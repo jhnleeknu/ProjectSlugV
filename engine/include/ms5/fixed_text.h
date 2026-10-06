@@ -75,6 +75,24 @@ bool trace_direct_fixed_text_visible(const std::vector<std::uint8_t>& script,
                                      std::vector<VideoPortWrite>& writes,
                                      std::string& error);
 
+// Parse controls and return one glyph, including zero. Success updates all
+// referenced state and clears error; failure preserves every state output.
+bool parse_fixed_text_glyph(const std::vector<std::uint8_t>& script,
+                            std::size_t& position, std::uint16_t& style,
+                            std::uint16_t& line, std::uint16_t& cursor,
+                            std::uint8_t& glyph, std::string& error);
+
+// Render an already parsed glyph using the table/direct paths below. Zero is
+// glyph data here. Combining marks and '@' operands consume script bytes from
+// position; this function does not parse controls. Success replaces writes,
+// updates position/cursor and clears error; failure preserves these outputs.
+bool render_table_text_glyph(std::uint8_t glyph,
+                             const std::vector<std::uint8_t>& script,
+                             std::size_t& position, std::uint16_t& cursor,
+                             std::uint16_t style, const FixedDataResource& font,
+                             std::vector<VideoPortWrite>& writes,
+                             std::string& error);
+
 // Confirmed font-0x68/0x6b paths at CPU 0x0e84c8, including combining marks
 // and the '@' glyph grammar at 0x0e86a0. The fixed-ROM resource must contain
 // each used complete table: 0x6b=[0x0e80c8,0x0e82c8), 0x68=[0x0e82c8,0x0e84c8).
