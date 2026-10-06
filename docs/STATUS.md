@@ -557,3 +557,12 @@
 - Python61개 및 C++ 전체 테스트 통과. 분석: docs/analysis/control-request.md. 리뷰: docs/reviews/0080-control-menu-finish.md.
 - 비영 종료 콜백은 호출이 필요할 때 명시적으로 거절한다. 고정 ROM에서 직접 비영 쓰기를 찾지 못했다는 사실을 콜백이 불가능하다는 결론으로 바꾸지 않았다.
 - 다음 작업은 비활성 수락·활성 대기·열린 메뉴 분기를 하나의 컨트롤러 진입으로 통합하고, 실제 호출자의 상태 byte 처리·게임 갱신 스케줄링을 연결하는 것이다. 전체 게임 복원 목표는 active다.
+
+
+## 2026-10-07 — 통합9136 컨트롤러와 호출자 실행 분석
+
+- `step_control`로 비활성 수락·활성 대기·열린 메뉴 분기를 하나의 C++ 진입 API/CLI에 연결했다. 기존 바이너리 리소스를 그대로 사용하며 모든 실패 출력 보존 계약을 유지한다.
+- 원본9136과835조건, 포트102,635회, 전체 RAM/signed D0/D3가 일치했다.4개 연속 시퀀스는 활성화·자식 메뉴 조작·전체 종료·재활성화·두 번째 종료를 포함한다.
+- `analyze_control_caller.py`는 실제f5a 이후512조건에서 helper 호출 순서, video word/포트, 효과 저장/복구, 카운터 wrap/trap 경계와 좌표 단계byte를 확인했다. 전체RAM 비교가 아닌 관측·명시적 조건 검사임을 구분했다.
+- `make all test`: Python61개와 C++ 전체 통과. 리뷰: docs/reviews/0081-control-dispatch.md. 분석: docs/analysis/control-request.md 및 control-caller.md.
+- 다음은3d7e/3db2의 video 제어와43dbc 단계byte 갱신을 구현하고,9136의 반환값 소비·팔레트 효과 API를 f54 호출자 순서로 연결하는 것이다. ec4의 동기화·입력 수집과 실제 게임 갱신은 아직 미완료다. 전체 목표는 active다.

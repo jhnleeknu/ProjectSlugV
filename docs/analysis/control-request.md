@@ -113,3 +113,21 @@ build/step_control_menu INPUT_RAM MENU_MS5D PAUSE_MS5D OUTPUT_RAM OUTPUT_PORTS S
 연결 검증은1,027프레임(9136 진입36,92fc 진입991), 실제 stage callback697회와 포트165,533회가 일치했다.13개 연속 시퀀스는 초기화 후 child 열기·조작·취소/선택·parent 복귀·종료와 header 요청 종료를 포함한다. 비영 프레임 반환138회에서9302의 D1 word 보존을 확인했다. BIOS 전환 시 종료 꼬리를 건너뛰며 실제 watchdog3회도 비교한다. 종료 콜백·잘못된 PAUSE 범위·미지원 모드·비활성 상태의12개 CLI 거절 조건과 C++ 늦은 오류 트랜잭션 검사를 통과했다.
 
 전체 `make all test`는 Python61개와 C++ 전체가 통과했다. 보고서는 `artifacts/control_finish/verification.json`(SHA256 `b9a16862228a1fb1b959aab7df3450362f2ac33ad37092501ff6459541b14afe`)과 `artifacts/control_menu_frame/verification.json`(SHA256 `a963f297ca0163bf489ad7a282c4554a925af55edca01733414cef66f981d6cd`)이다. 전체 CPU 레지스터/flags, 외부 진단 스택 메모리, 입력 수집·게임 업데이트 스케줄링, 픽셀·하드웨어 타이밍과 전체 게임 부팅을 검증한 것은 아니다.
+
+
+## 통합9136 진입
+
+```
+build/step_control INPUT_RAM MENU_MS5D PAUSE_MS5D OUTPUT_RAM OUTPUT_PORTS STYLE LINE ENTRY_STACK [FONT [STAGES_DIR]]
+.venv/bin/python tools/verify_control.py
+```
+
+`step_control`은7df0==0이면 비활성 수락, 그렇지 않고7dee==0이면 활성 대기, 그 외에는 열린 메뉴 프레임을 실행한다. 비활성 분기가 메뉴 byte보다 우선하므로 오래된7dee가 비영이어도 먼저 활성화를 처리한다. 사용하지 않는 분기의 리소스나 외부 진단 스택은 API에서 검사하지 않는다. CLI는 지정한 리소스 파일들을 로드한 뒤 호출한다.
+
+비활성 수락은 MOVEQ로D0를0/1로 만들고 D3를 보존한다. 다른 분기의 signed D0 전체도 기존 API 그대로 반환한다. 호출자는 하위 byte로 판단해야 한다. BIOS 외부 전환은 별도 필드이며 실제 firmware 실행을 대신하지 않는다. 지원하는 메뉴 descriptor·모드·콜백 범위는 구성 API와 같다.
+
+원본9136과835조건(독립576, RAM 승계258프레임, 오류 검증용 실제 메뉴 시작1회)에서 전체 RAM, signed D0, D3와 포트102,635회가 일치했다.4개 시퀀스는 활성화→누름 반복→메뉴 열기→debug/area/group 자식 조작→전체 종료→재활성화→두 번째 종료까지 이어진다. 재구성 측과 원본 측의 모든 출력 RAM을 비교하고 다음 입력 상태로 승계했다. 이 시퀀스의 입력 byte는 진단 호스트가 공급하며 실제 하드웨어 입력 수집을 검증한 것은 아니다.
+
+실제 원본 hook에서919a 활성화97회,91c2 활성 분기731회,92ce 메뉴 시작97회,92fc/9302 메뉴 프레임255회,928e 종료8회,9602 area callback38회,9802 group callback18회를 확인했다. 미지원 종료 콜백의 늦은 실패2조건은 출력 파일을 보존했다. 전체 `make all test`(Python61개와 C++ 전체), API 분기 우선순위·오류 시 상태 보존과 CLI 숫자/별칭 검사가 통과했다.
+
+보고서 `artifacts/control/verification.json` SHA256: `123e0774c0313c8fc741e753f3155004aeeb381c9f8ad06adddc3c60371b550e`. 실제 호출자의 효과·카운터 연결은 `control-caller.md`의 별도 분석이며,9136 통합만으로 게임 한 프레임이나 전체 부팅의 완료를 의미하지 않는다.
