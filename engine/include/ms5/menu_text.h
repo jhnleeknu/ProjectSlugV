@@ -14,8 +14,9 @@ struct StageGroupMenuContext;
 // rows support flags zero, ordinary or empty titles, known event-5 no-op
 // callbacks, debug callback 0x009aa8, and stage callbacks 0x009602 /
 // 0x009802. Dynamic drawing requires font and stage drawing requires context.
-// Separators use the original9cd4 tiles and unconditional occlusion. clip requires the direct renderer at
-// CPU 0x003650. Success replaces RAM and writes and clears error; failure
+// Separators use the original9cd4 tiles and unconditional occlusion. clip
+// selects RAM0x107f16 renderer3650 or9332;9332 requires font.
+// Success replaces RAM and writes and clears error; failure
 // preserves both. Optional final_line receives D3 only on success; hidden
 // rows preserve its input value.
 bool draw_menu_item(std::vector<std::uint8_t>& ram,
@@ -30,10 +31,14 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
 // 0x009aa8 and stage callbacks 0x009602 / 0x009802 are accepted. Dynamic
 // drawing requires font and stage drawing requires context. clip selects
 // per-glyph occlusion through RAM 0x107f16,
-// which must name the direct 0x003650 renderer. initial_line supplies the
+// which must name renderer0x003650 or0x009332. initial_line supplies the
 // title measurement's initial D3 word. Port writes preserve original order.
 // Success replaces RAM and writes and clears error; failure preserves both.
 // Height zero succeeds without decoding the resource or checking callbacks.
+// Unclipped renderer supports CPU3650 or9332;9332 requires font and maps
+// style low byte3 to6b, retaining that style until another stream control.
+// clip selects RAM0x107f16 regardless of renderer argument. Covered glyphs
+// preserve the cursor and skip renderer style changes and lookahead consumption.
 // Optional final_line receives the final D3 low word only on success. Each
 // rendered title resets the line to its start address before stream controls;
 // hidden items and event-5 no-ops preserve it. Height zero returns initial_line.
@@ -43,7 +48,8 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
                     std::vector<VideoPortWrite>& writes, std::string& error,
                     std::uint16_t* final_line = NULL,
                     const FixedDataResource* font = NULL,
-                    const StageGroupMenuContext* stage_context = NULL);
+                    const StageGroupMenuContext* stage_context = NULL,
+                    std::uint32_t renderer = 0x3650U);
 
 } // namespace ms5
 

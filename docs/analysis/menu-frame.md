@@ -1,6 +1,6 @@
 # 메뉴 프레임의 헤더와 스택 다시 그리기
 
-프로그램 SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. 이 문서의 CPU 주소는 고정 ROM 범위이며 복호화 파일 오프셋과 같다. 전체 a370 프레임은 아직 연결 중이다.
+프로그램 SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. 이 문서의 CPU 주소는 고정 ROM 범위이며 복호화 파일 오프셋과 같다. native93e0/958a/978a/99ee 메뉴의 a370 프레임을 C++에 연결했다. 전체 게임 루프/부팅을 복원했다는 뜻은 아니다.
 
 ## 헤더9430
 
@@ -32,9 +32,9 @@ build/redraw_menu_stack INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LAST_SLOT LI
 
 원본a6da 검증은 692조건(기본432, 좌표/구역 경계128, 부분24, 빈 범위12, 높이 혼합/가림 flag96)에서 전체 RAM·ordered ports·최종D3가 일치했다. 실제 테두리/문자 호출 순서와 callback 수를 원본 실행 hook으로 검사했다. stage 콜백3,305회 모두 S−28이며 원본A2 보존도 확인했다. 부분 범위 밖의 최신 메뉴가 가리는 경우와 마지막 슬롯 높이가0인 줄 위치 전달을 포함한다. 전체 `make all test`와 새 단위검사 통과.
 
-## 전체 프레임 연결 시 유지할 순서
+## 전체 프레임에서 유지하는 순서
 
-아래는 원본 명령에서 확인한 후속 구현 제약이며 전체 프레임 완료 주장이 아니다.
+아래는 원본 명령에서 확인하고 step_menu_frame에 연결한 순서다. 알려지지 않은 descriptor/header 콜백은 명시적으로 거절한다.
 
 - a370은 오래된 슬롯부터 descriptor+10 콜백을 호출한다. head보다 오래된 슬롯의 flag0과 현재 높이에 따라 닫기 단계를 수행하고 높이가0이 되면 a6da를 호출한다.
 - 활성 경로a406은 높이가 목표보다 작으면 열기 한 단계 후 반환한다. 열린 경우 flag0을 지운 이전 값에 따라 전체 텍스트를 다시 그리고, 헤더+6을 호출한 뒤 pending을 비우고 입력을 처리한다. pending은 콜백 호출 전에ff로 바꾼다.
@@ -43,3 +43,44 @@ build/redraw_menu_stack INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LAST_SLOT LI
 - 단계별 호출 깊이가 다르므로 stage context의 스택 주소를 모든 경로에 같은 값으로 넘기면 포맷터 RAM이 달라진다.
 
 실제 픽셀, 하드웨어 타이밍, 자연 입력 도달성, 전체 게임 부팅/스테이지 실행은 이 단계의 검증 범위 밖이다.
+
+## C++ 프레임 실행
+
+```
+build/step_menu_frame INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LINE ENTRY_STACK [FONT_MS5D [STAGES_DIRECTORY]]
+.venv/bin/python tools/verify_menu_frame.py
+```
+
+JSON 결과는 `status`(계속0/종료−1), `external_jump`, `line`이다. BIOS9532 분기의c00444는 실제 펌웨어를 실행하지 않고 외부 전환 주소를 반환한다. 이 경우 status0은 호스트 진단 표현이다. 실패하면 RAM, 결과 구조체와 포트 목록을 모두 보존한다. pending 처리의 무한 루프와 선택 가능한 callback 없는 메뉴도 오류로 거절한다.
+
+이 API는 프레임 진입 A1이 전역 renderer107f16과 같다는 입력 계약을 사용한다. 지원하는 전역 renderer는3650과9332다. entry_stack은 실제 원본a370 진입의 외부 진단 A7이며, C++ 호스트 주소가 아니다. stage context의 callback_stack을 그대로 재사용하지 않고 각 호출 경로의 깊이로 계산한다.
+
+| stage 콜백 경로 | a370 진입S에서 뺄 바이트 |
+|---|---:|
+| 열기 완료 전체 그리기/event6 내부 행 그리기 |24|
+| 열기 완료 event6 및 event0 |4|
+| 활성 flag 재출력 |28|
+| 입력 이동의 행 그리기 |24|
+| 대기 이벤트/입력 이벤트 |8|
+| 대기 event6 안의 중첩 행 그리기 |28|
+| 닫은 뒤 부모 event7 / event0 |8 / 4|
+| 닫은 뒤 스택 다시 그리기 |32|
+| 배경 메뉴 닫기 뒤 스택 다시 그리기 |36|
+
+슬롯 설정, push, 이벤트 디스패처의 선택적 final_line으로 D3를 반환하여 프레임 내부 호출 사이에 전달한다. 원본과 같은 줄 위치를 다음 프레임에도 넘길 수 있다.
+
+## 실제 메뉴 렌더러9332
+
+92f0에서 a2b8로 설치하는9332는 D1 low byte가3이면6b로 바꾼 후 e84c8 표 렌더러로 간다. 3918은 D1을 복원하지 않으므로 스타일 변경은 다음 glyph에서도 유지된다. menu_text는 기존 MS5D 글꼴과 glyph 파서/렌더러를 공유하여 이 동작을 연결한다.
+
+가림 wrapper a008은 a018의 판정 후 **전역107f16으로 tail-call**한다. 항상3650을 호출하는 것이 아니다. 따라서 clip 경로도 전역9332를 지원하며, 가려진 glyph는 스타일 변경·lookahead 소비·cursor 이동을 모두 생략한다. `@` operand가 다음 파서 입력에 남는 경우를 단위검사에 포함했다. 기존3650 API 기본값은 유지한다.
+
+## 프레임 검증 범위
+
+원본 a370을 수정하지 않은834프레임에서 전체65,536바이트 RAM, ordered video/watchdog writes, 반환 상태, 외부 전환 주소, 최종D3가 일치했다. 실제 stage콜백697회와 포트155,889회를 비교했다. 원본 a29c/C++ init_menu의 결과에서 시작해 RAM과D3를 계속 전달하는10개 시퀀스는 renderer3650/9332 각각에서 debug/area/group 취소와 area/group 확인을 수행한다. 자식 descriptor와 마지막 빈 stack을 별도로 확인한다.
+
+고립된 프레임은 열기/완료, pending0..7, 두 입력의 우선순위/enable, 헤더 종료 뒤 pending와 실제 입력의 계속 실행, 닫기/pop/event7/event0/다시 그리기, 배경 메뉴 닫기, 빈 stack/잘못된 mode를 포함한다. 정적 재시작3조건은 원본allocator 초기값을 쓰고 palette/coordinate 연결이 없는 경우의 watchdog 쓰기까지 비교한다. 연결된 오브젝트의 재시작은 별도 menu-event 검증 범위이며 여기서 확대 검증했다고 주장하지 않는다.
+
+원본 callback 주소/event/A7을 관찰한 결과 위 깊이와 일치했다. 원본 프로그램의 매핑된1MiB가 바뀌지 않았음도 확인했다. C++ 단위검사는 header가 RAM을 바꾼 뒤 pending callback 오류가 나는 경우, missing font, 빈 범위와 잘못된 stack의 모든 출력 보존을 검사한다. make all test(Python55개 및 C++ 전체)가 통과했다.
+
+남은 범위는 실제 호출자92da/92fc의 프레임 진입 레지스터·입력 수집/스케줄링 통합, 다른 메뉴 descriptor/flags/콜백, BIOS 실행, 픽셀과 하드웨어 타이밍, 전체 게임 루프와 실제 스테이지 실행이다.

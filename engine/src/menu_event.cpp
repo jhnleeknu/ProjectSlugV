@@ -34,7 +34,8 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
                          MenuEventResult& result,
                          std::vector<VideoPortWrite>& writes, std::string& error,
                          const FixedDataResource* font,
-                         const StageGroupMenuContext* stage_context) {
+                         const StageGroupMenuContext* stage_context,
+                         std::uint16_t* final_line) {
     bool covered=false;
     if (!menu_position_occluded(ram,0x7000U,covered,error)) return false;
     const std::uint32_t current=read_u32(ram,0x7f12U);
@@ -56,15 +57,19 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
         std::vector<VideoPortWrite> pending;
         MenuEventResult outcome;
         outcome.a2=current;
+        std::uint16_t local_line=initial_line;
         if (callback==0x9602U) {
-            std::uint16_t local_line=initial_line;
             if (!dispatch_stage_area_menu(candidate,resource,font,stage_context,event,
                                            local_line,outcome.a2,pending,error)) return false;
         } else if (callback==0x9802U) {
             if (!dispatch_stage_group_menu(candidate,resource,font,stage_context,event,
                                             outcome.a2,pending,error)) return false;
+            if (event==5U) {
+                local_line=static_cast<std::uint16_t>(
+                    (static_cast<std::uint16_t>(candidate[0x4cd8U])<<8) |
+                    candidate[0x4cd9U]);
+            }
         } else if (callback==0x9aa8U) {
-            std::uint16_t local_line=initial_line;
             if (!dispatch_debug_menu(candidate,resource,font,event,local_line,
                                      outcome.a2,pending,error)) return false;
         } else if (callback!=0U) {
@@ -87,7 +92,20 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
                     const unsigned int padding=(descriptor.flags&14U)!=0U ? 1U : 3U;
                     const std::uint8_t x=static_cast<std::uint8_t>(candidate[slot+9U]+padding);
                     const std::uint8_t y=static_cast<std::uint8_t>(candidate[slot+10U]+1U+index);
-                    if (!push_menu(candidate,resource,child,x,y,initial_line,pending,error,font)) return false;
+                    StageGroupMenuContext parent_context;
+                    const StageGroupMenuContext* parent_context_pointer=NULL;
+                    if (stage_context!=NULL) {
+                        if (stage_context->callback_stack<40U ||
+                            stage_context->callback_stack>0xffffffU) {
+                            error="nested menu redraw stack adjustment is outside CPU address range";
+                            return false;
+                        }
+                        parent_context=*stage_context;
+                        parent_context.callback_stack-=40U;
+                        parent_context_pointer=&parent_context;
+                    }
+                    if (!push_menu(candidate,resource,child,x,y,local_line,pending,error,font,
+                                   parent_context_pointer,&local_line)) return false;
                     outcome.a2=read_u32(candidate,0x7f0eU);
                 }
             } else if (event==4U) {
@@ -98,6 +116,7 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
         ram.swap(candidate);
         writes.swap(pending);
         result=outcome;
+        if (final_line!=NULL) *final_line=local_line;
     } catch (const std::bad_alloc&) {
         error="cannot allocate menu event state";
         return false;

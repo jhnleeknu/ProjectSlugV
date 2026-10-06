@@ -25,7 +25,8 @@ bool push_menu(std::vector<std::uint8_t>& ram,
                std::uint16_t x, std::uint16_t y, std::uint16_t initial_line,
                std::vector<VideoPortWrite>& writes, std::string& error,
                const FixedDataResource* font,
-               const StageGroupMenuContext* stage_context) {
+               const StageGroupMenuContext* stage_context,
+               std::uint16_t* final_line) {
     if (ram.size() != 65536U) {
         error = "menu stack requires exactly 65536 RAM bytes";
         return false;
@@ -76,13 +77,14 @@ bool push_menu(std::vector<std::uint8_t>& ram,
         }
         put_u32(candidate, 0x7f12U, new_head);
         if (!configure_menu_slot(candidate, resource, new_head, descriptor_address,
-                                  x, y, line, error)) {
+                                  x, y, line, error, &line)) {
             return false;
         }
         candidate[0x7f1bU] = 1U;
         put_u32(candidate, 0x7f12U, saved_current);
         ram.swap(candidate);
         writes.swap(pending);
+        if (final_line != NULL) *final_line = line;
     } catch (const std::bad_alloc&) {
         error = "cannot allocate menu stack output";
         return false;

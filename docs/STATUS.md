@@ -511,6 +511,14 @@
 - 전체 Python55개/C++검사와 새 빈 범위/늦은 오류 rollback 검사 통과. docs/analysis/menu-frame.md에 전체 프레임 연결 시 호출/이벤트 순서를 기록했다.
 - 다음은 a370의 활성/열기/닫기 경로를 한 프레임으로 연결하는 작업이다. 헤더 종료 요청 뒤에도 입력 처리가 계속되는 원본 순서와 경로별 콜백 스택을 보존해야 한다. 전체 게임 복원은 계속 미완료다.
 
+## 2026-10-07 — 전체 메뉴 프레임과 실제 글꼴 렌더러
+- 이전 turn은 헤더960/다시 그리기692조건을 검증한 progress다.
+- a370 활성/열기/닫기, pending·입력·부모복귀를 하나의 C++ 프레임으로 연결했다. 호출 깊이에 맞는 stage context와 D3 전달을 유지한다.
+- 원본92f0이 설치하는9332 및 a008의 전역renderer tail-call을 연결했다. covered glyph의 스타일/lookahead/cursor 보존도 검사했다.
+- 원본834프레임 전체 RAM/ordered video·watchdog/status/external_jump/D3 일치. renderer3650/9332에서 시작해 자식 확인·취소·부모복귀를 수행하는10연속시퀀스 포함, stage콜백697회/포트155,889회다.
+- 전체 Python55개/C++테스트 및 late-failure rollback 통과. docs/analysis/menu-frame.md와 reviews/0077 참고.
+- 입력 A1=전역renderer 계약이며 실제 호출자92da/92fc의 레지스터·입력 수집/스케줄링 연결, 다른 descriptor/flags, 최종 픽셀/타이밍·실제 게임 실행은 남았다. 전체 목표는 active다.
+
 ## 다음 작업
 1. 실제 ROM 애니메이션 스크립트의 참조·경계를 확인하고 런타임 리소스로 추출한다. 분기 등 나머지opcode를 해석해 상태 실행기에 연결한다.
 2. 팔레트·애니메이션·맵 참조 경로를 오브젝트 코드와 연결한다.

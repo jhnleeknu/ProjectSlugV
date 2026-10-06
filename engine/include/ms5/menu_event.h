@@ -16,14 +16,17 @@ struct MenuEventResult {
 // because the caller's menu state machine uses it after callbacks.
 // external_jump=c00444 requires a BIOS/host transition; that firmware is
 // not executed here. Port writes include video and watchdog300001.
-// Failure preserves RAM, result and writes. Pending slot+14 is not cleared
-// here; that is the frame loop's responsibility.
+// Success optionally returns D3 in final_line. stage_context uses this
+// event callback entry A7; nested push redraw adjusts it by 40 bytes.
+// Failure preserves RAM, result, writes and final_line. Pending slot+14 is
+// not cleared here; that is the frame loop's responsibility.
 bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
                          const FixedDataResource& resource,
                          std::uint16_t event, std::uint16_t initial_line,
                          MenuEventResult& result,
                          std::vector<VideoPortWrite>& writes, std::string& error,
                          const FixedDataResource* font = NULL,
-                         const StageGroupMenuContext* stage_context = NULL);
+                         const StageGroupMenuContext* stage_context = NULL,
+                         std::uint16_t* final_line = NULL);
 }
 #endif

@@ -59,18 +59,67 @@ bool append_text(const std::vector<std::uint8_t>& script,
                  std::uint16_t address, std::uint16_t style, bool clip,
                  std::vector<std::uint8_t>& ram,
                  std::vector<VideoPortWrite>& writes, std::string& error,
-                 std::uint16_t* final_line) {
+                 std::uint16_t* final_line, const FixedDataResource* font,
+                 std::uint32_t renderer) {
     std::vector<VideoPortWrite> text_writes;
-    if (!trace_direct_fixed_text_visible(script, address, style,
-            clip ? glyph_visible : NULL, &ram, text_writes, error)) {
-        return false;
-    }
-    if (final_line != NULL) {
-        FixedTextMeasure measurement;
-        if (!measure_fixed_text(script, style, address, measurement, error)) {
+    if (renderer == 0x9332U) {
+        if (font == NULL) {
+            error = "menu renderer CPU0x009332 requires the font resource";
             return false;
         }
-        *final_line = measurement.line;
+        if (font->source_cpu_address >= 0x100000U ||
+            font->source_cpu_address != font->source_rom_offset || font->data.empty() ||
+            font->data.size() > 0x100000U - font->source_cpu_address) {
+            error = "menu font resource must be a nonempty fixed-ROM range with matching CPU/ROM addresses";
+            return false;
+        }
+        std::size_t position = 0;
+        std::uint16_t line = address;
+        std::uint16_t cursor = address;
+        for (;;) {
+            std::uint8_t glyph = 0;
+            if (!parse_fixed_text_glyph(script, position, style, line, cursor,
+                                         glyph, error)) {
+                return false;
+            }
+            if (glyph == 0U) {
+                if (final_line != NULL) *final_line = line;
+                break;
+            }
+            if (clip) {
+                bool visible = false;
+                if (!glyph_visible(cursor, &ram, visible, error)) return false;
+                // a008 returns immediately for covered glyphs, preserving D1,
+                // renderer lookahead and D0's cursor for the next parser call.
+                if (!visible) continue;
+            }
+            // 9332 changes D1 itself;3918 preserves that change next iteration.
+            if ((style & 0xffU) == 3U) {
+                style = static_cast<std::uint16_t>((style & 0xff00U) | 0x6bU);
+            }
+            std::vector<VideoPortWrite> glyph_writes;
+            if (!render_table_text_glyph(glyph, script, position, cursor, style,
+                                          *font, glyph_writes, error)) {
+                return false;
+            }
+            if (glyph_writes.size() > 100000U - text_writes.size()) {
+                error = "menu text trace exceeds 100000 port events";
+                return false;
+            }
+            text_writes.insert(text_writes.end(), glyph_writes.begin(), glyph_writes.end());
+        }
+    } else {
+        if (!trace_direct_fixed_text_visible(script, address, style,
+                clip ? glyph_visible : NULL, &ram, text_writes, error)) {
+            return false;
+        }
+        if (final_line != NULL) {
+            FixedTextMeasure measurement;
+            if (!measure_fixed_text(script, style, address, measurement, error)) {
+                return false;
+            }
+            *final_line = measurement.line;
+        }
     }
     writes.insert(writes.end(), text_writes.begin(), text_writes.end());
     return true;
@@ -82,7 +131,8 @@ bool append_item(const MenuItem& item, std::size_t index,
                  std::vector<std::uint8_t>& ram,
                  std::vector<VideoPortWrite>& writes, std::string& error,
                  std::uint16_t* final_line, const FixedDataResource* font,
-                 const StageGroupMenuContext* stage_context) {
+                 const StageGroupMenuContext* stage_context,
+                 std::uint32_t renderer) {
     const std::uint8_t row = static_cast<std::uint8_t>(index + 1U);
     if (row >= ram[slot + 4U]) {
         return true;
@@ -144,7 +194,7 @@ bool append_item(const MenuItem& item, std::size_t index,
             const std::uint16_t style = current != head && index != selected ?
                                        0x0603U : 0x0003U;
             if (!append_text(script, address, style, clip, ram, writes, error,
-                             &line)) {
+                             &line, font, renderer)) {
                 return false;
             }
         }
@@ -207,8 +257,9 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
         error.clear();
         return true;
     }
-    if (clip && read_u32(ram, 0x7f16U) != 0x3650U) {
-        error = "clipped menu text requires the direct renderer at CPU 0x003650";
+    const std::uint32_t effective_renderer = clip ? read_u32(ram, 0x7f16U) : 0x3650U;
+    if (effective_renderer != 0x3650U && effective_renderer != 0x9332U) {
+        error = "menu text renderer must be CPU0x003650 or CPU0x009332";
         return false;
     }
     try {
@@ -237,7 +288,7 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
         }
         if (!append_item(item, index, slot, head, current, resource, clip,
                          candidate, pending, error, &candidate_line, font,
-                         stage_context)) {
+                         stage_context, effective_renderer)) {
             return false;
         }
         ram.swap(candidate);
@@ -259,7 +310,8 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
                     std::vector<VideoPortWrite>& writes, std::string& error,
                     std::uint16_t* final_line,
                     const FixedDataResource* font,
-                    const StageGroupMenuContext* stage_context) {
+                    const StageGroupMenuContext* stage_context,
+                    std::uint32_t renderer) {
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
@@ -277,8 +329,13 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
         error.clear();
         return true;
     }
-    if (clip && read_u32(ram, 0x7f16U) != 0x3650U) {
-        error = "clipped menu text requires the direct renderer at CPU 0x003650";
+    const std::uint32_t effective_renderer = clip ? read_u32(ram, 0x7f16U) : renderer;
+    if (effective_renderer != 0x3650U && effective_renderer != 0x9332U) {
+        error = "menu text renderer must be CPU0x003650 or CPU0x009332";
+        return false;
+    }
+    if (effective_renderer == 0x9332U && font == NULL) {
+        error = "menu renderer CPU0x009332 requires the font resource";
         return false;
     }
     MenuDescriptor descriptor;
@@ -330,14 +387,14 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
         const std::uint16_t title_address = base_address(column, ram[slot + 10U]);
         const std::uint16_t title_style = head == current ? 0x0103U : 0x0603U;
         if (!append_text(script, title_address, title_style, clip, candidate,
-                         pending, error, line_output)) {
+                         pending, error, line_output, font, effective_renderer)) {
             return false;
         }
         for (std::size_t index = 0; index < descriptor.items.size(); ++index) {
             candidate[slot + 8U] = static_cast<std::uint8_t>(index);
             if (!append_item(descriptor.items[index], index, slot, head, current,
                              resource, clip, candidate, pending, error,
-                             line_output, font, stage_context)) {
+                             line_output, font, stage_context, effective_renderer)) {
                 return false;
             }
         }

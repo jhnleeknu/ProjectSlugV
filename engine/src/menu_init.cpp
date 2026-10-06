@@ -51,7 +51,8 @@ bool configure_menu_slot(std::vector<std::uint8_t>& ram,
                          std::uint32_t slot_address,
                          std::uint32_t descriptor_address,
                          std::uint16_t x, std::uint16_t y,
-                         std::uint16_t initial_line, std::string& error) {
+                         std::uint16_t initial_line, std::string& error,
+                         std::uint16_t* final_line) {
     if (ram.size() != 65536U) {
         error = "menu initialization requires exactly 65536 RAM bytes";
         return false;
@@ -104,6 +105,7 @@ bool configure_menu_slot(std::vector<std::uint8_t>& ram,
     ram[slot + 13U] = 3;
     ram[slot + 14U] = 0xffU;
     ram[slot + 15U] = 0;
+    if (final_line != NULL) *final_line = line;
     error.clear();
     return true;
 }

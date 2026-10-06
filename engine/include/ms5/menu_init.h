@@ -8,14 +8,16 @@ namespace ms5 {
 // Confirmed CPU 0x00a110..0x00a1d0 slot initialization. slot_address is
 // a CPU work-RAM address from 0x107e0e through 0x107efe in steps of 16.
 // Writes only that slot, preserving its byte at +5 and all menu globals.
-// RAM must contain exactly 65536 bytes. Failure preserves RAM; success
-// clears error. Title streams must be wholly available in the resource.
+// RAM must contain exactly 65536 bytes. Failure preserves RAM and final_line;
+// success clears error and optionally returns D3 in final_line. Title streams
+// must be wholly available in the resource.
 bool configure_menu_slot(std::vector<std::uint8_t>& ram,
                          const FixedDataResource& resource,
                          std::uint32_t slot_address,
                          std::uint32_t descriptor_address,
                          std::uint16_t x, std::uint16_t y,
-                         std::uint16_t initial_line, std::string& error);
+                         std::uint16_t initial_line, std::string& error,
+                         std::uint16_t* final_line = NULL);
 
 // Confirmed CPU 0x00a29c reset and first menu allocation. This does not
 // implement nested menu allocation. RAM is one 65536-byte work-RAM image;
