@@ -75,10 +75,13 @@ bool trace_direct_fixed_text_visible(const std::vector<std::uint8_t>& script,
                                      std::vector<VideoPortWrite>& writes,
                                      std::string& error);
 
-// Confirmed font-0x6b table path at CPU 0x0e84c8, including combining marks
+// Confirmed font-0x68/0x6b paths at CPU 0x0e84c8, including combining marks
 // and the '@' glyph grammar at 0x0e86a0. The fixed-ROM resource must contain
-// the complete big-endian word table [0x0e80c8, 0x0e82c8). Other fonts fail.
-// Each glyph emits one long address/data write to CPU port 0x3c0000 and
+// each used complete table: 0x6b=[0x0e80c8,0x0e82c8), 0x68=[0x0e82c8,0x0e84c8).
+// Styles 0x00..0x0f use direct 0x3650 output without mark/@ consumption;
+// each emits a long address/data write and word 0x8200 reset. Style 0x30 uses
+// direct font3 after mark consumption, without @ grammar. Other fonts fail.
+// Each table glyph emits one long address/data write to CPU port 0x3c0000 and
 // advances the VRAM word cursor by 0x20. Success replaces writes and clears
 // error; failure preserves writes. An optional final_line receives the parser's
 // final VRAM line on success only. The trace is bounded to 100000 events.

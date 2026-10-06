@@ -22,6 +22,33 @@ int main() {
     script.push_back('a');script.push_back(0);
     assert(ms5::trace_table_fixed_text(script,0xffff,0xf6b,font,writes,error,&line));
     assert(writes.size()==1 && writes[0].size==4 && writes[0].value==0xfffff380U && line==0xffff);
+    // A resource containing only font68 is valid for streams using only 68.
+    ms5::FixedDataResource kana_font = font;
+    kana_font.source_cpu_address = kana_font.source_rom_offset = 0xe82c8;
+    script.assign(1, 'A');script.push_back(0);
+    assert(ms5::trace_table_fixed_text(script,0x7000,0x268,kana_font,writes,error));
+    assert(writes.size()==1 && writes[0].value==0x70002341U);
+    // A late switch to an absent table must roll back earlier writes and line.
+    script.clear();
+    script.push_back('A');script.push_back(92);script.push_back('c');
+    script.push_back(0x6b);script.push_back('B');script.push_back(0);
+    line=456;
+    assert(!ms5::trace_table_fixed_text(script,0x7000,0x68,kana_font,writes,error,&line));
+    assert(writes.size()==1 && writes[0].value==0x70002341U && line==456);
+    // Direct font3 emits '@' literally and does not combine the following mark.
+    script.clear();script.push_back('@');script.push_back(0xb3);
+    script.push_back(0xde);script.push_back(0);
+    assert(ms5::trace_table_fixed_text(script,0xffe0,0xf03,font,writes,error));
+    assert(writes.size()==6 && writes[0].value==0xffe0f340U);
+    assert(writes[1].size==2 && writes[1].value==0x8200U);
+    assert(writes[2].value==0x0000f3b3U && writes[4].value==0x0020f3deU);
+    // Font30 uses the same direct tiles, but consumes a combining mark first.
+    assert(ms5::trace_table_fixed_text(script,0xffe0,0xf30,font,writes,error));
+    assert(writes.size()==4 && writes[0].value==0xffe0f340U && writes[2].value==0x0000f3e0U);
+    script.assign(1,'A');script.push_back(0);
+    line=456;
+    assert(!ms5::trace_table_fixed_text(script,0x7000,0x69,font,writes,error,&line));
+    assert(writes.size()==4 && line==456);
     ms5::FixedDataResource data;
     data.source_cpu_address=data.source_rom_offset=0x99e0;
     data.data.assign(0xc8,0);

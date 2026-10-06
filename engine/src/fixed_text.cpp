@@ -217,12 +217,6 @@ bool trace_table_fixed_text(const std::vector<std::uint8_t>& script,
         error = "text font resource must be a nonempty fixed-ROM range with matching CPU/ROM addresses";
         return false;
     }
-    if (font.source_cpu_address > 0x0e80c8U ||
-        font.data.size() < 0x0e82c8U - font.source_cpu_address) {
-        error = "text font resource must contain CPU table [0x0e80c8, 0x0e82c8)";
-        return false;
-    }
-    const std::size_t table_offset = 0x0e80c8U - font.source_cpu_address;
     std::vector<VideoPortWrite> pending;
     std::uint16_t cursor = initial_address;
     std::uint16_t line = initial_address;
@@ -241,10 +235,38 @@ bool trace_table_fixed_text(const std::vector<std::uint8_t>& script,
             error.clear();
             return true;
         }
-        if ((style & 0x00ffU) != 0x6bU) {
-            error = "unsupported table text font: only style low byte 0x6b is confirmed";
+        const unsigned int font_id = style & 0x00ffU;
+        if (font_id < 0x10U) {
+            // e84c8 jumps to 3650 before examining lookahead or '@'.
+            if (pending.size() > 99998U) {
+                error = "table text trace exceeds 100000 port events";
+                return false;
+            }
+            VideoPortWrite write;
+            write.address = 0x3c0000U;
+            write.size = 4;
+            write.value = (static_cast<std::uint32_t>(cursor) << 16) |
+                          ((static_cast<std::uint32_t>(style) & 0x0f00U) << 4) |
+                          (font_id << 8) | glyph;
+            pending.push_back(write);
+            write.size = 2;
+            write.value = 0x8200U;
+            pending.push_back(write);
+            cursor = static_cast<std::uint16_t>(static_cast<unsigned int>(cursor) + 0x20U);
+            continue;
+        }
+        if (font_id != 0x6bU && font_id != 0x68U && font_id != 0x30U) {
+            error = "unsupported table text font: supported fonts are 0x00..0x0f, 0x30, 0x68 and 0x6b";
             return false;
         }
+        const std::uint32_t table_address = font_id == 0x68U ? 0x0e82c8U : 0x0e80c8U;
+        if (font_id != 0x30U && (font.source_cpu_address > table_address ||
+            font.data.size() < table_address + 512U - font.source_cpu_address)) {
+            error = "text font resource does not contain the selected complete lookup table";
+            return false;
+        }
+        const std::size_t table_offset = font_id == 0x30U ? 0U :
+                                         table_address - font.source_cpu_address;
         // CPU 0x0e84d6 peeks before applying the font-specific '@' grammar.
         if (position == script.size()) {
             error = "missing table text glyph lookahead";
@@ -263,6 +285,25 @@ bool trace_table_fixed_text(const std::vector<std::uint8_t>& script,
             glyph = static_cast<std::uint8_t>(
                 0xf0U + 2U * (static_cast<unsigned int>(glyph) - 0xcaU) +
                 (mark == 0xdfU ? 1U : 0U));
+        }
+        if (font_id == 0x30U) {
+            // e8558 uses direct font3 after combining marks, before '@'.
+            if (pending.size() > 99998U) {
+                error = "table text trace exceeds 100000 port events";
+                return false;
+            }
+            VideoPortWrite write;
+            write.address = 0x3c0000U;
+            write.size = 4;
+            write.value = (static_cast<std::uint32_t>(cursor) << 16) |
+                          ((static_cast<std::uint32_t>(style) & 0x0f00U) << 4) |
+                          0x300U | glyph;
+            pending.push_back(write);
+            write.size = 2;
+            write.value = 0x8200U;
+            pending.push_back(write);
+            cursor = static_cast<std::uint16_t>(static_cast<unsigned int>(cursor) + 0x20U);
+            continue;
         }
         if (glyph == 0x40U) {
             // The initial lookahead also establishes this operand is present.
