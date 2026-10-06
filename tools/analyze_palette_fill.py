@@ -1,4 +1,6 @@
 """Verify palette-bank1 fill and the setup routine's signed word addressing."""
+import argparse
+import subprocess
 import hashlib
 import json
 from pathlib import Path
@@ -11,6 +13,7 @@ from verify_palette_state import call
 
 
 def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--cpp',action='store_true');args=parser.parse_args()
     root=Path(__file__).resolve().parents[1];program,source=load_verified_program(root)
     if source['sha256']!='29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f':raise ValueError('Unsupported ROM')
     if program[0x8752:0x8b52] != bytes.fromhex('48e0ff00')*256:raise ValueError('Fill sequence changed')
@@ -19,6 +22,8 @@ def main():
     def hook(cpu,access,address,size,value,user):
         if address in (0x3a000f,0x3a001f):selections.append(0 if address==0x3a000f else 1)
     cpu.hook_add(UC_HOOK_MEM_WRITE,hook)
+    folder=root/'artifacts/palette_fill';folder.mkdir(parents=True,exist_ok=True)
+    inp,colors,out,outcolors,bank=[folder/name for name in ('input.bin','banks.bin','output.bin','output_banks.bin','display.bin')]
     rows=[]
     for seed in range(16):
         for display in (0,255):
@@ -28,6 +33,18 @@ def main():
             cpu.mem_write(0x100000,bytes(ram));cpu.mem_write(0x400000,bytes([0xa5])*8192);selections.clear();call(cpu,0x72fa)
             palette=b'\0\0'+(pattern*256)[2:]
             if bytes(cpu.mem_read(0x100000,65536))!=expected or bytes(cpu.mem_read(0x400000,8192))!=palette or selections!=[1,int(display!=0)]:raise ValueError('Fill mismatch')
+            if args.cpp:
+                bank0=hashlib.shake_256(bytes((seed,display))).digest(8192)
+                inp.write_bytes(ram);colors.write_bytes(bank0+bytes([0xa5])*8192)
+                subprocess.run([str(root/'build/transfer_palette_banks'),str(inp),str(colors),str(out),str(outcolors),str(bank)],check=True)
+                if out.read_bytes()!=expected or outcolors.read_bytes()!=bank0+palette or bank.read_bytes()!=bytes([int(display!=0)]):raise ValueError('C++ special fill mismatch')
+                # Next call resumes the normal path and must leave filled bank1 intact.
+                normal=bytearray(expected);normal[0x5da2:0x5dc2]=bytes.fromhex('8000')+bytes([seed])*30
+                cpu.mem_write(0x100000,bytes(normal));cpu.mem_write(0x400000,bank0);selections.clear();call(cpu,0x72fa)
+                normal_expected=bytes(cpu.mem_read(0x100000,65536));normal_bank0=bytes(cpu.mem_read(0x400000,8192))
+                inp.write_bytes(normal);colors.write_bytes(bank0+palette)
+                subprocess.run([str(root/'build/transfer_palette_banks'),str(inp),str(colors),str(out),str(outcolors),str(bank)],check=True)
+                if out.read_bytes()!=normal_expected or outcolors.read_bytes()!=normal_bank0+palette or bank.read_bytes()!=bytes([int(display!=0)]):raise ValueError('C++ fill-to-normal transition mismatch')
             rows.append({'seed':seed,'display':display,'palette_sha256':hashlib.sha256(palette).hexdigest()})
     base=int.from_bytes(program[0x200004:0x200008],'big');lookup=int.from_bytes(program[0x200008:0x20000c],'big');setups=[]
     for identifier in (0,1,15,1023,1024,2047,2048,0x897,65535):
@@ -42,8 +59,8 @@ def main():
         if bytes(cpu.mem_read(0x100000,65536))!=expected:raise ValueError('Fill setup mismatch')
         setups.append({'input_id':identifier,'source_rom_offset':address,'source_displacement':offset})
     folder=root/'artifacts/palette_fill';folder.mkdir(parents=True,exist_ok=True)
-    (folder/'verification.json').write_text(json.dumps({'source':source,'fill_cases':len(rows),'setup_cases':len(setups),'all_ram_palette_equal':True,
-        'scope':'Original-only valid initializer counter2000 and logical bank1 mapped at400000. Setup word displacement is verified, not assumed identical to normal source ID addressing. Other counter values, device timing and C++ integration pending.', 'fill_results':rows,'setup_results':setups},indent=2)+'\n')
+    (folder/'verification.json').write_text(json.dumps({'source':source,'fill_cases':len(rows),'cpp_verified':args.cpp,'cpp_normal_transition_cases':len(rows) if args.cpp else 0,'setup_cases':len(setups),'all_ram_palette_equal':True,
+        'scope':'Original-only valid initializer counter2000 and logical bank1 mapped at400000. Setup word displacement is verified, not assumed identical to normal source ID addressing. Optional C++ comparison covers both banks and following normal transfers. Other counter values and device timing pending.', 'fill_results':rows,'setup_results':setups},indent=2)+'\n')
     print('Original palette fill matches:',len(rows),'fills;',len(setups),'setups')
 
 

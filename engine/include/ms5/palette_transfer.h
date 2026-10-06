@@ -22,6 +22,18 @@ bool transfer_palette_frame(std::vector<std::uint8_t>& ram,
                             std::uint8_t& display_bank,
                             std::string& error);
 
+// Two-bank transfer: counter 0 delegates to the normal bank-0 path above.
+// Counter 0x2000 repeats RAM 0x7da2..0x7dc1 across bank 1, clears its first
+// word and RAM counter, and selects display bank from RAM 0x7dec. The special
+// path preserves bank 0, pending byte and staging data. Other counters fail.
+// RAM and both banks must be distinct vectors of exactly 65536/8192/8192
+// bytes. Failure preserves RAM, both banks and display_bank.
+bool transfer_palette_banks(std::vector<std::uint8_t>& ram,
+                            std::vector<std::uint8_t>& palette0,
+                            std::vector<std::uint8_t>& palette1,
+                            std::uint8_t& display_bank,
+                            std::string& error);
+
 } // namespace ms5
 
 #endif

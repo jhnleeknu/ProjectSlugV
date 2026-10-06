@@ -24,3 +24,13 @@ source = base + signed16((input_id * 32) & ffff)
 ```
 
 현재결과는원본분석과검증도구다. C++의두뱅크전송API와이설정함수의리소스주소연결은후속작업이며기존일반전송API는특수모드를명시적으로거부한다. 실제호출자의입력범위, 장치타이밍과표시화면은미확인이다.
+
+## C++ 두뱅크 전송 통합
+
+`transfer_palette_banks(ram,bank0,bank1,display_bank,error)`는counter0일때기존일반전송을사용하고counter2000일때확인된bank1전체채우기를실행한다. 두bank는각8192바이트이며서로다른vector여야한다. 지원하지않는counter는상태를바꾸지않고거부한다. 원본의다른counter가하드웨어미러영역을접근하는동작은아직검증하지않았다.
+
+CLI `transfer_palette_banks INPUT_RAM INPUT_BANKS OUTPUT_RAM OUTPUT_BANKS OUTPUT_DISPLAY`에서BANKS는bank0+bank1 순서의16384바이트다. DISPLAY는1바이트다. 입력과출력,출력끼리의같은파일을거부한다.
+
+`tools/analyze_palette_fill.py --cpp`는32개원본특수채우기에대해전체RAM·양쪽bank·최종선택을비교하고,각각다음일반전송으로돌아가bank1을보존하는32조건도확인한다. 모두일치했다. 전체기존검사및alias/잘못된counter거부검사통과.
+
+고정ROM에서확인한직접호출예는c550의MOVE.W #0,D0와c554의JSR8b64다. 이값은주소alias문제가없는원본base를사용하지만, 다른형태의호출까지배제하지는않는다. setup리소스연결과자연게임상태도달성은별도남아있다.
