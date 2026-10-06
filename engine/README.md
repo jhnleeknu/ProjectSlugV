@@ -70,3 +70,12 @@ build/emit_sprite_resource extracted/runtime/composition_002152.ms5c artifacts/r
 ```
 
 역방향은 하드웨어 슬롯 번호의 배정 방향이다. 타일 열의 순서를 뒤집지 않는다.
+
+큐 단위 갱신 통합 검증:
+
+```sh
+make build/refresh_sprite_queue
+.venv/bin/python tools/analyze_sprite_refresh_queue.py --cpp
+```
+
+`refresh_sprite_queue INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]`는 전체 큐를 처리한다. 비디오 출력은 BE32 처리 여부0/1 다음 BE16 주소/값 쌍이다. 게임 프로젝트는 같은 이름의 API에 로드된 리소스를 전달하면 된다. 아직 일반 단일 직사각형만 지원하며 다른 분기는 명시적으로 거부한다. 상세 계약은 docs/analysis/sprite-refresh-queue.md를 따른다.
