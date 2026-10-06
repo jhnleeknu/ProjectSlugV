@@ -131,3 +131,9 @@ ASCII MS5D + LE32 7개(version1,kind1,CPUbase,ROMoffset,payloadsize,CRC32,reserv
 원본 주소는 base+signed16((selector*32)&ffff)이며 각 레코드 manifest에 실제 ROM offset을 남긴다. 단일 색 변환은 기존4718 규칙과 같고 raw16워드와 hardware16워드를 모두 보존한다. converted word0은0이지만 setup API는 목적지 word0을 덮어쓰지 않는다.
 
 `setup_palette_fill`은 전용 카탈로그의 완전한2048개 정렬ID 구성을 요구한다. 범위 전체를 추출했다는 사실이 모든 선택값의 실제 게임 사용을 뜻하지는 않는다. 카탈로그 프로필은 manifest/API 계약이며 MS5P 바이너리 magic 자체가 프로필을 구분하는 것은 아니다.
+
+### MS5D 메뉴 descriptor 해석
+
+기존 MS5D v1 데이터 창을 그대로 사용한다. 현재 `control_menu.ms5d`는 fixed ROM937e..942f의문자열과93e0 descriptor를보존한다. `menu:000093e0` ID와원본주소/해석필드는manifest에기록한다.
+
+descriptor는BE필드의16byte헤더(title:u32,min_width:u8,min_height:u8,callback6:u32,callback10:u32,flags:u16)와10byte항목(title:u32,callback:u32,argument:u16)이다. title=ffffffff인4byte가종료하며0/fffffffe는항목으로보존한다. C++해석기는현재255개이내를지원한다. callback주소는논리코드참조이며호스트함수포인터가아니다. 문자데이터는원본386e스트림으로보존하고Unicode/PNG로대체하지않는다.
