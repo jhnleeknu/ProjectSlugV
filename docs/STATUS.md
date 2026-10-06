@@ -475,6 +475,13 @@
 - 원본289조건에서 전체64KiB RAM/ordered ports 일치. 빈문자열, D3 lowbyte 변경,256/512 인자 경계와 폭순환 포함. 전체테스트 및 glyph704스트림 회귀 통과.
 - 9602/9802의 실제 콜백 통합과 구분선/전체frame, 최종픽셀·음향은 남았다. docs/analysis/formatted-text.md 참고.
 
+## 2026-10-07 — 스테이지 그룹9..18 메뉴 이벤트
+- 이전 turn은 상태형포맷터289조건과 glyph704스트림을 검증한 progress다.
+- native978a/9802의 그룹선택·닫기·FOR/name 출력을 이벤트디스패처와 기존카탈로그/포맷터에 연결했다.
+- 비어있는그룹의 이름pointer0은 원본vector prefix를 MS5D로 보존해 처리한다. 진입stack주소가 포맷터RAM/A2에 남는 효과도 유지한다.
+- 원본1,120조건 전체RAM/ports/A2 일치. parent975조건 회귀와 전체테스트 통과.
+- 9602와 전체행그리기/이동/부모다시그리기의 stage event5 연결, 전체frame/실제stage실행은 남았다. docs/analysis/stage-group-menu.md 참고.
+
 ## 다음 작업
 1. 실제 ROM 애니메이션 스크립트의 참조·경계를 확인하고 런타임 리소스로 추출한다. 분기 등 나머지opcode를 해석해 상태 실행기에 연결한다.
 2. 팔레트·애니메이션·맵 참조 경로를 오브젝트 코드와 연결한다.

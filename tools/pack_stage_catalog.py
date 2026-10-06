@@ -39,6 +39,30 @@ def wrap(data,address):
     return struct.pack('<4s7I',b'MS5D',1,1,address,address,len(data),zlib.crc32(data),0)+data
 
 
+def pack_null_name_prefix(program, source, folder):
+    # The null name pointer reaches the original reset-vector bytes. Keep the
+    # initial zero as well as the bytes read before the following terminator.
+    raw = program[0:4]
+    if raw != bytes.fromhex('0010f300'):
+        raise ValueError('Original fixed-ROM vector prefix changed')
+    packed = wrap(raw, 0)
+    name = 'stage_null_name.ms5d'
+    (folder / name).write_bytes(packed)
+    (folder / 'stage_null_name.manifest.json').write_text(json.dumps({
+        'schema_version': 1, 'id': 'stage-null-name:00000000',
+        'format': 'MS5D', 'version': 1, 'file': name, 'source': source,
+        'source_cpu_address': 0, 'source_rom_offset': 0, 'source_length': 4,
+        'size': len(packed), 'sha256': hashlib.sha256(packed).hexdigest(),
+        'references': {'name_lookup_cpu_address': 0x4827e,
+                       'stage_callback_cpu_address': 0x9802},
+        'scope': 'Raw vector prefix consumed through a null name pointer for '
+                 'empty stage groups 9 through 15. The formatter consumes the '
+                 'initial byte 00 and bytes 10 f3 before the following 00 '
+                 'terminator. This is not an actual intended stage name; '
+                 'the original bytes are preserved without substitution.'
+    }, indent=2) + '\n')
+
+
 def main():
     root=Path(__file__).resolve().parents[1]
     program,source=load_verified_program(root)
@@ -65,6 +89,7 @@ def main():
                 'Opaque18-byte headers and name/control/padding bytes are preserved. '
                 'Referenced gameplay scripts/maps and natural reachability are not yet decoded.'
     },indent=2)+'\n')
+    pack_null_name_prefix(program, source, folder)
     print('Packed stage catalog:',len(groups),'groups;',sum(len(g['records']) for g in groups),'records')
 
 

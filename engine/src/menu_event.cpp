@@ -2,6 +2,7 @@
 #include "ms5/menu_border.h"
 #include "ms5/menu_descriptor.h"
 #include "ms5/menu_debug.h"
+#include "ms5/stage_group_menu.h"
 #include "ms5/menu_stack.h"
 #include "ms5/object_restart.h"
 #include <new>
@@ -15,7 +16,7 @@ std::uint32_t read_u32(const std::vector<std::uint8_t>& ram, std::size_t at) {
 bool supported(std::uint32_t callback) {
     return callback==0U || callback==0x9488U || callback==0x949aU ||
            callback==0x94b8U || callback==0x94d6U || callback==0x950cU ||
-           callback==0x9532U || callback==0x9aa8U;
+           callback==0x9532U || callback==0x9aa8U || callback==0x9802U;
 }
 void close_menu(std::vector<std::uint8_t>& ram, MenuEventResult& result) {
     ram[0x7f1bU]=2U;
@@ -31,7 +32,8 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
                          std::uint16_t event, std::uint16_t initial_line,
                          MenuEventResult& result,
                          std::vector<VideoPortWrite>& writes, std::string& error,
-                         const FixedDataResource* font) {
+                         const FixedDataResource* font,
+                         const StageGroupMenuContext* stage_context) {
     bool covered=false;
     if (!menu_position_occluded(ram,0x7000U,covered,error)) return false;
     const std::uint32_t current=read_u32(ram,0x7f12U);
@@ -53,7 +55,10 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
         std::vector<VideoPortWrite> pending;
         MenuEventResult outcome;
         outcome.a2=current;
-        if (callback==0x9aa8U) {
+        if (callback==0x9802U) {
+            if (!dispatch_stage_group_menu(candidate,resource,font,stage_context,event,
+                                            outcome.a2,pending,error)) return false;
+        } else if (callback==0x9aa8U) {
             std::uint16_t local_line=initial_line;
             if (!dispatch_debug_menu(candidate,resource,font,event,local_line,
                                      outcome.a2,pending,error)) return false;
