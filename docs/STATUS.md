@@ -291,6 +291,13 @@
 - 강제 양방향 상태전환 포함68시퀀스1632호출에서 원본/C++ 전체RAM·carry 일치. make all test 통과.
 - 이 경로의 composition group·팔레트·자연생성 경로 연결은 남았다. docs/analysis/animation-branch-resource.md 참고.
 
+## 2026-10-07 — 분기 오브젝트의 composition 연결
+- 이전 turn은 실제양방향루프의1632회 리소스실행을 검증한 progress다.
+- 두 initializer에서 groupF2 설정을 확인하고57개 MS5C 의존리소스를 추출했다.
+- 원본 initializer prefix 두 종류를 실행해 palette source ID 3종씩과 slot 할당을 기록했다. C++ allocator 전체복원은 아직 아니다.
+- 원본/C++ animation1632회 및 prepare/refresh3264단계 RAM·비디오 쓰기 비교를 확장했다. 자연생성·palette lifecycle·픽셀화면은 미완료다.
+- 상세근거 docs/analysis/branch-object-resources.md.
+
 ## 다음 작업
 1. 실제 ROM 애니메이션 스크립트의 참조·경계를 확인하고 런타임 리소스로 추출한다. 분기 등 나머지opcode를 해석해 상태 실행기에 연결한다.
 2. 팔레트·애니메이션·맵 참조 경로를 오브젝트 코드와 연결한다.
