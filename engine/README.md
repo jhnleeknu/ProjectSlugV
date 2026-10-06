@@ -107,3 +107,13 @@ make build/produce_sprite_queue build/prepare_sprite_queue build/refresh_sprite_
 ```
 
 `produce_sprite_queue init INPUT OUTPUT`은64KiB RAM에 원본 큐 초기화를 적용한다. 슬롯 범위는0xffff로 초기화되므로 표시 전에 구성해야 한다. `produce_sprite_queue submit INPUT OUTPUT STATUS D0 D1 D5 D7`의 status는 BE32 Accepted0/Clipped1/Full2/Waiting3이다. 엔진은 initialize_sprite_queue와 submit_sprite API를 사용한다. Waiting은 재개 가능한 코루틴이나 실제 대기 구현이 아니며 원본 대기 조건의 관찰 결과다.
+
+슬롯 영역 설정 및 비활성 영역 검증:
+
+```sh
+make build/configure_sprite_pool
+.venv/bin/python tools/verify_sprite_pool.py
+.venv/bin/python tools/verify_sprite_pipeline.py --disabled-pool
+```
+
+`configure_sprite_pool INPUT OUTPUT SELECT LOWER UPPER`는 원본 설정 함수의 메모리 효과를 적용한다. SELECT=0은 첫 영역이고 다른16bit값은 두 번째 영역이다. 초기화된 all-ffff 영역은 비활성이며 준비·갱신이 이를 보존한다. API는 `configure_sprite_pool`이다. 원본 setter는 혼합 sentinel도 만들 수 있으나 dispatcher는 유효 범위 또는 완전 비활성 상태만 지원한다.

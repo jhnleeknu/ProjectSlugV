@@ -37,6 +37,8 @@ def model(root, directory, initial):
         if word(ram, record+4) != 0xffff or style & 255:
             raise ValueError('Unsupported dispatch')
         identifier = int.from_bytes(ram[record+8:record+12], 'big')&0x7fffff
+        if ram[pool:pool+8] == bytes([255])*8:
+            continue
         path = directory/('%06x.raw.bin' % identifier)
         output = directory/'emission.bin'
         first, limit = word(ram, pool+current), word(ram, pool+(6 if forward else 4))
@@ -60,12 +62,13 @@ def model(root, directory, initial):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--cpp', action='store_true')
+    parser.add_argument('--disabled-pool', action='store_true')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     program, source = load_verified_program(root)
     if source['sha256'] != '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f':
         raise ValueError('Unsupported ROM')
-    directory = root/'artifacts/sprite_prepare_queue'
+    directory = root/('artifacts/sprite_prepare_disabled' if args.disabled_pool else 'artifacts/sprite_prepare_queue')
     directory.mkdir(parents=True, exist_ok=True)
     for identifier in (0x2152, 0x2952):
         _, _, data = resolve(program, identifier)
@@ -97,6 +100,8 @@ def main():
                         put(ram, 0x9150, 0x1234)
                         for pool, lower, upper in ((0x8d3e, 0, 190), (0x8d46, 190, 380)):
                             ram[pool:pool+8] = struct.pack('>4H', lower, upper, lower+cache, lower+cache)
+                        if args.disabled_pool:
+                            ram[0x8d46:0x8d4e] = bytes([255])*8
                         normal_count = delayed_count = 0
                         for index in range(count):
                             offset = 12*(index+1)
@@ -153,7 +158,7 @@ def main():
                                         'cache': cache, 'writes': len(writes), 'ram_sha256': hashlib.sha256(actual_ram).hexdigest(),
                                         'video_sha256': hashlib.sha256(b''.join(struct.pack('>I', w) for w in writes)).hexdigest()})
     (directory/'analysis.json').write_text(json.dumps({'source_program_sha256': source['sha256'], 'entry': 0x16bba,
-        'cases': len(results), 'cpp_verified': args.cpp, 'cpp_prepare_refresh_chain_verified': args.cpp, 'all_ram_and_video_equal': True,
+        'cases': len(results), 'cpp_verified': args.cpp, 'disabled_pool': args.disabled_pool, 'cpp_prepare_refresh_chain_verified': args.cpp, 'all_ram_and_video_equal': True,
         'scope': 'Complete preparation for normal rectangles with synchronized consumer; no concurrent wait, CPU flags or timed device claim.', 'results': results}, indent=2)+'\n')
     print('Preparation RAM and video match:', len(results), 'cases')
 

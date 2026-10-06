@@ -16,7 +16,7 @@ enum SpriteSubmitStatus {
 
 // Memory effects of CPU 0x00ccd6. RAM maps CPU 0x100000 and must contain
 // exactly 65536 bytes. Initializes the default callback, cursors, ready byte,
-// record offsets and both unsupported pool sentinels. Direction is preserved.
+// record offsets and both disabled pool sentinels. Direction is preserved.
 bool initialize_sprite_queue(std::vector<std::uint8_t>& ram,
                              std::string& error);
 

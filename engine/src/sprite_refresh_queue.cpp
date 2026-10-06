@@ -45,8 +45,10 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
         const std::uint16_t upper = word(ram, pool + 2);
         const std::uint16_t left = word(ram, pool + 4);
         const std::uint16_t right = word(ram, pool + 6);
-        if (lower > upper || upper > 380U || left < lower || left > upper ||
-            right < lower || right > upper) {
+        const bool disabled = lower == 0xffffU && upper == 0xffffU &&
+                              left == 0xffffU && right == 0xffffU;
+        if (!disabled && (lower > upper || upper > 380U || left < lower || left > upper ||
+                          right < lower || right > upper)) {
             error = "refresh queue pool bounds or current/cached slots are invalid";
             return false;
         }
@@ -112,9 +114,10 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
         const std::size_t pool = pools[(style & 4U) != 0 ? 1 : 0];
         const std::uint16_t u = static_cast<std::uint16_t>(word(updated, record + 2) >> 6);
         const std::uint16_t v = static_cast<std::uint16_t>(packed >> 23);
-        const std::uint16_t first = word(updated, pool + current_offset);
-        const std::uint16_t limit = word(updated, pool + (forward ? 2U : 0U));
-        const std::uint16_t cached = word(updated, pool + cached_offset);
+        const bool disabled = word(updated, pool) == 0xffffU;
+        const std::uint16_t first = disabled ? 0U : word(updated, pool + current_offset);
+        const std::uint16_t limit = disabled ? 0U : word(updated, pool + (forward ? 2U : 0U));
+        const std::uint16_t cached = disabled ? 0U : word(updated, pool + cached_offset);
         std::uint16_t next_slot = 0;
         std::vector<SpriteWrite> record_writes;
         const bool emitted = forward
@@ -127,8 +130,10 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
         if (!emitted) {
             return false;
         }
-        put(updated, pool + current_offset, next_slot);
-        output.insert(output.end(), record_writes.begin(), record_writes.end());
+        if (!disabled) {
+            put(updated, pool + current_offset, next_slot);
+            output.insert(output.end(), record_writes.begin(), record_writes.end());
+        }
     }
     for (unsigned int index = 0; index < 2; ++index) {
         const std::size_t pool = pools[index];

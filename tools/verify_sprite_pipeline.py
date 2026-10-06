@@ -1,22 +1,26 @@
 """Compare C++ init/submit/prepare/refresh over consecutive controlled frames."""
+import argparse
 import hashlib
 import json
 from pathlib import Path
 import struct
 import subprocess
 from unicorn import UC_HOOK_MEM_WRITE
-from unicorn.m68k_const import UC_M68K_REG_A5, UC_M68K_REG_A7, UC_M68K_REG_PC, UC_M68K_REG_D0, UC_M68K_REG_D1, UC_M68K_REG_D5, UC_M68K_REG_D7
+from unicorn.m68k_const import UC_M68K_REG_A5, UC_M68K_REG_A7, UC_M68K_REG_PC, UC_M68K_REG_D0, UC_M68K_REG_D1, UC_M68K_REG_D2, UC_M68K_REG_D5, UC_M68K_REG_D7
 from disassemble_program import load_verified_program
 from verify_object_reset import make_cpu
 from analyze_sprite_sort import put
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--disabled-pool", action="store_true")
+    args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     program, source = load_verified_program(root)
     if source['sha256'] != '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f':
         raise ValueError('Unsupported ROM')
-    directory = root/'artifacts/sprite_pipeline'
+    directory = root/('artifacts/sprite_pipeline_disabled' if args.disabled_pool else 'artifacts/sprite_pipeline')
     directory.mkdir(parents=True, exist_ok=True)
     inp, out, trace = directory/'input.bin', directory/'output.bin', directory/'trace.bin'
     resources = [str(root/'extracted/runtime'/('composition_%06x.ms5c'%i)) for i in (0x2152, 0x2952)]
@@ -49,13 +53,23 @@ def main():
             state = bytearray(out.read_bytes())
             if state != bytes(cpu.mem_read(0x100000, 65536)):
                 raise ValueError('Pipeline init mismatch')
-            # Controlled slot configuration; runtime setup/call scheduling is not inferred here.
+            # Controlled arguments passed through original and C++ pool setters.
             state[0x8d3c] = direction
             for at in (0x8d34, 0x8d36, 0x8d38, 0x8d3a):
                 put(state, at, start)
-            for pool, lower, upper in ((0x8d3e, 0, 190), (0x8d46, 190, 380)):
-                state[pool:pool+8] = struct.pack('>4H', lower, upper, lower, upper)
             cpu.mem_write(0x100000, bytes(state))
+            for selector, lower, upper in ((0, 0, 190), (1, 190, 380)):
+                if selector == 1 and args.disabled_pool:
+                    continue
+                for reg, value in ((UC_M68K_REG_D0,selector),(UC_M68K_REG_D1,lower),(UC_M68K_REG_D2,upper)):
+                    cpu.reg_write(reg,value)
+                run(0xcd1c)
+                inp.write_bytes(state)
+                subprocess.run([str(root/'build/configure_sprite_pool'), str(inp), str(out),
+                                str(selector), str(lower), str(upper)], check=True)
+                state = out.read_bytes()
+                if state != bytes(cpu.mem_read(0x100000,65536)):
+                    raise ValueError('Pipeline pool configuration differs')
             for frame, count in enumerate((4, 20, 0, 7)):
                 for index in range(count):
                     u, v = (0x2a0 if index%5 == 4 else 160), 384+frame
@@ -86,7 +100,7 @@ def main():
                                     'writes':len(events),'ram_sha256':hashlib.sha256(state).hexdigest(),
                                     'video_sha256':hashlib.sha256(expected_trace).hexdigest()})
     (directory/'verification.json').write_text(json.dumps({'source_program_sha256':source['sha256'],
-        'independent_sequences':4,'frames_per_sequence':4,'submissions':submissions,'stages':len(records),
+        'disabled_pool':args.disabled_pool,'independent_sequences':4,'frames_per_sequence':4,'submissions':submissions,'stages':len(records),
         'all_ram_and_video_equal':True,'scope':'Controlled four-frame sequences with default callback and two normal rectangle resources. No actual vblank, interrupt concurrency, pixel or whole-game timing claim.', 'results':records},indent=2)+'\n')
     print('Producer/prepare/refresh pipeline matches:',submissions,'submissions,',len(records),'stages')
 

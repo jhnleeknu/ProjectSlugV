@@ -40,6 +40,8 @@ def model(root, directory, initial):
         identifier = packed & 0x7fffff
         u = word(ram, record+2) >> 6
         v = (packed >> 23) & 511
+        if ram[pool:pool+8] == bytes([255])*8:
+            continue
         output = directory/'composition.bin'
         resource = root/'extracted/runtime'/('composition_%06x.ms5c' % identifier)
         first = word(ram, pool+(4 if forward else 6))
@@ -70,12 +72,13 @@ def model(root, directory, initial):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cpp", action="store_true")
+    parser.add_argument("--disabled-pool", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     program, source = load_verified_program(root)
     if source['sha256'] != '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f':
         raise ValueError('Unsupported program')
-    directory = root/'artifacts/sprite_refresh_queue'
+    directory = root/('artifacts/sprite_refresh_disabled' if args.disabled_pool else 'artifacts/sprite_refresh_queue')
     directory.mkdir(parents=True, exist_ok=True)
     cpu = make_cpu(program)
     cpu.mem_map(0x200000, 0x200000)
@@ -101,6 +104,8 @@ def main():
                         put(ram, 0x8d36, (start+2*count)&0x1fe)
                         for pool, lower, upper in ((0x8d3e, 0, 190), (0x8d46, 190, 380)):
                             ram[pool:pool+8] = struct.pack('>4H', lower, upper, lower+cache, lower+cache)
+                        if args.disabled_pool:
+                            ram[0x8d46:0x8d4e] = bytes([255])*8
                         for index in range(count):
                             offset = 12*(index+1)
                             put(ram, 0x8b34+((start+index*2)&0x1fe), offset)
@@ -136,7 +141,7 @@ def main():
                                         'cache': cache, 'writes': len(writes), 'ram_sha256': hashlib.sha256(actual_ram).hexdigest(),
                                         'video_sha256': hashlib.sha256(b''.join(struct.pack('>I', w) for w in writes)).hexdigest()})
     (directory/'analysis.json').write_text(json.dumps({'source_program_sha256': source['sha256'],
-        'entry': 0x16cfa, 'cpp_verified': args.cpp, 'cases': len(results), 'all_ram_and_video_equal': True,
+        'entry': 0x16cfa, 'cpp_verified': args.cpp, 'disabled_pool': args.disabled_pool, 'cases': len(results), 'all_ram_and_video_equal': True,
         'scope': 'Python dispatcher model using verified C++ MS5C emitters; first normal rectangular dispatch path, two pools and ring wrap. C++ dispatcher additionally checked with --cpp; no timed hardware claim.', 'results': results}, indent=2)+'\n')
     print('Full refresh dispatcher RAM and video match:', len(results), 'cases')
 
