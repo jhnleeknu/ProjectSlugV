@@ -251,6 +251,12 @@
 - 원본ROM 직접실행과C++ MS5A로드 경로가96호출·192비디오단계의RAM·carry·출력에서일치했다. make all test 통과.
 - 자연게임도달성·팔레트연결·외부스크립트분기·나머지opcode는미완료다. 근거:docs/analysis/animation-rom-loop.md.
 
+## 2026-10-07 — 애니메이션 조건 분기 분석
+- 이전 turn은 실제ROM 루프추출과C++ 실행검증을완료한progress다.
+- opcode0c의조건byte·선택자word·대상주소형식과원본필드테이블4a76c를확인했다.
+- 확인한32선택자prefix에서1536조건의분기포인터·전체RAM·반환carry가일치했다. 조건은byte동등성이아닌zero/nonzero 동등성이다.
+- C++ 통합과테이블전체경계·실제참조는미완료다. 근거 docs/analysis/animation-field-branch.md 및 tools/analyze_animation_branch.py.
+
 ## 다음 작업
 1. 실제 ROM 애니메이션 스크립트의 참조·경계를 확인하고 런타임 리소스로 추출한다. 분기 등 나머지opcode를 해석해 상태 실행기에 연결한다.
 2. 팔레트·애니메이션·맵 참조 경로를 오브젝트 코드와 연결한다.
