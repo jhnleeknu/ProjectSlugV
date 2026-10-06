@@ -47,7 +47,8 @@ def main():
                 if out.read_bytes()!=normal_expected or outcolors.read_bytes()!=normal_bank0+palette or bank.read_bytes()!=bytes([int(display!=0)]):raise ValueError('C++ fill-to-normal transition mismatch')
             rows.append({'seed':seed,'display':display,'palette_sha256':hashlib.sha256(palette).hexdigest()})
     base=int.from_bytes(program[0x200004:0x200008],'big');lookup=int.from_bytes(program[0x200008:0x20000c],'big');setups=[]
-    for identifier in (0,1,15,1023,1024,2047,2048,0x897,65535):
+    identifiers=list(range(2048))+[2048,4096,65535] if args.cpp else (0,1,15,1023,1024,2047,2048,0x897,65535)
+    for identifier in identifiers:
         ram=bytearray(65536);ram[0x7da2:0x7dc2]=bytes([0xa5])*32;ram[0x10:0x12]=b'\xbe\xef'
         expected=bytearray(ram);offset=(identifier*32)&65535;offset=offset if offset<32768 else offset-65536
         address=base+offset
@@ -57,10 +58,14 @@ def main():
         expected[0x7dea:0x7dec]=bytes.fromhex('2000');expected[0x10:0x12]=b'\0\0'
         cpu.mem_write(0x100000,bytes(ram));cpu.reg_write(UC_M68K_REG_D0,identifier);call(cpu,0x8b64)
         if bytes(cpu.mem_read(0x100000,65536))!=expected:raise ValueError('Fill setup mismatch')
+        if args.cpp:
+            inp.write_bytes(ram)
+            subprocess.run([str(root/'build/setup_palette_fill'),str(inp),str(root/'extracted/runtime/palette_fill.ms5p'),str(out),str(identifier)],check=True)
+            if out.read_bytes()!=expected:raise ValueError('C++ resource-backed fill setup mismatch')
         setups.append({'input_id':identifier,'source_rom_offset':address,'source_displacement':offset})
     folder=root/'artifacts/palette_fill';folder.mkdir(parents=True,exist_ok=True)
     (folder/'verification.json').write_text(json.dumps({'source':source,'fill_cases':len(rows),'cpp_verified':args.cpp,'cpp_normal_transition_cases':len(rows) if args.cpp else 0,'setup_cases':len(setups),'all_ram_palette_equal':True,
-        'scope':'Original-only valid initializer counter2000 and logical bank1 mapped at400000. Setup word displacement is verified, not assumed identical to normal source ID addressing. Optional C++ comparison covers both banks and following normal transfers. Other counter values and device timing pending.', 'fill_results':rows,'setup_results':setups},indent=2)+'\n')
+        'scope':'Verified initializer counter2000 and logical bank1 mapped at400000. Setup word displacement is verified, not assumed identical to normal source ID addressing. C++ mode checks all 2048 canonical fill resource selectors and three aliases. Optional C++ comparison covers both banks and following normal transfers. Other counter values and device timing pending.', 'fill_results':rows,'setup_results':setups},indent=2)+'\n')
     print('Original palette fill matches:',len(rows),'fills;',len(setups),'setups')
 
 

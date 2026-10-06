@@ -123,3 +123,11 @@ kind2 하위 header byte의 비영 값은 표시 소비기에서 출력에 영�
 ASCII MS5D + LE32 7개(version1,kind1,CPUbase,ROMoffset,payloadsize,CRC32,reserved0)의32byte 헤더다. CPUbase=ROMoffset<100000이고payload는1byte이상이며고정ROM끝을넘지않는다. byte는원본그대로보존하며파일길이는정확히32+payloadsize다. MS5A와주소표현을공유하되MS5D는명령스트림이아닌불변데이터창이다.
 
 `pack_animation_data.py`는필드테이블후보범위4a76c..4a88e(290byte)와callback1e의byte인덱스조회창6431a..6471a(1024byte)를포장한다. 뒤의창이하나의논리테이블전체라는주장은하지않으며manifest에이차이를명시한다. 실행기는필요한BE16/BE32읽기가제공된한창안에완전히들어가야한다. 창의중첩은거부하고인접창을자동결합하지않는다.
+
+### MS5P 특수 채우기 조회 프로필
+
+바이너리 MS5P version1/68바이트 레코드를 그대로 사용하되 카탈로그 식별자를 `mslug5.palette-fill-selectors`, lookup_profile을 `fill_signed_word`로 분리한다. 파일은 `palette_fill.ms5p`다. 이 카탈로그의 ID는 일반 source palette ID가 아니라 원본8b64 입력의 하위11비트(0..2047)다. 안정적인 리소스 키는 `palette-fill:<선택값>`이며 일반 팔레트 카탈로그와 합치지 않는다.
+
+원본 주소는 base+signed16((selector*32)&ffff)이며 각 레코드 manifest에 실제 ROM offset을 남긴다. 단일 색 변환은 기존4718 규칙과 같고 raw16워드와 hardware16워드를 모두 보존한다. converted word0은0이지만 setup API는 목적지 word0을 덮어쓰지 않는다.
+
+`setup_palette_fill`은 전용 카탈로그의 완전한2048개 정렬ID 구성을 요구한다. 범위 전체를 추출했다는 사실이 모든 선택값의 실제 게임 사용을 뜻하지는 않는다. 카탈로그 프로필은 manifest/API 계약이며 MS5P 바이너리 magic 자체가 프로필을 구분하는 것은 아니다.
