@@ -53,6 +53,18 @@
     {
       "path": "src/mame/snk/neogeo_spr.cpp",
       "sha256": "1ad3de4bd399c4dff3ea131f181e45746db623b4feac320af3eab807e93f2668"
+    },
+    {
+      "path": "src/mame/snk/neogeo_v.cpp",
+      "sha256": "0532050c3e4c6543979f6145223f69b966bfb8db8ab10010dbcd63ee10689a7d"
+    },
+    {
+      "path": "src/emu/video/resnet.cpp",
+      "sha256": "127fe8e4d2559d1ccb7c12b44e4ac34f2ea6e00d868da9951c54fc87b1aea2f9"
+    },
+    {
+      "path": "src/emu/video/resnet.h",
+      "sha256": "f46a0423b94a21823475a6a7072efbf36be5fb4f4ac89cf1dfbd014b7a861926"
     }
   ]
 }

@@ -92,6 +92,14 @@
 - 실제 화면·fixed source 선택·RGB 변환·공통 스트림 리소스 연결은 남아 있다.
 - 분석과 재현: docs/analysis/fixed-text.md, tools/verify_fixed_text.py.
 
+## 2026-10-06 — 추출 타일·팔레트를 소비하는 고정 레이어
+- C++ fixed renderer를 구현하여 MS5T와 MS5P를 실제로 사용했다.
+- 원본CPU와 일치한 문자 write trace에서 320×256 frame을 생성했다.
+- raw fixed ROM을 독립 해석한81920픽셀 전체가 C++ 하드웨어word frame과 일치했다.
+- pinned MAME 저항망 원본 함수로32×4 색상 조회표를 생성했다.
+- 확인용 PNG를 열어 경고문 배치를 점검했다. PNG는 런타임 입력이 아니다.
+- 실제 부팅 화면·fixed source 선택·sprite 합성·C++ RGB 계층은 아직 남아 있다.
+
 ## 다음 작업
 1. 콜백 호출 규약과 목록 변경 루틴을 C++로 재구성하고 원본 CPU 실행과 비교한다.
 2. 팔레트·애니메이션·맵 참조 경로를 오브젝트 코드와 연결한다.
