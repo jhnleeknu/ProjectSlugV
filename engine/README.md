@@ -88,3 +88,12 @@ make build/radix_sprite_queue
 ```
 
 `radix_sprite_queue INPUT OUTPUT`은64KiB RAM에서 준비 끝과 생산 끝 사이를 정렬한다. 지연 큐 정렬과는 다른 단계이며, 프로젝트에서는 `radix_sort_sprite_queue` API를 사용한다. 결과 순서뿐 아니라 원본 작업용 배열의 변경도 보존한다.
+
+준비→갱신 연속 경로:
+
+```sh
+make build/prepare_sprite_queue build/refresh_sprite_queue
+.venv/bin/python tools/analyze_sprite_prepare_queue.py --cpp
+```
+
+`prepare_sprite_queue INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]`는 MS5C를 읽어 지연 병합·정렬·명령 준비를 수행한다. 출력 명령은 BE16 주소/값 쌍이며 빈 결과는0바이트다. 이 출력 RAM을 `refresh_sprite_queue`에 전달할 수 있다. 준비 API는 읽기와 준비 cursor가 같을 때만 실행하며 소비 중이면 오류를 반환한다. 이 조건을 무시하고 busy wait를 대신 처리한 것으로 간주하지 않는다.
