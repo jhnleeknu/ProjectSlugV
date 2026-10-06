@@ -50,7 +50,7 @@ int main() {
     ram = fixture(); put(ram, 0x8d34, 2); reject(ram, resources);
     ram = fixture(); put(ram, 0x8d38, 2); reject(ram, resources);
     ram = fixture(); put(ram, 0x914e, 512); reject(ram, resources);
-    ram = fixture(); put(ram, 0x7f34+24+6, 0x1501); reject(ram, resources);
+    ram = fixture(); put(ram, 0x7f34+24+6, 0x1508); reject(ram, resources);
     ram = fixture(); put(ram, 0x7f34+24+2, 160*64+1); reject(ram, resources);
     ram = fixture(); put(ram, 0x7f34+24+10, 0x2952); reject(ram, resources);
     ram = fixture(); ram.pop_back(); reject(ram, resources);

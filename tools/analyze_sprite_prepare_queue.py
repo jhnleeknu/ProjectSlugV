@@ -34,7 +34,7 @@ def model(root, directory, initial):
         style = word(ram, record+6)
         pool = 0x8d46 if style & 4 else 0x8d3e
         style &= ~4
-        if word(ram, record+4) != 0xffff or style & 255:
+        if word(ram, record+4) != 0xffff or style & 252:
             raise ValueError('Unsupported dispatch')
         identifier = int.from_bytes(ram[record+8:record+12], 'big')&0x7fffff
         if ram[pool:pool+8] == bytes([255])*8:
@@ -42,12 +42,9 @@ def model(root, directory, initial):
         path = directory/('%06x.raw.bin' % identifier)
         output = directory/'emission.bin'
         first, limit = word(ram, pool+current), word(ram, pool+(6 if forward else 4))
-        if forward:
-            command = [str(root/'build/emit_composition'), str(path), str(output),
-                       str(word(ram, record+2)>>6), str(style), str(first), str(limit)]
-        else:
-            command = [str(root/'build/emit_composition_reverse'), str(path), str(output),
-                       str(word(ram, record+2)>>6), '0', str(style), str(first), str(limit), '0', 'normal']
+        command = [str(root/'build/emit_composition_variant'), str(path), str(output),
+                   str(word(ram, record+2)>>6), '0', str(style), str(first), str(limit),
+                   '0', 'forward' if forward else 'reverse', 'normal']
         subprocess.run(command, check=True)
         data = output.read_bytes()
         put(ram, pool+current, int.from_bytes(data[:4], 'big'))

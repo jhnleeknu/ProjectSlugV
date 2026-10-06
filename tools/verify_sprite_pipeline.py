@@ -15,12 +15,15 @@ from analyze_sprite_sort import put
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--disabled-pool", action="store_true")
+    parser.add_argument("--flips", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     program, source = load_verified_program(root)
     if source['sha256'] != '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f':
         raise ValueError('Unsupported ROM')
     directory = root/('artifacts/sprite_pipeline_disabled' if args.disabled_pool else 'artifacts/sprite_pipeline')
+    if args.flips:
+        directory = directory.with_name(directory.name+'_flips')
     directory.mkdir(parents=True, exist_ok=True)
     inp, out, trace = directory/'input.bin', directory/'output.bin', directory/'trace.bin'
     resources = [str(root/'extracted/runtime'/('composition_%06x.ms5c'%i)) for i in (0x2152, 0x2952)]
@@ -75,6 +78,8 @@ def main():
                     u, v = (0x2a0 if index%5 == 4 else 160), 384+frame
                     d0 = (u<<16)|v
                     d1 = (0xffff1500 if index%2 == 0 else 0xffff1604) | (64 if index%3 == 0 else 0)
+                    if args.flips:
+                        d1 |= (index+frame)&3
                     d5 = (count-index)*13
                     d7 = 0x2152 if index%2 == 0 else 0x2952
                     for reg, value in ((UC_M68K_REG_D0,d0),(UC_M68K_REG_D1,d1),(UC_M68K_REG_D5,d5),(UC_M68K_REG_D7,d7)):
@@ -100,7 +105,7 @@ def main():
                                     'writes':len(events),'ram_sha256':hashlib.sha256(state).hexdigest(),
                                     'video_sha256':hashlib.sha256(expected_trace).hexdigest()})
     (directory/'verification.json').write_text(json.dumps({'source_program_sha256':source['sha256'],
-        'disabled_pool':args.disabled_pool,'independent_sequences':4,'frames_per_sequence':4,'submissions':submissions,'stages':len(records),
+        'flips':args.flips,'disabled_pool':args.disabled_pool,'independent_sequences':4,'frames_per_sequence':4,'submissions':submissions,'stages':len(records),
         'all_ram_and_video_equal':True,'scope':'Controlled four-frame sequences with default callback and two normal rectangle resources. No actual vblank, interrupt concurrency, pixel or whole-game timing claim.', 'results':records},indent=2)+'\n')
     print('Producer/prepare/refresh pipeline matches:',submissions,'submissions,',len(records),'stages')
 

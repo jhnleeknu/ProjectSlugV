@@ -34,7 +34,7 @@ def model(root, directory, initial):
         style = word(ram, record+6)
         pool = 0x8d46 if style & 4 else 0x8d3e
         style &= ~4
-        if word(ram, record+4) != 0xffff or style & 3:
+        if word(ram, record+4) != 0xffff or style & 252:
             raise ValueError('Outside supported normal dispatcher path')
         packed = int.from_bytes(ram[record+8:record+12], 'big')
         identifier = packed & 0x7fffff

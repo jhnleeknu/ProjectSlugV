@@ -13,7 +13,7 @@ namespace ms5 {
 // mutation instead of simulating the original wait. Normal plus deferred entries
 // must match the producer end and fit the 255-entry unambiguous pending ring.
 // A pool containing four 0xffff words is disabled and emits no writes.
-// Records require marker 0xffff, style low byte 0 or 4 and X low six bits zero.
+// Records require marker 0xffff, style low byte 0..7 and X low six bits zero.
 // Allocation starts at the physical pool boundary and stops at its opposite
 // cached slot boundary. Success publishes producer end as prepared/normal end,
 // sets ready byte to 0xff, clears RAM word 0x10 and replaces writes. Direction

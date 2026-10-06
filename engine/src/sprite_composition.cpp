@@ -22,7 +22,7 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
                     std::uint16_t coordinate_u, std::uint16_t coordinate_v,
                     std::uint16_t style, std::uint16_t first_slot,
                     std::uint16_t limit, bool refresh, bool reverse,
-                    std::uint16_t cached_boundary,
+                    std::uint16_t cached_boundary, std::uint16_t geometry_flip,
                     std::vector<ms5::SpriteWrite>& writes,
                     std::uint16_t& next_slot, std::string& error) {
     error.clear();
@@ -61,9 +61,15 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
         width * (2U + height * 2U + (refresh ? 1U : 0U))));
     const std::uint32_t dx = read_be_word(data, 2);
     const std::uint32_t dy = read_be_word(data, 4);
-    const std::uint32_t yword =
-        (((static_cast<std::uint32_t>(coordinate_v) - dy) * 128U) &
-         0xffffU) | height;
+    // Unsigned arithmetic preserves the original low-word wrapping even when
+    // offsets exceed coordinates. Geometry is explicit so the normal APIs keep
+    // their established behavior for style low bits.
+    const bool horizontal = (geometry_flip & 1U) != 0;
+    const bool vertical = (geometry_flip & 2U) != 0;
+    const std::uint32_t ypos = vertical
+        ? static_cast<std::uint32_t>(coordinate_v) + dy - 1U + height * 16U
+        : static_cast<std::uint32_t>(coordinate_v) - dy;
+    const std::uint32_t yword = ((ypos * 128U) & 0xffffU) | height;
     std::uint16_t slot = first_slot;
     for (std::uint32_t column = 0; column < width; ++column) {
         // Both allocation directions test their bound before clipping; source
@@ -71,9 +77,12 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
         if (reverse ? slot <= limit : slot >= limit) {
             break;
         }
-        const std::uint32_t xword =
-            (dx * 64U + static_cast<std::uint32_t>(coordinate_u) * 64U +
-             column * 0x400U) & 0xffffU;
+        const std::uint32_t xposition = horizontal
+            ? (static_cast<std::uint32_t>(coordinate_u) - dx) * 64U -
+              (column + 1U) * 0x400U
+            : (static_cast<std::uint32_t>(coordinate_u) + dx) * 64U +
+              column * 0x400U;
+        const std::uint32_t xword = xposition & 0xffffU;
         if (((xword + 0x200U) & 0xffffU) >= 0x5000U) {
             continue;
         }
@@ -94,8 +103,9 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
         for (std::uint32_t row = 0; row < height; ++row) {
             const std::size_t offset = 8U + (column * height + row) * 4U;
             const std::uint32_t attribute = read_be_word(data, offset);
+            const std::uint32_t destination_row = vertical ? height - 1U - row : row;
             const std::uint32_t address =
-                (static_cast<std::uint32_t>(slot) + 1U) * 64U + row * 2U;
+                (static_cast<std::uint32_t>(slot) + 1U) * 64U + destination_row * 2U;
             append_write(result, address + 1U,
                          ((attribute + (style & 0xff00U)) & 0xffffU) ^
                          (style & 0x00ffU));
@@ -120,7 +130,7 @@ bool emit_sprite_rectangle(const std::vector<std::uint8_t>& data,
                            std::vector<SpriteWrite>& writes,
                            std::uint16_t& next_slot, std::string& error) {
     return emit_rectangle(data, coordinate_u, 0, style, first_slot, limit,
-                          false, false, 0, writes, next_slot, error);
+                          false, false, 0, 0, writes, next_slot, error);
 }
 
 bool emit_sprite_rectangle_refresh(const std::vector<std::uint8_t>& data,
@@ -134,7 +144,7 @@ bool emit_sprite_rectangle_refresh(const std::vector<std::uint8_t>& data,
                                    std::uint16_t& next_slot,
                                    std::string& error) {
     return emit_rectangle(data, coordinate_u, coordinate_v, style, first_slot,
-                          limit, true, false, cached_end, writes, next_slot, error);
+                          limit, true, false, cached_end, 0, writes, next_slot, error);
 }
 
 bool emit_sprite_rectangle_reverse(const std::vector<std::uint8_t>& data,
@@ -146,7 +156,7 @@ bool emit_sprite_rectangle_reverse(const std::vector<std::uint8_t>& data,
                                    std::uint16_t& next_slot,
                                    std::string& error) {
     return emit_rectangle(data, coordinate_u, 0, style, first_slot, lower,
-                          false, true, 0, writes, next_slot, error);
+                          false, true, 0, 0, writes, next_slot, error);
 }
 
 bool emit_sprite_rectangle_reverse_refresh(
@@ -156,7 +166,19 @@ bool emit_sprite_rectangle_reverse_refresh(
     std::uint16_t cached_begin, std::vector<SpriteWrite>& writes,
     std::uint16_t& next_slot, std::string& error) {
     return emit_rectangle(data, coordinate_u, coordinate_v, style, first_slot,
-                          lower, true, true, cached_begin, writes, next_slot, error);
+                          lower, true, true, cached_begin, 0, writes, next_slot, error);
+}
+
+bool emit_sprite_rectangle_variant(
+    const std::vector<std::uint8_t>& data,
+    std::uint16_t coordinate_u, std::uint16_t coordinate_v,
+    std::uint16_t style, std::uint16_t first_slot, std::uint16_t limit,
+    bool refresh, bool reverse, std::uint16_t cached_boundary,
+    std::vector<SpriteWrite>& writes, std::uint16_t& next_slot,
+    std::string& error) {
+    return emit_rectangle(data, coordinate_u, coordinate_v, style, first_slot,
+                          limit, refresh, reverse, cached_boundary, style & 3U,
+                          writes, next_slot, error);
 }
 
 } // namespace ms5

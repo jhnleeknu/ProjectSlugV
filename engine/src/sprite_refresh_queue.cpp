@@ -87,8 +87,8 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
         const std::size_t record = 0x7f34U + offset;
         const std::uint16_t style = word(updated, record + 6);
         if (word(updated, record + 4) != 0xffffU ||
-            ((style & 0xffU) != 0U && (style & 0xffU) != 4U)) {
-            error = "refresh queue supports only normal rectangle records with style low byte 0 or 4";
+            (style & 0xf8U) != 0U) {
+            error = "refresh queue supports only rectangle records with style low byte in 0..7";
             return false;
         }
         if ((word(updated, record + 2) & 0x3fU) != 0) {
@@ -120,13 +120,9 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
         const std::uint16_t cached = disabled ? 0U : word(updated, pool + cached_offset);
         std::uint16_t next_slot = 0;
         std::vector<SpriteWrite> record_writes;
-        const bool emitted = forward
-            ? emit_sprite_rectangle_refresh(resource->data, u, v,
-                static_cast<std::uint16_t>(style & 0xfffbU), first, limit,
-                cached, record_writes, next_slot, error)
-            : emit_sprite_rectangle_reverse_refresh(resource->data, u, v,
-                static_cast<std::uint16_t>(style & 0xfffbU), first, limit,
-                cached, record_writes, next_slot, error);
+        const bool emitted = emit_sprite_rectangle_variant(resource->data, u, v,
+            static_cast<std::uint16_t>(style & 0xfffbU), first, limit,
+            true, !forward, cached, record_writes, next_slot, error);
         if (!emitted) {
             return false;
         }

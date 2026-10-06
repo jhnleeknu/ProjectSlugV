@@ -66,6 +66,23 @@ bool emit_sprite_rectangle_reverse_refresh(
     std::uint16_t cached_begin, std::vector<SpriteWrite>& writes,
     std::uint16_t& next_slot, std::string& error);
 
+// Single rectangular transform branch. Style bit 0 mirrors column geometry;
+// bit 1 reverses destination rows and changes refresh Y geometry. Source words
+// stay in column-major order, and attributes keep the normal style transform.
+// refresh selects Y/cache handling; reverse selects descending slot allocation.
+// For forward allocation, first_slot <= limit <= 380 and slots below
+// cached_boundary retain X/zoom/tile words on refresh. For reverse allocation,
+// limit <= first_slot <= 380 and slots at or above cached_boundary retain them.
+// The same input/style, clipping, cache-boundary and failure contracts apply.
+// The four normal APIs above continue to use normal geometry for all styles.
+bool emit_sprite_rectangle_variant(
+    const std::vector<std::uint8_t>& data,
+    std::uint16_t coordinate_u, std::uint16_t coordinate_v,
+    std::uint16_t style, std::uint16_t first_slot, std::uint16_t limit,
+    bool refresh, bool reverse, std::uint16_t cached_boundary,
+    std::vector<SpriteWrite>& writes, std::uint16_t& next_slot,
+    std::string& error);
+
 } // namespace ms5
 
 #endif

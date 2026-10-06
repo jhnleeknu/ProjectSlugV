@@ -10,7 +10,7 @@ namespace ms5 {
 // offset ring, alternating traversal, cached columns and trailing Y cleanup.
 // RAM is exactly the 65536-byte work RAM image. Resources have unique exact IDs.
 // A pool containing four 0xffff words is disabled and emits no writes.
-// Ready records require marker 0xffff and style low byte 0 or 4 (pool select).
+// Ready records require marker 0xffff and style low byte 0..7 (H/V flip and pool select).
 // Record X must be producer-aligned: its fixed-point word has low six bits zero.
 // Success replaces writes, sets processed to the original ready bit and clears
 // error. Failure preserves RAM, writes and processed. A non-ready queue skips

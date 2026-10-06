@@ -129,7 +129,7 @@ void disabled_queues() {
                 reject_queue(refresh != 0, ram, missing);
                 put(ram, 0x7f40 + 4, 0); reject_queue(refresh != 0, ram, resources);
                 ram = queue_fixture(forward != 0, pool_index);
-                put(ram, 0x7f40 + 6, 0x1501); reject_queue(refresh != 0, ram, resources);
+                put(ram, 0x7f40 + 6, 0x1508); reject_queue(refresh != 0, ram, resources);
                 ram = queue_fixture(forward != 0, pool_index);
                 put(ram, 0x7f40 + 2, 160 * 64 + 1); reject_queue(refresh != 0, ram, resources);
             }

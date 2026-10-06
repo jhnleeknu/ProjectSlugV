@@ -42,7 +42,7 @@ build/emit_sprite_resource extracted/runtime/composition_002152.ms5c artifacts/s
 .venv/bin/python tools/verify_sprite_refresh.py --runtime-resources
 ```
 
-인자는 입력·출력·U·V·style·첫 slot·상한·준비된 slot 끝이다. 출력은 검증용 명령 기록(BE32 다음 slot, BE16 주소/값 쌍)이며 이미지 리소스가 아니다. 엔진 코드는 CompositionResource와 emit_sprite_rectangle_refresh를 직접 호출한다. 아직 sprite rasterizer 및 전체 게임 루프는 연결되지 않았다.
+인자는 입력·출력·U·V·style·첫 slot·상한·준비된 slot 끝이다. 출력은 검증용 명령 기록(BE32 다음 slot, BE16 주소/값 쌍)이며 이미지 리소스가 아니다. 엔진 코드는 CompositionResource와 emit_sprite_rectangle_variant를 직접 호출한다. 아직 sprite rasterizer 및 전체 게임 루프는 연결되지 않았다.
 
 줄별 하드웨어 스프라이트 선택:
 
@@ -117,3 +117,15 @@ make build/configure_sprite_pool
 ```
 
 `configure_sprite_pool INPUT OUTPUT SELECT LOWER UPPER`는 원본 설정 함수의 메모리 효과를 적용한다. SELECT=0은 첫 영역이고 다른16bit값은 두 번째 영역이다. 초기화된 all-ffff 영역은 비활성이며 준비·갱신이 이를 보존한다. API는 `configure_sprite_pool`이다. 원본 setter는 혼합 sentinel도 만들 수 있으나 dispatcher는 유효 범위 또는 완전 비활성 상태만 지원한다.
+
+### 직사각형 반전
+
+MS5C 리소스를 읽는 emitter와 준비·갱신 큐에서 style bit0/1의 좌우·상하 반전을 지원한다. 큐 bit2는 슬롯 영역 선택이다. 고정 분기용 기존 API의 배치 의미는 유지한다.
+
+```sh
+.venv/bin/python tools/verify_sprite_flips.py --cpp
+.venv/bin/python tools/verify_sprite_pipeline.py --flips
+.venv/bin/python tools/verify_sprite_pipeline.py --flips --disabled-pool
+```
+
+원본 분기와 좌표 수식은 `docs/analysis/sprite-flips.md`에 기록했다. PNG 없이 동일한 MS5C 런타임 데이터를 사용한다.

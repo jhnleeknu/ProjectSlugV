@@ -50,7 +50,7 @@ int main() {
     require(ms5::refresh_sprite_queue(ram, resources, writes, processed, error) && processed,
             "valid two-record dispatch failed");
     // A second bad record tests failure after the first emitter has succeeded.
-    ram = fixture(); put(ram, 0x7f34+24+6, 0x1501); reject(ram, resources);
+    ram = fixture(); put(ram, 0x7f34+24+6, 0x1508); reject(ram, resources);
     ram = fixture(); put(ram, 0x7f34+24+10, 0x2952); reject(ram, resources);
     ram = fixture(); put(ram, 0x7f34+24+2, 160*64+1); reject(ram, resources);
     ram = fixture(); put(ram, 0x8d34, 1); reject(ram, resources);
