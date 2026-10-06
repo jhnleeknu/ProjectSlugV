@@ -91,3 +91,13 @@ payload 앞에는 LE uint32 slot(0..15), LE uint32 source palette ID(0..65535)�
 로더는 형식·길이·CRC·binding 범위/중복을 검사한다. bytecode 해석 가능 여부는 decoder가 검사한다. kind1의 현재 C++ decoder는 ASCII/font61만 지원하며 나머지를 오류로 보고한다. 리소스는 palette catalog의 source ID를 참조하며 실행 프로그램은 누락된 ID를 거부한다.
 
 현재 단일 장면 실행은 initial cursor/style0, zero VRAM/background, normal screen, cartridge fixed tiles를 사용한다. 이 실험 조건은 manifest와 실행 문서에 명시하며 원본 부팅에서 관찰한 상태로 취급하지 않는다.
+
+## 스프라이트 합성 리소스 MS5C
+
+`pack_compositions.py`가 확인된 ID 0x2152/0x2952를 `composition_002152.ms5c`, `composition_002952.ms5c`로 저장한다. manifest는 원본 해시, bank/group/item, CPU 주소와 ROM 오프셋, 실제 호출부의 style·팔레트 연결을 기록한다. 카탈로그는 아직 incomplete_sparse다.
+
+32바이트 헤더: ASCII MS5C 다음 LE uint32 7개는 version=1, kind=1(일반 단일 직사각형), packed ID, source ROM offset, payload size, payload ZIP CRC32, reserved=0 순서다. ID는 23bit이며 bank selector(ID&7)는0..5다. 원본 위치와 payload 범위는8MiB 안에 있어야 한다. ID와 원본 위치의 실제 대응은 추출기가 고정 해시 ROM의 포인터를 따라 확인한다.
+
+payload는 원본 BE 데이터를 보존한다: uint16 0x0100, dx, dy, 폭/높이 각 uint8, 이후 열 우선 순서의 attribute/tile uint16 쌍이다. 폭1..255, 높이1..32이며 크기는8+폭×높이×4다. C++ 로더는 길이·CRC·종류·범위를 검사하고 실패 시 기존 리소스를 보존한다. 런타임 명령 생성은 ROM이나 PNG를 읽지 않고 이 payload를 직접 사용한다.
+
+팔레트 MS5P는 테이블0xddf08 추가로 현재17개 source ID를 포함한다. 이 테이블의 slot21/22는 source ID0xe91/0xe92다. 팔레트 선택은 호출부 상태이므로 합성 리소스 자체의 고정 속성으로 취급하지 않는다.

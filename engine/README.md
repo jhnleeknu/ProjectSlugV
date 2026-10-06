@@ -32,3 +32,14 @@ make build/render_text_scene
 `warning.ms5x`는 `.venv/bin/python tools/pack_text_scene.py`로 생성한다. 타일·팔레트 런타임 패키지는 기존 추출 단계에서 생성해야 한다. 이 실행 파일은 세 런타임 패키지만 읽어 원본 문자 명령을 해석하고 화면을 만든다. 분석 trace, PNG, Python이나 원본 ROM을 실행 중에 읽지 않는다.
 
 현재는 조작 없는 경고문 단일 장면이며 전체 게임 실행은 미완료다. 출력 PPM은 확인용이다. full pipeline 검증은 `.venv/bin/python tools/verify_text_scene.py`로 수행한다.
+
+스프라이트 합성 리소스를 직접 읽는 C++ 경로:
+
+```sh
+.venv/bin/python tools/pack_compositions.py
+make build/emit_sprite_resource
+build/emit_sprite_resource extracted/runtime/composition_002152.ms5c artifacts/sprite-writes.bin 160 384 0x1500 0 380 0
+.venv/bin/python tools/verify_sprite_refresh.py --runtime-resources
+```
+
+인자는 입력·출력·U·V·style·첫 slot·상한·준비된 slot 끝이다. 출력은 검증용 명령 기록(BE32 다음 slot, BE16 주소/값 쌍)이며 이미지 리소스가 아니다. 엔진 코드는 CompositionResource와 emit_sprite_rectangle_refresh를 직접 호출한다. 아직 sprite rasterizer 및 전체 게임 루프는 연결되지 않았다.

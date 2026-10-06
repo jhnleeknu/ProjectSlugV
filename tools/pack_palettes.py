@@ -1,6 +1,6 @@
 """Pack evidence-backed palette IDs, retaining source words and normal lookup output.
 
-This sparse catalog is incomplete. It contains IDs from two reviewed fixed-slot
+This sparse catalog is incomplete. It contains IDs from reviewed fixed-slot
 binding tables, not a guessed ROM extent or the entire palette catalog.
 """
 import hashlib
@@ -10,7 +10,7 @@ import struct
 import zlib
 from disassemble_program import load_verified_program
 
-BINDING_TABLES = (0xcb78, 0x4e47a)
+BINDING_TABLES = (0xcb78, 0x4e47a, 0xddf08)
 
 
 def extract(program):

@@ -54,3 +54,11 @@ make build/emit_composition_refresh build/emit_composition
 두ID,가로3종,세로4종(0,384,511,65535),cached_end3종,슬롯구간3종의216개조합에서원본0xf246의모든쓰기와다음slot이C++와일치했다. 이전일반경로80개도회귀통과했다. 결과는artifacts/sprite_refresh/verification.json에저장한다.
 
 이로써일반단일직사각형의Y/X/tile제어가준비되었으나,실제큐스케줄링·flip·여러블록·화면래스터화는여전히별도작업이다. cached_end라는이름은비교조건에대한분석용명칭이다.
+
+## C++ 리소스와 실제 팔레트 연결
+
+원본0xde12c에서 A0=0xddf08,0xde130에서 등록 함수를 호출한다. 해당 테이블은 slot17..24에 source ID0xe8d..0xe94를 flags1로 등록하며 slot8/9/10/15/13/14에0xb03/0xb04/0xb05/0xb06/0xe96/0x9cf를 등록한다. 따라서0xde170의 style0x1500과0xde18e의 style0x1600은 각각 slot21/source0xe91,slot22/source0xe92에 연결된다.
+
+이 테이블은 다른 장면 테이블과 독립된 초기 상태에서 검증한다. 서로 다른 장면의 slot 등록을 한 상태에 누적하면 실제 사용 문맥을 잃는다. 원본3ef2→8da2→7196→72fa 실행 결과와 확장된17개 MS5P 색상값이 일치했다.
+
+MS5C 로더와 emit_sprite_resource를 추가했다. `verify_sprite_refresh.py --runtime-resources`는 MS5C를 실제 C++ 입력으로 사용하고 원본0xf246을 새로 실행한다. 두 ID 각각의 호출 style로216개 조건의 순서 있는 비디오 쓰기와 다음 슬롯이 일치했다. 이는 명령 생성 검증이며 완성 스프라이트 픽셀·전체 프레임 스케줄 검증은 아니다.

@@ -1,4 +1,5 @@
 """Compare normal rectangular refresh, including Y and cached-slot reuse."""
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -13,11 +14,14 @@ from verify_sprite_composition import resolve
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--runtime-resources", action="store_true")
+    args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     program,source = load_verified_program(root)
     if source['sha256'] != '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f':
         raise ValueError('Unsupported revision')
-    directory = root/'artifacts/sprite_refresh'
+    directory = root/('artifacts/sprite_resource' if args.runtime_resources else 'artifacts/sprite_refresh')
     directory.mkdir(parents=True,exist_ok=True)
     cpu = make_cpu(program)
     cpu.mem_map(0x200000,0x200000)
@@ -33,12 +37,14 @@ def main():
         bank,offset,data = resolve(program,identifier)
         path = directory/('%06x.raw.bin'%identifier)
         path.write_bytes(data)
+        if args.runtime_resources:
+            path = root/"extracted/runtime"/("composition_%06x.ms5c" % identifier)
         cpu.mem_write(0x200000,program[bank:bank+0x100000])
         for u in (0,160,319):
             for v in (0,384,511,65535):
                 for cached in (0,10,380):
                     for first,limit in ((0,380),(379,380),(0,0)):
-                        style = 0x1500
+                        style = 0x1500 if identifier == 0x2152 else 0x1600
                         cpu.mem_write(0x100000,bytes(65536))
                         packed = ((((v<<7)&0xffff)<<16)|identifier)
                         cpu.mem_write(0x107f40,struct.pack('>III',(u<<6)&0xffff,style,packed))
@@ -50,12 +56,12 @@ def main():
                         next_slot = int.from_bytes(cpu.mem_read(0x105004,2),'big')
                         expected = struct.pack('>I',next_slot)+b''.join(struct.pack('>I',x) for x in events)
                         output = directory/'cpp.bin'
-                        subprocess.run([str(root/'build/emit_composition_refresh'),str(path),str(output),str(u),str(v),str(style),str(first),str(limit),str(cached)],check=True)
+                        subprocess.run([str(root/('build/emit_sprite_resource' if args.runtime_resources else 'build/emit_composition_refresh')),str(path),str(output),str(u),str(v),str(style),str(first),str(limit),str(cached)],check=True)
                         if output.read_bytes() != expected:
                             raise ValueError('Refresh mismatch %x U%d V%d first%d limit%d cached%d'%(identifier,u,v,first,limit,cached))
-                        results.append({'id':identifier,'u':u,'v':v,'first':first,'limit':limit,'cached_end':cached,
+                        results.append({'id':identifier,'style':style,'u':u,'v':v,'first':first,'limit':limit,'cached_end':cached,
                                         'next_slot':next_slot,'writes':len(events),'sha256':hashlib.sha256(expected).hexdigest()})
-    report = {'source_program_sha256':source['sha256'],'entry':0xf246,'cases':len(results),
+    report = {'source_program_sha256':source['sha256'],'entry':0xf246,'input_format':'MS5C' if args.runtime_resources else 'raw','cases':len(results),
               'all_ordered_writes_equal':True,'scope':'Single-block normal refresh and slot reuse; no full double-buffer scheduling, flipped paths, or pixel rasterization claim.',
               'results':results}
     (directory/'verification.json').write_text(json.dumps(report,indent=2)+'\n')
