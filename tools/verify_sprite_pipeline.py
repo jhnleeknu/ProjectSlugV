@@ -16,6 +16,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--disabled-pool", action="store_true")
     parser.add_argument("--flips", action="store_true")
+    parser.add_argument("--blocks", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     program, source = load_verified_program(root)
@@ -24,9 +25,12 @@ def main():
     directory = root/('artifacts/sprite_pipeline_disabled' if args.disabled_pool else 'artifacts/sprite_pipeline')
     if args.flips:
         directory = directory.with_name(directory.name+'_flips')
+    if args.blocks:
+        directory = directory.with_name(directory.name+'_blocks')
     directory.mkdir(parents=True, exist_ok=True)
     inp, out, trace = directory/'input.bin', directory/'output.bin', directory/'trace.bin'
-    resources = [str(root/'extracted/runtime'/('composition_%06x.ms5c'%i)) for i in (0x2152, 0x2952)]
+    identifiers = (0x2382a, 0x2402a, 0x2482a, 0x122) if args.blocks else (0x2152, 0x2952)
+    resources = [str(root/'extracted/runtime'/('composition_%06x.ms5c'%i)) for i in identifiers]
     cpu = make_cpu(program)
     cpu.mem_map(0x200000, 0x200000)
     cpu.mem_write(0x200000, program[0x400000:0x500000])
@@ -81,7 +85,7 @@ def main():
                     if args.flips:
                         d1 |= (index+frame)&3
                     d5 = (count-index)*13
-                    d7 = 0x2152 if index%2 == 0 else 0x2952
+                    d7 = identifiers[index%len(identifiers)]
                     for reg, value in ((UC_M68K_REG_D0,d0),(UC_M68K_REG_D1,d1),(UC_M68K_REG_D5,d5),(UC_M68K_REG_D7,d7)):
                         cpu.reg_write(reg,value)
                     run(0xcd58)
@@ -105,8 +109,8 @@ def main():
                                     'writes':len(events),'ram_sha256':hashlib.sha256(state).hexdigest(),
                                     'video_sha256':hashlib.sha256(expected_trace).hexdigest()})
     (directory/'verification.json').write_text(json.dumps({'source_program_sha256':source['sha256'],
-        'flips':args.flips,'disabled_pool':args.disabled_pool,'independent_sequences':4,'frames_per_sequence':4,'submissions':submissions,'stages':len(records),
-        'all_ram_and_video_equal':True,'scope':'Controlled four-frame sequences with default callback and two normal rectangle resources. No actual vblank, interrupt concurrency, pixel or whole-game timing claim.', 'results':records},indent=2)+'\n')
+        'blocks':args.blocks,'flips':args.flips,'disabled_pool':args.disabled_pool,'independent_sequences':4,'frames_per_sequence':4,'submissions':submissions,'stages':len(records),
+        'all_ram_and_video_equal':True,'scope':'Controlled four-frame sequences with default callback and selected rectangle resources. No actual vblank, interrupt concurrency, pixel or whole-game timing claim.', 'results':records},indent=2)+'\n')
     print('Producer/prepare/refresh pipeline matches:',submissions,'submissions,',len(records),'stages')
 
 

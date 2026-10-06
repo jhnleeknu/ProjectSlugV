@@ -101,3 +101,11 @@ payload 앞에는 LE uint32 slot(0..15), LE uint32 source palette ID(0..65535)�
 payload는 원본 BE 데이터를 보존한다: uint16 0x0100, dx, dy, 폭/높이 각 uint8, 이후 열 우선 순서의 attribute/tile uint16 쌍이다. 폭1..255, 높이1..32이며 크기는8+폭×높이×4다. C++ 로더는 길이·CRC·종류·범위를 검사하고 실패 시 기존 리소스를 보존한다. 런타임 명령 생성은 ROM이나 PNG를 읽지 않고 이 payload를 직접 사용한다.
 
 팔레트 MS5P는 테이블0xddf08 추가로 현재17개 source ID를 포함한다. 이 테이블의 slot21/22는 source ID0xe91/0xe92다. 팔레트 선택은 호출부 상태이므로 합성 리소스 자체의 고정 속성으로 취급하지 않는다.
+
+### MS5C v1 kind 2 — counted rectangles
+
+kind=2는 원본 BE16 헤더의 상위 byte를 블록 수(1..255), 하위 byte를0으로 제한한다. 그 뒤 블록 수만큼 `dx BE16, dy BE16, width uint8, height uint8, attribute/tile BE16 pairs`가 반복된다. 블록에는 별도0100 헤더가 없다. 각 블록 폭1..255·높이1..32, 열 우선 순서를 유지한다. 길이는 `2 + sum(6 + width*height*4)`이며 정확히 일치해야 한다. kind1의 기존 길이·개수 제한은 유지한다.
+
+`pack_composition_blocks.py`가 ID02382a/02402a/02482a/000122 네 리소스를 저장하고 별도 `composition_blocks.manifest.json`에 원본 위치와 블록 치수를 기록한다. 이들의 소비 동작은 원본 CPU 직접 호출로 검증했지만 자연스러운 게임 실행에서의 사용 여부와 호출부 팔레트는 아직 미확인이다.
+
+런타임 `emit_sprite_blocks`는 kind1과kind2의 raw payload를 읽고 각 블록의 상대좌표와 현재 슬롯을 적용한다. 실패 시 출력은 보존하며 슬롯이 소진되어도 나머지 payload의 형식 오류를 검사한다. 따라서 손상된 리소스에 대한 동작은 원본 CPU의 메모리 접근을 재현하는 계약이 아니다.

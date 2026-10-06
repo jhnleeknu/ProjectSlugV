@@ -42,7 +42,7 @@ build/emit_sprite_resource extracted/runtime/composition_002152.ms5c artifacts/s
 .venv/bin/python tools/verify_sprite_refresh.py --runtime-resources
 ```
 
-인자는 입력·출력·U·V·style·첫 slot·상한·준비된 slot 끝이다. 출력은 검증용 명령 기록(BE32 다음 slot, BE16 주소/값 쌍)이며 이미지 리소스가 아니다. 엔진 코드는 CompositionResource와 emit_sprite_rectangle_variant를 직접 호출한다. 아직 sprite rasterizer 및 전체 게임 루프는 연결되지 않았다.
+인자는 입력·출력·U·V·style·첫 slot·상한·준비된 slot 끝이다. 출력은 검증용 명령 기록(BE32 다음 slot, BE16 주소/값 쌍)이며 이미지 리소스가 아니다. 엔진 코드는 CompositionResource와 emit_sprite_blocks를 직접 호출한다. 아직 sprite rasterizer 및 전체 게임 루프는 연결되지 않았다.
 
 줄별 하드웨어 스프라이트 선택:
 
@@ -129,3 +129,17 @@ MS5C 리소스를 읽는 emitter와 준비·갱신 큐에서 style bit0/1의 좌
 ```
 
 원본 분기와 좌표 수식은 `docs/analysis/sprite-flips.md`에 기록했다. PNG 없이 동일한 MS5C 런타임 데이터를 사용한다.
+
+### 여러 직사각형으로 구성된 리소스
+
+MS5C kind2 로더와 emit_sprite_blocks가 개별 블록의 위치·반전·슬롯 배치를 처리한다. 기존 kind1도 같은 경로를 사용한다.
+
+```sh
+.venv/bin/python tools/pack_composition_blocks.py
+make all test
+.venv/bin/python tools/verify_sprite_blocks.py --cpp
+.venv/bin/python tools/verify_sprite_pipeline.py --blocks --flips
+.venv/bin/python tools/verify_sprite_pipeline.py --blocks --flips --disabled-pool
+```
+
+네 리소스의 팔레트 연결과 실제 게임 호출부는 미확인이며, 현재 검증은 RAM과 비디오 명령 단위다.

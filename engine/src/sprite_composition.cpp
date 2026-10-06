@@ -181,4 +181,56 @@ bool emit_sprite_rectangle_variant(
                           writes, next_slot, error);
 }
 
+bool emit_sprite_blocks(
+    const std::vector<std::uint8_t>& data,
+    std::uint16_t coordinate_u, std::uint16_t coordinate_v,
+    std::uint16_t style, std::uint16_t first_slot, std::uint16_t limit,
+    bool refresh, bool reverse, std::uint16_t cached_boundary,
+    std::vector<SpriteWrite>& writes, std::uint16_t& next_slot,
+    std::string& error) {
+    if (data.size() < 2 || data[0] == 0 || data[1] != 0) {
+        error = "counted rectangle header must have nonzero count and zero low byte";
+        return false;
+    }
+    std::size_t cursor = 2;
+    std::uint16_t slot = first_slot;
+    std::vector<SpriteWrite> result;
+    for (unsigned int index = 0; index < data[0]; ++index) {
+        if (data.size() - cursor < 6) {
+            error = "counted rectangle block header is truncated";
+            return false;
+        }
+        const std::size_t width = data[cursor + 4];
+        const std::size_t height = data[cursor + 5];
+        const std::size_t body_size = 6U + width * height * 4U;
+        if (width == 0 || height == 0 || height > 32 ||
+            body_size > data.size() - cursor) {
+            error = "counted rectangle dimensions or block length are invalid";
+            return false;
+        }
+        std::vector<std::uint8_t> block;
+        block.reserve(body_size + 2U);
+        block.push_back(1);
+        block.push_back(0);
+        block.insert(block.end(), data.begin() + cursor,
+                     data.begin() + cursor + body_size);
+        std::vector<SpriteWrite> block_writes;
+        if (!emit_sprite_rectangle_variant(block, coordinate_u, coordinate_v,
+                style, slot, limit, refresh, reverse, cached_boundary,
+                block_writes, slot, error)) {
+            return false;
+        }
+        result.insert(result.end(), block_writes.begin(), block_writes.end());
+        cursor += body_size;
+    }
+    if (cursor != data.size()) {
+        error = "counted rectangle payload has trailing bytes";
+        return false;
+    }
+    writes.swap(result);
+    next_slot = slot;
+    error.clear();
+    return true;
+}
+
 } // namespace ms5

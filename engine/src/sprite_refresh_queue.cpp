@@ -120,7 +120,7 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
         const std::uint16_t cached = disabled ? 0U : word(updated, pool + cached_offset);
         std::uint16_t next_slot = 0;
         std::vector<SpriteWrite> record_writes;
-        const bool emitted = emit_sprite_rectangle_variant(resource->data, u, v,
+        const bool emitted = emit_sprite_blocks(resource->data, u, v,
             static_cast<std::uint16_t>(style & 0xfffbU), first, limit,
             true, !forward, cached, record_writes, next_slot, error);
         if (!emitted) {

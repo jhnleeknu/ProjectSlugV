@@ -34,7 +34,8 @@ bool fail(std::string& error, const char* message) {
 bool load_composition_resource(const std::string& path,
                                CompositionResource& resource,
                                std::string& error) {
-    const std::uint32_t maximum_payload = 8U + 255U * 32U * 4U;
+    const std::uint32_t maximum_single_payload = 8U + 255U * 32U * 4U;
+    const std::uint32_t maximum_blocks_payload = 2U + 255U * (6U + 255U * 32U * 4U);
     std::ifstream input(path.c_str(), std::ios::binary | std::ios::ate);
     if (!input) {
         return fail(error, "cannot open composition resource");
@@ -43,7 +44,7 @@ bool load_composition_resource(const std::string& path,
     if (file_size < 32) {
         return fail(error, "composition resource header is truncated");
     }
-    if (file_size > static_cast<std::streamoff>(32U + maximum_payload)) {
+    if (file_size > static_cast<std::streamoff>(32U + maximum_blocks_payload)) {
         return fail(error, "composition resource exceeds maximum size");
     }
     input.seekg(0, std::ios::beg);
@@ -54,12 +55,14 @@ bool load_composition_resource(const std::string& path,
     if (header[0] != 'M' || header[1] != 'S' || header[2] != '5' || header[3] != 'C') {
         return fail(error, "invalid composition resource magic");
     }
-    if (read_u32(header + 4) != 1 || read_u32(header + 8) != 1) {
+    const std::uint32_t kind = read_u32(header + 8);
+    if (read_u32(header + 4) != 1 || (kind != 1 && kind != 2)) {
         return fail(error, "unsupported composition resource version or kind");
     }
     const std::uint32_t id = read_u32(header + 12);
     const std::uint32_t source_offset = read_u32(header + 16);
     const std::uint32_t payload_size = read_u32(header + 20);
+    const std::uint32_t maximum_payload = kind == 1 ? maximum_single_payload : maximum_blocks_payload;
     if (id > 0x7fffffU || (id & 7U) > 5U) {
         return fail(error, "composition packed ID is out of range");
     }
@@ -87,14 +90,29 @@ bool load_composition_resource(const std::string& path,
     if (payload_crc32(candidate.data) != read_u32(header + 24)) {
         return fail(error, "composition payload CRC32 mismatch");
     }
-    if (candidate.data[0] != 1 || candidate.data[1] != 0) {
-        return fail(error, "composition payload is not a normal single rectangle");
+    const std::uint32_t count = candidate.data[0];
+    if (count == 0 || candidate.data[1] != 0 || (kind == 1 && count != 1)) {
+        return fail(error, "invalid composition rectangle count or flags");
     }
-    const std::uint32_t width = candidate.data[6];
-    const std::uint32_t height = candidate.data[7];
-    if (width == 0 || height == 0 || height > 32 ||
-        payload_size != 8U + width * height * 4U) {
-        return fail(error, "invalid composition rectangle dimensions or size");
+    std::size_t position = 2;
+    for (std::uint32_t block = 0; block < count; ++block) {
+        if (candidate.data.size() - position < 6U) {
+            return fail(error, "composition rectangle header is truncated");
+        }
+        const std::uint32_t width = candidate.data[position + 4];
+        const std::uint32_t height = candidate.data[position + 5];
+        if (width == 0 || height == 0 || height > 32) {
+            return fail(error, "invalid composition rectangle dimensions");
+        }
+        position += 6U;
+        const std::size_t tile_bytes = width * height * 4U;
+        if (tile_bytes > candidate.data.size() - position) {
+            return fail(error, "composition rectangle tiles are truncated");
+        }
+        position += tile_bytes;
+    }
+    if (position != candidate.data.size()) {
+        return fail(error, "composition payload has trailing bytes");
     }
     resource.data.swap(candidate.data);
     resource.id = id;

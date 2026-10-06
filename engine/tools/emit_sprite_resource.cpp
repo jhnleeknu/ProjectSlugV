@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
         std::cerr << error << '\n';
         return 1;
     }
-    const bool emitted = ms5::emit_sprite_rectangle_variant(resource.data,
+    const bool emitted = ms5::emit_sprite_blocks(resource.data,
         numbers[0], numbers[1], numbers[2], numbers[3], numbers[4],
         true, direction == "reverse", numbers[5], writes, next_slot, error);
     if (!emitted) {

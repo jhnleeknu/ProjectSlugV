@@ -83,6 +83,18 @@ bool emit_sprite_rectangle_variant(
     std::vector<SpriteWrite>& writes, std::uint16_t& next_slot,
     std::string& error);
 
+// Counted rectangles (header count << 8, followed by count block bodies).
+// All blocks are validated, including those after slot exhaustion. Writes and
+// next_slot are replaced only on complete success. Transform/slot parameters
+// have the same meaning as emit_sprite_rectangle_variant.
+bool emit_sprite_blocks(
+    const std::vector<std::uint8_t>& data,
+    std::uint16_t coordinate_u, std::uint16_t coordinate_v,
+    std::uint16_t style, std::uint16_t first_slot, std::uint16_t limit,
+    bool refresh, bool reverse, std::uint16_t cached_boundary,
+    std::vector<SpriteWrite>& writes, std::uint16_t& next_slot,
+    std::string& error);
+
 } // namespace ms5
 
 #endif

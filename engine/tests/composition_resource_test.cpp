@@ -63,6 +63,24 @@ std::vector<unsigned char> fixture(unsigned int width, unsigned int height) {
     return bytes;
 }
 
+void rebuild_payload_header(std::vector<unsigned char>& bytes) {
+    set_u32(bytes, 20, static_cast<std::uint32_t>(bytes.size() - 32));
+    set_u32(bytes, 24, crc32(bytes, 32));
+}
+
+std::vector<unsigned char> blocks_fixture(unsigned int count, unsigned int width,
+                                         unsigned int height) {
+    const std::vector<unsigned char> rectangle = fixture(width, height);
+    std::vector<unsigned char> bytes(rectangle.begin(), rectangle.begin() + 34);
+    set_u32(bytes, 8, 2);
+    bytes[32] = static_cast<unsigned char>(count);
+    for (unsigned int block = 0; block < count; ++block) {
+        bytes.insert(bytes.end(), rectangle.begin() + 34, rectangle.end());
+    }
+    rebuild_payload_header(bytes);
+    return bytes;
+}
+
 void rejected(const std::string& path, const std::vector<unsigned char>& bytes,
               ms5::CompositionResource& output, const char* message) {
     write_file(path, bytes);
@@ -138,6 +156,49 @@ int main() {
     set_u32(minimum, 12, 0); set_u32(minimum, 16, 0);
     write_file(path, minimum);
     require(ms5::load_composition_resource(path, output, error), "minimum rectangle and zero ID");
+
+    const std::vector<unsigned char> blocks = blocks_fixture(2, 2, 3);
+    write_file(path, blocks);
+    error = "old error";
+    require(ms5::load_composition_resource(path, output, error), "load two rectangles of kind two");
+    require(error.empty() && output.id == 0x2152 && output.source_rom_offset == 0x234567 &&
+            output.data == std::vector<unsigned char>(blocks.begin() + 32, blocks.end()),
+            "kind two retains complete original bytes and metadata");
+    bad = blocks; set_u32(bad, 8, 1);
+    rejected(path, bad, output, "kind one rejects multiple rectangles");
+    const std::size_t block_fields[] = {32, 33, 38, 39, 68, 69};
+    const unsigned char block_values[] = {0, 1, 0, 33, 0, 0};
+    for (unsigned int i = 0; i < sizeof(block_fields) / sizeof(block_fields[0]); ++i) {
+        bad = blocks; bad[block_fields[i]] = block_values[i];
+        rebuild_payload_header(bad);
+        rejected(path, bad, output, "invalid kind two field with valid CRC");
+    }
+    bad = blocks; bad[32] = 3; rebuild_payload_header(bad);
+    rejected(path, bad, output, "kind two count exceeds available blocks");
+    bad = blocks; bad[32] = 1; rebuild_payload_header(bad);
+    rejected(path, bad, output, "kind two count leaves trailing block");
+    bad = blocks; bad.resize(32 + 2 + 30 + 5); rebuild_payload_header(bad);
+    rejected(path, bad, output, "kind two second block header truncated");
+    bad = blocks; bad.pop_back(); rebuild_payload_header(bad);
+    rejected(path, bad, output, "kind two second block tiles truncated");
+    bad = blocks; bad.push_back(0); rebuild_payload_header(bad);
+    rejected(path, bad, output, "kind two trailing payload byte");
+    bad = blocks; bad[24] ^= 1;
+    rejected(path, bad, output, "kind two CRC mismatch");
+    bad = blocks; bad.resize(43); rebuild_payload_header(bad);
+    rejected(path, bad, output, "kind two below minimum payload size");
+    bad = blocks; set_u32(bad, 20, 2U + 255U * (6U + 255U * 32U * 4U) + 1U);
+    rejected(path, bad, output, "kind two declared payload above theoretical maximum");
+    bad = blocks; set_u32(bad, 16, 0x800000U - static_cast<std::uint32_t>(blocks.size() - 32) + 1U);
+    rejected(path, bad, output, "kind two source range crosses ROM end");
+    std::vector<unsigned char> wide_blocks = blocks_fixture(2, 255, 32);
+    write_file(path, wide_blocks);
+    require(ms5::load_composition_resource(path, output, error), "kind two payload exceeds kind one maximum");
+    bad = wide_blocks; set_u32(bad, 8, 1);
+    rejected(path, bad, output, "kind one retains its own payload maximum");
+    const std::vector<unsigned char> many_blocks = blocks_fixture(255, 1, 1);
+    write_file(path, many_blocks);
+    require(ms5::load_composition_resource(path, output, error), "kind two maximum block count");
     const ms5::CompositionResource before = output;
     require(std::remove(path.c_str()) == 0, "remove fixture");
     require(!ms5::load_composition_resource(path, output, error) && !error.empty() &&
