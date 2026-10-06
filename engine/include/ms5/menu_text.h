@@ -24,10 +24,14 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
 // title measurement's initial D1 word. Port writes preserve original order.
 // Success replaces RAM and writes and clears error; failure preserves both.
 // Height zero succeeds without decoding the resource or checking callbacks.
+// Optional final_line receives the final D3 low word only on success. Each
+// rendered title resets the line to its start address before stream controls;
+// hidden items and event-5 no-ops preserve it. Height zero returns initial_line.
 bool draw_menu_text(std::vector<std::uint8_t>& ram,
                     const FixedDataResource& resource, bool clip,
                     std::uint16_t initial_line,
-                    std::vector<VideoPortWrite>& writes, std::string& error);
+                    std::vector<VideoPortWrite>& writes, std::string& error,
+                    std::uint16_t* final_line = NULL);
 
 } // namespace ms5
 

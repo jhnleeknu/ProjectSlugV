@@ -54,11 +54,19 @@ std::uint16_t base_address(std::uint8_t x, std::uint8_t y) {
 bool append_text(const std::vector<std::uint8_t>& script,
                  std::uint16_t address, std::uint16_t style, bool clip,
                  std::vector<std::uint8_t>& ram,
-                 std::vector<VideoPortWrite>& writes, std::string& error) {
+                 std::vector<VideoPortWrite>& writes, std::string& error,
+                 std::uint16_t* final_line) {
     std::vector<VideoPortWrite> text_writes;
     if (!trace_direct_fixed_text_visible(script, address, style,
             clip ? glyph_visible : NULL, &ram, text_writes, error)) {
         return false;
+    }
+    if (final_line != NULL) {
+        FixedTextMeasure measurement;
+        if (!measure_fixed_text(script, style, address, measurement, error)) {
+            return false;
+        }
+        *final_line = measurement.line;
     }
     writes.insert(writes.end(), text_writes.begin(), text_writes.end());
     return true;
@@ -68,7 +76,8 @@ bool append_item(const MenuItem& item, std::size_t index,
                  std::size_t slot, std::uint32_t head, std::uint32_t current,
                  const FixedDataResource& resource, bool clip,
                  std::vector<std::uint8_t>& ram,
-                 std::vector<VideoPortWrite>& writes, std::string& error) {
+                 std::vector<VideoPortWrite>& writes, std::string& error,
+                 std::uint16_t* final_line) {
     const std::uint8_t row = static_cast<std::uint8_t>(index + 1U);
     if (row >= ram[slot + 4U]) {
         return true;
@@ -103,7 +112,8 @@ bool append_item(const MenuItem& item, std::size_t index,
         }
         const std::uint16_t style = current != head && index != selected ?
                                    0x0603U : 0x0003U;
-        if (!append_text(script, address, style, clip, ram, writes, error)) {
+        if (!append_text(script, address, style, clip, ram, writes, error,
+                         final_line)) {
             return false;
         }
     }
@@ -163,7 +173,7 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
             return false;
         }
         if (!append_item(item, index, slot, head, current, resource, clip,
-                         ram, pending, error)) {
+                         ram, pending, error, NULL)) {
             return false;
         }
         writes.swap(pending);
@@ -178,7 +188,8 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
 bool draw_menu_text(std::vector<std::uint8_t>& ram,
                     const FixedDataResource& resource, bool clip,
                     std::uint16_t initial_line,
-                    std::vector<VideoPortWrite>& writes, std::string& error) {
+                    std::vector<VideoPortWrite>& writes, std::string& error,
+                    std::uint16_t* final_line) {
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
@@ -190,6 +201,9 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
     std::vector<VideoPortWrite> pending;
     if (height == 0U) {
         writes.swap(pending);
+        if (final_line != NULL) {
+            *final_line = initial_line;
+        }
         error.clear();
         return true;
     }
@@ -226,6 +240,8 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
     }
     try {
         std::vector<std::uint8_t> candidate(ram);
+        std::uint16_t pending_line = initial_line;
+        std::uint16_t* line_output = final_line != NULL ? &pending_line : NULL;
         std::vector<std::uint8_t> script;
         if (!script_at(resource, descriptor.title_address, script, error)) {
             return false;
@@ -244,18 +260,22 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
         const std::uint16_t title_address = base_address(column, ram[slot + 10U]);
         const std::uint16_t title_style = head == current ? 0x0103U : 0x0603U;
         if (!append_text(script, title_address, title_style, clip, candidate,
-                         pending, error)) {
+                         pending, error, line_output)) {
             return false;
         }
         for (std::size_t index = 0; index < descriptor.items.size(); ++index) {
             candidate[slot + 8U] = static_cast<std::uint8_t>(index);
             if (!append_item(descriptor.items[index], index, slot, head, current,
-                             resource, clip, candidate, pending, error)) {
+                             resource, clip, candidate, pending, error,
+                             line_output)) {
                 return false;
             }
         }
         ram.swap(candidate);
         writes.swap(pending);
+        if (final_line != NULL) {
+            *final_line = pending_line;
+        }
     } catch (const std::bad_alloc&) {
         error = "cannot allocate menu text output";
         return false;

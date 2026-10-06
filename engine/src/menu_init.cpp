@@ -46,13 +46,20 @@ bool measure_title(const FixedDataResource& resource, std::uint32_t address,
 
 } // namespace
 
-bool initialize_menu(std::vector<std::uint8_t>& ram,
-                     const FixedDataResource& resource,
-                     std::uint32_t descriptor_address,
-                     std::uint16_t x, std::uint16_t y,
-                     std::uint16_t initial_line, std::string& error) {
+bool configure_menu_slot(std::vector<std::uint8_t>& ram,
+                         const FixedDataResource& resource,
+                         std::uint32_t slot_address,
+                         std::uint32_t descriptor_address,
+                         std::uint16_t x, std::uint16_t y,
+                         std::uint16_t initial_line, std::string& error) {
     if (ram.size() != 65536U) {
         error = "menu initialization requires exactly 65536 RAM bytes";
+        return false;
+    }
+    if (slot_address < UINT32_C(0x107e0e) ||
+        slot_address > UINT32_C(0x107efe) ||
+        (slot_address - UINT32_C(0x107e0e)) % 16U != 0U) {
+        error = "menu slot address is outside the aligned slot array";
         return false;
     }
     MenuDescriptor descriptor;
@@ -84,10 +91,7 @@ bool initialize_menu(std::vector<std::uint8_t>& ram,
     const std::uint8_t height = height_candidate > descriptor.min_height ?
         height_candidate : descriptor.min_height;
 
-    write_u32(ram, 0x7f16U, 0x00003650U);
-    ram[0x7f1aU] = 0;
-    write_u32(ram, 0x7f0eU, 0x00107efeU);
-    const std::size_t slot = 0x7efeU;
+    const std::size_t slot = slot_address - UINT32_C(0x100000);
     write_u32(ram, slot, descriptor_address);
     ram[slot + 4U] = 0;
     ram[slot + 6U] = static_cast<std::uint8_t>(descriptor.items.size());
@@ -100,8 +104,23 @@ bool initialize_menu(std::vector<std::uint8_t>& ram,
     ram[slot + 13U] = 3;
     ram[slot + 14U] = 0xffU;
     ram[slot + 15U] = 0;
-    ram[0x7f1bU] = 1;
     error.clear();
+    return true;
+}
+
+bool initialize_menu(std::vector<std::uint8_t>& ram,
+                     const FixedDataResource& resource,
+                     std::uint32_t descriptor_address,
+                     std::uint16_t x, std::uint16_t y,
+                     std::uint16_t initial_line, std::string& error) {
+    if (!configure_menu_slot(ram, resource, UINT32_C(0x107efe),
+                             descriptor_address, x, y, initial_line, error)) {
+        return false;
+    }
+    write_u32(ram, 0x7f16U, 0x00003650U);
+    ram[0x7f1aU] = 0;
+    write_u32(ram, 0x7f0eU, 0x00107efeU);
+    ram[0x7f1bU] = 1;
     return true;
 }
 
