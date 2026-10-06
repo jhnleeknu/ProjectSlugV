@@ -14,6 +14,12 @@ bool trace_menu_border(const std::vector<std::uint8_t>& ram,
                        const FixedDataResource& resource,
                        std::vector<FixedWrite>& writes, std::string& error);
 
+// Query the confirmed CPU 0x00a018 helper using the same RAM/slot
+// constraints as trace_menu_border. Failure preserves covered.
+bool menu_position_occluded(const std::vector<std::uint8_t>& ram,
+                            std::uint16_t address, bool& covered,
+                            std::string& error);
+
 } // namespace ms5
 
 #endif

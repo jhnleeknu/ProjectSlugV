@@ -20,6 +20,25 @@ bool valid_slot(std::uint32_t address) {
            (address - 0x00107e0eU) % 16U == 0U;
 }
 
+bool validate_slots(const std::vector<std::uint8_t>& ram,
+                    std::size_t& head, std::size_t& current,
+                    std::string& error) {
+    if (ram.size() != 65536U) {
+        error = "menu border requires exactly 65536 RAM bytes";
+        return false;
+    }
+    const std::uint32_t head_address = read_u32(ram, 0x7f0eU);
+    const std::uint32_t current_address = read_u32(ram, 0x7f12U);
+    if (!valid_slot(head_address) || !valid_slot(current_address) ||
+        head_address > current_address) {
+        error = "menu border requires aligned menu slots with head <= current";
+        return false;
+    }
+    head = head_address - 0x00100000U;
+    current = current_address - 0x00100000U;
+    return true;
+}
+
 bool occluded(const std::vector<std::uint8_t>& ram, std::size_t head,
               std::size_t current, std::uint16_t address) {
     const std::uint16_t delta = static_cast<std::uint16_t>(
@@ -75,22 +94,27 @@ void emit_border_row(const std::vector<std::uint8_t>& ram, std::size_t head,
 
 } // namespace
 
+bool menu_position_occluded(const std::vector<std::uint8_t>& ram,
+                            std::uint16_t address, bool& covered,
+                            std::string& error) {
+    std::size_t head = 0U;
+    std::size_t current = 0U;
+    if (!validate_slots(ram, head, current, error)) {
+        return false;
+    }
+    covered = occluded(ram, head, current, address);
+    error.clear();
+    return true;
+}
+
 bool trace_menu_border(const std::vector<std::uint8_t>& ram,
                        const FixedDataResource& resource,
                        std::vector<FixedWrite>& writes, std::string& error) {
-    if (ram.size() != 65536U) {
-        error = "menu border requires exactly 65536 RAM bytes";
+    std::size_t head = 0U;
+    std::size_t current = 0U;
+    if (!validate_slots(ram, head, current, error)) {
         return false;
     }
-    const std::uint32_t head_address = read_u32(ram, 0x7f0eU);
-    const std::uint32_t current_address = read_u32(ram, 0x7f12U);
-    if (!valid_slot(head_address) || !valid_slot(current_address) ||
-        head_address > current_address) {
-        error = "menu border requires aligned menu slots with head <= current";
-        return false;
-    }
-    const std::size_t head = head_address - 0x00100000U;
-    const std::size_t current = current_address - 0x00100000U;
     const unsigned int height = ram[current + 4U];
     std::vector<FixedWrite> pending;
     if (height == 0U) {
