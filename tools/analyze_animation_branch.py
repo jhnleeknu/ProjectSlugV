@@ -12,8 +12,9 @@ from analyze_animation_wait import put
 def main():
     root=Path(__file__).resolve().parents[1];program,source=load_verified_program(root)
     if source['sha256']!='29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f': raise ValueError('Unsupported ROM')
-    # A reviewed prefix only, not a claim about the complete selector table size.
-    offsets=struct.unpack('>32H',program[0x4a76c:0x4a7ac])
+    # Candidate table ends at separately referenced code entry 0x4a88e.
+    # Execution validates these 145 words; it does not prove every entry is used.
+    offsets=struct.unpack('>145H',program[0x4a76c:0x4a88e])
     cpu=make_cpu(program);cpu.mem_map(0x200000,0x200000)
     cpu.mem_write(0xff100,bytes.fromhex('55f900105900'))
     rows=[]
@@ -48,8 +49,8 @@ def main():
                                  'timer':timer,'taken':taken,'ram_sha256':hashlib.sha256(result).hexdigest()})
     destination=root/'artifacts/animation_branch';destination.mkdir(parents=True,exist_ok=True)
     (destination/'verification.json').write_text(json.dumps({'source':source,'cases':len(rows),'all_ram_carry_equal':True,
-        'selector_table_rom_offset':0x4a76c,'selector_prefix_words':32,
-        'scope':'Controlled opcode0c fixtures and a reviewed 32-word table prefix. Full selector extent and natural script references not established.',
+        'selector_table_rom_offset':0x4a76c,'selector_words_checked':145,'candidate_table_end':0x4a88e,
+        'scope':'Controlled opcode0c fixtures and 145 words before a separately referenced code entry. No claim every selector is naturally used.',
         'results':rows},indent=2)+'\n')
     print('Animation field branch RAM/carry match:',len(rows),'cases')
 
