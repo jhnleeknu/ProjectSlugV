@@ -178,3 +178,16 @@ make all test
 ```
 
 `step_animation_resource INPUT_RAM INPUT_MS5A OUTPUT_RAM OUTPUT_STATUS OBJECT_OFFSET`가원본주소를보존한MS5A를읽고실행한다. 현재00/04/08/28을지원하며08의대상은같은리소스안이어야한다. 실제추출루프와4개MS5C의96호출·192표시단계가원본과일치한다. 검증오브젝트상태는제어된fixture다.
+
+### 애니메이션 필드·테이블 데이터
+
+`step_animation_with_data`는기존인자에 `const std::vector<FixedDataResource>& regions`를받아0c 조건분기와14/1e 테이블복사를지원한다. 기존 `step_animation`은빈데이터목록으로동작한다. 명령에필요한데이터가없으면명시적오류다.
+
+```sh
+.venv/bin/python tools/pack_animation_data.py
+make all test
+.venv/bin/python tools/analyze_animation_branch.py --cpp
+.venv/bin/python tools/analyze_animation_callback.py --cpp
+```
+
+CLI: `step_animation_data INPUT_RAM INPUT_SCRIPT OUTPUT_RAM OUTPUT_STATUS OBJECT_OFFSET SCRIPT_BASE [MS5D ...]`. 원본전체ROM을런타임에읽지않고추출된MS5D창만사용한다. 다른14 callback선택자는아직거부한다.

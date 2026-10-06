@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "ms5/fixed_data_resource.h"
+
 namespace ms5 {
 
 // Execute the verified 00/04/08/28 animation subset. RAM maps CPU 0x100000
@@ -19,6 +21,17 @@ bool step_animation(std::vector<std::uint8_t>& ram,
                     const std::vector<std::uint8_t>& script,
                     std::uint32_t script_base,
                     bool& carry, std::string& error);
+
+// Adds field branch 0c and callback 14 selector 1e. Data windows must be
+// nonempty, nonoverlapping fixed-ROM ranges with matching CPU/ROM addresses.
+// Each data read must fit a supplied window. All failures preserve RAM/carry.
+// Inactive pointers retain the legacy behavior without validating windows.
+bool step_animation_with_data(std::vector<std::uint8_t>& ram,
+                              std::size_t object_offset,
+                              const std::vector<std::uint8_t>& script,
+                              std::uint32_t script_base,
+                              const std::vector<FixedDataResource>& regions,
+                              bool& carry, std::string& error);
 
 } // namespace ms5
 

@@ -1,4 +1,6 @@
 """Verify opcode 0c boolean field branch using original selector table words."""
+import argparse
+from animation_cpp_check import check as check_cpp
 import hashlib
 import json
 from pathlib import Path
@@ -10,6 +12,7 @@ from analyze_animation_wait import put
 
 
 def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--cpp',action='store_true');args=parser.parse_args()
     root=Path(__file__).resolve().parents[1];program,source=load_verified_program(root)
     if source['sha256']!='29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f': raise ValueError('Unsupported ROM')
     # Candidate table ends at separately referenced code entry 0x4a88e.
@@ -45,10 +48,12 @@ def main():
                     result=bytearray(cpu.mem_read(0x100000,65536));carry=result[0x5900];result[0x5900]=0
                     if result!=expected or carry!=(255 if taken else 0):
                         raise ValueError('Branch mismatch '+repr((selector,desired,actual_value,timer)))
+                    if args.cpp:
+                        check_cpp(root,root/"artifacts/animation_branch",ram,expected,int(taken),14)
                     rows.append({'selector':selector,'field_offset':offset,'desired':desired,'field_value':actual_value,
                                  'timer':timer,'taken':taken,'ram_sha256':hashlib.sha256(result).hexdigest()})
     destination=root/'artifacts/animation_branch';destination.mkdir(parents=True,exist_ok=True)
-    (destination/'verification.json').write_text(json.dumps({'source':source,'cases':len(rows),'all_ram_carry_equal':True,
+    (destination/'verification.json').write_text(json.dumps({'source':source,'cases':len(rows),'cpp_verified':args.cpp,'all_ram_carry_equal':True,
         'selector_table_rom_offset':0x4a76c,'selector_words_checked':145,'candidate_table_end':0x4a88e,
         'scope':'Controlled opcode0c fixtures and 145 words before a separately referenced code entry. No claim every selector is naturally used.',
         'results':rows},indent=2)+'\n')

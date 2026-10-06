@@ -1,4 +1,6 @@
 """Verify opcode14 selector1e callback through the original interpreter."""
+import argparse
+from animation_cpp_check import check as check_cpp
 import hashlib
 import json
 from pathlib import Path
@@ -10,6 +12,7 @@ from analyze_animation_wait import put
 
 
 def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--cpp',action='store_true');args=parser.parse_args()
     root=Path(__file__).resolve().parents[1];program,source=load_verified_program(root)
     if source['sha256']!='29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f':raise ValueError('Unsupported ROM')
     if int.from_bytes(program[0x4a578:0x4a57c],'big')!=0x2b3fa:raise ValueError('Callback target changed')
@@ -38,11 +41,13 @@ def main():
                 actual=bytearray(cpu.mem_read(0x100000,65536))
                 if actual[0x5900]!=0:raise ValueError('Unexpected return carry')
                 if actual!=expected:raise ValueError('Callback RAM mismatch '+repr((index,timer,bank_shadow)))
+                if args.cpp:
+                    check_cpp(root,root/"artifacts/animation_callback",ram,expected,0,8)
                 rows.append({'index':index,'timer':timer,'initial_bank_shadow':bank_shadow,
                              'source_read_rom_offset':0x6431a+index*4,'written_value':int.from_bytes(actual[obj+0x78:obj+0x7c],'big'),
                              'ram_sha256':hashlib.sha256(actual).hexdigest()})
     destination=root/'artifacts/animation_callback';destination.mkdir(parents=True,exist_ok=True)
-    (destination/'verification.json').write_text(json.dumps({'source':source,'cases':len(rows),'all_ram_carry_equal':True,
+    (destination/'verification.json').write_text(json.dumps({'source':source,'cases':len(rows),'cpp_verified':args.cpp,'all_ram_carry_equal':True,
         'scope':'Opcode14 selector1e under controlled object state. Full byte index operation tested, not a declaration of the source table logical extent or naturally used indices.',
         'results':rows},indent=2)+'\n')
     print('Animation callback RAM/carry match:',len(rows),'cases')

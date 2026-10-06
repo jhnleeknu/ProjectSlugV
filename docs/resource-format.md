@@ -117,3 +117,9 @@ kind2 하위 header byte의 비영 값은 표시 소비기에서 출력에 영�
 32byte 헤더: ASCII MS5A와LE32 7개(version1,kind1,source CPU address,source ROM offset,payload size,payload CRC32,reserved0). kind1은 고정 프로그램 영역이라 CPU주소=ROMoffset이고 둘 다100000미만이다. payload는1byte이상이며 고정 영역 끝을 넘지 않는다. 원본 명령 byte와절대분기주소를그대로보존한다.
 
 로더는 헤더·범위·파일정확길이·CRC를검사하며 명령지원여부는 실행기가검사한다. 실패시기존리소스는보존한다. `pack_animation.py`는 확인된호출부와자기루프끝을검사해6f1e2..6f21a의56byte를포장하고 참조하는 MS5C 네개도함께생성한다. 명령·호출부·그룹·감소량·원본해시는 `animations.manifest.json`에기록한다. 현재카탈로그는대표루프하나이며전체추출이아니다.
+
+## 고정 ROM 데이터 창 MS5D
+
+ASCII MS5D + LE32 7개(version1,kind1,CPUbase,ROMoffset,payloadsize,CRC32,reserved0)의32byte 헤더다. CPUbase=ROMoffset<100000이고payload는1byte이상이며고정ROM끝을넘지않는다. byte는원본그대로보존하며파일길이는정확히32+payloadsize다. MS5A와주소표현을공유하되MS5D는명령스트림이아닌불변데이터창이다.
+
+`pack_animation_data.py`는필드테이블후보범위4a76c..4a88e(290byte)와callback1e의byte인덱스조회창6431a..6471a(1024byte)를포장한다. 뒤의창이하나의논리테이블전체라는주장은하지않으며manifest에이차이를명시한다. 실행기는필요한BE16/BE32읽기가제공된한창안에완전히들어가야한다. 창의중첩은거부하고인접창을자동결합하지않는다.
