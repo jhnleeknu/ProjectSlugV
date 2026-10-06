@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++11 -O2 -Wall -Wextra -pedantic -Iengine/include
 PYTHON = .venv/bin/python
 
 .PHONY: all test runtime-resources setup-tools
-all: build/check_tiles build/reset_object build/init_objects
+all: build/check_tiles build/reset_object build/init_objects build/upload_palette
 
 build:
 	mkdir -p build
@@ -39,3 +39,6 @@ runtime-resources:
 setup-tools:
 	python3 -m venv .venv
 	$(PYTHON) -m pip install -r requirements-analysis.txt
+
+build/upload_palette: engine/src/palette_upload.cpp engine/tools/upload_palette.cpp engine/include/ms5/palette_upload.h | build
+	$(CXX) $(CXXFLAGS) engine/src/palette_upload.cpp engine/tools/upload_palette.cpp -o $@
