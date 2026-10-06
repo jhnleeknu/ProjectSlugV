@@ -1,4 +1,6 @@
 """Verify full original control-menu text layout, callbacks and clipping model."""
+import argparse
+import subprocess
 import hashlib
 import itertools
 import json
@@ -84,7 +86,13 @@ def model(program, descriptor, ram, clip):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cpp', action='store_true')
+    args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
+    folder = root / 'artifacts/menu_text'
+    folder.mkdir(parents=True, exist_ok=True)
+    inp, out, ports = [folder / name for name in ('input.bin', 'output.bin', 'ports.bin')]
     program, source = load_verified_program(root)
     if source['sha256'] != '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f':
         raise ValueError('Unsupported ROM')
@@ -133,15 +141,24 @@ def main():
             raise ValueError('Original layout did not return')
         if events != expected_events or callbacks != expected_callbacks or bytes(cpu.mem_read(0x100000, 65536)) != expected:
             raise ValueError('Layout mismatch: ' + repr((height, selected, width, clip, nested, len(events), len(expected_events))))
+        if args.cpp:
+            ram[0x7f16:0x7f1a] = (0x3650).to_bytes(4, 'big')
+            inp.write_bytes(ram)
+            subprocess.run([str(root / 'build/draw_menu_text'), str(inp),
+                            str(root / 'extracted/runtime/control_menu.ms5d'), str(out), str(ports),
+                            str(int(clip)), str(0x7000)], check=True)
+            expected_ports = b''.join(struct.pack('>BII', *event) for event in events)
+            if out.read_bytes() != expected or ports.read_bytes() != expected_ports:
+                raise ValueError('C++ menu layout mismatch')
         rows.append({'height': height, 'selected': selected, 'width': width, 'clip': clip, 'nested': nested,
                      'port_events': len(events), 'callback_calls': len(callbacks)})
     folder = root / 'artifacts/menu_text'
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / 'analysis.json').write_text(json.dumps({'source': source, 'cases': len(rows),
-        'whole_ram_ports_callbacks_equal': True, 'results': rows,
+    (folder / ('verification.json' if args.cpp else 'analysis.json')).write_text(json.dumps({'source': source, 'cases': len(rows),
+        'cpp_verified': args.cpp, 'whole_ram_ports_callbacks_equal': True, 'results': rows,
         'scope': 'Original full9e1a/9d3a and real six callbacks against independent model for menu93e0. '
-                 'No C++ full-layout implementation yet; other menus/flags/callbacks not covered.'}, indent=2) + '\n')
-    print('Original menu text model matches:', len(rows), 'cases')
+                 'Optional C++ comparison covers RAM and port events; other menu flags/callbacks not covered.'}, indent=2) + '\n')
+    print('Menu text original/model' + ('/C++' if args.cpp else '') + ' matches:', len(rows), 'cases')
 
 
 if __name__ == '__main__':

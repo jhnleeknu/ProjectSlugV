@@ -58,6 +58,22 @@ bool trace_direct_fixed_text(const std::vector<std::uint8_t>& script,
                              std::vector<VideoPortWrite>& writes,
                              std::string& error);
 
+// Called for each nonzero glyph at its current VRAM word address. Returning
+// false fails the trace; visible=false skips both port events and cursor advance.
+typedef bool (*FixedTextVisibility)(std::uint16_t address, void* context,
+                                    bool& visible, std::string& error);
+
+// Uses the same control grammar and transactional output as the direct trace.
+// Controls still update the cursor when glyphs are hidden. A null callback
+// accepts every glyph. The event bound counts only emitted port events.
+bool trace_direct_fixed_text_visible(const std::vector<std::uint8_t>& script,
+                                     std::uint16_t initial_address,
+                                     std::uint16_t initial_style,
+                                     FixedTextVisibility visibility,
+                                     void* context,
+                                     std::vector<VideoPortWrite>& writes,
+                                     std::string& error);
+
 } // namespace ms5
 
 #endif

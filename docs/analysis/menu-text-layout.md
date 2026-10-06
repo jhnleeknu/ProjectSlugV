@@ -30,4 +30,20 @@ current slot의visible height(+4)가0이면9e1a는반환한다. 제목길이를3
 
 모델은카탈로그에관찰한c/p명령만허용하며다른명령이생기면실패한다. 원본함수본문을모델로치환하거나callback을건너뛰지않았다. 출력은artifacts/menu_text/analysis.json이다.
 
-다음C++연결은기존문자해석기에glyph단위가림을연결하고,배치·선택표시·style및event5 dispatcher를원본순서대로수행해야한다. C++전체메뉴배치는아직구현하지않았다. 이분석은자연게임입력도달성이나팔레트/픽셀화면검증이아니다.
+다음C++연결은기존문자해석기에glyph단위가림을연결하고,배치·선택표시·style및event5 dispatcher를원본순서대로수행해야한다. 초기분석후아래지원범위의C++배치를추가했다. 이분석은자연게임입력도달성이나팔레트/픽셀화면검증이아니다.
+
+## C++ 배치 통합
+
+`draw_menu_text(ram,resource,clip,initial_line,writes,error)`가공통MS5D descriptor/문자측정/직접문자출력/가림판정을사용한다. 현재지원범위는flags0,nonnull제목및일반항목,descriptor와일치하는항목수,callback0또는확인한6개event5 no-op함수다. 지원밖의flags/separator/callback은명시적으로거부한다. 오류시RAM과출력목록을모두보존한다. height0에서는리소스를읽지않고빈목록으로반환한다.
+
+직접문자해석기에`FixedTextVisibility`함수포인터를추가해glyph마다출력여부를판정한다. invisible이면두포트쓰기와cursor증가를함께생략한다. 제어명령은계속해석한다. 기존직접출력API는null callback으로같은구현을사용한다. clip모드는RAM7f16의3650 renderer를검사한다.
+
+```
+make all test
+build/draw_menu_text INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES CLIP LINE
+.venv/bin/python tools/analyze_menu_text.py --cpp
+```
+
+CLIP은0/1,LINE은제목길이측정시원본D3의word초기값이다. 출력포트파일은기존9byte진단레코드(size/address/value)다. 실제게임용입력은원본MS5D이며출력기록재생으로배치로직을대체하지않는다.
+
+원본288조건과C++의전체RAM및쓰기폭/주소/값/순서가일치했다. 지원밖callback/flags에서상태보존,높이0의리소스생략과glyph가림시cursor보존unit검사도통과했다. a370의상태전환과선택입력,다른event callback,메뉴픽셀/팔레트연결은계속남아있다.

@@ -151,6 +151,17 @@ bool trace_direct_fixed_text(const std::vector<std::uint8_t>& script,
                              std::uint16_t initial_style,
                              std::vector<VideoPortWrite>& writes,
                              std::string& error) {
+    return trace_direct_fixed_text_visible(script, initial_address, initial_style,
+                                           NULL, NULL, writes, error);
+}
+
+bool trace_direct_fixed_text_visible(const std::vector<std::uint8_t>& script,
+                                     std::uint16_t initial_address,
+                                     std::uint16_t initial_style,
+                                     FixedTextVisibility visibility,
+                                     void* context,
+                                     std::vector<VideoPortWrite>& writes,
+                                     std::string& error) {
     std::vector<VideoPortWrite> pending;
     std::uint16_t cursor = initial_address;
     std::uint16_t line = initial_address;
@@ -165,6 +176,13 @@ bool trace_direct_fixed_text(const std::vector<std::uint8_t>& script,
             writes.swap(pending);
             error.clear();
             return true;
+        }
+        bool visible = true;
+        if (visibility != NULL && !visibility(cursor, context, visible, error)) {
+            return false;
+        }
+        if (!visible) {
+            continue;
         }
         if (pending.size() >= 200000U) {
             error = "direct text trace exceeds 200000 port events";
