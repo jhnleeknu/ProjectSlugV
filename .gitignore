@@ -1,0 +1,11 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.venv/
+build/
+roms/
+extracted/
+artifacts/
+*.zip
+*.7z
+*.rom
