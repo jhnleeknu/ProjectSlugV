@@ -89,6 +89,33 @@ bool read_fixed(const std::vector<ms5::FixedDataResource>& regions,
     return false;
 }
 
+bool draw_instruction(std::vector<std::uint8_t>& ram,
+                      std::size_t object_offset,
+                      const std::vector<std::uint8_t>& script,
+                      std::uint32_t script_base, std::uint64_t cursor,
+                      std::string& error) {
+    if (!fetch(script, script_base, cursor, 7, error)) return false;
+    const std::size_t offset = static_cast<std::size_t>(cursor - script_base);
+    const std::vector<std::uint8_t> operand(script.begin() + offset,
+                                           script.begin() + offset + 7);
+    ms5::AnimationDraw draw;
+    if (!ms5::decode_animation_draw(ram, object_offset, operand, draw, error)) {
+        return false;
+    }
+    if (!draw.skipped) {
+        ms5::SpriteSubmitStatus status;
+        if (!ms5::submit_sprite(ram, draw.d0, draw.d1, draw.d5, draw.d7,
+                                status, error)) {
+            return false;
+        }
+        if (status == ms5::SpriteWaiting) {
+            error = "animation sprite producer wait cannot resume in this API";
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 namespace ms5 {
@@ -203,29 +230,47 @@ bool step_animation_with_data(std::vector<std::uint8_t>& ram,
             put_long(next, state, pointer);
             continue;
         }
+        if (opcode == 0x10) {
+            if (!fetch(script, script_base, cursor, 3, error)) return false;
+            const std::size_t at = static_cast<std::size_t>(cursor - script_base);
+            const std::uint8_t selector = script[at];
+            const std::uint16_t length = word(script, at + 1);
+            const std::uint64_t list_base = cursor + 3;
+            std::uint32_t raw_offset = 0;
+            if (!read_fixed(regions, 0x4a76cU +
+                            static_cast<std::uint32_t>(selector) * 2U,
+                            2, raw_offset, error)) return false;
+            const std::uint16_t field_offset = static_cast<std::uint16_t>(raw_offset);
+            const std::int64_t field_address =
+                static_cast<std::int64_t>(object_offset) + signed_word(field_offset);
+            if (field_address < 0 || field_address >= 65536) {
+                error = "animation indexed draw field address is outside RAM";
+                return false;
+            }
+            // MOVE.B retains the high byte of the table offset in D0.W.
+            const std::uint16_t index_word = static_cast<std::uint16_t>(
+                (field_offset & 0xff00U) | next[static_cast<std::size_t>(field_address)]);
+            const std::uint16_t offset = static_cast<std::uint16_t>(
+                static_cast<std::uint32_t>(index_word) << 3);
+            if (offset < length) {
+                const std::uint64_t selected = static_cast<std::uint64_t>(
+                    static_cast<std::int64_t>(list_base) + signed_word(offset));
+                if (!fetch(script, script_base, selected, 8, error)) return false;
+                if (script[static_cast<std::size_t>(selected - script_base)] != 0x04) {
+                    error = "unsupported animation indexed draw opcode";
+                    return false;
+                }
+                if (!draw_instruction(next, object_offset, script, script_base,
+                                      selected + 1, error)) return false;
+            }
+            cursor = static_cast<std::uint64_t>(
+                static_cast<std::int64_t>(list_base) + signed_word(length));
+            continue;
+        }
         if (opcode == 0x04) {
-            if (!fetch(script, script_base, cursor, 7, error)) {
-                return false;
-            }
-            const std::size_t offset = static_cast<std::size_t>(cursor - script_base);
-            const std::vector<std::uint8_t> operand(script.begin() + offset,
-                                                    script.begin() + offset + 7);
+            if (!draw_instruction(next, object_offset, script, script_base,
+                                  cursor, error)) return false;
             cursor += 7;
-            AnimationDraw draw;
-            if (!decode_animation_draw(next, object_offset, operand, draw, error)) {
-                return false;
-            }
-            if (!draw.skipped) {
-                SpriteSubmitStatus status;
-                if (!submit_sprite(next, draw.d0, draw.d1, draw.d5, draw.d7,
-                                   status, error)) {
-                    return false;
-                }
-                if (status == SpriteWaiting) {
-                    error = "animation sprite producer wait cannot resume in this API";
-                    return false;
-                }
-            }
             continue;
         }
         if (opcode != 0x00) {

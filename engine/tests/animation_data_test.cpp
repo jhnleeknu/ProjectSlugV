@@ -29,5 +29,23 @@ int main() {
     check(ram[0x2078]==0xab && ram[0x207b]==0xab && ram[0x2029]==6);
     ram=before;ram[0x207d]=1;const std::vector<std::uint8_t> outside=ram;
     check(!ms5::step_animation_with_data(ram,0x2000,script,0x105800,regions,carry,error) && ram==outside);
+    // Indexed draw skips out-of-range entries without decoding their bytes.
+    ram=before;fields.data[0]=0;fields.data[1]=0xa0;regions.assign(1,fields);
+    const std::uint8_t indexed[]={0x10,0,0,8,0xff,0,0,0,0,0,0,0,0x28};
+    script.assign(indexed,indexed+sizeof(indexed));
+    check(ms5::step_animation_with_data(ram,0x2000,script,0x105800,regions,carry,error));
+    check(carry && ram[0x2029]==0);
+    ram=before;ram[0x20a0]=0;const std::vector<std::uint8_t> selected=ram;
+    check(!ms5::step_animation_with_data(ram,0x2000,script,0x105800,regions,carry,error) && ram==selected && carry);
+    script[4]=4;script[9]=0x7f;script[10]=0xf8; // suppressed draw ID 007ff800
+    check(ms5::step_animation_with_data(ram,0x2000,script,0x105800,regions,carry,error));
+    check(carry && ram[0x2029]==0);
+    ram=selected;script.resize(11);
+    check(!ms5::step_animation_with_data(ram,0x2000,script,0x105800,regions,carry,error) && ram==selected);
+    // MOVE.B keeps the offset word's high byte: 0100 becomes index word0100.
+    script.assign(indexed,indexed+sizeof(indexed));fields.data[0]=1;fields.data[1]=0;
+    regions.assign(1,fields);ram=selected;
+    check(ms5::step_animation_with_data(ram,0x2000,script,0x105800,regions,carry,error));
+    check(carry && ram[0x2029]==0);
     std::cout<<"animation_data_test: passed\n";
 }
