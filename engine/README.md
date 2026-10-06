@@ -61,3 +61,12 @@ make build/sort_sprite_queue
 ```
 
 `sort_sprite_queue INPUT OUTPUT TAG`는 CPU0x100000에 대응하는64KiB RAM에서 지연 목록을 일반 링에 합치며 새 태그를 저장한다. 실제 런타임에서는 `sort_deferred_sprites` API를 사용한다. 전체 큐 생성·소비 스케줄은 아직 연결하지 않았다.
+
+MS5C로 역방향 슬롯을 채우려면 마지막 인자에 `reverse`를 추가한다. 이때 FIRST는 높은 시작 경계, LIMIT은 낮은 경계, CACHED는 준비된 슬롯의 시작이다. 기존 인자를 생략한 동작은 forward다.
+
+```sh
+build/emit_sprite_resource extracted/runtime/composition_002152.ms5c artifacts/reverse-writes.bin 160 384 0x1500 380 0 380 reverse
+.venv/bin/python tools/verify_sprite_reverse.py --runtime-resources
+```
+
+역방향은 하드웨어 슬롯 번호의 배정 방향이다. 타일 열의 순서를 뒤집지 않는다.

@@ -21,8 +21,8 @@ void append_write(std::vector<ms5::SpriteWrite>& writes,
 bool emit_rectangle(const std::vector<std::uint8_t>& data,
                     std::uint16_t coordinate_u, std::uint16_t coordinate_v,
                     std::uint16_t style, std::uint16_t first_slot,
-                    std::uint16_t limit, bool refresh,
-                    std::uint16_t cached_end,
+                    std::uint16_t limit, bool refresh, bool reverse,
+                    std::uint16_t cached_boundary,
                     std::vector<ms5::SpriteWrite>& writes,
                     std::uint16_t& next_slot, std::string& error) {
     error.clear();
@@ -40,12 +40,15 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
         error = "input length must match the rectangle dimensions exactly";
         return false;
     }
-    if (first_slot > limit || limit > 380) {
-        error = "slots must satisfy first_slot <= limit <= 380";
+    if (reverse ? (limit > first_slot || first_slot > 380)
+                : (first_slot > limit || limit > 380)) {
+        error = reverse ? "slots must satisfy lower <= first_slot <= 380"
+                        : "slots must satisfy first_slot <= limit <= 380";
         return false;
     }
-    if (cached_end > 380) {
-        error = "cached_end must be <= 380";
+    if (cached_boundary > 380) {
+        error = reverse ? "cached_begin must be <= 380"
+                        : "cached_end must be <= 380";
         return false;
     }
     if ((style & 0x00f8U) != 0) {
@@ -63,9 +66,9 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
          0xffffU) | height;
     std::uint16_t slot = first_slot;
     for (std::uint32_t column = 0; column < width; ++column) {
-        // In the supported slot range the original signed BPL limit test is
-        // equivalent to this comparison, and precedes horizontal clipping.
-        if (slot >= limit) {
+        // Both allocation directions test their bound before clipping; source
+        // columns advance left-to-right regardless of the slot direction.
+        if (reverse ? slot <= limit : slot >= limit) {
             break;
         }
         const std::uint32_t xword =
@@ -74,10 +77,15 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
         if (((xword + 0x200U) & 0xffffU) >= 0x5000U) {
             continue;
         }
+        if (reverse) {
+            --slot;
+        }
         if (refresh) {
             append_write(result, 0x8201U + slot, yword);
-            if (slot < cached_end) {
-                ++slot;
+            if (reverse ? slot >= cached_boundary : slot < cached_boundary) {
+                if (!reverse) {
+                    ++slot;
+                }
                 continue;
             }
         }
@@ -93,7 +101,9 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
                          (style & 0x00ffU));
             append_write(result, address, read_be_word(data, offset + 2));
         }
-        ++slot;
+        if (!reverse) {
+            ++slot;
+        }
     }
     writes.swap(result);
     next_slot = slot;
@@ -110,7 +120,7 @@ bool emit_sprite_rectangle(const std::vector<std::uint8_t>& data,
                            std::vector<SpriteWrite>& writes,
                            std::uint16_t& next_slot, std::string& error) {
     return emit_rectangle(data, coordinate_u, 0, style, first_slot, limit,
-                          false, 0, writes, next_slot, error);
+                          false, false, 0, writes, next_slot, error);
 }
 
 bool emit_sprite_rectangle_refresh(const std::vector<std::uint8_t>& data,
@@ -124,7 +134,29 @@ bool emit_sprite_rectangle_refresh(const std::vector<std::uint8_t>& data,
                                    std::uint16_t& next_slot,
                                    std::string& error) {
     return emit_rectangle(data, coordinate_u, coordinate_v, style, first_slot,
-                          limit, true, cached_end, writes, next_slot, error);
+                          limit, true, false, cached_end, writes, next_slot, error);
+}
+
+bool emit_sprite_rectangle_reverse(const std::vector<std::uint8_t>& data,
+                                   std::uint16_t coordinate_u,
+                                   std::uint16_t style,
+                                   std::uint16_t first_slot,
+                                   std::uint16_t lower,
+                                   std::vector<SpriteWrite>& writes,
+                                   std::uint16_t& next_slot,
+                                   std::string& error) {
+    return emit_rectangle(data, coordinate_u, 0, style, first_slot, lower,
+                          false, true, 0, writes, next_slot, error);
+}
+
+bool emit_sprite_rectangle_reverse_refresh(
+    const std::vector<std::uint8_t>& data,
+    std::uint16_t coordinate_u, std::uint16_t coordinate_v,
+    std::uint16_t style, std::uint16_t first_slot, std::uint16_t lower,
+    std::uint16_t cached_begin, std::vector<SpriteWrite>& writes,
+    std::uint16_t& next_slot, std::string& error) {
+    return emit_rectangle(data, coordinate_u, coordinate_v, style, first_slot,
+                          lower, true, true, cached_begin, writes, next_slot, error);
 }
 
 } // namespace ms5

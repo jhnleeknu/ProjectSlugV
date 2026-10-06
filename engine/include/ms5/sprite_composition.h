@@ -43,6 +43,29 @@ bool emit_sprite_rectangle_refresh(const std::vector<std::uint8_t>& data,
                                    std::uint16_t& next_slot,
                                    std::string& error);
 
+// Normal rectangular branch of CPU 0x0117b2 with descending slot allocation.
+// Columns retain their original left-to-right order; this is not image flipping.
+// lower <= first_slot <= 380. A visible column decrements the slot before writes;
+// clipped columns consume no slot. The data/style and failure contracts above apply.
+bool emit_sprite_rectangle_reverse(const std::vector<std::uint8_t>& data,
+                                   std::uint16_t coordinate_u,
+                                   std::uint16_t style,
+                                   std::uint16_t first_slot,
+                                   std::uint16_t lower,
+                                   std::vector<SpriteWrite>& writes,
+                                   std::uint16_t& next_slot,
+                                   std::string& error);
+
+// Normal rectangular refresh branch of CPU 0x013b66, descending slots as above.
+// Each visible column emits Y first after decrementing its slot. Slots at or
+// above cached_begin retain X/zoom/tile words. cached_begin must be <= 380.
+bool emit_sprite_rectangle_reverse_refresh(
+    const std::vector<std::uint8_t>& data,
+    std::uint16_t coordinate_u, std::uint16_t coordinate_v,
+    std::uint16_t style, std::uint16_t first_slot, std::uint16_t lower,
+    std::uint16_t cached_begin, std::vector<SpriteWrite>& writes,
+    std::uint16_t& next_slot, std::string& error);
+
 } // namespace ms5
 
 #endif

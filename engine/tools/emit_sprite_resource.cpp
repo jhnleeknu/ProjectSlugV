@@ -50,10 +50,15 @@ void append_word(std::vector<std::uint8_t>& bytes, std::uint16_t value) {
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 9) {
-        std::cerr << "usage: emit_sprite_resource INPUT OUTPUT U V STYLE FIRST LIMIT CACHED\n"
+    if (argc != 9 && argc != 10) {
+        std::cerr << "usage: emit_sprite_resource INPUT OUTPUT U V STYLE FIRST LIMIT CACHED [forward|reverse]\n"
                   << "numbers: decimal or 0x hexadecimal, 0..65535\n"
                   << "output: BE32 next slot followed by BE16 address/value pairs\n";
+        return 2;
+    }
+    const std::string direction = argc == 10 ? argv[9] : "forward";
+    if (direction != "forward" && direction != "reverse") {
+        std::cerr << "direction must be forward or reverse\n";
         return 2;
     }
     std::uint16_t numbers[6];
@@ -83,9 +88,12 @@ int main(int argc, char** argv) {
         std::cerr << error << '\n';
         return 1;
     }
-    if (!ms5::emit_sprite_rectangle_refresh(
-            resource.data, numbers[0], numbers[1], numbers[2], numbers[3], numbers[4],
-            numbers[5], writes, next_slot, error)) {
+    const bool emitted = direction == "reverse"
+        ? ms5::emit_sprite_rectangle_reverse_refresh(resource.data, numbers[0], numbers[1],
+            numbers[2], numbers[3], numbers[4], numbers[5], writes, next_slot, error)
+        : ms5::emit_sprite_rectangle_refresh(resource.data, numbers[0], numbers[1],
+            numbers[2], numbers[3], numbers[4], numbers[5], writes, next_slot, error);
+    if (!emitted) {
         std::cerr << error << '\n';
         return 1;
     }
