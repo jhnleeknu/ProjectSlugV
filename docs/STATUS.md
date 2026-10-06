@@ -388,6 +388,12 @@
 - 원본388조건의count/style/line/종료주소가일치했다. 16비트countwrap과비ASCII byte도검증했다. 잘린입력/trap조건거부와출력보존검사통과.
 - 메뉴초기화/표시와다른글꼴렌더링은남았다. docs/analysis/fixed-text.md 참고.
 
+## 2026-10-07 — 메뉴 초기화와 네이티브 리소스 연결
+- 이전 turn은 문자열측정388조건과표시회귀를완료한progress다.
+- a29c reset/첫메뉴할당을C++로연결했다. MS5D descriptor와원본문자측정으로폭/높이및RAM상태를설정한다.
+- 실제리소스및경계378조건의전체RAM이원본과일치했다. 8/16비트wrap,slot+5/current pointer보존,문자열간line전달을확인했다.
+- 중첩a0a0 push와a370 프레임/표시는남았다. docs/analysis/control-menu.md 참고.
+
 ## 다음 작업
 1. 실제 ROM 애니메이션 스크립트의 참조·경계를 확인하고 런타임 리소스로 추출한다. 분기 등 나머지opcode를 해석해 상태 실행기에 연결한다.
 2. 팔레트·애니메이션·맵 참조 경로를 오브젝트 코드와 연결한다.

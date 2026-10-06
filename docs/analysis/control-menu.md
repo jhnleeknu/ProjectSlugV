@@ -27,3 +27,20 @@ make all test
 C++출력전체필드가원본과일치했다. 원본9b26의6선택주소,9b3e의24호출(각항목event0/3/7/ffff),7문자열범위를확인했다. callback진입점에서멈췄으므로callback내용·메뉴화면·자연도달성검증과구분한다. 경계·종료표시·255/256개·출력보존검사와전체기존검사가통과했다.
 
 다음연결대상은a0a0의메뉴초기화,386e문자열측정, a370메뉴프레임과항목callback이다. 이한메뉴추출을전체메뉴카탈로그로간주하지않는다.
+
+## a29c 초기화의 C++ 연결
+
+`initialize_menu`는a29c의메뉴스택reset과첫할당을구현한다. 이진입점은head7f0e를107f0e로초기화하므로a0a0의중첩메뉴표시경로를거치지않고107efe에첫슬롯을만든다. 일반a0a0 push나중첩메뉴지원과구분한다.
+
+MS5D descriptor의제목과항목문자열을`measure_fixed_text`로읽는다. 제목0은생략하고항목0/fffffffe도측정을생략한다. style은입력Y word로시작하고line은명시적인initial_line으로받으며문자열간에이어진다. 최대글자수는16비트unsigned 비교다. flags&0e가0이면padding4,아니면2를더한결과의하위byte와최소너비중큰값을쓴다. 높이는(항목수+2)의하위byte와최소높이중큰값이다. 호스트의일반정수크기로계산해wrap을없애지않는다.
+
+새슬롯+0에는원본descriptor주소를보존한다. +4를0으로쓰지만+5는기존값을유지한다. +6은항목수,+7/+8은0,+9/+a는X/Y하위byte,+b/+c는폭/높이,+d는3,+e는ff,+f는0이다. 전역7f16은기본문자callback3650,7f1a는0,7f1b는1이다. current pointer7f12는원본의push/pop효과대로보존된다.
+
+CLI:
+
+```
+build/init_menu INPUT_RAM INPUT_MS5D OUTPUT_RAM ADDRESS X Y LINE
+.venv/bin/python tools/verify_menu_init.py
+```
+
+실제93e0리소스16조건과합성경계362조건,총378조건의전체RAM이원본a29c와일치했다. 254/255항목에서높이byte wrap,255주변문자열폭,65535글자word wrap,문자열간line전달을포함한다. 잘못된리소스/측정trap/짧은RAM은상태변경없이거부한다. 전체기존검사통과. 이단계는메뉴초기화이며프레임애니메이션·중첩메뉴·실제화면은후속작업이다.
