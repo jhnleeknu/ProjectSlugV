@@ -18,15 +18,13 @@ void append_write(std::vector<ms5::SpriteWrite>& writes,
     writes.push_back(write);
 }
 
-} // namespace
-
-namespace ms5 {
-
-bool emit_sprite_rectangle(const std::vector<std::uint8_t>& data,
-                           std::uint16_t coordinate_u, std::uint16_t style,
-                           std::uint16_t first_slot, std::uint16_t limit,
-                           std::vector<SpriteWrite>& writes,
-                           std::uint16_t& next_slot, std::string& error) {
+bool emit_rectangle(const std::vector<std::uint8_t>& data,
+                    std::uint16_t coordinate_u, std::uint16_t coordinate_v,
+                    std::uint16_t style, std::uint16_t first_slot,
+                    std::uint16_t limit, bool refresh,
+                    std::uint16_t cached_end,
+                    std::vector<ms5::SpriteWrite>& writes,
+                    std::uint16_t& next_slot, std::string& error) {
     error.clear();
     if (data.size() < 8 || read_be_word(data, 0) != 0x0100U) {
         error = "input must begin with one rectangular block (0x0100)";
@@ -46,14 +44,23 @@ bool emit_sprite_rectangle(const std::vector<std::uint8_t>& data,
         error = "slots must satisfy first_slot <= limit <= 380";
         return false;
     }
+    if (cached_end > 380) {
+        error = "cached_end must be <= 380";
+        return false;
+    }
     if ((style & 0x00f8U) != 0) {
         error = "style low byte supports only bits 0..2";
         return false;
     }
 
-    std::vector<SpriteWrite> result;
-    result.reserve(static_cast<std::size_t>(width * (2U + height * 2U)));
+    std::vector<ms5::SpriteWrite> result;
+    result.reserve(static_cast<std::size_t>(
+        width * (2U + height * 2U + (refresh ? 1U : 0U))));
     const std::uint32_t dx = read_be_word(data, 2);
+    const std::uint32_t dy = read_be_word(data, 4);
+    const std::uint32_t yword =
+        (((static_cast<std::uint32_t>(coordinate_v) - dy) * 128U) &
+         0xffffU) | height;
     std::uint16_t slot = first_slot;
     for (std::uint32_t column = 0; column < width; ++column) {
         // In the supported slot range the original signed BPL limit test is
@@ -66,6 +73,13 @@ bool emit_sprite_rectangle(const std::vector<std::uint8_t>& data,
              column * 0x400U) & 0xffffU;
         if (((xword + 0x200U) & 0xffffU) >= 0x5000U) {
             continue;
+        }
+        if (refresh) {
+            append_write(result, 0x8201U + slot, yword);
+            if (slot < cached_end) {
+                ++slot;
+                continue;
+            }
         }
         append_write(result, 0x8401U + slot, (xword * 2U) & 0xffffU);
         append_write(result, 0x8001U + slot, 0xffffU);
@@ -84,6 +98,33 @@ bool emit_sprite_rectangle(const std::vector<std::uint8_t>& data,
     writes.swap(result);
     next_slot = slot;
     return true;
+}
+
+} // namespace
+
+namespace ms5 {
+
+bool emit_sprite_rectangle(const std::vector<std::uint8_t>& data,
+                           std::uint16_t coordinate_u, std::uint16_t style,
+                           std::uint16_t first_slot, std::uint16_t limit,
+                           std::vector<SpriteWrite>& writes,
+                           std::uint16_t& next_slot, std::string& error) {
+    return emit_rectangle(data, coordinate_u, 0, style, first_slot, limit,
+                          false, 0, writes, next_slot, error);
+}
+
+bool emit_sprite_rectangle_refresh(const std::vector<std::uint8_t>& data,
+                                   std::uint16_t coordinate_u,
+                                   std::uint16_t coordinate_v,
+                                   std::uint16_t style,
+                                   std::uint16_t first_slot,
+                                   std::uint16_t limit,
+                                   std::uint16_t cached_end,
+                                   std::vector<SpriteWrite>& writes,
+                                   std::uint16_t& next_slot,
+                                   std::string& error) {
+    return emit_rectangle(data, coordinate_u, coordinate_v, style, first_slot,
+                          limit, true, cached_end, writes, next_slot, error);
 }
 
 } // namespace ms5

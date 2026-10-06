@@ -34,3 +34,23 @@ make build/emit_composition
 이 진입점에서style하위bit를변경한검증은실제flip dispatch가맞다는증명이아니다. 원본은flip별별도진입점도가지며그경로는미검증이다. dy와레지스터부수효과,세로위치제어0x8200계열,전체큐소비,스프라이트화면합성은아직남아있다. 함수이름의rectangle은지원형식을한정하며전체원본consumer대체완료를뜻하지않는다.
 
 raw합성파일과trace는artifacts/sprite_composition에분석용으로저장한다. 이후공통리소스규격·로더와연결해야하며현재raw시험파일을최종런타임카탈로그로취급하지않는다.
+
+## 세로 제어와 슬롯 재사용: 0xf246
+
+후속 분석에서 원본 0x16bba/0x16cfa의 큐 소비 경로를 찾았다. 두 경로는 RAM0x108d3c의 bit7과 슬롯 범위를 사용해 서로 다른 dispatch table을 선택한다.0x16d7c의 table0xf226 첫 entry는0xf246으로 연결된다. 실제 호출 시점과 전체 동시 처리 규약은 아직 미확인이다.
+
+0xf246은 같은 packed ID와 합성 데이터를 읽지만, header의dy를 사용하여 `(((V-dy)*128)&0xffff)|height`의 세로 제어word를 만든다. V는producer D0 하위word에서 유래하며 queue record+8 상위word의bits7..15에 저장되어 있다.
+
+이 경로의 A4+2는 슬롯limit, +4는다음slot, +6은이미준비된끝slot이다. 가로clip을통과한각열은0x8201+slot의Y제어를먼저쓴다. slot<cached_end이면가로위치·축소·타일쓰기를생략하고slot만증가한다. 그렇지않으면기존일반경로와같은X·zoom·attribute/tile쓰기를이어간다. 이것으로이전분석에서Y쓰기가없었던이유를설명할수있다.
+
+C++ `emit_sprite_rectangle_refresh`에이경로를추가했다. 기존API와공통명령생성코드를공유하되기존API출력을보존한다. dy의부호·V범위는unsigned모듈러계산으로원본word연산을따른다.
+
+```
+make build/emit_composition_refresh build/emit_composition
+.venv/bin/python tools/verify_sprite_refresh.py
+.venv/bin/python tools/verify_sprite_composition.py
+```
+
+두ID,가로3종,세로4종(0,384,511,65535),cached_end3종,슬롯구간3종의216개조합에서원본0xf246의모든쓰기와다음slot이C++와일치했다. 이전일반경로80개도회귀통과했다. 결과는artifacts/sprite_refresh/verification.json에저장한다.
+
+이로써일반단일직사각형의Y/X/tile제어가준비되었으나,실제큐스케줄링·flip·여러블록·화면래스터화는여전히별도작업이다. cached_end라는이름은비교조건에대한분석용명칭이다.
