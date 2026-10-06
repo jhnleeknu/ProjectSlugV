@@ -115,7 +115,11 @@ def main():
         rows.append({'profile': label, 'mode': mode, 'requested': requested,
                      'old': ram[0x7f05], 'direction_flags': ram[0x7f0d],
                      'height': ram[0x7f02], 'nested': ram[0x7f0e:0x7f12] != ram[0x7f12:0x7f16],
+                     'width': ram[0x7f09],
                      'selected': expected[0x7f05], 'port_events': len(writes),
+                     'separator_cells': sum(size == 4 and address == 0x3c0000 and
+                         (value & 65535) in (0x0bf8, 0x0bf9, 0x0bfa)
+                         for size, address, value in writes),
                      'callbacks': callbacks.copy(),
                      'ram_sha256': hashlib.sha256(expected).hexdigest(),
                      'ports_sha256': hashlib.sha256(expected_ports).hexdigest()})
@@ -141,13 +145,41 @@ def main():
             data = fixture(items, flags)
             cpu.mem_write(FIXTURE_BASE, data)
             resource.write_bytes(pack(data))
-            # An old disabled row is drawable; visible old separators are outside the API.
-            old_indices = [i for i, item in enumerate(items) if item[0] != 0xfffffffe]
+            # Include old disabled and separator rows when redrawing the previous selection.
+            old_indices = range(len(items))
             for old, direction, height, nested, action in itertools.product(
                     old_indices, (0, 2, 255), (0, 2, 8), (False, True), actions):
                 ram = ram_for(FIXTURE_MENU, len(items), old, direction, height, nested,
                               'synthetic-' + str(len(rows)))
                 compare(ram, resource, action[0], action[1], label + '-flags-' + str(flags))
+
+    separator_items = [(FIXTURE_BASE + 8, CALLBACKS[0], 0),
+                       (0xfffffffe, CALLBACKS[1], 65535),
+                       (FIXTURE_BASE + 12, CALLBACKS[2], 32768)]
+    data = fixture(separator_items)
+    cpu.mem_write(FIXTURE_BASE, data)
+    resource.write_bytes(pack(data))
+    # The old separator is at column 5, row 10. A one-cell parent can cover
+    # its first cell or the next cell, exposing 9cd4's stalled cursor branch.
+    for width, occlusion, direction, action in itertools.product(
+            (0, 1, 2, 3, 4, 255), ('none', 'first-cell', 'second-cell'),
+            (0, 2, 255), actions):
+        ram = ram_for(FIXTURE_MENU, 3, 1, direction, 8,
+                      occlusion != 'none', 'separator-boundary-' + str(len(rows)))
+        ram[0x7f09] = width
+        if occlusion != 'none':
+            ram[0x7ef2] = 1
+            ram[0x7ef7:0x7efa] = bytes((5 if occlusion == 'first-cell' else 6, 10, 1))
+        compare(ram, resource, action[0], action[1], 'separator-width-' +
+                str(width) + '-occlusion-' + occlusion)
+        cells = 0 if width < 2 else 256 if width == 2 else width - 2
+        if occlusion == 'first-cell':
+            cells = 0
+        elif occlusion == 'second-cell':
+            cells = min(1, cells)
+        if rows[-1]['separator_cells'] != cells:
+            raise ValueError('Original separator coverage differed: ' + repr(
+                (rows[-1]['profile'], rows[-1]['separator_cells'], cells)))
 
     boundary_items = [(FIXTURE_BASE + 8, CALLBACKS[0] if index in (0, 127, 254) else 0,
                        index) for index in range(255)]
@@ -207,10 +239,12 @@ def main():
         'results': rows, 'rejections': rejections,
         'scope': 'Full original routines and event-5 callbacks execute unmodified. '
                  'Only synthetic descriptor/string data are installed at CPU 0x80000. '
-                 'Descriptor flags0, zero titles, disabled callbacks, separators skipped during navigation, '
-                 'byte index clamping/wrap, clipping and callback arguments covered. '
+                 'Descriptor flags zero, zero titles, disabled callbacks, separators skipped during navigation '
+                 'and visible old separator redraws are covered. Separator widths 0/1/2/3/4/255 '
+                 'are compared with no parent cover and parent cover at the first or second cell. '
+                 'Byte index clamping/wrap, clipping and callback arguments are covered. '
                  'Hidden rows bypass nonzero descriptor flags; visible nonzero flags are rejected. '
-                 'Visible old separators, unsupported callbacks, CPU register/flag equivalence, '
+                 'Unsupported callbacks, CPU register/flag equivalence, '
                  'hardware timing and full boot are outside scope.'
     }, indent=2) + '\n')
     print('Menu navigation original/C++ match:', len(rows), 'cases;', len(rejections), 'rejections')

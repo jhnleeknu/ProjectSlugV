@@ -44,5 +44,30 @@ int main() {
     ram[0x7f02] = 0;
     assert(ms5::draw_menu_text(ram, ms5::FixedDataResource(), true, 0x7000, writes, error));
     assert(writes.empty());
+    data.data[15] = 0;
+    put(data.data, 16, 0xfffffffeU);
+    ram[0x7f02] = 3;
+    ram[0x7f06] = 0;
+    const unsigned int widths[] = {0, 1, 2, 3, 4, 255};
+    const unsigned int counts[] = {0, 0, 256, 1, 2, 253};
+    for (unsigned int i = 0; i < 6; ++i) {
+        ram[0x7f09] = static_cast<std::uint8_t>(widths[i]);
+        final_line = 0x1234;
+        assert(ms5::draw_menu_item(ram, data, false, writes, error, NULL, NULL, &final_line));
+        assert(writes.size() == counts[i] && final_line == 0x1234);
+        if (!writes.empty()) {
+            assert(writes.front().size == 4 && writes.front().value == 0x70210bf8U);
+            if (writes.size() > 1) {
+                assert((writes.back().value & 65535U) == 0x0bfaU);
+            }
+        }
+    }
+    // Occlusion applies even when clip=false; a covered first cell keeps
+    // the cursor stationary, so all remaining separator cells stay covered.
+    put(ram, 0x7f0e, 0x107eee);
+    ram[0x7ef2] = 1;ram[0x7ef7] = 1;ram[0x7ef8] = 1;ram[0x7ef9] = 1;
+    ram[0x7efd] = 0;
+    assert(ms5::draw_menu_item(ram, data, false, writes, error, NULL, NULL, &final_line));
+    assert(writes.empty() && final_line == 0x1234);
     std::cout << "Menu text unsupported paths and rollback passed\n";
 }

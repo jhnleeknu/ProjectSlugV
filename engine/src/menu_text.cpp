@@ -93,34 +93,60 @@ bool append_item(const MenuItem& item, std::size_t index,
                                                 ram[slot + 10U])) + 0x20U);
     address = static_cast<std::uint16_t>((address & 0xff00U) |
         ((static_cast<unsigned int>(address) + row) & 0xffU));
-    for (unsigned int half_index = 0; half_index < 2U; ++half_index) {
-        bool covered = false;
-        if (!menu_position_occluded(ram, address, covered, error)) {
-            return false;
-        }
-        if (!covered) {
-            VideoPortWrite write;
-            write.size = 4U;
-            write.address = 0x3c0000U;
-            const std::uint16_t tile = index == selected ?
-                static_cast<std::uint16_t>(0x0313U + half_index) : 0x00ffU;
-            write.value = (static_cast<std::uint32_t>(address) << 16) | tile;
-            writes.push_back(write);
-        }
-        address = static_cast<std::uint16_t>(
-            static_cast<unsigned int>(address) + 0x20U);
-    }
     std::uint16_t line = final_line != NULL ? *final_line : 0U;
-    if (item.title_address != 0U) {
-        std::vector<std::uint8_t> script;
-        if (!script_at(resource, item.title_address, script, error)) {
-            return false;
+    if (item.title_address == 0xfffffffeU) {
+        // 9d86 subtracts width as a word; 9cd4 then decrements its low byte.
+        // Width2 therefore emits256 cells, rather than an empty separator.
+        if (ram[slot + 11U] >= 2U) {
+            const unsigned int width = ram[slot + 11U];
+            const unsigned int cells = width == 2U ? 256U : width - 2U;
+            for (unsigned int column = 0; column < cells; ++column) {
+                bool covered = false;
+                if (!menu_position_occluded(ram, address, covered, error)) {
+                    return false;
+                }
+                if (!covered) {
+                    VideoPortWrite write;
+                    write.address = 0x3c0000U;
+                    write.size = 4U;
+                    const std::uint16_t tile = column == 0U ? 0x0bf8U :
+                        column + 1U == cells ? 0x0bfaU : 0x0bf9U;
+                    write.value = (static_cast<std::uint32_t>(address) << 16) | tile;
+                    writes.push_back(write);
+                    // Covered cells do not advance the cursor in9cd4.
+                    address = static_cast<std::uint16_t>(address + 0x20U);
+                }
+            }
         }
-        const std::uint16_t style = current != head && index != selected ?
-                                   0x0603U : 0x0003U;
-        if (!append_text(script, address, style, clip, ram, writes, error,
-                         &line)) {
-            return false;
+    } else {
+        for (unsigned int half_index = 0; half_index < 2U; ++half_index) {
+            bool covered = false;
+            if (!menu_position_occluded(ram, address, covered, error)) {
+                return false;
+            }
+            if (!covered) {
+                VideoPortWrite write;
+                write.size = 4U;
+                write.address = 0x3c0000U;
+                const std::uint16_t tile = index == selected ?
+                    static_cast<std::uint16_t>(0x0313U + half_index) : 0x00ffU;
+                write.value = (static_cast<std::uint32_t>(address) << 16) | tile;
+                writes.push_back(write);
+            }
+            address = static_cast<std::uint16_t>(
+                static_cast<unsigned int>(address) + 0x20U);
+        }
+        if (item.title_address != 0U) {
+            std::vector<std::uint8_t> script;
+            if (!script_at(resource, item.title_address, script, error)) {
+                return false;
+            }
+            const std::uint16_t style = current != head && index != selected ?
+                                       0x0603U : 0x0003U;
+            if (!append_text(script, address, style, clip, ram, writes, error,
+                             &line)) {
+                return false;
+            }
         }
     }
     if (item.callback == 0x9aa8U || item.callback == 0x9602U ||
@@ -205,10 +231,6 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
         }
         std::uint16_t candidate_line = final_line != NULL ? *final_line : 0U;
         const MenuItem& item = descriptor.items[index];
-        if (item.title_address == 0xfffffffeU) {
-            error = "menu item drawing does not support separator items";
-            return false;
-        }
         if (!supported_callback(item.callback)) {
             error = "menu item event-5 callback is unsupported";
             return false;
@@ -277,8 +299,8 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
     }
     for (std::size_t index = 0; index < descriptor.items.size(); ++index) {
         const MenuItem& item = descriptor.items[index];
-        if (item.title_address == 0U || item.title_address == 0xfffffffeU) {
-            error = "menu text does not support empty or separator items";
+        if (item.title_address == 0U) {
+            error = "menu text does not support empty items";
             return false;
         }
         if (!supported_callback(item.callback)) {

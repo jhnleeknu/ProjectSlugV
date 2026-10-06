@@ -14,7 +14,7 @@ struct StageGroupMenuContext;
 // rows support flags zero, ordinary or empty titles, known event-5 no-op
 // callbacks, debug callback 0x009aa8, and stage callbacks 0x009602 /
 // 0x009802. Dynamic drawing requires font and stage drawing requires context.
-// Separators are rejected. clip requires the direct renderer at
+// Separators use the original9cd4 tiles and unconditional occlusion. clip requires the direct renderer at
 // CPU 0x003650. Success replaces RAM and writes and clears error; failure
 // preserves both. Optional final_line receives D3 only on success; hidden
 // rows preserve its input value.
