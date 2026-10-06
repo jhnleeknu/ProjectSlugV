@@ -21,6 +21,18 @@
     {
       "path": "src/devices/bus/neogeo/prot_pcm2.cpp",
       "sha256": "c9b0aa2e24d39476cc9c860455dfaec8795741338d0964fb88e41807cd5804bc"
+    },
+    {
+      "path": "src/lib/util/endianness.h",
+      "sha256": "1b63313f0b3850958081f8ef8e756983f660e1b2148796cd349958d5cfeefd81"
+    },
+    {
+      "path": "src/emu/romentry.h",
+      "sha256": "572a2d095ee86abafcc30e4df876e76d5a03d56d2add9d4b80dfb31835580a08"
+    },
+    {
+      "path": "src/emu/romload.cpp",
+      "sha256": "854873d6f1b33d1dd3614a219b4b744f8fefb11708c8389141157825599f275f"
     }
   ]
 }
