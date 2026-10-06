@@ -71,6 +71,13 @@
 - 원본 0x4718 helper의 signed16 조회 변환을 16개 probe에서 확인했다.
 - 전체 팔레트 범위·게임 사용 ID·혼합 경로·RGB 변환·wrapper는 미완료. 분석: docs/analysis/palette-flow.md.
 
+## 2026-10-06 — 팔레트 슬롯 관리 추적
+- 0x3ef2 초기화를 C++로 구현하고 20개 패턴 × 64KiB RAM 전체 원본 일치를 확인했다.
+- 256개 destination 슬롯과 source palette ID가 별개임을 확인했다.
+- 원본0x8ebe에서 ID 공유·새 할당 플래그·동일 bucket의 ID 구분을 실행 관찰했다.
+- 원본0x8ff4의 보유 슬롯 참조 해제를 실행 관찰했다. 할당/해제 C++ 구현은 아직이다.
+- 상세 주소·필드·검증 범위: docs/analysis/palette-flow.md.
+
 ## 다음 작업
 1. 콜백 호출 규약과 목록 변경 루틴을 C++로 재구성하고 원본 CPU 실행과 비교한다.
 2. 팔레트·애니메이션·맵 참조 경로를 오브젝트 코드와 연결한다.
