@@ -64,7 +64,116 @@ bool append_text(const std::vector<std::uint8_t>& script,
     return true;
 }
 
+bool append_item(const MenuItem& item, std::size_t index,
+                 std::size_t slot, std::uint32_t head, std::uint32_t current,
+                 const FixedDataResource& resource, bool clip,
+                 std::vector<std::uint8_t>& ram,
+                 std::vector<VideoPortWrite>& writes, std::string& error) {
+    const std::uint8_t row = static_cast<std::uint8_t>(index + 1U);
+    if (row >= ram[slot + 4U]) {
+        return true;
+    }
+    const std::uint8_t selected = ram[slot + 7U];
+    std::uint16_t address = static_cast<std::uint16_t>(
+        static_cast<unsigned int>(base_address(ram[slot + 9U],
+                                                ram[slot + 10U])) + 0x20U);
+    address = static_cast<std::uint16_t>((address & 0xff00U) |
+        ((static_cast<unsigned int>(address) + row) & 0xffU));
+    for (unsigned int half_index = 0; half_index < 2U; ++half_index) {
+        bool covered = false;
+        if (!menu_position_occluded(ram, address, covered, error)) {
+            return false;
+        }
+        if (!covered) {
+            VideoPortWrite write;
+            write.size = 4U;
+            write.address = 0x3c0000U;
+            const std::uint16_t tile = index == selected ?
+                static_cast<std::uint16_t>(0x0313U + half_index) : 0x00ffU;
+            write.value = (static_cast<std::uint32_t>(address) << 16) | tile;
+            writes.push_back(write);
+        }
+        address = static_cast<std::uint16_t>(
+            static_cast<unsigned int>(address) + 0x20U);
+    }
+    if (item.title_address != 0U) {
+        std::vector<std::uint8_t> script;
+        if (!script_at(resource, item.title_address, script, error)) {
+            return false;
+        }
+        const std::uint16_t style = current != head && index != selected ?
+                                   0x0603U : 0x0003U;
+        if (!append_text(script, address, style, clip, ram, writes, error)) {
+            return false;
+        }
+    }
+    // Supported callbacks return from event 5 without RAM or video writes.
+    return true;
+}
+
 } // namespace
+
+bool draw_menu_item(std::vector<std::uint8_t>& ram,
+                    const FixedDataResource& resource, bool clip,
+                    std::vector<VideoPortWrite>& writes, std::string& error) {
+    bool covered = false;
+    if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
+        return false;
+    }
+    const std::uint32_t head = read_u32(ram, 0x7f0eU);
+    const std::uint32_t current = read_u32(ram, 0x7f12U);
+    const std::size_t slot = current - 0x100000U;
+    const std::uint8_t index = ram[slot + 8U];
+    const std::uint8_t row = static_cast<std::uint8_t>(
+        static_cast<unsigned int>(index) + 1U);
+    std::vector<VideoPortWrite> pending;
+    if (row >= ram[slot + 4U]) {
+        writes.swap(pending);
+        error.clear();
+        return true;
+    }
+    if (clip && read_u32(ram, 0x7f16U) != 0x3650U) {
+        error = "clipped menu text requires the direct renderer at CPU 0x003650";
+        return false;
+    }
+    try {
+        MenuDescriptor descriptor;
+        if (!decode_menu_descriptor(resource, read_u32(ram, slot), descriptor, error)) {
+            return false;
+        }
+        if (descriptor.flags != 0U || descriptor.items.size() > 255U) {
+            error = "menu text supports only flags zero and at most 255 items";
+            return false;
+        }
+        if (ram[slot + 6U] != descriptor.items.size()) {
+            error = "menu slot item count does not match the descriptor";
+            return false;
+        }
+        if (index >= descriptor.items.size()) {
+            error = "menu item index lies outside the descriptor";
+            return false;
+        }
+        const MenuItem& item = descriptor.items[index];
+        if (item.title_address == 0xfffffffeU) {
+            error = "menu item drawing does not support separator items";
+            return false;
+        }
+        if (!supported_callback(item.callback)) {
+            error = "menu item event-5 callback is unsupported";
+            return false;
+        }
+        if (!append_item(item, index, slot, head, current, resource, clip,
+                         ram, pending, error)) {
+            return false;
+        }
+        writes.swap(pending);
+    } catch (const std::bad_alloc&) {
+        error = "cannot allocate menu text output";
+        return false;
+    }
+    error.clear();
+    return true;
+}
 
 bool draw_menu_text(std::vector<std::uint8_t>& ram,
                     const FixedDataResource& resource, bool clip,
@@ -138,45 +247,12 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
                          pending, error)) {
             return false;
         }
-        const std::uint8_t selected = ram[slot + 7U];
         for (std::size_t index = 0; index < descriptor.items.size(); ++index) {
             candidate[slot + 8U] = static_cast<std::uint8_t>(index);
-            const std::uint8_t row = static_cast<std::uint8_t>(index + 1U);
-            if (row >= height) {
-                continue;
-            }
-            std::uint16_t address = static_cast<std::uint16_t>(
-                static_cast<unsigned int>(base_address(ram[slot + 9U],
-                                                        ram[slot + 10U])) + 0x20U);
-            address = static_cast<std::uint16_t>((address & 0xff00U) |
-                ((static_cast<unsigned int>(address) + row) & 0xffU));
-            for (unsigned int half_index = 0; half_index < 2U; ++half_index) {
-                if (!menu_position_occluded(candidate, address, covered, error)) {
-                    return false;
-                }
-                if (!covered) {
-                    VideoPortWrite write;
-                    write.size = 4U;
-                    write.address = 0x3c0000U;
-                    const std::uint16_t tile = index == selected ?
-                        static_cast<std::uint16_t>(0x0313U + half_index) : 0x00ffU;
-                    write.value = (static_cast<std::uint32_t>(address) << 16) | tile;
-                    pending.push_back(write);
-                }
-                address = static_cast<std::uint16_t>(
-                    static_cast<unsigned int>(address) + 0x20U);
-            }
-            if (!script_at(resource, descriptor.items[index].title_address,
-                           script, error)) {
+            if (!append_item(descriptor.items[index], index, slot, head, current,
+                             resource, clip, candidate, pending, error)) {
                 return false;
             }
-            const std::uint16_t style = current != head && index != selected ?
-                                       0x0603U : 0x0003U;
-            if (!append_text(script, address, style, clip, candidate, pending, error)) {
-                return false;
-            }
-            // Every supported callback was checked before any candidate mutation.
-            // Its event-5 branch returns without RAM or video writes.
         }
         ram.swap(candidate);
         writes.swap(pending);

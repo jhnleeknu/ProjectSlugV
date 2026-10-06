@@ -6,6 +6,17 @@
 
 namespace ms5 {
 
+// Confirmed CPU 0x009d3a current-item layout. The current slot's byte +8
+// chooses the item and byte +7 chooses the selection. A row outside the
+// visible height returns before descriptor or renderer validation. Visible
+// rows support flags zero, ordinary or empty titles, and known event-5 no-op
+// callbacks. Separators are rejected. clip requires the direct renderer at
+// CPU 0x003650. Success replaces writes and clears error without changing
+// RAM; failure preserves RAM and writes.
+bool draw_menu_item(std::vector<std::uint8_t>& ram,
+                    const FixedDataResource& resource, bool clip,
+                    std::vector<VideoPortWrite>& writes, std::string& error);
+
 // Confirmed CPU 0x009e1a flags-zero menu layout. RAM maps CPU
 // 0x100000..0x10ffff. Only event-5 callbacks confirmed to have no effects
 // are accepted. clip selects per-glyph occlusion through RAM 0x107f16,
