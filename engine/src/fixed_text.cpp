@@ -3,19 +3,15 @@
 #include <cstddef>
 
 namespace ms5 {
+namespace {
 
-bool trace_fixed_text(const std::vector<std::uint8_t>& script,
-                      std::uint16_t initial_address,
-                      std::uint16_t initial_style,
-                      std::vector<FixedWrite>& writes,
-                      std::string& error) {
-    std::vector<FixedWrite> pending;
-    std::uint16_t cursor = initial_address;
-    std::uint16_t line = initial_address;
-    std::uint16_t style = initial_style;
-    std::size_t position = 0;
+// Shared control grammar; callers decide whether to count or render glyphs.
+bool next_text_glyph(const std::vector<std::uint8_t>& script,
+                     std::size_t& position, std::uint16_t& style,
+                     std::uint16_t& line, std::uint16_t& cursor,
+                     std::uint8_t& glyph, std::string& error) {
     while (position < script.size()) {
-        std::uint8_t glyph = script[position++];
+        glyph = script[position++];
         if (glyph == 0x5cU) {
             if (position == script.size()) {
                 error = "missing text escape operand";
@@ -69,6 +65,54 @@ bool trace_fixed_text(const std::vector<std::uint8_t>& script,
             }
             // An unknown escape emits its second byte as a glyph.
         }
+        return true;
+    }
+    error = "missing text stream terminator";
+    return false;
+}
+
+} // namespace
+
+bool measure_fixed_text(const std::vector<std::uint8_t>& script,
+                        std::uint16_t initial_style,
+                        std::uint16_t initial_line,
+                        FixedTextMeasure& measurement,
+                        std::string& error) {
+    FixedTextMeasure pending;
+    pending.style = initial_style;
+    pending.line = initial_line;
+    std::uint16_t cursor = initial_line;
+    for (;;) {
+        std::uint8_t glyph = 0;
+        if (!next_text_glyph(script, pending.consumed_bytes, pending.style,
+                             pending.line, cursor, glyph, error)) {
+            return false;
+        }
+        if (glyph == 0) {
+            measurement = pending;
+            error.clear();
+            return true;
+        }
+        pending.glyph_count = static_cast<std::uint16_t>(
+            static_cast<unsigned int>(pending.glyph_count) + 1U);
+    }
+}
+
+bool trace_fixed_text(const std::vector<std::uint8_t>& script,
+                      std::uint16_t initial_address,
+                      std::uint16_t initial_style,
+                      std::vector<FixedWrite>& writes,
+                      std::string& error) {
+    std::vector<FixedWrite> pending;
+    std::uint16_t cursor = initial_address;
+    std::uint16_t line = initial_address;
+    std::uint16_t style = initial_style;
+    std::size_t position = 0;
+    for (;;) {
+        std::uint8_t glyph = 0;
+        if (!next_text_glyph(script, position, style, line, cursor, glyph, error)) {
+            return false;
+        }
         if (glyph == 0) {
             writes.swap(pending);
             error.clear();
@@ -100,8 +144,6 @@ bool trace_fixed_text(const std::vector<std::uint8_t>& script,
         pending.push_back(second);
         cursor = static_cast<std::uint16_t>(static_cast<unsigned int>(cursor) + 0x20U);
     }
-    error = "missing text stream terminator";
-    return false;
 }
 
 } // namespace ms5

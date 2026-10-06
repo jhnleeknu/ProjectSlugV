@@ -39,3 +39,19 @@ make build/trace_fixed_text
 경고문 쓰기 순서 SHA256 `5b7226162bf069a169c70096001c3dca4c3fffa621752366e2862afa373aa9a1`.
 
 추출 스트림과 trace는 artifacts/fixed_text에 보관한다. 이 trace 파일은 분석·비교용이며 최종 게임이 스크린샷이나 기록된 명령을 재생하는 구조로 대체하지 않는다. 엔진은 복원한 제어 해석을 실행하며, 후속 단계에서 공통 리소스·fixed 타일·팔레트·렌더러를 연결한다.
+
+## 문자열 길이 측정과 공통 제어 해석
+
+38e8은같은386e해석기를사용하지만글꼴타일을그리지않고반환된nonzero byte수를word로센다. 따라서ASCII뿐아니라80..ff도한글자씩세며65536개면0으로wrap한다. 제어명령의인자0은문자열종료가아니지만반환된문자0(알수없는escape뒤0포함)은종료다.
+
+`measure_fixed_text`와기존`trace_fixed_text`가제어해석을공유하도록정리했다. 측정결과는glyph_count/style/line/consumed_bytes이며오류시이전결과를보존한다. trace의font61/ASCII지원범위는그대로다. 비ASCII측정가능을비ASCII렌더링지원으로간주하지않는다.
+
+CLI `measure_fixed_text INPUT_MS5D CPU_ADDRESS STYLE LINE`은MS5D데이터창의주소에서읽고glyph_count/style/line/end_cpu_address를JSON으로출력한다. 문자열주소는홀수도허용한다. 기존control_menu.ms5d의7문자열을실제로읽어검증했다.
+
+```
+make all test
+.venv/bin/python tools/verify_text_measure.py
+.venv/bin/python tools/verify_fixed_text.py
+```
+
+원본38e8과388조건의글자수·style·line·종료주소가일치했다. 메뉴7문자열,모든nonzero byte255종,위치명령120조건,개행경계4조건,escape종료및65536글자wrap을포함한다. 잘림/누락/원본trap에대응하는입력7개는명시적으로거부했다. 오류출력보존unit검사도통과했다. 이구현은메뉴크기계산에필요한문자측정이며메뉴초기화/표시전체구현은남아있다.
