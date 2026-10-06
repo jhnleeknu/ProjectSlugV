@@ -1,5 +1,6 @@
 #include "ms5/stage_area_menu.h"
 #include "ms5/menu_event.h"
+#include "ms5/menu_stack.h"
 #include <cassert>
 #include <cstring>
 #include <iostream>
@@ -78,5 +79,18 @@ int main() {
     assert(ram[0x7f05]==8 && ram[0x7f06]==8 && ram[0x7f0c]==0 && ram[0x7e07]==7);
     assert(get(ram,0x4ce4)==context.callback_stack-20U);
     ram[0x7f06]=1;fail(ram,menu,&font,&context,5);
+    // Parent drawing mutates formatter RAM before child configuration. A late
+    // invalid child must roll back those changes and all prepared video writes.
+    put(menu.data,0x2c,0x956c); // Full-menu drawing also needs its header title.
+    const std::vector<std::uint8_t> before_push=ram;
+    writes.assign(1,ms5::VideoPortWrite());writes[0].value=789;
+    assert(!ms5::push_menu(ram,menu,0x200,4,8,0x7000,writes,error,&font,&context));
+    assert(ram==before_push && writes.size()==1 && writes[0].value==789);
+    assert(!ms5::push_menu(ram,menu,0x958a,4,8,0x7000,writes,error,&font));
+    assert(ram==before_push && writes.size()==1 && writes[0].value==789);
+    assert(ms5::push_menu(ram,menu,0x958a,4,8,0x7000,writes,error,&font,&context));
+    assert(get(ram,0x7f0e)==0x107eee && get(ram,0x7f12)==0x107efe);
+    assert(get(ram,0x4ce4)==context.callback_stack && !writes.empty());
+    assert(ram[0x7f1b]==1 && ram[0x7ef2]==0);
     std::cout << "Stage area wrap, nested navigation stack and late-error rollback passed\n";
 }

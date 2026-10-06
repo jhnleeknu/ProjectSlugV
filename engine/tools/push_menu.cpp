@@ -1,4 +1,5 @@
 #include "ms5/menu_stack.h"
+#include "ms5/stage_group_menu.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -37,6 +38,14 @@ bool same_file(const std::string& left, const std::string& right) {
          stat(right.c_str(), &right_stat) == 0 &&
          left_stat.st_dev == right_stat.st_dev &&
          left_stat.st_ino == right_stat.st_ino);
+}
+
+std::string stage_resource_path(const std::string& directory,
+                                const std::string& filename) {
+    if (directory.empty() || directory[directory.size() - 1U] == '/') {
+        return directory + filename;
+    }
+    return directory + "/" + filename;
 }
 
 bool read_ram(const std::string& path, std::vector<std::uint8_t>& ram) {
@@ -95,16 +104,21 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 9 && argc != 10) {
-        std::cerr << "usage: push_menu INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES ADDRESS X Y LINE [FONT_MS5D]\n";
+    if (argc != 9 && argc != 10 && argc != 12) {
+        std::cerr << "usage: push_menu INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES ADDRESS X Y LINE [FONT_MS5D [STAGES_DIRECTORY CALLBACK_STACK]]\n";
         return 2;
     }
     std::uint32_t address, x, y, line;
+    std::uint32_t callback_stack = 0U;
     if (!parse_integer(argv[5], 0xffffffffU, address) ||
         !parse_integer(argv[6], 0xffffU, x) ||
         !parse_integer(argv[7], 0xffffU, y) ||
         !parse_integer(argv[8], 0xffffU, line)) {
         std::cerr << "ADDRESS/X/Y/LINE must be integers within their 32/16/16/16-bit ranges\n";
+        return 1;
+    }
+    if (argc == 12 && !parse_integer(argv[11], 0xffffffU, callback_stack)) {
+        std::cerr << "CALLBACK_STACK must be a uint24 integer\n";
         return 1;
     }
     const std::string ram_path(argv[1]);
@@ -119,6 +133,25 @@ int main(int argc, char** argv) {
         std::cerr << "outputs must be distinct from both inputs and each other\n";
         return 1;
     }
+    if (argc == 12) {
+        std::vector<std::string> stage_inputs;
+        stage_inputs.push_back(stage_resource_path(argv[10], "stage_index.ms5d"));
+        stage_inputs.push_back(stage_resource_path(argv[10], "stage_null_name.ms5d"));
+        for (unsigned int index = 0U; index < 19U; ++index) {
+            std::string filename = "stage_group_";
+            filename += static_cast<char>('0' + index / 10U);
+            filename += static_cast<char>('0' + index % 10U);
+            filename += ".ms5d";
+            stage_inputs.push_back(stage_resource_path(argv[10], filename));
+        }
+        for (std::size_t index = 0U; index < stage_inputs.size(); ++index) {
+            if (same_file(stage_inputs[index], output_ram_path) ||
+                same_file(stage_inputs[index], output_writes_path)) {
+                std::cerr << "stage inputs and outputs must be distinct\n";
+                return 1;
+            }
+        }
+    }
     std::vector<std::uint8_t> ram;
     ms5::FixedDataResource resource;
     std::string error;
@@ -127,7 +160,7 @@ int main(int argc, char** argv) {
     }
     ms5::FixedDataResource font;
     const ms5::FixedDataResource* font_pointer = NULL;
-    if (argc == 10) {
+    if (argc == 10 || argc == 12) {
         if (same_file(argv[9], output_ram_path) || same_file(argv[9], output_writes_path)) {
             std::cerr << "font input and outputs must be distinct\n";
             return 1;
@@ -137,10 +170,28 @@ int main(int argc, char** argv) {
         }
         font_pointer = &font;
     }
+    ms5::StageCatalog catalog;
+    ms5::FixedDataResource null_name;
+    ms5::StageGroupMenuContext context;
+    const ms5::StageGroupMenuContext* context_pointer = NULL;
+    if (argc == 12) {
+        if (!ms5::load_stage_catalog(argv[10], catalog, error) ||
+            !ms5::load_fixed_data_resource(stage_resource_path(argv[10], "stage_null_name.ms5d"),
+                                           null_name, error)) {
+            std::cerr << error << '\n';
+            return 1;
+        }
+        context.catalog = &catalog;
+        context.null_name = &null_name;
+        // Caller supplies actual parent event-5 callback entry A7, not a0a0 entry A7.
+        context.callback_stack = callback_stack;
+        context_pointer = &context;
+    }
     std::vector<ms5::VideoPortWrite> writes;
     if (!ms5::load_fixed_data_resource(resource_path, resource, error) ||
         !ms5::push_menu(ram, resource, address, static_cast<std::uint16_t>(x),
-                        static_cast<std::uint16_t>(y), static_cast<std::uint16_t>(line), writes, error, font_pointer)) {
+                        static_cast<std::uint16_t>(y), static_cast<std::uint16_t>(line),
+                        writes, error, font_pointer, context_pointer)) {
         std::cerr << error << '\n';
         return 1;
     }
