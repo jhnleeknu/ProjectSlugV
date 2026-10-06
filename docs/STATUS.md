@@ -298,6 +298,13 @@
 - 원본/C++ animation1632회 및 prepare/refresh3264단계 RAM·비디오 쓰기 비교를 확장했다. 자연생성·palette lifecycle·픽셀화면은 미완료다.
 - 상세근거 docs/analysis/branch-object-resources.md.
 
+## 2026-10-07 — 동적 팔레트 할당·해제 C++ 복원
+- 이전 turn은57개 composition 연결과3264비디오단계 원본비교를 완료한 progress다.
+- 원본8ebe/8ff4/8e4a의 bucket·free목록과 참조 관리를 해석하고 C++로 구현했다.
+- 공유/강제할당·참조특수값·256슬롯소진·역순해제·FIFO재사용 포함409연산의 전체RAM이 원본과 일치했다.
+- make all test 및 실패rollback 검사 통과. MS5P 동적업로드·효과·전체오브젝트 생명주기 연결은 남았다.
+- 근거 docs/analysis/palette-allocator.md.
+
 ## 다음 작업
 1. 실제 ROM 애니메이션 스크립트의 참조·경계를 확인하고 런타임 리소스로 추출한다. 분기 등 나머지opcode를 해석해 상태 실행기에 연결한다.
 2. 팔레트·애니메이션·맵 참조 경로를 오브젝트 코드와 연결한다.
