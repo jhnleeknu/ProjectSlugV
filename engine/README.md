@@ -43,3 +43,12 @@ build/emit_sprite_resource extracted/runtime/composition_002152.ms5c artifacts/s
 ```
 
 인자는 입력·출력·U·V·style·첫 slot·상한·준비된 slot 끝이다. 출력은 검증용 명령 기록(BE32 다음 slot, BE16 주소/값 쌍)이며 이미지 리소스가 아니다. 엔진 코드는 CompositionResource와 emit_sprite_rectangle_refresh를 직접 호출한다. 아직 sprite rasterizer 및 전체 게임 루프는 연결되지 않았다.
+
+줄별 하드웨어 스프라이트 선택:
+
+```sh
+make build/parse_sprite_scanline
+.venv/bin/python tools/verify_sprite_scanline.py
+```
+
+`parse_sprite_scanline INPUT OUTPUT SCANLINE`은 BE VRAM0x11000바이트를 읽어 홀짝에 맞는97word 목록만 갱신한다. 엔진에서는 같은 이름의 벡터 API를 직접 호출한다. 검증은 실제 MS5C 두 개의 명령을 포함해512줄씩 비교한다. 화면 픽셀 변환과 비디오 타이머는 아직 별도 미구현 단계다.

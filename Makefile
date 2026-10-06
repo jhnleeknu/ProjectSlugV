@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++11 -O2 -Wall -Wextra -pedantic -Iengine/include
 PYTHON = .venv/bin/python
 
 .PHONY: all test runtime-resources setup-tools
-all: build/emit_sprite_resource build/check_tiles build/reset_object build/init_objects build/upload_palette build/init_palette build/check_palettes build/trace_fixed_text build/render_fixed_words build/convert_color_words build/render_text_scene build/update_position build/emit_composition build/emit_composition_refresh
+all: build/parse_sprite_scanline build/emit_sprite_resource build/check_tiles build/reset_object build/init_objects build/upload_palette build/init_palette build/check_palettes build/trace_fixed_text build/render_fixed_words build/convert_color_words build/render_text_scene build/update_position build/emit_composition build/emit_composition_refresh
 
 build:
 	mkdir -p build
@@ -26,7 +26,7 @@ build/init_objects: engine/src/object_lists.cpp engine/src/object_state.cpp engi
 build/object_lists_test: engine/src/object_lists.cpp engine/src/object_state.cpp engine/tests/object_lists_test.cpp engine/include/ms5/object_lists.h engine/include/ms5/object_state.h | build
 	$(CXX) $(CXXFLAGS) engine/src/object_lists.cpp engine/src/object_state.cpp engine/tests/object_lists_test.cpp -o $@
 
-test: build/composition_resource_test build/tile_resource_test build/object_state_test build/object_lists_test build/palette_resource_test build/fixed_renderer_test build/text_resource_test
+test: build/sprite_scanline_test build/composition_resource_test build/tile_resource_test build/object_state_test build/object_lists_test build/palette_resource_test build/fixed_renderer_test build/text_resource_test
 	$(PYTHON) -m unittest discover -s tools/tests -v
 	./build/tile_resource_test
 	./build/object_state_test
@@ -35,6 +35,7 @@ test: build/composition_resource_test build/tile_resource_test build/object_stat
 	./build/fixed_renderer_test
 	./build/text_resource_test
 	./build/composition_resource_test
+	./build/sprite_scanline_test
 
 runtime-resources:
 	python3 tools/pack_tiles.py
@@ -94,3 +95,9 @@ build/emit_sprite_resource: engine/src/composition_resource.cpp engine/src/sprit
 
 build/composition_resource_test: engine/src/composition_resource.cpp engine/tests/composition_resource_test.cpp engine/include/ms5/composition_resource.h | build
 	$(CXX) $(CXXFLAGS) engine/src/composition_resource.cpp engine/tests/composition_resource_test.cpp -o $@
+
+build/parse_sprite_scanline: engine/src/sprite_scanline.cpp engine/tools/parse_sprite_scanline.cpp engine/include/ms5/sprite_scanline.h | build
+	$(CXX) $(CXXFLAGS) engine/src/sprite_scanline.cpp engine/tools/parse_sprite_scanline.cpp -o $@
+
+build/sprite_scanline_test: engine/src/sprite_scanline.cpp engine/tests/sprite_scanline_test.cpp engine/include/ms5/sprite_scanline.h | build
+	$(CXX) $(CXXFLAGS) engine/src/sprite_scanline.cpp engine/tests/sprite_scanline_test.cpp -o $@
