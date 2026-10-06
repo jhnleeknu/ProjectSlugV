@@ -1,4 +1,6 @@
 """Verify animation draw operand decoding before the original sprite producer."""
+import argparse
+import subprocess
 import json
 from pathlib import Path
 import struct
@@ -36,6 +38,9 @@ def model(control, xbyte, ybyte, identifier, style, palette_word, palettes,
 
 
 def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--cpp",action="store_true")
+    args=parser.parse_args()
     root=Path(__file__).resolve().parents[1]
     program,source=load_verified_program(root)
     if source['sha256']!='29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f':
@@ -47,6 +52,7 @@ def main():
             captured.append([cpu.reg_read(r) for r in (UC_M68K_REG_D0,UC_M68K_REG_D1,UC_M68K_REG_D5,UC_M68K_REG_D7)])
             cpu.emu_stop()
     cpu.hook_add(UC_HOOK_CODE,hook,begin=0xcd58,end=0xcd58)
+    destination=root/'artifacts/animation_draw';destination.mkdir(parents=True,exist_ok=True)
     cases=[]
     for control in range(256):
         for flip in range(4):
@@ -73,10 +79,45 @@ def main():
                 expected=model(control,xbyte,ybyte,identifier,style,special,(0x21,0x22,0x23,0x24),160,384,control&3,0x2a,0x5678,0,0,0)
                 if captured!=[expected] or cpu.reg_read(UC_M68K_REG_A1)!=0x105807:
                     raise ValueError('Draw argument mismatch '+repr((control,flip,special,captured,expected)))
+                if args.cpp:
+                    (destination/'ram.bin').write_bytes(ram)
+                    (destination/'operand.bin').write_bytes(ram[0x5800:0x5807])
+                    subprocess.run([str(root/'build/decode_animation_draw'),str(destination/'ram.bin'),
+                        str(destination/'operand.bin'),str(destination/'cpp.bin'),str(obj)],check=True)
+                    if (destination/'cpp.bin').read_bytes()!=struct.pack('>5I',0,*expected):
+                        raise ValueError('C++ animation decode mismatch')
                 cases.append({'control':control,'flip':flip,'palette_word':special,'arguments':expected})
-    destination=root/'artifacts/animation_draw';destination.mkdir(parents=True,exist_ok=True)
-    (destination/'verification.json').write_text(json.dumps({'source':source,'cases':len(cases),'all_arguments_equal':True,
-        'scope':'Direct draw handler calls with controlled object state, intercepted before producer. No animation timing, skip branch or whole-game claim.','results':cases},indent=2)+'\n')
+    skip_cases=0
+    for identifier in (0x7ff800,0x2152):
+        for delay in (0,127,128,255):
+            for hidden in (0,8):
+                for blink in (0,1):
+                    ram=bytearray(65536);obj=0x2000
+                    struct.pack_into('>I',ram,obj+0x12,0xffff1500)
+                    ram[obj+0x2a]=delay;ram[obj+0x61]=hidden;ram[15]=blink
+                    operand=bytes((0,0,0))+struct.pack('>I',identifier)
+                    ram[0x5800:0x5807]=operand
+                    cpu.mem_write(0x100000,bytes(ram))
+                    for reg,value in ((UC_M68K_REG_A0,0x102026),(UC_M68K_REG_A1,0x105800),(UC_M68K_REG_A5,0x108000),(UC_M68K_REG_A6,0x102000),(UC_M68K_REG_A7,0x1feffc)):
+                        cpu.reg_write(reg,value)
+                    cpu.mem_write(0x1feffc,struct.pack('>I',0xff000));captured.clear()
+                    cpu.emu_start(0x4a10c,0xff000,count=2000)
+                    expected=model(0,0,0,identifier,0xffff1500,0,(0,0,0,0),0,0,0,0,0,delay,hidden,blink)
+                    if captured != ([] if expected is None else [expected]):
+                        raise ValueError('Original skip mismatch')
+                    if cpu.reg_read(UC_M68K_REG_A1)!=0x105807 or cpu.reg_read(UC_M68K_REG_PC)!=(0xff000 if expected is None else 0xcd58):
+                        raise ValueError('Unexpected skip return or operand consumption')
+                    if args.cpp:
+                        (destination/'ram.bin').write_bytes(ram)
+                        (destination/'operand.bin').write_bytes(operand)
+                        subprocess.run([str(root/'build/decode_animation_draw'),str(destination/'ram.bin'),
+                            str(destination/'operand.bin'),str(destination/'cpp.bin'),str(obj)],check=True)
+                        packed=struct.pack('>5I',1,0,0,0,0) if expected is None else struct.pack('>5I',0,*expected)
+                        if (destination/'cpp.bin').read_bytes()!=packed:
+                            raise ValueError('C++ skip mismatch')
+                    skip_cases+=1
+    (destination/'verification.json').write_text(json.dumps({'source':source,'cases':len(cases),'skip_conditions':skip_cases,'cpp_verified':args.cpp,'all_arguments_equal':True,
+        'scope':'Direct draw handler calls with controlled object state, intercepted before producer. Skip returns and seven-byte operand consumption checked separately. No animation timing or whole-game claim.','results':cases},indent=2)+'\n')
     print('Animation draw producer arguments match:',len(cases),'cases')
 
 

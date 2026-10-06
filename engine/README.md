@@ -143,3 +143,16 @@ make all test
 ```
 
 네 리소스의 팔레트 연결과 실제 게임 호출부는 미확인이며, 현재 검증은 RAM과 비디오 명령 단위다.
+
+### 애니메이션 표시 인자 변환
+
+`decode_animation_draw(ram, object_offset, operand, result, error)`가 opcode04 뒤7byte와 오브젝트 상태로 표시 인자를 만든다. `result.skipped`가false이면 `submit_sprite`에 d0/d1/d5/d7을 전달한다. RAM을 수정하지 않으며 명령 포인터 전진은 호출자가 처리한다. 실제 스크립트의 시간·분기 실행기는 아직 연결되지 않았다.
+
+```sh
+make all test
+.venv/bin/python tools/analyze_animation_draw.py --cpp
+.venv/bin/python tools/verify_sprite_pipeline.py --blocks --flips --animation
+.venv/bin/python tools/verify_sprite_pipeline.py --blocks --flips --animation --disabled-pool
+```
+
+검증 CLI `decode_animation_draw INPUT_RAM INPUT_OPERAND OUTPUT OBJECT_OFFSET`의 OUTPUT은 skipped,d0,d1,d5,d7의BE32 다섯 word다. 이 출력은 검증 기록이며 별도 런타임 리소스 형식이 아니다.
