@@ -111,3 +111,9 @@ kind=2는 원본 BE16 헤더의 상위 byte를 블록 수(1..255), 하위 byte�
 런타임 `emit_sprite_blocks`는 kind1과kind2의 raw payload를 읽고 각 블록의 상대좌표와 현재 슬롯을 적용한다. 실패 시 출력은 보존하며 슬롯이 소진되어도 나머지 payload의 형식 오류를 검사한다. 따라서 손상된 리소스에 대한 동작은 원본 CPU의 메모리 접근을 재현하는 계약이 아니다.
 
 kind2 하위 header byte의 비영 값은 표시 소비기에서 출력에 영향을 주지 않는다. 실제0101/0103 리소스 및 단일/3블록의0..255 byte sweep8192조건으로 확인했다. 다른 호출자에서 이 byte를 이용하는지는 미확인이다. kind1의0100 제한은 이전 규격 그대로 유지한다.
+
+## 애니메이션 리소스 MS5A
+
+32byte 헤더: ASCII MS5A와LE32 7개(version1,kind1,source CPU address,source ROM offset,payload size,payload CRC32,reserved0). kind1은 고정 프로그램 영역이라 CPU주소=ROMoffset이고 둘 다100000미만이다. payload는1byte이상이며 고정 영역 끝을 넘지 않는다. 원본 명령 byte와절대분기주소를그대로보존한다.
+
+로더는 헤더·범위·파일정확길이·CRC를검사하며 명령지원여부는 실행기가검사한다. 실패시기존리소스는보존한다. `pack_animation.py`는 확인된호출부와자기루프끝을검사해6f1e2..6f21a의56byte를포장하고 참조하는 MS5C 네개도함께생성한다. 명령·호출부·그룹·감소량·원본해시는 `animations.manifest.json`에기록한다. 현재카탈로그는대표루프하나이며전체추출이아니다.

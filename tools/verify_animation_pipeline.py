@@ -1,4 +1,5 @@
 """Consecutive wait/draw script steps through the original and C++ sprite paths."""
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -12,11 +13,12 @@ from analyze_animation_wait import put
 
 
 def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--rom-script',action='store_true');args=parser.parse_args()
     root=Path(__file__).resolve().parents[1]
     program,source=load_verified_program(root)
     if source['sha256']!='29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f':
         raise ValueError('Unsupported ROM')
-    directory=root/'artifacts/animation_pipeline';directory.mkdir(parents=True,exist_ok=True)
+    directory=root/('artifacts/animation_pipeline_rom' if args.rom_script else 'artifacts/animation_pipeline');directory.mkdir(parents=True,exist_ok=True)
     inp,out,status,script_path=[directory/name for name in ('input.bin','output.bin','status.bin','script.bin')]
     cpu=make_cpu(program);cpu.mem_map(0x200000,0x200000)
     cpu.mem_write(0x200000,program[0x400000:0x500000])
@@ -38,6 +40,11 @@ def main():
     script=bytes((4,0,0,0))+struct.pack('>I',0x2152)+bytes((0,2,4,4,1,1))+struct.pack('>I',0x2382a)+bytes((0,1,0x28))
     script_path.write_bytes(script)
     resources=[str(root/'extracted/runtime'/('composition_%06x.ms5c'%i)) for i in (0x2152,0x2382a)]
+    script_base=0x105800
+    if args.rom_script:
+        from pack_animation import extract
+        script_base,script,commands,ids=extract(program)
+        resources=[str(root/'extracted/runtime'/('composition_%06x.ms5c'%i)) for i in sorted(set(ids))]
     rows=[]
     for timer in (0,65535):
         for speed in (128,256):
@@ -46,17 +53,22 @@ def main():
                 state[0x8d3c]=direction
                 state[0x8d3e:0x8d46]=struct.pack('>4H',0,380,0,380)
                 obj=0x2000
-                struct.pack_into('>I',state,obj+0x12,0xffff1503)
+                struct.pack_into('>I',state,obj+0x12,0xffff1503 | (64 if args.rom_script else 0))
+                if args.rom_script: put(state,obj+0x20,0xca)
                 state[obj+0x19]=21;put(state,obj+0x1e,13)
                 put(state,obj+0x42,160);put(state,obj+0x46,384)
-                state[obj+0x26:obj+0x2a]=struct.pack('>I',0x105800)
+                state[obj+0x26:obj+0x2a]=struct.pack('>I',script_base)
                 put(state,obj+0x2a,timer);put(state,obj+0x2c,speed)
-                state[0x5800:0x5800+len(script)]=script
+                if not args.rom_script: state[0x5800:0x5800+len(script)]=script
                 cpu.mem_write(0x100000,bytes(state))
                 for frame in range(12):
                     expected,carry=run(0x49fc6)
                     inp.write_bytes(state)
-                    subprocess.run([str(root/'build/step_animation'),str(inp),str(script_path),str(out),str(status),str(obj),'0x105800'],check=True)
+                    if args.rom_script:
+                        subprocess.run([str(root/'build/step_animation_resource'),str(inp),
+                            str(root/'extracted/runtime/animation_06f1e2.ms5a'),str(out),str(status),str(obj)],check=True)
+                    else:
+                        subprocess.run([str(root/'build/step_animation'),str(inp),str(script_path),str(out),str(status),str(obj),'0x105800'],check=True)
                     state=out.read_bytes()
                     if state!=expected or status.read_bytes()!=struct.pack('>I',carry):
                         raise ValueError('Animation step mismatch '+repr((timer,speed,direction,frame)))
@@ -72,8 +84,8 @@ def main():
                         rows.append({'initial_timer':timer,'speed':speed,'initial_direction':direction,'frame':frame,
                             'stage':stage,'script_pointer':pointer,'timer':remaining,'ram_sha256':hashlib.sha256(state).hexdigest(),
                             'video_sha256':hashlib.sha256(trace).hexdigest()})
-    (directory/'verification.json').write_text(json.dumps({'source':source,'sequences':8,'steps':96,'video_stages':len(rows),
-        'all_ram_carry_video_equal':True,'scope':'Controlled script combining draw/wait/boundary. Actual MS5C resources; no natural script or interrupt/timing claim.','results':rows},indent=2)+'\n')
+    (directory/'verification.json').write_text(json.dumps({'source':source,'rom_script':args.rom_script,'sequences':8,'steps':96,'video_stages':len(rows),
+        'all_ram_carry_video_equal':True,'scope':'Controlled object state with selected synthetic or original script and actual MS5C resources. No full natural gameplay or interrupt/timing claim.','results':rows},indent=2)+'\n')
     print('Animation pipeline matches: 96 interpreter steps,',len(rows),'video stages')
 
 

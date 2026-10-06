@@ -59,7 +59,7 @@ bool step_animation(std::vector<std::uint8_t>& ram,
         return false;
     }
     const std::size_t state = object_offset + 0x26;
-    const std::uint32_t pointer = longword(ram, state);
+    std::uint32_t pointer = longword(ram, state);
     if (pointer == 0) {
         put(ram, 0x10, 0);
         carry = true;
@@ -94,6 +94,14 @@ bool step_animation(std::vector<std::uint8_t>& ram,
             ram.swap(next);
             carry = true;
             return true;
+        }
+        if (opcode == 0x08) {
+            if (!fetch(script, script_base, cursor, 5, error)) return false;
+            const std::size_t at = static_cast<std::size_t>(cursor - script_base);
+            pointer = longword(script, at + 1);
+            put_long(next, state, pointer);
+            cursor = pointer;
+            continue;
         }
         if (opcode == 0x04) {
             if (!fetch(script, script_base, cursor, 7, error)) {

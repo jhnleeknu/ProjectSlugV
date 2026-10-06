@@ -46,5 +46,13 @@ int main() {
     for (unsigned int i=0;i<10001;++i) script.insert(script.end(),skipped,skipped+8);
     script.push_back(0x28);
     check(!ms5::step_animation(ram,0x2000,script,0x105800,carry,error) && ram==before);
+    // Absolute jump updates saved pointer before interpreting the target.
+    ram=before;
+    const std::uint8_t jump[]={8,0x7f,0,0x10,0x58,6,0,0};
+    script.assign(jump,jump+8);
+    check(ms5::step_animation(ram,0x2000,script,0x105800,carry,error));
+    check(ram[0x2029]==6 && !carry);
+    ram=before;script[5]=0; // self-loop hits budget; no committed pointer effects
+    check(!ms5::step_animation(ram,0x2000,script,0x105800,carry,error) && ram==before);
     std::cout << "animation_step_test: passed\n";
 }

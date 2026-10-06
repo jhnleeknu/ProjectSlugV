@@ -8,7 +8,7 @@
 
 namespace ms5 {
 
-// Execute the verified 00/04/28 animation subset. RAM maps CPU 0x100000
+// Execute the verified 00/04/08/28 animation subset. RAM maps CPU 0x100000
 // and contains exactly 65536 bytes; object_offset leaves 0x62 bytes.
 // Script bytes map script_base in the 24-bit CPU address space. Instruction
 // fetches use only this script, never RAM. An inactive pointer accepts an

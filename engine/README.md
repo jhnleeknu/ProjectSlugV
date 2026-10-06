@@ -168,3 +168,13 @@ make all test
 ```
 
 CLI: `step_animation INPUT_RAM INPUT_SCRIPT OUTPUT_RAM OUTPUT_STATUS OBJECT_OFFSET SCRIPT_BASE`. STATUS는 반환carry의BE32 0/1이다. 현재 혼합script 검증은 인위적으로 만든fixture이며 자연ROM 애니메이션 전체 실행을 의미하지 않는다.
+
+### 원본 애니메이션 MS5A 실행
+
+```sh
+.venv/bin/python tools/pack_animation.py
+make all test
+.venv/bin/python tools/verify_animation_pipeline.py --rom-script
+```
+
+`step_animation_resource INPUT_RAM INPUT_MS5A OUTPUT_RAM OUTPUT_STATUS OBJECT_OFFSET`가원본주소를보존한MS5A를읽고실행한다. 현재00/04/08/28을지원하며08의대상은같은리소스안이어야한다. 실제추출루프와4개MS5C의96호출·192표시단계가원본과일치한다. 검증오브젝트상태는제어된fixture다.
