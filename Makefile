@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++11 -O2 -Wall -Wextra -pedantic -Iengine/include
 PYTHON = .venv/bin/python
 
 .PHONY: all test runtime-resources setup-tools
-all: build/check_tiles build/reset_object build/init_objects build/upload_palette build/init_palette build/check_palettes build/trace_fixed_text build/render_fixed_words
+all: build/check_tiles build/reset_object build/init_objects build/upload_palette build/init_palette build/check_palettes build/trace_fixed_text build/render_fixed_words build/convert_color_words
 
 build:
 	mkdir -p build
@@ -63,3 +63,6 @@ build/render_fixed_words: engine/src/fixed_renderer.cpp engine/src/tile_resource
 
 build/fixed_renderer_test: engine/src/fixed_renderer.cpp engine/tests/fixed_renderer_test.cpp engine/include/ms5/fixed_renderer.h engine/include/ms5/tile_resource.h | build
 	$(CXX) $(CXXFLAGS) engine/src/fixed_renderer.cpp engine/tests/fixed_renderer_test.cpp -o $@
+
+build/convert_color_words: engine/src/hardware_color.cpp engine/src/color_lookup.inc engine/tools/convert_color_words.cpp engine/include/ms5/hardware_color.h | build
+	$(CXX) $(CXXFLAGS) engine/src/hardware_color.cpp engine/tools/convert_color_words.cpp -o $@

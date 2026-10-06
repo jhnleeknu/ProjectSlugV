@@ -17,12 +17,12 @@ neogeo_v.cpp와 resnet.cpp/h를 동일 MAME 리비전에서 확보하고 해시�
 
 32단계 × normal/dark/shadow/dark_shadow 4개 열128바이트 조회표 SHA256 `1a35fd99068aba9ed9e05a97335f63ded453d32c8ddbb567c64a0d45da630ed4`. 단순 5bit 선형 확대가 아니라 MAME의 저항망 가중값을 사용한다. 원본 pulldown parameter는 int이므로 dark_shadow 저항의 실수→정수 변환도 원본 함수를 그대로 실행해 보존한다.
 
-확인용 PNG는 normal screen(그림자 없음)을 가정하고 word bit15로 dark 열을 고른다. 채널 주소는 원본 paletteram_w의 bit 배치를 적용한다. 이 RGB 변환은 현재 확인용 Python에 있으며 C++ 하드웨어 계층의 완성으로 간주하지 않는다.
+확인용 PNG는 normal screen(그림자 없음)을 가정하고 word bit15로 dark 열을 고른다. 채널 주소는 원본 paletteram_w의 bit 배치를 적용한다. 후속 hardware-color.md 단계에서 이 변환을 C++ 하드웨어 계층으로 옮겼다. 현재 확인용 Python은 C++ CLI 출력의 PNG 포장만 수행한다.
 
 ## 재현과 한계
 
 ```
-make build/render_fixed_words
+make build/render_fixed_words build/convert_color_words
 .venv/bin/python tools/verify_fixed_renderer.py
 .venv/bin/python tools/inspect_color_reference.py
 .venv/bin/python tools/preview_fixed_frame.py
