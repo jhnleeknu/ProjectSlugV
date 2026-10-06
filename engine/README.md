@@ -79,3 +79,12 @@ make build/refresh_sprite_queue
 ```
 
 `refresh_sprite_queue INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]`는 전체 큐를 처리한다. 비디오 출력은 BE32 처리 여부0/1 다음 BE16 주소/값 쌍이다. 게임 프로젝트는 같은 이름의 API에 로드된 리소스를 전달하면 된다. 아직 일반 단일 직사각형만 지원하며 다른 분기는 명시적으로 거부한다. 상세 계약은 docs/analysis/sprite-refresh-queue.md를 따른다.
+
+표시 준비 전 일반 링의 안정 정렬:
+
+```sh
+make build/radix_sprite_queue
+.venv/bin/python tools/analyze_sprite_radix.py --cpp
+```
+
+`radix_sprite_queue INPUT OUTPUT`은64KiB RAM에서 준비 끝과 생산 끝 사이를 정렬한다. 지연 큐 정렬과는 다른 단계이며, 프로젝트에서는 `radix_sort_sprite_queue` API를 사용한다. 결과 순서뿐 아니라 원본 작업용 배열의 변경도 보존한다.
