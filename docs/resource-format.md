@@ -69,3 +69,25 @@ C++ 로더는 헤더·CRC·정확한 파일 길이·주소 정렬·범위·오�
 각 레코드: LE uint32 원본 source ID(0..65535), 원본 BE uint16 색상값16개, 일반 조회 변환 후 BE uint16 하드웨어 색상값16개. source ID 오름차순이며 중복을 허용하지 않는다. 변환 후 첫 word는0이다. 원본 첫 word는 별도로 보존한다. 나머지15개는 원본0x4718의 signed16 lookup 계산을 적용한 결과다. 이 값은 RGB가 아니며 혼합·명암 분기 결과를 미리 대체하지 않는다.
 
 C++ 로더는 정확한 길이, 헤더, 상한, CRC, ID 정렬·중복, 첫 변환 word를 검증한다. 실패하면 기존 레코드를 보존한다. manifest에는 각 ID의 원본 위치, 15개 lookup 위치, 이 ID를 참조하는 등록 테이블·레코드·destination slot·flags를 저장한다. `catalog_status=incomplete_sparse`를 유지한다.
+
+## 원본 고정 문자 스트림 MS5X
+
+고정 문자 스트림과 palette source ID→slot 연결을 함께 담는다. 현재 리소스 ID `mslug5.fixed_text.00cb80`, 파일 `warning.ms5x`, 이력 `warning.manifest.json`이다. 기록된 타일 쓰기나 완성 이미지가 아니라 원본 제어 byte를 C++가 해석한다.
+
+32바이트 헤더: magic ASCII MS5X, 이후 uint32 LE 7개다.
+
+| 오프셋 | 필드 | 값 |
+|---:|---|---|
+| 4 | version | 1 |
+| 8 | kind | 1=원본 fixed text stream |
+| 12 | id | 원본 프로그램 오프셋, 0..0x7fffff |
+| 16 | binding_count | 1..16 |
+| 20 | payload_size | binding_count×8 + script bytes |
+| 24 | crc32 | payload ZIP CRC32 |
+| 28 | reserved | 0 |
+
+payload 앞에는 LE uint32 slot(0..15), LE uint32 source palette ID(0..65535)의8바이트 레코드를 binding_count개 둔다. slot은 중복 불가다. 뒤에는1..1048576바이트의 원본 명령 스트림을 그대로 둔다. 제어 operand로0이 포함될 수 있으므로 raw NUL 위치만으로 끝을 추정하지 않는다. 파일 길이는32+payload_size와 같아야 한다.
+
+로더는 형식·길이·CRC·binding 범위/중복을 검사한다. bytecode 해석 가능 여부는 decoder가 검사한다. kind1의 현재 C++ decoder는 ASCII/font61만 지원하며 나머지를 오류로 보고한다. 리소스는 palette catalog의 source ID를 참조하며 실행 프로그램은 누락된 ID를 거부한다.
+
+현재 단일 장면 실행은 initial cursor/style0, zero VRAM/background, normal screen, cartridge fixed tiles를 사용한다. 이 실험 조건은 manifest와 실행 문서에 명시하며 원본 부팅에서 관찰한 상태로 취급하지 않는다.

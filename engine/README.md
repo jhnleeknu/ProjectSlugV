@@ -21,3 +21,14 @@ check_tiles는 현재 파일 검증 CLI이며 렌더링 화면을 제공하지 �
 테스트 실행은 macOS/Linux POSIX 임시 파일 API를 사용하고 로더 자체는 표준 C++11이다.
 
 오브젝트 초기화 원본 CPU 비교: `.venv/bin/python tools/verify_object_reset.py` (`make all` 후 실행). 이 함수는 메모리 효과를 검증했으며 전체 게임 루프는 아직 아니다.
+
+## 리소스로 단일 문자 장면 실행
+
+```
+make build/render_text_scene
+./build/render_text_scene extracted/runtime/warning.ms5x extracted/runtime/fixed.ms5t extracted/runtime/palettes.ms5p artifacts/warning.ppm
+```
+
+`warning.ms5x`는 `.venv/bin/python tools/pack_text_scene.py`로 생성한다. 타일·팔레트 런타임 패키지는 기존 추출 단계에서 생성해야 한다. 이 실행 파일은 세 런타임 패키지만 읽어 원본 문자 명령을 해석하고 화면을 만든다. 분석 trace, PNG, Python이나 원본 ROM을 실행 중에 읽지 않는다.
+
+현재는 조작 없는 경고문 단일 장면이며 전체 게임 실행은 미완료다. 출력 PPM은 확인용이다. full pipeline 검증은 `.venv/bin/python tools/verify_text_scene.py`로 수행한다.
