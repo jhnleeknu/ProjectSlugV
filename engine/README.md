@@ -97,3 +97,13 @@ make build/prepare_sprite_queue build/refresh_sprite_queue
 ```
 
 `prepare_sprite_queue INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]`는 MS5C를 읽어 지연 병합·정렬·명령 준비를 수행한다. 출력 명령은 BE16 주소/값 쌍이며 빈 결과는0바이트다. 이 출력 RAM을 `refresh_sprite_queue`에 전달할 수 있다. 준비 API는 읽기와 준비 cursor가 같을 때만 실행하며 소비 중이면 오류를 반환한다. 이 조건을 무시하고 busy wait를 대신 처리한 것으로 간주하지 않는다.
+
+생성기와 연속 표시 경로:
+
+```sh
+make build/produce_sprite_queue build/prepare_sprite_queue build/refresh_sprite_queue
+.venv/bin/python tools/verify_sprite_producer.py --cpp
+.venv/bin/python tools/verify_sprite_pipeline.py
+```
+
+`produce_sprite_queue init INPUT OUTPUT`은64KiB RAM에 원본 큐 초기화를 적용한다. 슬롯 범위는0xffff로 초기화되므로 표시 전에 구성해야 한다. `produce_sprite_queue submit INPUT OUTPUT STATUS D0 D1 D5 D7`의 status는 BE32 Accepted0/Clipped1/Full2/Waiting3이다. 엔진은 initialize_sprite_queue와 submit_sprite API를 사용한다. Waiting은 재개 가능한 코루틴이나 실제 대기 구현이 아니며 원본 대기 조건의 관찰 결과다.
