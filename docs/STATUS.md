@@ -85,6 +85,13 @@
 - 전체 카탈로그가 아닌 incomplete_sparse 상태를 manifest와 규격에 명시했다.
 - 실제 RGB 렌더링과 원본 장면 대응은 아직 남아 있다.
 
+## 2026-10-06 — 원본 문자에서 타일 배치로 연결
+- 경고문 원본 [0xcb80,0xccd5), palette source0x897→slot0, font61 참조를 추적했다.
+- ASCII/font61 제어 해석을 C++로 복원했다. 미지원 글꼴은 오류로 구분한다.
+- 실제 원본 경고문560개 포트 쓰기 순서 전체와 추가127개 ASCII 스트림이 C++ 결과와 일치했다.
+- 실제 화면·fixed source 선택·RGB 변환·공통 스트림 리소스 연결은 남아 있다.
+- 분석과 재현: docs/analysis/fixed-text.md, tools/verify_fixed_text.py.
+
 ## 다음 작업
 1. 콜백 호출 규약과 목록 변경 루틴을 C++로 재구성하고 원본 CPU 실행과 비교한다.
 2. 팔레트·애니메이션·맵 참조 경로를 오브젝트 코드와 연결한다.
