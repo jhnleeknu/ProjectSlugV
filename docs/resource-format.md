@@ -104,8 +104,10 @@ payload는 원본 BE 데이터를 보존한다: uint16 0x0100, dx, dy, 폭/높�
 
 ### MS5C v1 kind 2 — counted rectangles
 
-kind=2는 원본 BE16 헤더의 상위 byte를 블록 수(1..255), 하위 byte를0으로 제한한다. 그 뒤 블록 수만큼 `dx BE16, dy BE16, width uint8, height uint8, attribute/tile BE16 pairs`가 반복된다. 블록에는 별도0100 헤더가 없다. 각 블록 폭1..255·높이1..32, 열 우선 순서를 유지한다. 길이는 `2 + sum(6 + width*height*4)`이며 정확히 일치해야 한다. kind1의 기존 길이·개수 제한은 유지한다.
+kind=2는 원본 BE16 헤더의 상위 byte를 블록 수(1..255), 하위 byte를 원본 그대로 보존한다(표시 소비기에는 영향 없음). 그 뒤 블록 수만큼 `dx BE16, dy BE16, width uint8, height uint8, attribute/tile BE16 pairs`가 반복된다. 블록에는 별도0100 헤더가 없다. 각 블록 폭1..255·높이1..32, 열 우선 순서를 유지한다. 길이는 `2 + sum(6 + width*height*4)`이며 정확히 일치해야 한다. kind1의 기존 길이·개수 제한은 유지한다.
 
-`pack_composition_blocks.py`가 ID02382a/02402a/02482a/000122 네 리소스를 저장하고 별도 `composition_blocks.manifest.json`에 원본 위치와 블록 치수를 기록한다. 이들의 소비 동작은 원본 CPU 직접 호출로 검증했지만 자연스러운 게임 실행에서의 사용 여부와 호출부 팔레트는 아직 미확인이다.
+`pack_composition_blocks.py`가 ID02382a/02402a/02482a/000122/029802/070002 여섯 리소스를 저장하고 별도 `composition_blocks.manifest.json`에 원본 위치와 블록 치수를 기록한다. 이들의 소비 동작은 원본 CPU 직접 호출로 검증했지만 자연스러운 게임 실행에서의 사용 여부와 호출부 팔레트는 아직 미확인이다.
 
 런타임 `emit_sprite_blocks`는 kind1과kind2의 raw payload를 읽고 각 블록의 상대좌표와 현재 슬롯을 적용한다. 실패 시 출력은 보존하며 슬롯이 소진되어도 나머지 payload의 형식 오류를 검사한다. 따라서 손상된 리소스에 대한 동작은 원본 CPU의 메모리 접근을 재현하는 계약이 아니다.
+
+kind2 하위 header byte의 비영 값은 표시 소비기에서 출력에 영향을 주지 않는다. 실제0101/0103 리소스 및 단일/3블록의0..255 byte sweep8192조건으로 확인했다. 다른 호출자에서 이 byte를 이용하는지는 미확인이다. kind1의0100 제한은 이전 규격 그대로 유지한다.

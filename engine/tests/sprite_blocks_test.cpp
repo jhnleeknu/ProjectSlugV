@@ -21,6 +21,17 @@ int main() {
             writes[5].address == 0x8202 && writes[5].value == 0xf801 &&
             writes[6].address == 0x8402 && writes[6].value == 2048 &&
             writes[9].address == 128 && writes[9].value == 12, "wrong block placement");
+    const std::vector<ms5::SpriteWrite> reference = writes;
+    for (unsigned int low=0; low<256; ++low) {
+        data[1] = static_cast<std::uint8_t>(low);
+        require(ms5::emit_sprite_blocks(data,0,0,0,0,380,true,false,0,
+                                        writes,next,error), "opaque header rejected");
+        require(next==2 && writes.size()==reference.size(), "opaque byte changed size");
+        for (std::size_t i=0; i<writes.size(); ++i) {
+            require(writes[i].address==reference[i].address &&
+                    writes[i].value==reference[i].value, "opaque byte changed emission");
+        }
+    }
     // Exhaustion must not suppress validation of a malformed later block.
     data[17] = 0;
     const std::vector<ms5::SpriteWrite> before = writes;

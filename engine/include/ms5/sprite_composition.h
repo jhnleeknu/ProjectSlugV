@@ -83,7 +83,8 @@ bool emit_sprite_rectangle_variant(
     std::vector<SpriteWrite>& writes, std::uint16_t& next_slot,
     std::string& error);
 
-// Counted rectangles (header count << 8, followed by count block bodies).
+// Counted rectangles (header count in high byte, followed by count block bodies).
+// Low header byte is preserved but does not affect this consumer.
 // All blocks are validated, including those after slot exhaustion. Writes and
 // next_slot are replaced only on complete success. Transform/slot parameters
 // have the same meaning as emit_sprite_rectangle_variant.

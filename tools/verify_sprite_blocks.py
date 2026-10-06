@@ -29,7 +29,7 @@ def resolve_blocks(program, identifier):
     table = pointer(bank+4+group*4)
     offset = pointer(table+item*4)
     header = int.from_bytes(program[offset:offset+2], 'big')
-    if header & 255 or not 1 <= header>>8 <= 255:
+    if not 1 <= header>>8 <= 255:
         raise ValueError('Unsupported block header')
     cursor, blocks = offset+2, []
     for index in range(header>>8):
@@ -73,7 +73,7 @@ def main():
             events.append(value)
     cpu.hook_add(UC_HOOK_MEM_WRITE,hook)
     results = []
-    for identifier in (0x2382a,0x2402a,0x2482a,0x122):
+    for identifier in (0x2382a,0x2402a,0x2482a,0x122,0x29802,0x70002):
         bank,offset,data,blocks = resolve_blocks(program,identifier)
         path=directory/('%06x.raw.bin'%identifier)
         path.write_bytes(data)
@@ -107,7 +107,7 @@ def main():
                                     if out.read_bytes()!=actual:
                                         raise ValueError('C++ flip mismatch')
                                 results.append({'id':identifier,'entry':entry,'flip':flip,'reverse':reverse,'refresh':refresh,'u':u,'v':v,'first':first,'limit':limit,'cached':cached,'writes':len(events),'sha256':hashlib.sha256(actual).hexdigest()})
-    (directory/'verification.json').write_text(json.dumps({'source_program_sha256':source['sha256'],'cases':len(results),'cpp_verified':args.cpp,'all_ordered_writes_equal':True,'scope':'Four real multi-block resources, transforms, allocation directions and prepare/refresh. No pixel or caller reachability claim.','results':results},indent=2)+'\n')
+    (directory/'verification.json').write_text(json.dumps({'source_program_sha256':source['sha256'],'cases':len(results),'cpp_verified':args.cpp,'all_ordered_writes_equal':True,'scope':'Six real counted-rectangle resources including nonzero low header bytes, transforms, allocation directions and prepare/refresh. No pixel or caller reachability claim.','results':results},indent=2)+'\n')
     print('All multi-block writes match:',len(results),'cases')
 
 

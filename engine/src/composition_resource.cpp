@@ -91,7 +91,7 @@ bool load_composition_resource(const std::string& path,
         return fail(error, "composition payload CRC32 mismatch");
     }
     const std::uint32_t count = candidate.data[0];
-    if (count == 0 || candidate.data[1] != 0 || (kind == 1 && count != 1)) {
+    if (count == 0 || (kind == 1 && (count != 1 || candidate.data[1] != 0))) {
         return fail(error, "invalid composition rectangle count or flags");
     }
     std::size_t position = 2;

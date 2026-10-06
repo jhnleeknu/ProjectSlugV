@@ -16,7 +16,7 @@ struct CompositionResource {
 // MS5C v1 kind 1: one original BE normal rectangle; kind 2: 1..255
 // original BE rectangles. Both retain the packed source ID and decrypted ROM
 // file offset. Header fields are LE32; payload remains BE, with a count byte,
-// zero byte, then dx/dy BE16, width/height bytes and attr/tile BE16 pairs
+// opaque low byte (zero required for kind 1), then dx/dy BE16, width/height bytes and attr/tile BE16 pairs
 // for each rectangle (width 1..255, height 1..32).
 // Validates bounds, CRC32 and every rectangle before replacing resource.
 // Failure preserves all resource fields and reports error; success clears error.

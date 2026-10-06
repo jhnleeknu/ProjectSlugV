@@ -29,7 +29,7 @@ def main():
         directory = directory.with_name(directory.name+'_blocks')
     directory.mkdir(parents=True, exist_ok=True)
     inp, out, trace = directory/'input.bin', directory/'output.bin', directory/'trace.bin'
-    identifiers = (0x2382a, 0x2402a, 0x2482a, 0x122) if args.blocks else (0x2152, 0x2952)
+    identifiers = (0x2382a, 0x2402a, 0x2482a, 0x122, 0x29802, 0x70002) if args.blocks else (0x2152, 0x2952)
     resources = [str(root/'extracted/runtime'/('composition_%06x.ms5c'%i)) for i in identifiers]
     cpu = make_cpu(program)
     cpu.mem_map(0x200000, 0x200000)

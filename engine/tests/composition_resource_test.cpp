@@ -164,10 +164,18 @@ int main() {
     require(error.empty() && output.id == 0x2152 && output.source_rom_offset == 0x234567 &&
             output.data == std::vector<unsigned char>(blocks.begin() + 32, blocks.end()),
             "kind two retains complete original bytes and metadata");
+    for (unsigned int low = 0; low < 256; ++low) {
+        std::vector<unsigned char> opaque = blocks;
+        opaque[33] = static_cast<unsigned char>(low);
+        rebuild_payload_header(opaque);
+        write_file(path, opaque);
+        require(ms5::load_composition_resource(path, output, error) &&
+                output.data[1] == low, "kind two preserves opaque header byte");
+    }
     bad = blocks; set_u32(bad, 8, 1);
     rejected(path, bad, output, "kind one rejects multiple rectangles");
-    const std::size_t block_fields[] = {32, 33, 38, 39, 68, 69};
-    const unsigned char block_values[] = {0, 1, 0, 33, 0, 0};
+    const std::size_t block_fields[] = {32, 38, 39, 68, 69};
+    const unsigned char block_values[] = {0, 0, 33, 0, 0};
     for (unsigned int i = 0; i < sizeof(block_fields) / sizeof(block_fields[0]); ++i) {
         bad = blocks; bad[block_fields[i]] = block_values[i];
         rebuild_payload_header(bad);

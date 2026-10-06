@@ -188,8 +188,8 @@ bool emit_sprite_blocks(
     bool refresh, bool reverse, std::uint16_t cached_boundary,
     std::vector<SpriteWrite>& writes, std::uint16_t& next_slot,
     std::string& error) {
-    if (data.size() < 2 || data[0] == 0 || data[1] != 0) {
-        error = "counted rectangle header must have nonzero count and zero low byte";
+    if (data.size() < 2 || data[0] == 0) {
+        error = "counted rectangle header must have nonzero count";
         return false;
     }
     std::size_t cursor = 2;
