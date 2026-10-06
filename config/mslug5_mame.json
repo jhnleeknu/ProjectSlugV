@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "set": "mslug5",
+  "source": {
+    "repository": "https://github.com/mamedev/mame",
+    "revision": "df09546b783c419889a2386bec9402883574b881",
+    "path": "src/mame/snk/neogeo.cpp"
+  },
+  "files": [
+    {
+      "name": "268-p1cr.p1",
+      "size": 4194304,
+      "crc32": "d0466792",
+      "sha1": "880819933d997fab398f91061e9dbccb959ae8a1",
+      "region": "maincpu"
+    },
+    {
+      "name": "268-p2cr.p2",
+      "size": 4194304,
+      "crc32": "fbf6b61e",
+      "sha1": "9ec743d5988b5e3183f37f8edf45c72a8c0c893e",
+      "region": "maincpu"
+    },
+    {
+      "name": "268-m1.m1",
+      "size": 524288,
+      "crc32": "4a5a6e0e",
+      "sha1": "df0f660f2465e1db7be5adfcaf5e88ad61a74a42",
+      "region": "audiocrypt"
+    },
+    {
+      "name": "268-v1c.v1",
+      "size": 8388608,
+      "crc32": "ae31d60c",
+      "sha1": "c42285cf4e52fea74247860813e826df5aa7600a",
+      "region": "adpcma"
+    },
+    {
+      "name": "268-v2c.v2",
+      "size": 8388608,
+      "crc32": "c40613ed",
+      "sha1": "af889570304e2867d7dfea1e94e388c06249fb67",
+      "region": "adpcma"
+    },
+    {
+      "name": "268-c1c.c1",
+      "size": 8388608,
+      "crc32": "ab7c389a",
+      "sha1": "025a188de589500bf7637fa8e7a37ab24bf4312e",
+      "region": "sprites"
+    },
+    {
+      "name": "268-c2c.c2",
+      "size": 8388608,
+      "crc32": "3560881b",
+      "sha1": "493d218c92290b4770024d6ee2917c4022753b07",
+      "region": "sprites"
+    },
+    {
+      "name": "268-c3c.c3",
+      "size": 8388608,
+      "crc32": "3af955ea",
+      "sha1": "cf36b6ae9b0d12744b17cb7a928399214de894be",
+      "region": "sprites"
+    },
+    {
+      "name": "268-c4c.c4",
+      "size": 8388608,
+      "crc32": "c329c373",
+      "sha1": "5073d4079958a0ef5426885af2c9e3178f37d5e0",
+      "region": "sprites"
+    },
+    {
+      "name": "268-c5c.c5",
+      "size": 8388608,
+      "crc32": "959c8177",
+      "sha1": "889bda7c65d71172e7d89194d1269561888fe789",
+      "region": "sprites"
+    },
+    {
+      "name": "268-c6c.c6",
+      "size": 8388608,
+      "crc32": "010a831b",
+      "sha1": "aec140661e3ae35d264df416478ba15188544d91",
+      "region": "sprites"
+    },
+    {
+      "name": "268-c7c.c7",
+      "size": 8388608,
+      "crc32": "6d72a969",
+      "sha1": "968dd9a4d1209b770b9b85ea6532fa24d262a262",
+      "region": "sprites"
+    },
+    {
+      "name": "268-c8c.c8",
+      "size": 8388608,
+      "crc32": "551d720e",
+      "sha1": "ebf69e334fcaba0fda6fd432fd0970283a365d12",
+      "region": "sprites"
+    }
+  ]
+}

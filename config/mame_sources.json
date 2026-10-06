@@ -1,0 +1,26 @@
+{
+  "repository": "https://github.com/mamedev/mame",
+  "revision": "df09546b783c419889a2386bec9402883574b881",
+  "files": [
+    {
+      "path": "src/mame/snk/neogeo.cpp",
+      "sha256": "77324df687d4cf49c6874a9f83d6253a69f7db59404b878a51685850207afc97"
+    },
+    {
+      "path": "src/devices/bus/neogeo/pvc.cpp",
+      "sha256": "86b4ac0b66121a6e5fec57ec56a039fb4d1b13426fd63f4d83540f6f981c630b"
+    },
+    {
+      "path": "src/devices/bus/neogeo/prot_pvc.cpp",
+      "sha256": "3bf2b2e1e57395abb04c2c42dc724b6792f09177e11c9fdff99b825f36ba9dd0"
+    },
+    {
+      "path": "src/devices/bus/neogeo/prot_cmc.cpp",
+      "sha256": "f6b618e70a1e6dcdcbbed1ee9c3fbc352dd195a895baf2fbb2e22ee413e3bf84"
+    },
+    {
+      "path": "src/devices/bus/neogeo/prot_pcm2.cpp",
+      "sha256": "c9b0aa2e24d39476cc9c860455dfaec8795741338d0964fb88e41807cd5804bc"
+    }
+  ]
+}
