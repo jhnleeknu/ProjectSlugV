@@ -16,8 +16,14 @@ int main() {
     check(!ms5::prepare_palettes(ram, records, error) && ram == before);
     ram[0x4dad] = 0;
     ram[0x7dc2] = 1;
-    const std::vector<std::uint8_t> effect = ram;
-    check(!ms5::prepare_palettes(ram, records, error) && ram == effect);
+    check(ms5::prepare_palettes(ram, records, error));
+    check(ram[0x5da4] == 0x40 && ram[0x5da5] == 0); // red channel +1
+    ram[0x7dc2] = 127; records[0].source_words[1] = 31U << 10;
+    ram[0x4da1] = 0x80;
+    check(ms5::prepare_palettes(ram, records, error));
+    check(ram[0x5da4] == 0 && ram[0x5da5] == 0); // 31+127 wraps to signed-negative byte
+    records[0].source_words[1] = 0;
+
     ram[0x4da1] = ram[0x4db1] = 0x82;
     check(ms5::prepare_palettes(ram, records, error));
     check(ram[0x5da2] == 0x80 && ram[0x5da4] == 0x12 && ram[0x5da5] == 0x34);

@@ -46,6 +46,31 @@ std::uint16_t blend_word(std::uint16_t first, std::uint16_t second,
         value = static_cast<std::uint16_t>(
             value | (static_cast<std::uint16_t>(channel) << shift));
     }
+    return value;
+}
+
+std::uint16_t apply_effect_word(std::uint16_t source,
+                                std::uint8_t high_effect,
+                                std::uint8_t middle_effect,
+                                std::uint8_t low_effect) {
+    const std::uint8_t effects[3] = {
+        low_effect, middle_effect, high_effect
+    };
+    std::uint16_t value = 0;
+    for (unsigned int channel_index = 0; channel_index < 3; ++channel_index) {
+        const unsigned int shift = channel_index * 5;
+        const std::uint16_t channel = (source >> shift) & 31U;
+        // The ROM adds byte values before testing the signed-byte sign bit.
+        const std::uint8_t sum = static_cast<std::uint8_t>(
+            channel + effects[channel_index]);
+        const std::uint16_t adjusted = (sum & 0x80U) != 0 ? 0 :
+            (sum > 31U ? 31U : sum);
+        value = static_cast<std::uint16_t>(value | (adjusted << shift));
+    }
+    return value;
+}
+
+std::uint16_t hardware_word(std::uint16_t value) {
     return static_cast<std::uint16_t>(
         ((value & 1U) << 12) | ((value & 0x20U) << 8) |
         ((value & 0x400U) << 4) | ((value >> 1) & 15U) |
@@ -90,10 +115,7 @@ bool prepare_palettes(std::vector<std::uint8_t>& ram,
         candidate[node + 15] = static_cast<std::uint8_t>(flags & 0x7fU);
         const std::uint16_t first_id = read_be16(candidate, node + 0xa);
         const std::uint16_t second_id = read_be16(candidate, node + 0xc);
-        if (effects != 0 && (flags & 2U) == 0) {
-            error = "unsupported palette color effects";
-            return false;
-        }
+        const bool apply_effects = effects != 0 && (flags & 2U) == 0;
         const std::uint8_t weight = candidate[node + 0xe];
         const bool blend = first_id != second_id && weight > 0 && weight < 31;
         const std::uint16_t selected_id =
@@ -107,14 +129,22 @@ bool prepare_palettes(std::vector<std::uint8_t>& ram,
         const std::size_t staging = 0x5da2 + slot * 32;
         for (std::size_t word = 1; word < 16; ++word) {
             std::uint16_t hardware = first->hardware_words[word];
+            std::uint16_t source = first->source_words[word];
             if (blend) {
                 if (first->source_words[word] > 0x7fffU ||
                     second->source_words[word] > 0x7fffU) {
                     error = "unsupported palette interpolation source bit 15";
                     return false;
                 }
-                hardware = blend_word(first->source_words[word],
-                                      second->source_words[word], weight);
+                source = blend_word(first->source_words[word],
+                                    second->source_words[word], weight);
+            }
+            if (apply_effects) {
+                source = apply_effect_word(source, candidate[0x7dc2],
+                                           candidate[0x7dc4], candidate[0x7dc6]);
+            }
+            if (blend || apply_effects) {
+                hardware = hardware_word(source);
             }
             write_be16(candidate, staging + word * 2, hardware);
         }
