@@ -15,7 +15,8 @@ namespace ms5 {
 bool navigate_menu(std::vector<std::uint8_t>& ram,
                    const FixedDataResource& resource, bool explicit_selection,
                    std::uint8_t requested,
-                   std::vector<VideoPortWrite>& writes, std::string& error);
+                   std::vector<VideoPortWrite>& writes, std::string& error,
+                   const FixedDataResource* font = NULL);
 
 } // namespace ms5
 #endif

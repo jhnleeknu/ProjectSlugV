@@ -3,6 +3,7 @@
 #include "ms5/fixed_text.h"
 #include "ms5/menu_border.h"
 #include "ms5/menu_descriptor.h"
+#include "ms5/menu_debug.h"
 
 #include <new>
 
@@ -18,7 +19,7 @@ std::uint32_t read_u32(const std::vector<std::uint8_t>& ram, std::size_t at) {
 bool supported_callback(std::uint32_t address) {
     return address == 0U || address == 0x9488U || address == 0x94d6U ||
            address == 0x949aU || address == 0x94b8U || address == 0x950cU ||
-           address == 0x9532U;
+           address == 0x9532U || address == 0x9aa8U;
 }
 
 bool script_at(const FixedDataResource& resource, std::uint32_t address,
@@ -77,7 +78,7 @@ bool append_item(const MenuItem& item, std::size_t index,
                  const FixedDataResource& resource, bool clip,
                  std::vector<std::uint8_t>& ram,
                  std::vector<VideoPortWrite>& writes, std::string& error,
-                 std::uint16_t* final_line) {
+                 std::uint16_t* final_line, const FixedDataResource* font) {
     const std::uint8_t row = static_cast<std::uint8_t>(index + 1U);
     if (row >= ram[slot + 4U]) {
         return true;
@@ -117,7 +118,19 @@ bool append_item(const MenuItem& item, std::size_t index,
             return false;
         }
     }
-    // Supported callbacks return from event 5 without RAM or video writes.
+    if (item.callback == 0x9aa8U) {
+        std::uint16_t line = final_line != NULL ? *final_line : 0U;
+        std::uint32_t a2 = current;
+        std::vector<VideoPortWrite> ports;
+        if (!dispatch_debug_menu(ram, resource, font, 5U, line, a2, ports, error)) {
+            return false;
+        }
+        writes.insert(writes.end(), ports.begin(), ports.end());
+        if (final_line != NULL) {
+            *final_line = line;
+        }
+    }
+    // Other supported callbacks return from event 5 without RAM or video writes.
     return true;
 }
 
@@ -125,7 +138,8 @@ bool append_item(const MenuItem& item, std::size_t index,
 
 bool draw_menu_item(std::vector<std::uint8_t>& ram,
                     const FixedDataResource& resource, bool clip,
-                    std::vector<VideoPortWrite>& writes, std::string& error) {
+                    std::vector<VideoPortWrite>& writes, std::string& error,
+                    const FixedDataResource* font) {
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
@@ -147,6 +161,7 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
         return false;
     }
     try {
+        std::vector<std::uint8_t> candidate(ram);
         MenuDescriptor descriptor;
         if (!decode_menu_descriptor(resource, read_u32(ram, slot), descriptor, error)) {
             return false;
@@ -173,9 +188,10 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
             return false;
         }
         if (!append_item(item, index, slot, head, current, resource, clip,
-                         ram, pending, error, NULL)) {
+                         candidate, pending, error, NULL, font)) {
             return false;
         }
+        ram.swap(candidate);
         writes.swap(pending);
     } catch (const std::bad_alloc&) {
         error = "cannot allocate menu text output";
@@ -189,7 +205,8 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
                     const FixedDataResource& resource, bool clip,
                     std::uint16_t initial_line,
                     std::vector<VideoPortWrite>& writes, std::string& error,
-                    std::uint16_t* final_line) {
+                    std::uint16_t* final_line,
+                    const FixedDataResource* font) {
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
@@ -267,7 +284,7 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
             candidate[slot + 8U] = static_cast<std::uint8_t>(index);
             if (!append_item(descriptor.items[index], index, slot, head, current,
                              resource, clip, candidate, pending, error,
-                             line_output)) {
+                             line_output, font)) {
                 return false;
             }
         }

@@ -187,7 +187,7 @@ def main():
     (folder / 'verification.json').write_text(json.dumps({
         'source': source, 'emulator': 'Unicorn ' + unicorn.__version__,
         'entry_cpu_address': 0xa0a0, 'native_resource': 'control_menu_tree.ms5d',
-        'native_resource_cpu_range': [0x937e, 0x9a98],
+        'native_resource_cpu_range': [0x937e, 0x9aa8],
         'cases': len(rows), 'whole_ram_and_ordered_video_ports_equal': True,
         'invalid_requests_create_no_outputs': True, 'results': rows, 'rejections': rejections,
         'scope': 'Unmodified original a0a0 including previous head border and inactive text. '

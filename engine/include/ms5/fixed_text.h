@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "ms5/video_port.h"
+#include "ms5/fixed_data_resource.h"
 
 namespace ms5 {
 
@@ -73,6 +74,21 @@ bool trace_direct_fixed_text_visible(const std::vector<std::uint8_t>& script,
                                      void* context,
                                      std::vector<VideoPortWrite>& writes,
                                      std::string& error);
+
+// Confirmed font-0x6b table path at CPU 0x0e84c8, including combining marks
+// and the '@' glyph grammar at 0x0e86a0. The fixed-ROM resource must contain
+// the complete big-endian word table [0x0e80c8, 0x0e82c8). Other fonts fail.
+// Each glyph emits one long address/data write to CPU port 0x3c0000 and
+// advances the VRAM word cursor by 0x20. Success replaces writes and clears
+// error; failure preserves writes. An optional final_line receives the parser's
+// final VRAM line on success only. The trace is bounded to 100000 events.
+bool trace_table_fixed_text(const std::vector<std::uint8_t>& script,
+                            std::uint16_t initial_address,
+                            std::uint16_t initial_style,
+                            const FixedDataResource& font,
+                            std::vector<VideoPortWrite>& writes,
+                            std::string& error,
+                            std::uint16_t* final_line = NULL);
 
 } // namespace ms5
 

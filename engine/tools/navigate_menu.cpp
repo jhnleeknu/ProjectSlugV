@@ -95,8 +95,8 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 7) {
-        std::cerr << "usage: navigate_menu INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES MODE INDEX\n";
+    if (argc != 7 && argc != 8) {
+        std::cerr << "usage: navigate_menu INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES MODE INDEX [FONT_MS5D]\n";
         return 2;
     }
     const std::string mode_text(argv[5]);
@@ -124,10 +124,22 @@ int main(int argc, char** argv) {
     if (!read_ram(ram_path, ram)) {
         return 1;
     }
+    ms5::FixedDataResource font;
+    const ms5::FixedDataResource* font_pointer = NULL;
+    if (argc == 8) {
+        if (same_file(argv[7], output_ram_path) || same_file(argv[7], output_writes_path)) {
+            std::cerr << "font input and outputs must be distinct\n";
+            return 1;
+        }
+        if (!ms5::load_fixed_data_resource(argv[7], font, error)) {
+            std::cerr << error << '\n'; return 1;
+        }
+        font_pointer = &font;
+    }
     std::vector<ms5::VideoPortWrite> writes;
     if (!ms5::load_fixed_data_resource(resource_path, resource, error) ||
         !ms5::navigate_menu(ram, resource, mode_text == "select",
-                             static_cast<std::uint8_t>(index), writes, error)) {
+                             static_cast<std::uint8_t>(index), writes, error, font_pointer)) {
         std::cerr << error << '\n';
         return 1;
     }

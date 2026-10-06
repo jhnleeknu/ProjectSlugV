@@ -95,8 +95,8 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 7) {
-        std::cerr << "usage: draw_menu_text INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES CLIP LINE\n";
+    if (argc != 7 && argc != 8) {
+        std::cerr << "usage: draw_menu_text INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES CLIP LINE [FONT_MS5D]\n";
         return 2;
     }
     const std::string clip_text(argv[5]);
@@ -124,10 +124,22 @@ int main(int argc, char** argv) {
     if (!read_ram(ram_path, ram)) {
         return 1;
     }
+    ms5::FixedDataResource font;
+    const ms5::FixedDataResource* font_pointer = NULL;
+    if (argc == 8) {
+        if (same_file(argv[7], output_ram_path) || same_file(argv[7], output_writes_path)) {
+            std::cerr << "font input and outputs must be distinct\n";
+            return 1;
+        }
+        if (!ms5::load_fixed_data_resource(argv[7], font, error)) {
+            std::cerr << error << '\n'; return 1;
+        }
+        font_pointer = &font;
+    }
     std::vector<ms5::VideoPortWrite> writes;
     if (!ms5::load_fixed_data_resource(resource_path, resource, error) ||
         !ms5::draw_menu_text(ram, resource, clip_text == "1",
-                             static_cast<std::uint16_t>(line), writes, error)) {
+                             static_cast<std::uint16_t>(line), writes, error, NULL, font_pointer)) {
         std::cerr << error << '\n';
         return 1;
     }

@@ -10,6 +10,7 @@ namespace ms5 {
 bool push_menu(std::vector<std::uint8_t>& ram,
                const FixedDataResource& resource, std::uint32_t descriptor_address,
                std::uint16_t x, std::uint16_t y, std::uint16_t initial_line,
-               std::vector<VideoPortWrite>& writes, std::string& error);
+               std::vector<VideoPortWrite>& writes, std::string& error,
+               const FixedDataResource* font = NULL);
 }
 #endif

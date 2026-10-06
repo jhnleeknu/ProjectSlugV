@@ -204,4 +204,122 @@ bool trace_direct_fixed_text_visible(const std::vector<std::uint8_t>& script,
     }
 }
 
+bool trace_table_fixed_text(const std::vector<std::uint8_t>& script,
+                            std::uint16_t initial_address,
+                            std::uint16_t initial_style,
+                            const FixedDataResource& font,
+                            std::vector<VideoPortWrite>& writes,
+                            std::string& error,
+                            std::uint16_t* final_line) {
+    if (font.source_cpu_address >= 0x100000U ||
+        font.source_cpu_address != font.source_rom_offset || font.data.empty() ||
+        font.data.size() > 0x100000U - font.source_cpu_address) {
+        error = "text font resource must be a nonempty fixed-ROM range with matching CPU/ROM addresses";
+        return false;
+    }
+    if (font.source_cpu_address > 0x0e80c8U ||
+        font.data.size() < 0x0e82c8U - font.source_cpu_address) {
+        error = "text font resource must contain CPU table [0x0e80c8, 0x0e82c8)";
+        return false;
+    }
+    const std::size_t table_offset = 0x0e80c8U - font.source_cpu_address;
+    std::vector<VideoPortWrite> pending;
+    std::uint16_t cursor = initial_address;
+    std::uint16_t line = initial_address;
+    std::uint16_t style = initial_style;
+    std::size_t position = 0;
+    for (;;) {
+        std::uint8_t glyph = 0;
+        if (!next_text_glyph(script, position, style, line, cursor, glyph, error)) {
+            return false;
+        }
+        if (glyph == 0) {
+            writes.swap(pending);
+            if (final_line != NULL) {
+                *final_line = line;
+            }
+            error.clear();
+            return true;
+        }
+        if ((style & 0x00ffU) != 0x6bU) {
+            error = "unsupported table text font: only style low byte 0x6b is confirmed";
+            return false;
+        }
+        // CPU 0x0e84d6 peeks before applying the font-specific '@' grammar.
+        if (position == script.size()) {
+            error = "missing table text glyph lookahead";
+            return false;
+        }
+        const std::uint8_t mark = script[position];
+        if (mark == 0xdeU && glyph == 0xb3U) {
+            ++position;
+            glyph = 0xe0U;
+        } else if (mark == 0xdeU && glyph >= 0xb6U && glyph <= 0xc4U) {
+            ++position;
+            glyph = static_cast<std::uint8_t>(static_cast<unsigned int>(glyph) + 0x2bU);
+        } else if ((mark == 0xdeU || mark == 0xdfU) &&
+                   glyph >= 0xcaU && glyph <= 0xceU) {
+            ++position;
+            glyph = static_cast<std::uint8_t>(
+                0xf0U + 2U * (static_cast<unsigned int>(glyph) - 0xcaU) +
+                (mark == 0xdfU ? 1U : 0U));
+        }
+        if (glyph == 0x40U) {
+            // The initial lookahead also establishes this operand is present.
+            glyph = script[position++];
+            unsigned int selector = 0;
+            bool selected = true;
+            if (glyph == '.') {
+                selector = 0;
+            } else if (glyph == ':') {
+                selector = 1;
+            } else if (glyph == '~' || glyph == '-') {
+                selector = 2;
+            } else {
+                selected = false;
+            }
+            if (selected || glyph == '`') {
+                if (position == script.size()) {
+                    error = "missing table text '@' operand";
+                    return false;
+                }
+                glyph = script[position++];
+                if (selected) {
+                    unsigned int value = selector;
+                    bool mapped = true;
+                    if (glyph == 'a') {
+                        value += 0;
+                    } else if (glyph == 'u') {
+                        value += 3;
+                    } else if (glyph == 'e') {
+                        value += 6;
+                    } else if (glyph == 'o') {
+                        value += 8;
+                    } else {
+                        mapped = false;
+                    }
+                    if (mapped) {
+                        glyph = static_cast<std::uint8_t>(0x80U + value);
+                    }
+                }
+            }
+        }
+        if (pending.size() >= 100000U) {
+            error = "table text trace exceeds 100000 port events";
+            return false;
+        }
+        const std::size_t offset = table_offset + 2U * static_cast<unsigned int>(glyph);
+        const std::uint32_t tile =
+            (static_cast<std::uint32_t>(font.data[offset]) << 8) |
+            static_cast<std::uint32_t>(font.data[offset + 1]) |
+            ((static_cast<std::uint32_t>(style) & 0x0f00U) << 4);
+        VideoPortWrite write;
+        write.address = 0x3c0000U;
+        write.value = (static_cast<std::uint32_t>(cursor) << 16) | tile;
+        write.size = 4;
+        pending.push_back(write);
+        cursor = static_cast<std::uint16_t>(static_cast<unsigned int>(cursor) + 0x20U);
+    }
+}
+
 } // namespace ms5

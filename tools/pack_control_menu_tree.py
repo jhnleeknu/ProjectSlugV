@@ -8,7 +8,7 @@ from disassemble_program import load_verified_program
 from pack_control_menu import extract
 
 BASE = 0x937e
-END = 0x9a98
+END = 0x9aa8
 MENUS = (0x93e0, 0x958a, 0x978a, 0x99ee)
 
 
@@ -45,7 +45,7 @@ def catalog(program):
                        'title_address': title, 'min_width': width, 'min_height': height,
                        'callback6': callback6, 'callback10': callback10, 'flags': flags,
                        'end_cpu_address': cursor, 'items': items})
-    if [len(d['items']) for d in result] != [6, 10, 10, 15] or result[-1]['end_cpu_address'] != END:
+    if [len(d['items']) for d in result] != [6, 10, 10, 15] or result[-1]['end_cpu_address'] != 0x9a98:
         raise ValueError('Menu catalog profile changed')
     return result, [{'caller_cpu_address': a, 'child_cpu_address': b} for a, b in edges]
 
@@ -66,7 +66,8 @@ def main():
         'file': 'control_menu_tree.ms5d', 'source': source,
         'source_cpu_address': BASE, 'source_rom_offset': BASE, 'size': len(packed),
         'sha256': hashlib.sha256(packed).hexdigest(), 'descriptors': descriptors,
-        'static_child_references': edges,
+        'static_child_references': edges, 'debug_bit_map_cpu_address': 0x9a98,
+        'debug_bit_map': list(program[0x9a98:0x9aa7]),
         'scope': 'Four menu descriptors and their text in one unchanged fixed-ROM window. '
                  'Intervening code/data bytes are retained as opaque source bytes; not executed by the loader. '
                  'Callback bodies are not reconstructed by packing. Child rendering and event behavior remain separate work.'

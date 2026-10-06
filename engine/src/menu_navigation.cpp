@@ -24,7 +24,8 @@ std::uint8_t advance(std::uint8_t index, std::uint8_t count, bool previous) {
 bool navigate_menu(std::vector<std::uint8_t>& ram,
                    const FixedDataResource& resource, bool explicit_selection,
                    std::uint8_t requested,
-                   std::vector<VideoPortWrite>& writes, std::string& error) {
+                   std::vector<VideoPortWrite>& writes, std::string& error,
+                   const FixedDataResource* font) {
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
@@ -60,11 +61,11 @@ bool navigate_menu(std::vector<std::uint8_t>& ram,
         std::vector<VideoPortWrite> row;
         candidate[slot + 7U] = index;
         candidate[slot + 8U] = old_index;
-        if (!draw_menu_item(candidate, resource, true, pending, error)) {
+        if (!draw_menu_item(candidate, resource, true, pending, error, font)) {
             return false;
         }
         candidate[slot + 8U] = index;
-        if (!draw_menu_item(candidate, resource, true, row, error)) {
+        if (!draw_menu_item(candidate, resource, true, row, error, font)) {
             return false;
         }
         pending.insert(pending.end(), row.begin(), row.end());

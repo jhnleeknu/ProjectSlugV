@@ -23,7 +23,8 @@ std::uint16_t base_address(std::uint8_t x, std::uint8_t y) {
 bool push_menu(std::vector<std::uint8_t>& ram,
                const FixedDataResource& resource, std::uint32_t descriptor_address,
                std::uint16_t x, std::uint16_t y, std::uint16_t initial_line,
-               std::vector<VideoPortWrite>& writes, std::string& error) {
+               std::vector<VideoPortWrite>& writes, std::string& error,
+               const FixedDataResource* font) {
     if (ram.size() != 65536U) {
         error = "menu stack requires exactly 65536 RAM bytes";
         return false;
@@ -66,7 +67,7 @@ bool push_menu(std::vector<std::uint8_t>& ram,
                     candidate[parent+10U]) + (height < 2U ? 2U : height));
             }
             std::vector<VideoPortWrite> text;
-            if (!draw_menu_text(candidate, resource, true, line, text, error, &line)) {
+            if (!draw_menu_text(candidate, resource, true, line, text, error, &line, font)) {
                 return false;
             }
             pending.insert(pending.end(), text.begin(), text.end());

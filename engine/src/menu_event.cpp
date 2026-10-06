@@ -1,6 +1,7 @@
 #include "ms5/menu_event.h"
 #include "ms5/menu_border.h"
 #include "ms5/menu_descriptor.h"
+#include "ms5/menu_debug.h"
 #include "ms5/menu_stack.h"
 #include "ms5/object_restart.h"
 #include <new>
@@ -14,7 +15,7 @@ std::uint32_t read_u32(const std::vector<std::uint8_t>& ram, std::size_t at) {
 bool supported(std::uint32_t callback) {
     return callback==0U || callback==0x9488U || callback==0x949aU ||
            callback==0x94b8U || callback==0x94d6U || callback==0x950cU ||
-           callback==0x9532U;
+           callback==0x9532U || callback==0x9aa8U;
 }
 void close_menu(std::vector<std::uint8_t>& ram, MenuEventResult& result) {
     ram[0x7f1bU]=2U;
@@ -29,7 +30,8 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
                          const FixedDataResource& resource,
                          std::uint16_t event, std::uint16_t initial_line,
                          MenuEventResult& result,
-                         std::vector<VideoPortWrite>& writes, std::string& error) {
+                         std::vector<VideoPortWrite>& writes, std::string& error,
+                         const FixedDataResource* font) {
     bool covered=false;
     if (!menu_position_occluded(ram,0x7000U,covered,error)) return false;
     const std::uint32_t current=read_u32(ram,0x7f12U);
@@ -51,7 +53,11 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
         std::vector<VideoPortWrite> pending;
         MenuEventResult outcome;
         outcome.a2=current;
-        if (callback!=0U) {
+        if (callback==0x9aa8U) {
+            std::uint16_t local_line=initial_line;
+            if (!dispatch_debug_menu(candidate,resource,font,event,local_line,
+                                     outcome.a2,pending,error)) return false;
+        } else if (callback!=0U) {
             if (event==7U && (callback==0x949aU || callback==0x94b8U)) {
                 if (candidate[0x7dfaU]==0U && candidate[0x7dfbU]==1U) {
                     close_menu(candidate,outcome);
@@ -71,7 +77,7 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
                     const unsigned int padding=(descriptor.flags&14U)!=0U ? 1U : 3U;
                     const std::uint8_t x=static_cast<std::uint8_t>(candidate[slot+9U]+padding);
                     const std::uint8_t y=static_cast<std::uint8_t>(candidate[slot+10U]+1U+index);
-                    if (!push_menu(candidate,resource,child,x,y,initial_line,pending,error)) return false;
+                    if (!push_menu(candidate,resource,child,x,y,initial_line,pending,error,font)) return false;
                     outcome.a2=read_u32(candidate,0x7f0eU);
                 }
             } else if (event==4U) {
