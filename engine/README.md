@@ -6,6 +6,7 @@ C++11 기본 문법으로 작성하며, 리소스 규격은 ../docs/resource-for
 저장소 루트에서:
 
 ```sh
+make setup-tools
 python3 tools/decode_tiles.py
 python3 tools/verify_tiles_reference.py
 python3 tools/pack_tiles.py
