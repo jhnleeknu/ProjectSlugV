@@ -146,4 +146,44 @@ bool trace_fixed_text(const std::vector<std::uint8_t>& script,
     }
 }
 
+bool trace_direct_fixed_text(const std::vector<std::uint8_t>& script,
+                             std::uint16_t initial_address,
+                             std::uint16_t initial_style,
+                             std::vector<VideoPortWrite>& writes,
+                             std::string& error) {
+    std::vector<VideoPortWrite> pending;
+    std::uint16_t cursor = initial_address;
+    std::uint16_t line = initial_address;
+    std::uint16_t style = initial_style;
+    std::size_t position = 0;
+    for (;;) {
+        std::uint8_t glyph = 0;
+        if (!next_text_glyph(script, position, style, line, cursor, glyph, error)) {
+            return false;
+        }
+        if (glyph == 0) {
+            writes.swap(pending);
+            error.clear();
+            return true;
+        }
+        if (pending.size() >= 200000U) {
+            error = "direct text trace exceeds 200000 port events";
+            return false;
+        }
+        const std::uint32_t tile =
+            ((static_cast<std::uint32_t>(style) & 0x0f00U) << 4) |
+            ((static_cast<std::uint32_t>(style) & 0x000fU) << 8) |
+            static_cast<std::uint32_t>(glyph);
+        VideoPortWrite write;
+        write.address = 0x3c0000U;
+        write.value = (static_cast<std::uint32_t>(cursor) << 16) | tile;
+        write.size = 4;
+        pending.push_back(write);
+        cursor = static_cast<std::uint16_t>(static_cast<unsigned int>(cursor) + 0x20U);
+        write.value = 0x8200U;
+        write.size = 2;
+        pending.push_back(write);
+    }
+}
+
 } // namespace ms5

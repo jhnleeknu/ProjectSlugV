@@ -55,3 +55,21 @@ make all test
 ```
 
 원본38e8과388조건의글자수·style·line·종료주소가일치했다. 메뉴7문자열,모든nonzero byte255종,위치명령120조건,개행경계4조건,escape종료및65536글자wrap을포함한다. 잘림/누락/원본trap에대응하는입력7개는명시적으로거부했다. 오류출력보존unit검사도통과했다. 이구현은메뉴크기계산에필요한문자측정이며메뉴초기화/표시전체구현은남아있다.
+
+## 기본 1타일 문자 출력 3650
+
+메뉴초기화는기본문자callback을3650으로설정한다. 공통3918/386e루프에서3650으로들어오는glyph는1바이트다. 원본SWAP/MOVE.W/LSL.B/LSL.W/MOVE.B를따르면타일word는`((style&0f00)<<4)|((style&000f)<<8)|glyph`이다. ASCII제한이없고각byte를한타일로쓴다. 이것은다중바이트Unicode해석을의미하지않는다. 원본문자제어코드가고르는font/page와glyph번호를그대로사용한다.
+
+매글자마다3c0000에 `(cursor<<16)|tile`을long으로쓴뒤cursor word에20을더하고,같은포트에8200을word로쓴다. 후자의VRAM주소설정을생략하지않는다. C++ `VideoPortWrite`는address/value/size를갖는공통하드웨어쓰기표현이며 `trace_direct_fixed_text`가이순서를출력한다. 기존2타일font61 trace와측정API의지원범위는유지한다.
+
+```
+make all test
+build/trace_direct_text INPUT_MS5D CPU_ADDRESS CURSOR STYLE OUTPUT_WRITES
+.venv/bin/python tools/verify_direct_text.py
+```
+
+CLI의비교파일은각이벤트를size byte+BE32포트주소+BE32값의9바이트로기록한다. 이는비교출력이며새로운게임리소스포맷이아니다. 입력은기존MS5D원본문자열이다. API는성공시목록을교체하고제어명령오류/100000글자상한에서이전목록을보존한다.
+
+원본3918/3650과291스트림의포트주소·쓰기폭·값·순서가일치했다. 실제메뉴7문자열×4style,255nonzero glyph×256style조합65,280개,주소word wrap과제어명령을포함한다. Unicorn callback이word값을부호확장해서보고하는경우실제쓰기폭16비트로마스크해버스값을비교한다. 전체기존검사와출력보존/상한unit검사가통과했다.
+
+이결과는기본문자렌더링의원본포트명령검증이다. 메뉴항목배치/선택표시/가림callback 및최종팔레트·픽셀화면검증은아직남았다.

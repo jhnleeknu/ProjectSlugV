@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "ms5/video_port.h"
+
 namespace ms5 {
 
 struct FixedWrite {
@@ -43,6 +45,18 @@ bool trace_fixed_text(const std::vector<std::uint8_t>& script,
                       std::uint16_t initial_style,
                       std::vector<FixedWrite>& writes,
                       std::string& error);
+
+// Direct text output from CPU 0x003650 with the shared 0x00386e parser.
+// Each nonzero glyph emits a long address/data write followed by a word
+// address reset to 0x8200 at CPU port 0x3c0000. All glyphs and styles are
+// accepted. Cursor and line are VRAM word addresses. Success replaces
+// writes and clears error; failure preserves writes. The trace is bounded
+// to 200000 port events and ignores bytes after the first terminator.
+bool trace_direct_fixed_text(const std::vector<std::uint8_t>& script,
+                             std::uint16_t initial_address,
+                             std::uint16_t initial_style,
+                             std::vector<VideoPortWrite>& writes,
+                             std::string& error);
 
 } // namespace ms5
 
