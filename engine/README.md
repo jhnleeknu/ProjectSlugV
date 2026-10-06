@@ -52,3 +52,12 @@ make build/parse_sprite_scanline
 ```
 
 `parse_sprite_scanline INPUT OUTPUT SCANLINE`은 BE VRAM0x11000바이트를 읽어 홀짝에 맞는97word 목록만 갱신한다. 엔진에서는 같은 이름의 벡터 API를 직접 호출한다. 검증은 실제 MS5C 두 개의 명령을 포함해512줄씩 비교한다. 화면 픽셀 변환과 비디오 타이머는 아직 별도 미구현 단계다.
+
+지연 표시 큐 정렬과 태그 갱신:
+
+```sh
+make build/sort_sprite_queue
+.venv/bin/python tools/analyze_sprite_sort.py --cpp
+```
+
+`sort_sprite_queue INPUT OUTPUT TAG`는 CPU0x100000에 대응하는64KiB RAM에서 지연 목록을 일반 링에 합치며 새 태그를 저장한다. 실제 런타임에서는 `sort_deferred_sprites` API를 사용한다. 전체 큐 생성·소비 스케줄은 아직 연결하지 않았다.
