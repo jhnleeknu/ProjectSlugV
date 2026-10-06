@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++11 -O2 -Wall -Wextra -pedantic -Iengine/include
 PYTHON = .venv/bin/python
 
 .PHONY: all test runtime-resources setup-tools
-all: build/trace_table_text build/dispatch_menu_event build/push_menu build/navigate_menu build/select_menu_input build/draw_menu_text build/trace_direct_text build/step_menu_motion build/trace_menu_border build/init_menu build/measure_fixed_text build/check_menu build/read_control_request build/snapshot_palette build/setup_palette_fill build/transfer_palette_banks build/transfer_palette build/control_palette build/step_palette_frame build/prepare_palette build/palette_allocator build/step_animation_data build/step_animation_resource build/step_animation build/decode_animation_draw build/emit_composition_blocks build/emit_composition_variant build/configure_sprite_pool build/produce_sprite_queue build/prepare_sprite_queue build/radix_sprite_queue build/refresh_sprite_queue build/emit_composition_reverse build/sort_sprite_queue build/parse_sprite_scanline build/emit_sprite_resource build/check_tiles build/reset_object build/init_objects build/upload_palette build/init_palette build/check_palettes build/trace_fixed_text build/render_fixed_words build/convert_color_words build/render_text_scene build/update_position build/emit_composition build/emit_composition_refresh
+all: build/query_stage build/stage_state build/trace_table_text build/dispatch_menu_event build/push_menu build/navigate_menu build/select_menu_input build/draw_menu_text build/trace_direct_text build/step_menu_motion build/trace_menu_border build/init_menu build/measure_fixed_text build/check_menu build/read_control_request build/snapshot_palette build/setup_palette_fill build/transfer_palette_banks build/transfer_palette build/control_palette build/step_palette_frame build/prepare_palette build/palette_allocator build/step_animation_data build/step_animation_resource build/step_animation build/decode_animation_draw build/emit_composition_blocks build/emit_composition_variant build/configure_sprite_pool build/produce_sprite_queue build/prepare_sprite_queue build/radix_sprite_queue build/refresh_sprite_queue build/emit_composition_reverse build/sort_sprite_queue build/parse_sprite_scanline build/emit_sprite_resource build/check_tiles build/reset_object build/init_objects build/upload_palette build/init_palette build/check_palettes build/trace_fixed_text build/render_fixed_words build/convert_color_words build/render_text_scene build/update_position build/emit_composition build/emit_composition_refresh
 
 build:
 	mkdir -p build
@@ -26,8 +26,9 @@ build/init_objects: engine/src/object_lists.cpp engine/src/object_state.cpp engi
 build/object_lists_test: engine/src/object_lists.cpp engine/src/object_state.cpp engine/tests/object_lists_test.cpp engine/include/ms5/object_lists.h engine/include/ms5/object_state.h | build
 	$(CXX) $(CXXFLAGS) engine/src/object_lists.cpp engine/src/object_state.cpp engine/tests/object_lists_test.cpp -o $@
 
-test: build/menu_debug_test build/menu_event_test build/menu_stack_test build/menu_navigation_test build/menu_input_test build/menu_text_test build/direct_text_test build/menu_motion_test build/menu_border_test build/menu_init_test build/text_measure_test build/menu_descriptor_test build/palette_fill_test build/palette_transfer_test build/palette_frame_test build/palette_prepare_test build/palette_allocator_test build/animation_data_test build/fixed_data_resource_test build/animation_resource_test build/animation_step_test build/animation_draw_test build/sprite_blocks_test build/sprite_pool_test build/sprite_producer_test build/sprite_prepare_queue_test build/sprite_radix_test build/sprite_refresh_queue_test build/sprite_queue_test build/sprite_scanline_test build/composition_resource_test build/tile_resource_test build/object_state_test build/object_lists_test build/palette_resource_test build/fixed_renderer_test build/text_resource_test
+test: build/stage_catalog_test build/menu_debug_test build/menu_event_test build/menu_stack_test build/menu_navigation_test build/menu_input_test build/menu_text_test build/direct_text_test build/menu_motion_test build/menu_border_test build/menu_init_test build/text_measure_test build/menu_descriptor_test build/palette_fill_test build/palette_transfer_test build/palette_frame_test build/palette_prepare_test build/palette_allocator_test build/animation_data_test build/fixed_data_resource_test build/animation_resource_test build/animation_step_test build/animation_draw_test build/sprite_blocks_test build/sprite_pool_test build/sprite_producer_test build/sprite_prepare_queue_test build/sprite_radix_test build/sprite_refresh_queue_test build/sprite_queue_test build/sprite_scanline_test build/composition_resource_test build/tile_resource_test build/object_state_test build/object_lists_test build/palette_resource_test build/fixed_renderer_test build/text_resource_test
 	$(PYTHON) -m unittest discover -s tools/tests -v
+	./build/stage_catalog_test
 	./build/menu_debug_test
 	./build/menu_event_test
 	./build/menu_stack_test
@@ -67,6 +68,7 @@ test: build/menu_debug_test build/menu_event_test build/menu_stack_test build/me
 	./build/sprite_pool_test
 
 runtime-resources:
+	$(PYTHON) tools/pack_stage_catalog.py
 	$(PYTHON) tools/pack_menu_font.py
 	$(PYTHON) tools/pack_control_menu_tree.py
 	python3 tools/pack_tiles.py
@@ -329,3 +331,12 @@ build/trace_table_text: engine/src/fixed_text.cpp engine/src/fixed_data_resource
 
 build/menu_debug_test: engine/src/menu_debug.cpp engine/src/menu_text.cpp engine/src/menu_border.cpp engine/src/menu_descriptor.cpp engine/src/fixed_text.cpp engine/include/ms5/menu_debug.h engine/tests/menu_debug_test.cpp | build
 	$(CXX) $(CXXFLAGS) engine/src/menu_debug.cpp engine/src/menu_text.cpp engine/src/menu_border.cpp engine/src/menu_descriptor.cpp engine/src/fixed_text.cpp engine/tests/menu_debug_test.cpp -o $@
+
+build/query_stage: engine/src/stage_catalog.cpp engine/src/fixed_data_resource.cpp engine/include/ms5/stage_catalog.h engine/tools/query_stage.cpp | build
+	$(CXX) $(CXXFLAGS) engine/src/stage_catalog.cpp engine/src/fixed_data_resource.cpp engine/tools/query_stage.cpp -o $@
+
+build/stage_state: engine/src/stage_state.cpp engine/include/ms5/stage_state.h engine/tools/stage_state.cpp | build
+	$(CXX) $(CXXFLAGS) engine/src/stage_state.cpp engine/tools/stage_state.cpp -o $@
+
+build/stage_catalog_test: engine/src/stage_catalog.cpp engine/src/stage_state.cpp engine/src/fixed_data_resource.cpp engine/include/ms5/stage_catalog.h engine/include/ms5/stage_state.h engine/tests/stage_catalog_test.cpp | build
+	$(CXX) $(CXXFLAGS) engine/src/stage_catalog.cpp engine/src/stage_state.cpp engine/src/fixed_data_resource.cpp engine/tests/stage_catalog_test.cpp -o $@
