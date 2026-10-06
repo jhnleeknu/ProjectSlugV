@@ -180,8 +180,8 @@ build/step_animation: $(ANIMATION_SOURCES) $(ANIMATION_HEADERS) engine/tools/ste
 build/animation_step_test: $(ANIMATION_SOURCES) $(ANIMATION_HEADERS) engine/tests/animation_step_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(ANIMATION_SOURCES) engine/tests/animation_step_test.cpp -o $@
 
-build/step_animation_resource: $(ANIMATION_SOURCES) $(ANIMATION_HEADERS) engine/src/animation_resource.cpp engine/include/ms5/animation_resource.h engine/tools/step_animation_resource.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_SOURCES) engine/src/animation_resource.cpp engine/tools/step_animation_resource.cpp -o $@
+build/step_animation_resource: $(ANIMATION_SOURCES) $(ANIMATION_HEADERS) engine/src/animation_resource.cpp engine/src/fixed_data_resource.cpp engine/include/ms5/animation_resource.h engine/tools/step_animation_resource.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_SOURCES) engine/src/animation_resource.cpp engine/src/fixed_data_resource.cpp engine/tools/step_animation_resource.cpp -o $@
 
 build/animation_resource_test: engine/src/animation_resource.cpp engine/include/ms5/animation_resource.h engine/tests/animation_resource_test.cpp | build
 	$(CXX) $(CXXFLAGS) engine/src/animation_resource.cpp engine/tests/animation_resource_test.cpp -o $@

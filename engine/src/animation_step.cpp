@@ -211,17 +211,19 @@ bool step_animation_with_data(std::vector<std::uint8_t>& ram,
         if (opcode == 0x14) {
             if (!fetch(script, script_base, cursor, 5, error)) return false;
             const std::size_t at = static_cast<std::size_t>(cursor - script_base);
-            if (script[at] != 0x1e) {
+            const std::uint8_t selector = script[at];
+            if (selector != 0x1d && selector != 0x1e) {
                 error = "unsupported animation callback selector";
                 return false;
             }
-            if (object_offset > 65536 - 0x7e) {
+            const std::size_t index_offset = selector == 0x1d ? 0x7c : 0x7d;
+            if (object_offset > 65536 - (index_offset + 1)) {
                 error = "animation callback object fields are outside RAM";
                 return false;
             }
             const std::uint64_t address =
                 static_cast<std::uint64_t>(longword(script, at + 1)) +
-                static_cast<std::uint32_t>(next[object_offset + 0x7d]) * 4U;
+                static_cast<std::uint32_t>(next[object_offset + index_offset]) * 4U;
             std::uint32_t value = 0;
             if (!read_fixed(regions, address, 4, value, error)) return false;
             put_long(next, object_offset + 0x78, value);

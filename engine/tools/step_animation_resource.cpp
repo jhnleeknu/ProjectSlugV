@@ -130,8 +130,8 @@ bool write_bytes(const std::string& path, const std::uint8_t* bytes,
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 6) {
-        std::cerr << "usage: step_animation_resource INPUT_RAM INPUT_MS5A OUTPUT_RAM OUTPUT_STATUS OBJECT_OFFSET\n";
+    if (argc < 6) {
+        std::cerr << "usage: step_animation_resource INPUT_RAM INPUT_MS5A OUTPUT_RAM OUTPUT_STATUS OBJECT_OFFSET [INPUT_MS5D...]\n";
         return 2;
     }
     std::uint32_t object_offset;
@@ -159,9 +159,23 @@ int main(int argc, char** argv) {
         std::cerr << error << '\n';
         return 1;
     }
+    std::vector<ms5::FixedDataResource> regions;
+    for (int index = 6; index < argc; ++index) {
+        if (same_file(output_ram, argv[index]) || same_file(output_status, argv[index])) {
+            std::cerr << "outputs must be distinct from data resources\n";
+            return 1;
+        }
+        ms5::FixedDataResource region;
+        if (!ms5::load_fixed_data_resource(argv[index], region, error)) {
+            std::cerr << error << '\n';
+            return 1;
+        }
+        regions.push_back(region);
+    }
     bool carry = false;
-    if (!ms5::step_animation(ram, object_offset, resource.data,
-                             resource.source_cpu_address, carry, error)) {
+    if (!ms5::step_animation_with_data(ram, object_offset, resource.data,
+                                      resource.source_cpu_address, regions,
+                                      carry, error)) {
         std::cerr << error << '\n';
         return 1;
     }

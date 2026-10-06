@@ -284,6 +284,13 @@
 - make all test, 추가 오류/rollback 검사, 기존ROM루프96호출·192비디오단계 회귀가 통과했다.
 - 전체 실제분기스크립트·자연도달성과 나머지 명령은 미완료다. docs/analysis/animation-indexed-draw.md 참고.
 
+## 2026-10-07 — 원본 양방향 루프의 네이티브 리소스 실행
+- 이전 turn은 opcode10 원본비교·C++ 통합을 끝낸 progress다.
+- 실제65f56..662c2의 두 4프레임 루프를 MS5A로 추출했다. 1d callback은+7c를 조회하며 1e는+7d다.
+- MS5A CLI에 MS5D 입력을 연결하고 352바이트 callback 창을 별도 리소스로 제공했다.
+- 강제 양방향 상태전환 포함68시퀀스1632호출에서 원본/C++ 전체RAM·carry 일치. make all test 통과.
+- 이 경로의 composition group·팔레트·자연생성 경로 연결은 남았다. docs/analysis/animation-branch-resource.md 참고.
+
 ## 다음 작업
 1. 실제 ROM 애니메이션 스크립트의 참조·경계를 확인하고 런타임 리소스로 추출한다. 분기 등 나머지opcode를 해석해 상태 실행기에 연결한다.
 2. 팔레트·애니메이션·맵 참조 경로를 오브젝트 코드와 연결한다.

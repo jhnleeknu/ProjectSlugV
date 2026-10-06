@@ -22,7 +22,9 @@ bool step_animation(std::vector<std::uint8_t>& ram,
                     std::uint32_t script_base,
                     bool& carry, std::string& error);
 
-// Adds field branch 0c, indexed draw 10 and callback 14 selector 1e.
+// Adds field branch 0c, indexed draw 10 and callback 14 selectors 1d/1e.
+// Callback 1d indexes with object+7c, while 1e indexes with object+7d;
+// both read a big-endian longword at operand_base+index*4 into object+78.
 // Data windows must be
 // nonempty, nonoverlapping fixed-ROM ranges with matching CPU/ROM addresses.
 // Each data read must fit a supplied window. All failures preserve RAM/carry.
