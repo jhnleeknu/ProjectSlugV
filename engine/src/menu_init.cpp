@@ -114,9 +114,10 @@ bool initialize_menu(std::vector<std::uint8_t>& ram,
                      const FixedDataResource& resource,
                      std::uint32_t descriptor_address,
                      std::uint16_t x, std::uint16_t y,
-                     std::uint16_t initial_line, std::string& error) {
+                     std::uint16_t initial_line, std::string& error,
+                     std::uint16_t* final_line) {
     if (!configure_menu_slot(ram, resource, UINT32_C(0x107efe),
-                             descriptor_address, x, y, initial_line, error)) {
+                             descriptor_address, x, y, initial_line, error, final_line)) {
         return false;
     }
     write_u32(ram, 0x7f16U, 0x00003650U);

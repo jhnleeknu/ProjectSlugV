@@ -28,7 +28,8 @@ bool initialize_menu(std::vector<std::uint8_t>& ram,
                      const FixedDataResource& resource,
                      std::uint32_t descriptor_address,
                      std::uint16_t x, std::uint16_t y,
-                     std::uint16_t initial_line, std::string& error);
+                     std::uint16_t initial_line, std::string& error,
+                     std::uint16_t* final_line = NULL);
 
 } // namespace ms5
 
