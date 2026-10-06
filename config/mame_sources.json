@@ -33,6 +33,26 @@
     {
       "path": "src/emu/romload.cpp",
       "sha256": "854873d6f1b33d1dd3614a219b4b744f8fefb11708c8389141157825599f275f"
+    },
+    {
+      "path": "src/devices/bus/neogeo/prot_cmc.h",
+      "sha256": "928fdf1f6c546d57dd3f69b6bf02d413ba6d95f84dba442b65a66321bdcf29ca"
+    },
+    {
+      "path": "src/lib/util/hash.cpp",
+      "sha256": "cdb9f69c9da248989bcbc256e5d40db7971833f8cf215150b640866e6bcc4393"
+    },
+    {
+      "path": "src/lib/util/hashing.cpp",
+      "sha256": "520bfb8c30571b2cd55cbf7d64275048be4af7935dd3f045863f55032001f324"
+    },
+    {
+      "path": "src/lib/util/hashing.h",
+      "sha256": "4b80705fd397c79b20b2fe65bc0af3b77644c9cde571e35570747e4bc55f5190"
+    },
+    {
+      "path": "src/mame/snk/neogeo_spr.cpp",
+      "sha256": "1ad3de4bd399c4dff3ea131f181e45746db623b4feac320af3eab807e93f2668"
     }
   ]
 }

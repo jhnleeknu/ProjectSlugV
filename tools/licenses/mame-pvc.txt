@@ -3,7 +3,7 @@ BSD 3-Clause License
 Copyright S. Smith, David Haywood, Fabio Priuli.
 All rights reserved.
 
-Source: MAME src/devices/bus/neogeo/prot_pvc.cpp
+Sources: MAME src/devices/bus/neogeo/prot_pvc.cpp, prot_cmc.cpp, prot_pcm2.cpp
 The source header identifies BSD-3-Clause and the copyright holders above;
 it does not specify a copyright year.
 
