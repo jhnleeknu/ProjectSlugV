@@ -4,6 +4,8 @@
 #include "ms5/menu_border.h"
 #include "ms5/menu_descriptor.h"
 #include "ms5/menu_debug.h"
+#include "ms5/stage_area_menu.h"
+#include "ms5/stage_group_menu.h"
 
 #include <new>
 
@@ -19,7 +21,8 @@ std::uint32_t read_u32(const std::vector<std::uint8_t>& ram, std::size_t at) {
 bool supported_callback(std::uint32_t address) {
     return address == 0U || address == 0x9488U || address == 0x94d6U ||
            address == 0x949aU || address == 0x94b8U || address == 0x950cU ||
-           address == 0x9532U || address == 0x9aa8U;
+           address == 0x9532U || address == 0x9aa8U ||
+           address == 0x9602U || address == 0x9802U;
 }
 
 bool script_at(const FixedDataResource& resource, std::uint32_t address,
@@ -78,7 +81,8 @@ bool append_item(const MenuItem& item, std::size_t index,
                  const FixedDataResource& resource, bool clip,
                  std::vector<std::uint8_t>& ram,
                  std::vector<VideoPortWrite>& writes, std::string& error,
-                 std::uint16_t* final_line, const FixedDataResource* font) {
+                 std::uint16_t* final_line, const FixedDataResource* font,
+                 const StageGroupMenuContext* stage_context) {
     const std::uint8_t row = static_cast<std::uint8_t>(index + 1U);
     if (row >= ram[slot + 4U]) {
         return true;
@@ -106,6 +110,7 @@ bool append_item(const MenuItem& item, std::size_t index,
         address = static_cast<std::uint16_t>(
             static_cast<unsigned int>(address) + 0x20U);
     }
+    std::uint16_t line = final_line != NULL ? *final_line : 0U;
     if (item.title_address != 0U) {
         std::vector<std::uint8_t> script;
         if (!script_at(resource, item.title_address, script, error)) {
@@ -114,21 +119,39 @@ bool append_item(const MenuItem& item, std::size_t index,
         const std::uint16_t style = current != head && index != selected ?
                                    0x0603U : 0x0003U;
         if (!append_text(script, address, style, clip, ram, writes, error,
-                         final_line)) {
+                         &line)) {
             return false;
         }
     }
-    if (item.callback == 0x9aa8U) {
-        std::uint16_t line = final_line != NULL ? *final_line : 0U;
+    if (item.callback == 0x9aa8U || item.callback == 0x9602U ||
+        item.callback == 0x9802U) {
         std::uint32_t a2 = current;
         std::vector<VideoPortWrite> ports;
-        if (!dispatch_debug_menu(ram, resource, font, 5U, line, a2, ports, error)) {
-            return false;
+        if (item.callback == 0x9aa8U) {
+            if (!dispatch_debug_menu(ram, resource, font, 5U, line, a2,
+                                     ports, error)) {
+                return false;
+            }
+        } else if (item.callback == 0x9602U) {
+            if (!dispatch_stage_area_menu(ram, resource, font, stage_context,
+                                          5U, line, a2, ports, error)) {
+                return false;
+            }
+        } else {
+            if (!dispatch_stage_group_menu(ram, resource, font, stage_context,
+                                           5U, a2, ports, error)) {
+                return false;
+            }
+            // The native 0x9781 format ends in a literal space and zero,
+            // leaving D3 equal to the formatter's stored line word.
+            line = static_cast<std::uint16_t>(
+                (static_cast<unsigned int>(ram[0x4cd8U]) << 8) |
+                ram[0x4cd9U]);
         }
         writes.insert(writes.end(), ports.begin(), ports.end());
-        if (final_line != NULL) {
-            *final_line = line;
-        }
+    }
+    if (final_line != NULL) {
+        *final_line = line;
     }
     // Other supported callbacks return from event 5 without RAM or video writes.
     return true;
@@ -139,7 +162,9 @@ bool append_item(const MenuItem& item, std::size_t index,
 bool draw_menu_item(std::vector<std::uint8_t>& ram,
                     const FixedDataResource& resource, bool clip,
                     std::vector<VideoPortWrite>& writes, std::string& error,
-                    const FixedDataResource* font) {
+                    const FixedDataResource* font,
+                    const StageGroupMenuContext* stage_context,
+                    std::uint16_t* final_line) {
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
@@ -178,6 +203,7 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
             error = "menu item index lies outside the descriptor";
             return false;
         }
+        std::uint16_t candidate_line = final_line != NULL ? *final_line : 0U;
         const MenuItem& item = descriptor.items[index];
         if (item.title_address == 0xfffffffeU) {
             error = "menu item drawing does not support separator items";
@@ -188,11 +214,15 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
             return false;
         }
         if (!append_item(item, index, slot, head, current, resource, clip,
-                         candidate, pending, error, NULL, font)) {
+                         candidate, pending, error, &candidate_line, font,
+                         stage_context)) {
             return false;
         }
         ram.swap(candidate);
         writes.swap(pending);
+        if (final_line != NULL) {
+            *final_line = candidate_line;
+        }
     } catch (const std::bad_alloc&) {
         error = "cannot allocate menu text output";
         return false;
@@ -206,7 +236,8 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
                     std::uint16_t initial_line,
                     std::vector<VideoPortWrite>& writes, std::string& error,
                     std::uint16_t* final_line,
-                    const FixedDataResource* font) {
+                    const FixedDataResource* font,
+                    const StageGroupMenuContext* stage_context) {
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
@@ -258,7 +289,7 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
     try {
         std::vector<std::uint8_t> candidate(ram);
         std::uint16_t pending_line = initial_line;
-        std::uint16_t* line_output = final_line != NULL ? &pending_line : NULL;
+        std::uint16_t* line_output = &pending_line;
         std::vector<std::uint8_t> script;
         if (!script_at(resource, descriptor.title_address, script, error)) {
             return false;
@@ -284,7 +315,7 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
             candidate[slot + 8U] = static_cast<std::uint8_t>(index);
             if (!append_item(descriptor.items[index], index, slot, head, current,
                              resource, clip, candidate, pending, error,
-                             line_output, font)) {
+                             line_output, font, stage_context)) {
                 return false;
             }
         }

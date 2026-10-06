@@ -10,7 +10,7 @@ struct MenuEventResult {
     MenuEventResult() : a2(0), external_jump(0) {}
 };
 // CPU 9b3e through the six control-menu callbacks and debug callback9aa8.
-// Debug drawing requires font. Stage group callback9802 drawing additionally
+// Debug drawing requires font. Stage callbacks9602/9802 drawing additionally
 // requires stage_context. Dispatches slot+8;
 // event is the D0 word, initial_line is D3's text-line word. Returns A2
 // because the caller's menu state machine uses it after callbacks.

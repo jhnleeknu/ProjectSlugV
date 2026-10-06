@@ -25,7 +25,9 @@ bool navigate_menu(std::vector<std::uint8_t>& ram,
                    const FixedDataResource& resource, bool explicit_selection,
                    std::uint8_t requested,
                    std::vector<VideoPortWrite>& writes, std::string& error,
-                   const FixedDataResource* font) {
+                   const FixedDataResource* font,
+                   const StageGroupMenuContext* stage_context,
+                   std::uint16_t* final_line) {
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
@@ -57,21 +59,27 @@ bool navigate_menu(std::vector<std::uint8_t>& ram,
     }
     try {
         std::vector<std::uint8_t> candidate(ram);
+        std::uint16_t candidate_line = final_line != NULL ? *final_line : 0U;
         std::vector<VideoPortWrite> pending;
         std::vector<VideoPortWrite> row;
         candidate[slot + 7U] = index;
         candidate[slot + 8U] = old_index;
-        if (!draw_menu_item(candidate, resource, true, pending, error, font)) {
+        if (!draw_menu_item(candidate, resource, true, pending, error, font,
+                            stage_context, &candidate_line)) {
             return false;
         }
         candidate[slot + 8U] = index;
-        if (!draw_menu_item(candidate, resource, true, row, error, font)) {
+        if (!draw_menu_item(candidate, resource, true, row, error, font,
+                            stage_context, &candidate_line)) {
             return false;
         }
         pending.insert(pending.end(), row.begin(), row.end());
         candidate[slot + 14U] = 0U;
         ram.swap(candidate);
         writes.swap(pending);
+        if (final_line != NULL) {
+            *final_line = candidate_line;
+        }
     } catch (const std::bad_alloc&) {
         error = "cannot allocate menu navigation output";
         return false;
