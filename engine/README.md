@@ -156,3 +156,15 @@ make all test
 ```
 
 검증 CLI `decode_animation_draw INPUT_RAM INPUT_OPERAND OUTPUT OBJECT_OFFSET`의 OUTPUT은 skipped,d0,d1,d5,d7의BE32 다섯 word다. 이 출력은 검증 기록이며 별도 런타임 리소스 형식이 아니다.
+
+### 애니메이션 상태 실행
+
+`step_animation(ram, object_offset, script, script_base, carry, error)`가 opcode00/04/28을 실행한다. script는 원본CPU 주소를 기준으로 읽는 불변byte vector다. 상태 포인터와 타이머는RAM에 유지되며04는 표시 인자 변환과 큐 생성기를 호출한다. 실패는RAM과carry를 보존한다. 비동기 producer 대기와 다른opcode는 아직 지원하지 않는다.
+
+```sh
+make all test
+.venv/bin/python tools/analyze_animation_wait.py --cpp
+.venv/bin/python tools/verify_animation_pipeline.py
+```
+
+CLI: `step_animation INPUT_RAM INPUT_SCRIPT OUTPUT_RAM OUTPUT_STATUS OBJECT_OFFSET SCRIPT_BASE`. STATUS는 반환carry의BE32 0/1이다. 현재 혼합script 검증은 인위적으로 만든fixture이며 자연ROM 애니메이션 전체 실행을 의미하지 않는다.

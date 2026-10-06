@@ -1,4 +1,6 @@
 """Ground animation wait/end state transitions against the original interpreter."""
+import argparse
+import subprocess
 import hashlib
 import json
 from pathlib import Path
@@ -55,6 +57,7 @@ def model(initial,obj):
 
 
 def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--cpp',action='store_true');args=parser.parse_args()
     root=Path(__file__).resolve().parents[1]
     program,source=load_verified_program(root)
     if source['sha256']!='29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f':
@@ -62,6 +65,15 @@ def main():
     cpu=make_cpu(program);cpu.mem_map(0x200000,0x200000)
     # SCS absolute long captures the actual CPU carry flag after RTS.
     cpu.mem_write(0xff100,bytes.fromhex('55f900105900'))
+    destination=root/'artifacts/animation_wait';destination.mkdir(parents=True,exist_ok=True)
+    def check_cpp(initial,expected,carry):
+        if not args.cpp: return
+        (destination/'input.bin').write_bytes(initial)
+        (destination/'script.bin').write_bytes(initial[0x5800:0x5806])
+        subprocess.run([str(root/'build/step_animation'),str(destination/'input.bin'),str(destination/'script.bin'),
+            str(destination/'output.bin'),str(destination/'status.bin'),'8192','0x105800'],check=True)
+        if (destination/'output.bin').read_bytes()!=expected or (destination/'status.bin').read_bytes()!=struct.pack('>I',carry):
+            raise ValueError('C++ wait mismatch')
     results=[]
     for timer in (0,1,255,256,32767,32768,0xff00,0xffff):
         for speed in (0,1,256,65535):
@@ -88,6 +100,7 @@ def main():
                         if actual!=expected:
                             diffs=[hex(i) for i in range(65536) if actual[i]!=expected[i]]
                             raise ValueError('Wait state mismatch '+repr((timer,speed,duration,tail,countdown,diffs[:12])))
+                        check_cpp(ram,expected,carry)
                         results.append({'timer':timer,'speed':speed,'duration':duration,'tail':tail,'countdown':countdown,
                                         'model_steps':steps,'ram_sha256':hashlib.sha256(actual).hexdigest()})
     for kind in ('inactive','end'):
@@ -113,10 +126,11 @@ def main():
                 actual[0x5900]=ram[0x5900]
                 if actual!=expected:
                     raise ValueError('End/inactive RAM mismatch')
+                check_cpp(ram,expected,carry)
                 results.append({'kind':kind,'timer':timer,'countdown':countdown,
                                 'model_steps':steps,'ram_sha256':hashlib.sha256(actual).hexdigest()})
     destination=root/'artifacts/animation_wait';destination.mkdir(parents=True,exist_ok=True)
-    (destination/'verification.json').write_text(json.dumps({'source':source,'cases':len(results),'all_ram_equal':True,'return_carry_equal':True,
+    (destination/'verification.json').write_text(json.dumps({'source':source,'cases':len(results),'cpp_verified':args.cpp,'all_ram_equal':True,'return_carry_equal':True,
         'scope':'Wait/end-only controlled RAM scripts through original interpreter. Return carry checked through original CPU SCS. Draw opcodes, natural scripts and timing not verified.','results':results},indent=2)+'\n')
     print('Animation wait/end RAM matches:',len(results),'cases')
 

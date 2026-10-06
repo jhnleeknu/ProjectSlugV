@@ -37,3 +37,13 @@ A0+0은 명령 포인터long, +4는16bit 타이머, +6은16bit 감소량이다.0
 초기 실험에서 반환 주소를 이후 별도emu_start로 재실행하자 다음 호출의 종료점 관찰이 맞지 않았다. 검증stub을 원본반환 경로에 직접 넣고 하나의emu_start로 실행하도록 수정해 결과를 다시 확인했다.
 
 현재 도구는 대기/경계 전용 의미 모델이다. C++ 시간 흐름 실행기, draw 혼합 스크립트, 다른opcode, 자연 게임 스크립트 및 실제 프레임 스케줄은 후속 작업이다.
+
+## C++ 실행기 통합
+
+`step_animation`은 원본 상태 포인터를 사용해 입력 script bytes와 CPU base 안에서00/04/28을 해석한다. 명령 fetch는 리소스 byte vector에서만 수행하고 RAM은 상태로 사용한다. 비활성 포인터에서는bank shadow만0으로 만들고carry1로 반환한다. 원본 명령 주소를 보존하지만 하드웨어 bank 전환을 수행하는 API는 아니다.
+
+04는 `decode_animation_draw`와 `submit_sprite`에 연결했다. Accepted/Clipped/Full이면 해석을 계속하고, 동시 소비를 기다리는 Waiting은 명시적 오류로 되돌린다. 지원하지 않는 명령·잘린 operand·범위 밖 fetch·10000명령 초과도 오류이며 호출 전 RAM과carry를 보존한다. 이 실패 처리는 손상된 원본 명령 스트림의 CPU 동작을 흉내 내려는 계약이 아니다.
+
+`analyze_animation_wait.py --cpp`의2000조건에서 원본·C++ 전체RAM과carry가 일치했다. `verify_animation_pipeline.py`는 두 draw 명령과 두 wait,28을 섞은제어스크립트로8개 연속 시퀀스를 비교한다. 타이머 초기0/ffff, 감소량128/256, 큐 초기방향0/128 조합에서12회씩 실행해총96 interpreter 호출과192 준비·갱신 단계의 전체RAM·carry·비디오 쓰기가 일치했다. 표시 리소스는 실제 추출된 MS5C 2152/2382a를 C++ 로더로 읽는다.
+
+이 스크립트는 검증 fixture다. 원본 ROM에서 추출한 자연 애니메이션 리소스로 취급하지 않는다. 실제 스크립트의 경계·참조·시간 설정과 나머지opcode 연결은 다음 단계다.
