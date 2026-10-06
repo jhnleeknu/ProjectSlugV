@@ -50,7 +50,7 @@ build/start_control_menu INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LINE ENTRY_
 
 원본ca9e는3c0000에773개의long을 쓴다. VRAM주소7500..77ff에0을 순서대로 쓰고,7500/7520/7540/7560에0200,7580에ff02를 쓴다. 이 단계에서 해당 데이터의 더 넓은 하드웨어 의미를 추정하지 않는다. 이어 RAM7dee를ff로 만들고 a29c로93e0을x4/y8에 초기화한다. a2b8의 효과로 전역renderer를9332로 설정하고 종료word7dfa를0으로 만든다.
 
-첫a370 프레임까지 즉시 실행한다. 이 호출의 실제 진입A7은92ce 진입S−4다. 원본native메뉴의 표시 높이가0이므로 첫 프레임은 열기 단계를 수행하며 글꼴 리소스는 아직 읽지 않는다. 이후 호출은 step_menu_frame에 기존font/stage리소스를 전달한다.
+첫a370 프레임까지 즉시 실행한다. 이 호출의 실제 진입A7은92ce 진입S−4다. 원본native메뉴의 표시 높이가0이므로 첫 프레임은 열기 단계를 수행하며 글꼴 리소스는 아직 읽지 않는다. 이후 컨트롤러 호출은 아래 step_control_menu에 기존 font/stage 리소스를 전달한다.
 
 마지막92a8은 각 플레이어의 누적 입력에 `(현재 XOR 저장값) AND 현재`를OR하고7df3을byte 감소한다. 저장값7dfc/d는 이 경로에서 갱신하지 않는다. 비활성 요청 수락과 메뉴 진입의 입력 보관 시점을 합쳐 버리면 원본과 달라진다.
 
@@ -58,7 +58,7 @@ build/start_control_menu INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LINE ENTRY_
 
 원본92ce의432개 고립 조건과3개 열기 시퀀스의15호출을 비교했다. 전체 RAM, ordered ports, signedD0, D3 및 외부 전환 결과가 일치했다. helper 호출 순서는ca9e/a29c/a2b8/a370/92a8이며 앞의 네 진입은S−4, 꼬리는S임을 hook으로 확인했다. 초기화 후 첫 프레임의 소수 byte, 누적 입력과 countdown을 별도 검사했다. 연속 시퀀스는 실제9332 호출과 완전히 열린 상태 도달을 확인한다.
 
-아직 미완료인 범위는9136 활성 대기/반복 전체 제어, 메뉴 종료 뒤 간접callback과928e 문자열 지우기, 실제 게임 입력 수집·스케줄링/부팅 및 픽셀/타이밍이다. 분리된 진입과 프레임 검증을 전체 컨트롤러/게임 완료로 취급하지 않는다.
+활성 대기와 메뉴 종료 연결은 아래 후속 절에서 다룬다. 실제 게임 입력 수집·스케줄링/부팅 및 픽셀/타이밍은 미완료이며, 분리된 진입과 프레임 검증을 전체 게임 완료로 취급하지 않는다.
 
 비활성 진입의 C++ 비교는 원본9136의8,192조건 전체 RAM/반환byte가 일치했다(수락8,169/미진입23). 원본mapped1MiB 불변, 이미 활성인 입력·잘못된 RAM 크기·직접/하드링크/심볼릭링크 출력 충돌의 보존 검사를 포함한다. 전체 make all test(Python55개 및 C++전체) 통과.
 
@@ -86,4 +86,30 @@ build/step_control_wait INPUT_RAM MENU_MS5D PAUSE_MS5D OUTPUT_RAM OUTPUT_PORTS S
 
 원본9136/91c2의1,416조건에서 전체RAM,포트238,180회,signedD0,D3가 일치했다. 실측분기는대기776/새진행135/누름유지205/메뉴진입300이며,실제3902문자열은PAUSE484/공백144회다. 두플레이어의20회누름유지와표시억제유무별40회점멸시퀀스는출력RAM을이어갔다. 원본분기·script주소·counter/입력누적을별도assertion으로검사했다.
 
-수정후전체make all test(Python61개/C++전체)가통과했다. 늦은텍스트오류시이미감소한counter와모든출력을복원하는검사,키우선순위,반복underflow,표시palette/줄위치를포함한다. 이미열린메뉴의종료간접callback/928e출력및최종통합은남아있다.
+수정후전체make all test(Python61개/C++전체)가통과했다. 늦은텍스트오류시이미감소한counter와모든출력을복원하는검사,키우선순위,반복underflow,표시palette/줄위치를포함한다. 이미 열린 메뉴의 후속 처리와928e 출력은 다음 절에서 연결한다. 임의의 종료 간접 콜백과 실제 게임 메인 루프 통합은 남아 있다.
+
+
+## 열린 메뉴의 프레임과 종료 연결
+
+```
+build/finish_control_menu INPUT_RAM PAUSE_MS5D OUTPUT_RAM OUTPUT_PORTS FRAME_D0 STYLE LINE
+build/step_control_menu INPUT_RAM MENU_MS5D PAUSE_MS5D OUTPUT_RAM OUTPUT_PORTS STYLE LINE ENTRY_STACK [FONT [STAGES_DIR]]
+.venv/bin/python tools/verify_control_finish.py
+.venv/bin/python tools/verify_control_menu_frame.py
+```
+
+`finish_control_menu`는 원본9302부터의 처리다. 입력은 a370이 **반환한 뒤**의 D0 전체와 D1/D3 word다. D0 low byte가0이면932a는 하위 word만0으로 만든다. 그 외에는 메뉴 열림 byte7dee를0으로 만들고7df6의 콜백을 호출한 후, 종료 word7dfa가 정확히1이면928e로 간다. 현재 C++은 호출이 필요한 비영 콜백을 명시적으로 거절한다. low byte0인 경로에서는 콜백을 읽거나 실행하지 않으므로 비영 값도 허용한다.
+
+928e는9079의 다섯 공백을 e84c8을 통해 그린다. 메뉴의9332 remapper를 거치지 않으며, 문자열이 선택한 font3은3650 직접 출력을 사용한다. 별도 폰트 테이블을 읽지 않고 기존 PAUSE MS5D의 제어 바이트를 사용한다. 들어온 D1의 palette를 보존한다. 마지막에7dee와7df0을0으로 만들고 D0=1로 설정한다. 종료 word가1이 아니면 활성 제어7df0과 D0를 유지한다. 모든 정상 반환은92a8의 입력 누적과 blink 감소를 수행한다.
+
+`step_control_menu`는 이미 활성화되고 메뉴가 열린 상태(7df0/7dee가 모두 비영)에서92fc의 전체 호출을 연결한다. a370에는 컨트롤러 진입 A7보다4 작은 주소를 전달하여 stage callback의 스택 깊이도 보존한다. BIOS 전환이면 종료 꼬리를 실행하지 않는다. 모드0..2에서 프레임이 비영 D0를 반환하는 경로는 빈 스택 또는 높이0인 마지막 root를 pop하는 경우다. 두 경로는 D1을 바꾸지 않는다. 이 근거로 종료 지우기에 진입 STYLE을 전달하며, 실제9302 hook에서도 이 조건을 검사한다. 다른 모드는 이 연결 API의 지원 범위 밖이다.
+
+두 API 모두 실패하면 RAM, 결과 구조체와 포트 목록을 보존한다. 특히 프레임이 마지막 root를 pop한 후 종료 콜백이나 문자열 검증에서 실패하는 경우도 전체 호출을 취소한다. 반환 status는 signed D0 전체이며, 호출자의 상태 판정은 하위 byte를 사용한다.
+
+고정 ROM 첫1MiB에서7df6의 직접 참조는919a의0 초기화와930e의로드를 확인했다. 이 검색은 계산 주소나 다른 뱅크를 통한 비영 쓰기가 없다는 증거가 아니다. 임의의 간접 콜백 구현은 미완료다. 원본 프로그램 SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이며, 이 절의 CPU 주소는 복호화 ROM 오프셋과 같다.
+
+종료 꼬리 비교는880조건(독립760 + RAM 승계120), 실제3918 호출118회와 포트1,180회가 일치했다. 비영 콜백 거절48조건에서 기존 출력 보존과 새 출력 미생성을 확인했다. 전체 RAM, signed D0, D3 word 및 원본 매핑 불변을 검사했다.
+
+연결 검증은1,027프레임(9136 진입36,92fc 진입991), 실제 stage callback697회와 포트165,533회가 일치했다.13개 연속 시퀀스는 초기화 후 child 열기·조작·취소/선택·parent 복귀·종료와 header 요청 종료를 포함한다. 비영 프레임 반환138회에서9302의 D1 word 보존을 확인했다. BIOS 전환 시 종료 꼬리를 건너뛰며 실제 watchdog3회도 비교한다. 종료 콜백·잘못된 PAUSE 범위·미지원 모드·비활성 상태의12개 CLI 거절 조건과 C++ 늦은 오류 트랜잭션 검사를 통과했다.
+
+전체 `make all test`는 Python61개와 C++ 전체가 통과했다. 보고서는 `artifacts/control_finish/verification.json`(SHA256 `b9a16862228a1fb1b959aab7df3450362f2ac33ad37092501ff6459541b14afe`)과 `artifacts/control_menu_frame/verification.json`(SHA256 `a963f297ca0163bf489ad7a282c4554a925af55edca01733414cef66f981d6cd`)이다. 전체 CPU 레지스터/flags, 외부 진단 스택 메모리, 입력 수집·게임 업데이트 스케줄링, 픽셀·하드웨어 타이밍과 전체 게임 부팅을 검증한 것은 아니다.
