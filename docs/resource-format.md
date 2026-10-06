@@ -49,3 +49,23 @@ manifest.json에는 런타임 파일 크기·SHA256, source 파일·SHA256, pale
 각 레코드는 BE uint32 RAM 주소, BE uint32 콜백 주소, BE uint16 네 개다. 네 word는 오브젝트 +0x76부터 복사한다. 콜백 주소는 원본 CPU 함수 식별자이며 호스트 함수 포인터로 캐스팅하지 않는다. 원본 주소와 C++ 구현을 연결하는 디스패치는 별도로 구현해야 한다.
 
 C++ 로더는 헤더·CRC·정확한 파일 길이·주소 정렬·범위·오브젝트 간 겹침을 검사한다. 실패하면 기존 테이블을 보존한다. `tools/pack_object_boot.py`는 검증된 프로그램에서 생성하고 `object_boot.manifest.json`에 SHA256과 원본 위치를 기록한다.
+
+## 원본 ID 기반 팔레트 MS5P
+
+리소스 ID `mslug5.palettes`, 파일 `palettes.ms5p`, 이력 `palettes.manifest.json`이다. 현재 카탈로그는 확인된 고정 등록 테이블 두 개의 source ID 0x897,0xb01,0xb02만 담는 **미완성 sparse 카탈로그**다. source ID는 destination 슬롯 번호와 다르다. 이후 확인한 ID를 기존 번호 그대로 추가한다.
+
+헤더 32바이트: ASCII MS5P 이후 uint32 little-endian 7개다.
+
+| 오프셋 | 필드 | 값 |
+|---:|---|---|
+| 4 | version | 1 |
+| 8 | count | 1..65536 |
+| 12 | record_size | 68 |
+| 16 | payload_size | count×68 |
+| 20 | crc32 | payload ZIP CRC32 |
+| 24 | reserved | 0 |
+| 28 | reserved | 0 |
+
+각 레코드: LE uint32 원본 source ID(0..65535), 원본 BE uint16 색상값16개, 일반 조회 변환 후 BE uint16 하드웨어 색상값16개. source ID 오름차순이며 중복을 허용하지 않는다. 변환 후 첫 word는0이다. 원본 첫 word는 별도로 보존한다. 나머지15개는 원본0x4718의 signed16 lookup 계산을 적용한 결과다. 이 값은 RGB가 아니며 혼합·명암 분기 결과를 미리 대체하지 않는다.
+
+C++ 로더는 정확한 길이, 헤더, 상한, CRC, ID 정렬·중복, 첫 변환 word를 검증한다. 실패하면 기존 레코드를 보존한다. manifest에는 각 ID의 원본 위치, 15개 lookup 위치, 이 ID를 참조하는 등록 테이블·레코드·destination slot·flags를 저장한다. `catalog_status=incomplete_sparse`를 유지한다.

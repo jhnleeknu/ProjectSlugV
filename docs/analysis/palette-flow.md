@@ -51,3 +51,15 @@ C++ `initialize_palette_state`는 이 루틴의 지속 RAM 효과를 구현했�
 7과263은 같은 bucket을 사용하지만 서로 다른 ID로 구분된다. 이후 원본 0x8ff4를 호출하면 오브젝트의 보유 슬롯을 역순으로 처리하고 참조를 내린다. 0이 된 노드는 0x8e4a를 통해 free-list 끝에 돌아가며 ID 두 개를0xffff, flag를2로 만든다. count0과0xffff는 내리지 않는다. 위 관찰에서 세 노드 모두 참조0으로 돌아가고 오브젝트 count도0으로 바뀌었다.
 
 검증 명령: `make build/init_palette` 후 `.venv/bin/python tools/verify_palette_state.py`. 초기화 차등 비교 출력 SHA256: `d2a04699f71d262946afe8d6db9a25a772ba19903b41090405b8ba06b6848dbf`. 할당/해제는 원본 실행 관찰이며 아직 C++ 동등성 검증이 아니다. pool 소진의 진단 출력 경로와 trap은 실행하지 않았다.
+
+## 고정 등록 테이블과 첫 런타임 팔레트
+
+0x8da2는 A0의 6바이트 레코드들(목적 슬롯 BEword, source ID BEword, flags byte, 나머지 byte)을 읽고 슬롯 첫 word0xffff에서 끝낸다. 슬롯 노드 참조 수를0xffff로 고정하고 ID 두 개 및 flags|0x80을 설정하는 경로다. source ID0xffff일 때는 별도의 비활성 설정 분기가 있다.
+
+원본 호출 위치0xcb68의 PC-relative A0는0xcb78을 가리킨다. 이 테이블은 slot0/source0x897/flags0 한 항목과 terminator다. 호출 위치0x4e992의 A0는0x4e47a를 가리키며 slot9/source0xb01/flags2, slot10/source0xb02/flags2와 terminator를 담는다. 실제 게임 장면에서 이 호출이 발생하는 조건은 아직 확정하지 않았다.
+
+`tools/pack_palettes.py`는 위 테이블의 source ID를 보존하는 MS5P v1 sparse 리소스를 생성한다. 원본 색상16word와 일반 lookup 결과16word를 함께 저장한다. ID의 전체 상한이나 주변 데이터까지 팔레트로 간주하지 않는다.
+
+`tools/verify_palette_resources.py`는 원본0x3ef2 초기화, 두 테이블을 입력한0x8da2 등록, 0x7196 준비, 0x72fa 전송을 차례로 실행한다. zero RAM의 일반 조회 경로에서 CPU0x400000의 슬롯0,9,10 총96바이트가 패키징한 변환 word와 일치한다. 생성 리소스를 C++ check_palettes로 실제 로드했다. MMIO는 메모리로 기록하며 실제 bank 장치와 watchdog, 표시 타이밍은 재현하지 않는다. 이 실험은 세 팔레트의 데이터 경로를 검증하며 RGB 화면이나 게임 부팅을 검증하지 않는다.
+
+재현: `make build/check_palettes`, `.venv/bin/python tools/pack_palettes.py`, `.venv/bin/python tools/verify_palette_resources.py`.

@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++11 -O2 -Wall -Wextra -pedantic -Iengine/include
 PYTHON = .venv/bin/python
 
 .PHONY: all test runtime-resources setup-tools
-all: build/check_tiles build/reset_object build/init_objects build/upload_palette build/init_palette
+all: build/check_tiles build/reset_object build/init_objects build/upload_palette build/init_palette build/check_palettes
 
 build:
 	mkdir -p build
@@ -26,15 +26,17 @@ build/init_objects: engine/src/object_lists.cpp engine/src/object_state.cpp engi
 build/object_lists_test: engine/src/object_lists.cpp engine/src/object_state.cpp engine/tests/object_lists_test.cpp engine/include/ms5/object_lists.h engine/include/ms5/object_state.h | build
 	$(CXX) $(CXXFLAGS) engine/src/object_lists.cpp engine/src/object_state.cpp engine/tests/object_lists_test.cpp -o $@
 
-test: build/tile_resource_test build/object_state_test build/object_lists_test
+test: build/tile_resource_test build/object_state_test build/object_lists_test build/palette_resource_test
 	$(PYTHON) -m unittest discover -s tools/tests -v
 	./build/tile_resource_test
 	./build/object_state_test
 	./build/object_lists_test
+	./build/palette_resource_test
 
 runtime-resources:
 	python3 tools/pack_tiles.py
 	$(PYTHON) tools/pack_object_boot.py
+	$(PYTHON) tools/pack_palettes.py
 
 setup-tools:
 	python3 -m venv .venv
@@ -45,3 +47,9 @@ build/upload_palette: engine/src/palette_upload.cpp engine/tools/upload_palette.
 
 build/init_palette: engine/src/palette_state.cpp engine/tools/init_palette.cpp engine/include/ms5/palette_state.h | build
 	$(CXX) $(CXXFLAGS) engine/src/palette_state.cpp engine/tools/init_palette.cpp -o $@
+
+build/check_palettes: engine/src/palette_resource.cpp engine/tools/check_palettes.cpp engine/include/ms5/palette_resource.h | build
+	$(CXX) $(CXXFLAGS) engine/src/palette_resource.cpp engine/tools/check_palettes.cpp -o $@
+
+build/palette_resource_test: engine/src/palette_resource.cpp engine/tests/palette_resource_test.cpp engine/include/ms5/palette_resource.h | build
+	$(CXX) $(CXXFLAGS) engine/src/palette_resource.cpp engine/tests/palette_resource_test.cpp -o $@
