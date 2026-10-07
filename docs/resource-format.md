@@ -153,3 +153,11 @@ descriptor는BE필드의16byte헤더(title:u32,min_width:u8,min_height:u8,callba
 `main_startup.ms5d`는 기존 MS5D v1 kind1으로 고정 ROM `e7b58..e7bc0`의104바이트를 그대로 보존한다. 안정 ID는 `main-startup:000e7b58`이다. payload는17개의6바이트 레코드와 마지막 BE16 `ffff` 종결자로 구성된다. 레코드는 `destination_slot:BE16`, `source_id:BE16`, `flags:u8`, `sixth_byte:u8`이며 여섯 번째 바이트도 원본 그대로 유지한다. 주소·해시·레코드별 메타데이터는 manifest에 기록한다.
 
 목적 슬롯 `ffff`는 종결자다. source ID `ffff`는 해당 슬롯을 비활성화하는 값이며 실제 팔레트 데이터 ID로 추출하지 않는다. `pack_palettes.py`는 이 등록 근거를 기존 희소 MS5P 카탈로그에 추가하고, 비활성 레코드도 bindings 메타데이터에 `disabled:true`와 함께 보존한다. 이 표의 유효 고유 source ID는11종이다. 표와 카탈로그 추출은 전체 메인 초기화 실행이나 자연 도달성 검증을 뜻하지 않는다.
+
+### MS5D 고정 게임 레코드 창
+
+`pack_game_records.py`는 기존 MS5D v1 kind1으로 고정 ROM `4cf64..4d0a4`의320바이트를 `game_records.ms5d`에 보존한다. 안정 ID는 `game-records:0004cf64`다. payload는 ID0..19의16바이트 레코드20개이며, 소비하지 않는 바이트도 삭제·재배열하지 않는다. CPU주소와 canonical decrypted ROM파일 오프셋은 이 고정 영역에서 같다. manifest에는 전체 프로그램·payload·컨테이너 및 각 레코드의 SHA256, 원본 주소, 전체 raw bytes와 의미 이름을 붙이지 않은 필드를 기록한다.
+
+원본 `4d81c..4d84e`는 D1.word를 unsigned20미만으로 검사한 뒤 `4cf64 + (D1 & ff)*16`을 조회한다. 범위를 벗어나면 TRAP #15로 간다. 읽는 필드는 상대 byte1/byte2와 BE16 word0a/word0c/word0e다. `481de..48210`은 이 조회기를 호출하고 선택한 RAM 구조체에 값을 기록한다. 추출기는 두 명령 창의 정확한 바이트와 고정 프로그램 해시를 검증한다. payload SHA256은 `9b1c4db78844053dff88ac7c863b15852c1ad1b9e500a831ed5a01fa9eff923c`이며32바이트 헤더를 포함한 파일 길이는352바이트다.
+
+이 창은 기존 `FixedDataResource`가 직접 읽는 원본 BE데이터다. 레코드 필드의 게임 의미, 자연스러운 호출부 도달성, 전체 초기화 실행과 원본 TRAP 처리는 이 추출 규격의 검증 범위가 아니다.

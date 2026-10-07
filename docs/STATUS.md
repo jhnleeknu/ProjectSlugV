@@ -1000,3 +1000,11 @@
 - `verify_game_prelude.py`:171경계, 조건부읽기16회, 오류47조건통과.12시퀀스의실제IRQ37회/포트68개로head수정없이재개했다. 기존startup CLI→원본c584 JSR→접두부연결2조건도통과했다. SHA256 `24e42600a631bc346165547a417fe3aa9c8dab9f2bc039697c952525c918af05`.
 - 후속초기화의리셋함수9개를묶어구현했다. `verify_game_reset.py`:288조건/오류17조건통과,16승계시퀀스포함. SHA256 `3188b37509467d265d390a56e74720662b928a890fe0904219cf19d3277f30d3`.
 - 전체빌드·Python81개·C++전체통과. 메인리뷰 `docs/reviews/0135-game-prelude-resets.md`. 다음은475a4 suffix의오브젝트·레코드처리및리셋함수순서연결이다. 자연부팅과전체게임복원은미완료이며목표는진행중이다.
+
+
+## 2026-10-07 — 전체47570 초기화와 네이티브 리소스 연결
+- 475a4 suffix의 오브젝트1bcfe/1bd12, 레코드481de/4d81c와 기존 리셋 함수를 원본 순서로 연결했다. `initialize_game`은 사운드 대기를 승계하고47570의RTS까지 실행한다. returned와 마지막 내부PC를 구분하며 후속 실패는 접두부 변경까지 롤백한다.
+- 20×16byte 레코드 전체를MS5D로 추출하고 C++에서 읽는다. selector의zero/nonzero와parity 선택 차이, live pointer, 정수폭과 fallthrough를 보존했다. PNG/오디오 진단 출력에 의존하지 않는다.
+- 원본 비교: 오브젝트149조건/오류24, 레코드168조건/오류32, 전체초기화562조건/오류31 통과. 전체 RAM과 계약된 레지스터 및 pending을 비교했다. 전체초기화 보고서SHA256 `ba538ea67e01041c8b199c889d8f2a225f18b203bf55e6a281da5464af12a3b2`. 실제CLI JSON 상태 승계로 재검증했고 결과가 같다.
+- 전체빌드·Python88개·C++전체 통과. 메인리뷰 `docs/reviews/0136-game-initialization.md`, 상세 `docs/analysis/game-initialization.md`. whole-function 대기 해제4시퀀스는 호스트sound head 수정이며 IRQ/스케줄러 동등성으로 확대하지 않는다.
+- 다음c58a 경로94명령후보/22직접호출/23분기·JMP를 목록화하고 메인이 분기/콜백 fallthrough를 분석했다. `docs/analysis/game-continuation.md`. BIOS c00444 경계와 하위호출4fb1a/28ae/c4cc/caf0 연결이 다음 대상이다. 자연부팅·전투·모든스테이지와 전체게임 복원은 미완료이며 목표는 진행 중이다.
