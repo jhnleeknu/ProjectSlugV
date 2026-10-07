@@ -1065,3 +1065,10 @@
 - 전체 make -j3 all test: Python95/C++90 통과, 경고0. 문서 docs/analysis/sound-pair.md 및 stage-entry.md, 메인 리뷰 docs/reviews/0143-stage-entry.md.
 - 다음 구간478c4..47b00 목록화 완료:134행/35직접호출/23대상. 마지막 잘린 명령은 미완료로 보존했다. 다음은 팔레트 효과·대기 callback·오브젝트 할당 분기와 이후 스테이지 본문 연결이다.
 - 전체 리소스/게임플레이 복원 목표는 진행 중이다. 전체 진행률25~30%는 범위 기반 추정이며 측정된 코드 커버리지가 아니다.
+
+## 2026-10-07 — 스테이지 전환 분기 검증
+- C++11 stage_transition은 여섯 dispatch와 세 callback을 연결한다. 팔레트 DIVS의 전체 반환값, timer underflow, allocation 실패 fallback 및 LIVE child 좌표 복사 순서를 보존한다.
+- 480bc/479b0 본문 직전 또는478de busy-loop 한 회 관찰 뒤 반환한다. 자연 scheduler와 전체 stage body는 미완료다.
+- 전체 make -j3 all test: Python95/C++91 통과, 경고0. 독립 원본1249/오류49조건,618179포트,실제CLI 승계6시퀀스 통과. callback 호출과 flag 변경은 host fixture다. 보고서 artifacts/stage_transition/verification.json SHA256 fa20a6699046a1429b21094909462a5f7cd9be89688f6016ae195ff7756f97d3.
+- 다음 본문 호출18대상/582행 목록화와 API 재사용 후보를 artifacts/stage_body에 보존했다. code/data 경계 및 실행 도달 여부는 자동 목록으로 확정하지 않는다.
+- 다음 분석은 e7c36 추가 팔레트 등록e7bda(26bytes),477c2의 제거/팔레트/사운드 연결 및479b0 본문이다. docs/reviews/0144-stage-transition.md에 메인 해석을 기록했다.
