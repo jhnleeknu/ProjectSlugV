@@ -32,7 +32,7 @@ CLI: `build/sample_input INPUT_RAM INPUT_MS5D OUTPUT_RAM SYSTEM P1_RAW P2_RAW P1
 
 The diagnostic `--playback` CLI carries input state through repeated calls and emits a47-byte per-frame trace (RAM4ca8..4cd5 plus read count) and final64KiB RAM. This trace is verification output, not a game resource format.
 
-Recorder349c, subsequentb68 bookkeeping, CPU register propagation, interrupts and bus timing remain outside this API. Direct input sampling is not proof of whole-game boot or synchronized gameplay.
+Recorder349c, CPU register propagation, interrupts and bus timing remain outside this API. Subsequentb68 bookkeeping is implemented by the separate input_status API and connected by step_input; see input-status.md. Direct input sampling is not proof of whole-game boot or synchronized gameplay.
 
 Reproduce original-ROM comparison with `.venv/bin/python tools/verify_input_sampler.py`. The supported replay contract requires every actually accessed byte to lie in the retained MS5D window. A malformed previous index offfff is signed−1: it can read the preceding byte for the second buffer, but falls outside the retained window at the first buffer base. The latter is an explicit support error, not a substitute value or a native CPU fault.
 

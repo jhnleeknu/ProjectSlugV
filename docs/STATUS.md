@@ -617,3 +617,10 @@
 - 원본 초기화121조건과 이어지는 입력 갱신120회에서 전체64KiB RAM이 일치했다. CLI 오류·파일 별칭17조건에서 입력과 기존 출력 보존을 확인했다.
 - `make all test`: Python67개 및 C++ 전체 통과. 리뷰: docs/reviews/0087-input-initializer.md. 보고서: artifacts/input_initializer/verification.json.
 - 다음은b68 상태 후처리와 인터럽트 신호 생산을ec4 루프에 연결하는 것이다. 전체CPU 레지스터·장치 시간축·전체 부팅은 미완료이며 전체 목표는 active다.
+
+## 2026-10-07 — 입력 상태 후처리와 샘플링 통합
+
+- `update_input_status`로b68의 상태 복사·pending 비트 소모·슬롯 조회를 복원하고, `step_input`으로31d6→b68을 연결했다. 후처리 실패 시 입력 갱신까지 취소한다.
+- 조회 인덱스의 byte wrap을 보존하도록b58..c58 전체256바이트를 MS5D로 추출했다. 명령과 겹치는 원본 바이트도 유지한다.
+- 원본 전체RAM 비교576조건과 승계160회 갱신, 오류·파일 별칭12조건 통과. Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0088-input-status.md.
+- 다음은f12 입력 호출자의 신호 초기화와 callback 분기, CPU 반환 레지스터 의존성 및 인터럽트 연결이다. c8c가 사운드·작업 복구까지 호출함을 정적으로 확인했다. 전체 게임 부팅과 시간축은 미완료이며 목표는 active다.
