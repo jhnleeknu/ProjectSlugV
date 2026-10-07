@@ -124,12 +124,14 @@ int main(int argc, char** argv) {
     const bool raster_begin = mode == "raster-begin";
     const bool raster_finish = mode == "raster-finish";
     const bool callback = mode == "callback";
-    if ((!begin && !finish && !callback && !raster_begin && !raster_finish) ||
-        ((begin || callback || raster_begin || raster_finish) && argc != 10) ||
+    const bool main_call = mode == "main-call";
+    const bool main_return = mode == "main-return";
+    if ((!begin && !finish && !callback && !raster_begin && !raster_finish && !main_call && !main_return) ||
+        ((begin || callback || raster_begin || raster_finish || main_call || main_return) && argc != 10) ||
         (finish && argc != 11)) {
         std::cerr << "usage: step_irq_envelope begin|callback INPUT_RAM INPUT_STACK INPUT_REGS OUTPUT_RAM OUTPUT_STACK OUTPUT_REGS OUTPUT_PORTS STACK_BASE\n"
                   << "       step_irq_envelope finish INPUT_RAM INPUT_STACK INPUT_REGS OUTPUT_RAM OUTPUT_STACK OUTPUT_REGS OUTPUT_PORTS STACK_BASE VIDEO_STATUS\n"
-                  << "       step_irq_envelope raster-begin|raster-finish INPUT_RAM INPUT_STACK INPUT_REGS OUTPUT_RAM OUTPUT_STACK OUTPUT_REGS OUTPUT_PORTS STACK_BASE\n";
+                  << "       step_irq_envelope raster-begin|raster-finish|main-call|main-return INPUT_RAM INPUT_STACK INPUT_REGS OUTPUT_RAM OUTPUT_STACK OUTPUT_REGS OUTPUT_PORTS STACK_BASE\n";
         return 2;
     }
     std::uint32_t stack_base = 0U;
@@ -202,8 +204,12 @@ int main(int argc, char** argv) {
         succeeded=ms5::return_default_irq_callback(stack,stack_base,registers,result,writes,error);
     } else if(raster_begin) {
         succeeded=ms5::begin_raster_irq(ram,stack,stack_base,registers,result,writes,error);
-    } else {
+    } else if(raster_finish) {
         succeeded=ms5::finish_raster_irq(ram,stack,stack_base,registers,result,writes,error);
+    } else if(main_call) {
+        succeeded=ms5::enter_main_callback(ram,stack,stack_base,registers,result,writes,error);
+    } else {
+        succeeded=ms5::restore_main_callback(stack,stack_base,registers,result,writes,error);
     }
     if (!succeeded) {
         std::cerr << error << '\n';

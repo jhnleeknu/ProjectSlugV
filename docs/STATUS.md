@@ -776,3 +776,11 @@
 - `begin_raster_irq`/`finish_raster_irq`로29c의 활성·비활성 분기, 기본 콜백과VRAM/A5 복구를 구현했다. 원본386조건, 포트314개/스택 쓰기441개 및 오류23조건 통과.
 - CLI 모드 검사/분기 누락을 메인이 수정하고 재검증했다. Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0107-interrupt-frame-raster.md.
 - 다음은ec4 앞부분과f3c 콜백 재개를 연결하여 명시적인 다음 poll 진입을 실제 메인 흐름으로 대체하는 것이다. SR/RTE/BIOS·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는 active다.
+
+
+## 2026-10-07 — 메인 콜백의 실제 호출 스택과 오브젝트 복구
+
+- `enter_main_callback`/`restore_main_callback`으로 f3c 호출과 f44 복귀를 복원했다. 이미 읽은 A0와 실제 스택의 저장 A6를 사용하고 콜백의 다른 레지스터 변경을 보존한다. f46 팔레트 호출 직전까지다.
+- 원본352조건, 실패/별칭21조건 및 실제 기본RTS16회 연결 검증 통과. 전체 RAM·스택·16레지스터·스택 쓰기가 일치했다. Python73개/C++ 전체 검사와 추가 API 단위 검사 통과.
+- 리뷰: docs/reviews/0108-main-callback-stack.md. 분석: docs/analysis/main-callback-stack.md.
+- 다음은5728 팔레트 처리의 최종D1을 복원하고 f4c 대기를 연결하는 것이다. f4c는 RAM16!=0만 검사하므로 ef2 임계값·비디오 읽기를 재사용하면 안 된다. ec4 앞부분, 실제 콜백 본문, SR/RTE/BIOS·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는active다.

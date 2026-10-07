@@ -134,4 +134,36 @@ bool finish_raster_irq(std::vector<std::uint8_t>& ram,
     next.next_pc=0x2cc;result=next;ports.swap(hardware);error.clear();return true;
 }
 
+bool enter_main_callback(std::vector<std::uint8_t>& ram,
+                         std::vector<std::uint8_t>& stack,std::uint32_t stack_base,
+                         InterruptRegisters& registers,IrqEnvelopeResult& result,
+                         std::vector<VideoPortWrite>& ports,std::string& error) {
+    const std::uint32_t sp=registers.a[7],object=registers.a[6];
+    if(ram.size()!=65536U || &ram==&stack || object<0x100000U || object>0x10ff82U ||
+       (object&1U)!=0 || sp<0x110008U || sp>0xfffffeU || (sp&1U)!=0 ||
+       !valid_span(stack,stack_base,sp-8U,sp)) {
+        error="main callback requires a RAM context field and external save frame";return false;
+    }
+    std::vector<std::uint8_t> candidate=stack;InterruptRegisters next=registers;
+    IrqEnvelopeResult outcome;
+    push(candidate,stack_base,next.a[7],4,object,outcome.stack_writes);
+    next.a[6]=read(ram,object-0x100000U+0x7aU,4);
+    push(candidate,stack_base,next.a[7],4,0xf44,outcome.stack_writes);
+    outcome.next_pc=registers.a[0];
+    stack.swap(candidate);registers=next;result=outcome;ports.clear();error.clear();return true;
+}
+bool restore_main_callback(const std::vector<std::uint8_t>& stack,
+                           std::uint32_t stack_base,InterruptRegisters& registers,
+                           IrqEnvelopeResult& result,
+                           std::vector<VideoPortWrite>& ports,std::string& error) {
+    const std::uint32_t sp=registers.a[7];
+    if(sp<0x110000U || sp>0xfffffaU || (sp&1U)!=0 ||
+       !valid_span(stack,stack_base,sp,sp+4U)) {
+        error="main callback return requires an external saved A6 long";return false;
+    }
+    IrqEnvelopeResult next;next.next_pc=0xf46;
+    registers.a[6]=read(stack,sp-stack_base,4);registers.a[7]+=4U;
+    result=next;ports.clear();error.clear();return true;
+}
+
 }

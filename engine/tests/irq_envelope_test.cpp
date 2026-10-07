@@ -54,5 +54,31 @@ int main() {
     ram[0xfd80]=0;regs.a[7]=0;
     assert(ms5::begin_raster_irq(ram,stack,1,regs,result,ports,error));
     assert(result.next_pc==0x2d6 && !result.bios_handoff && ports.size()==1 && regs.a[7]==0);
-    std::cout<<"IRQ envelope saved frame, explicit stack writes and rollback passed\n";
+    // Main callback uses already-loaded A0, and restores the actual saved A6.
+    regs=original;regs.a[0]=0x3dcc;regs.a[6]=0x100100;
+    put(ram,0x176,4,0xdeadbeef);put(ram,0x17a,4,0x12345678);
+    assert(ms5::enter_main_callback(ram,stack,0x110000,regs,result,ports,error));
+    assert(result.next_pc==0x3dcc && regs.a[6]==0x12345678 && regs.a[7]==0x110078);
+    assert(result.stack_writes.size()==2 && ports.empty());
+    regs.d[1]=0x99887766;regs.a[6]=0xdeadbeef;
+    assert(ms5::return_default_irq_callback(stack,0x110000,regs,result,ports,error));
+    assert(result.next_pc==0xf44 && regs.a[7]==0x11007c);
+    // Use current bytes, even when a callback has modified the saved object.
+    put(stack,0x7c,4,0xfedcba98);
+    assert(ms5::restore_main_callback(stack,0x110000,regs,result,ports,error));
+    assert(result.next_pc==0xf46 && regs.a[6]==0xfedcba98 && regs.a[7]==0x110080);
+    assert(regs.d[1]==0x99887766 && result.stack_writes.empty() && ports.empty());
+    const std::vector<std::uint8_t> main_ram=ram,main_stack=stack;
+    result.next_pc=0x1234;result.bios_handoff=true;
+    ms5::VideoPortWrite sentinel;sentinel.size=2;sentinel.address=0x3c0000;sentinel.value=77;
+    result.stack_writes.push_back(sentinel);ports.push_back(sentinel);
+    assert(!ms5::restore_main_callback(stack,0x110000,regs,result,ports,error));
+    assert(!ms5::enter_main_callback(ram,stack,0x110000,regs,result,ports,error));
+    assert(ram==main_ram && stack==main_stack && regs.a[6]==0xfedcba98 && regs.a[7]==0x110080);
+    assert(result.next_pc==0x1234 && result.bios_handoff && result.stack_writes.size()==1);
+    assert(result.stack_writes[0].value==77 && ports.size()==1 && ports[0].value==77);
+    regs.a[6]=0x100100;
+    assert(!ms5::enter_main_callback(ram,ram,0x110000,regs,result,ports,error));
+    assert(ram==main_ram && regs.a[6]==0x100100 && result.next_pc==0x1234);
+    std::cout<<"IRQ and main callback saved frames, explicit stack writes and rollback passed\n";
 }

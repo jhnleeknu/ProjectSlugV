@@ -49,5 +49,19 @@ bool finish_raster_irq(std::vector<std::uint8_t>& ram,
                        InterruptRegisters& registers,IrqEnvelopeResult& result,
                        std::vector<VideoPortWrite>& ports,std::string& error);
 
+// Main f3c: save the current object A6, load its +7a context, call input A0.
+// Does not reload the callback slot +76, already consumed by native f30.
+// Stops at callback entry; finalSP=inputSP-8. Uses the shared stack result.
+bool enter_main_callback(std::vector<std::uint8_t>& ram,
+                         std::vector<std::uint8_t>& stack,std::uint32_t stack_base,
+                         InterruptRegisters& registers,IrqEnvelopeResult& result,
+                         std::vector<VideoPortWrite>& ports,std::string& error);
+// Native f44: callback RTS already consumed f44. Restore A6 from the actual
+// stack and stop at f46 BEFORE palette processing. Other registers unchanged.
+bool restore_main_callback(const std::vector<std::uint8_t>& stack,
+                           std::uint32_t stack_base,InterruptRegisters& registers,
+                           IrqEnvelopeResult& result,
+                           std::vector<VideoPortWrite>& ports,std::string& error);
+
 }
 #endif
