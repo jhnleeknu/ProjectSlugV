@@ -92,5 +92,23 @@ int main() {
                writes[i].address==renderer_writes[i].address &&
                writes[i].value==renderer_writes[i].value);
     }
+    // Terminal controls affect returned D1.style but are not stored on NUL.
+    text(resources[0],0,"A\\c7");
+    std::uint16_t final_style=0;
+    assert(ms5::format_fixed_text(ram,resources,empty_font,0x60000,0x1fefe0,arguments,
+                                  0x7000,3,writes,error,0x3650,&final_style));
+    assert(final_style=='7' && ram[0x4cdb]==3);
+    ms5::FixedDataResource debug;
+    std::uint32_t d1=0x12345678U;
+    ram[0xf000]=0;
+    const std::vector<std::uint8_t> debug_before=ram;
+    assert(ms5::step_main_debug(ram,debug,0xffffffffU,d1,writes,error));
+    assert(ram==debug_before && d1==0x12345678U && writes.empty());
+    ram[0xf000]=1;ram[0x185]=0;
+    assert(ms5::step_main_debug(ram,debug,0x100101,d1,writes,error));
+    ram[0x185]=1;
+    const std::vector<std::uint8_t> active_before=ram;
+    assert(!ms5::step_main_debug(ram,debug,0x100101,d1,writes,error));
+    assert(ram==active_before && d1==0x12345678U && writes.empty());
     std::cout << "Formatted text state, padding, external arguments and rollback passed\n";
 }

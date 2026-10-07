@@ -106,7 +106,8 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
                        const FixedDataResource& font,std::uint32_t format_address,
                        std::uint32_t arguments_address,const std::vector<std::uint8_t>& argument_bytes,
                        std::uint16_t cursor,std::uint16_t style,
-                       std::vector<VideoPortWrite>& writes,std::string& error,std::uint32_t renderer) {
+                       std::vector<VideoPortWrite>& writes,std::string& error,std::uint32_t renderer,
+                       std::uint16_t* final_style) {
     if(renderer!=0x3650U && renderer!=0xe84c8U) {
         error="formatted text supports renderer3650 or e84c8";return false;
     }
@@ -142,7 +143,9 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
         std::uint8_t glyph=0;
         if(!parse(memory,at,style,line,cursor,glyph,error))return false;
         if(glyph==0) {
-            ram.swap(pending_ram);writes.swap(pending);error.clear();return true;
+            ram.swap(pending_ram);writes.swap(pending);
+            if(final_style!=NULL) *final_style=style;
+            error.clear();return true;
         }
         putword(pending_ram,state,cursor);putword(pending_ram,state+2,line);
         putword(pending_ram,state+4,style);
@@ -208,4 +211,30 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
     }
     error="formatted text exceeds100000 execution steps";return false;
 }
+bool step_main_debug(std::vector<std::uint8_t>& ram,
+                     const FixedDataResource& debug,std::uint32_t object_address,
+                     std::uint32_t& d1,std::vector<VideoPortWrite>& writes,
+                     std::string& error) {
+    if(ram.size()!=65536U) {error="main debug requires 64KiB RAM";return false;}
+    if((ram[0xf000]&1U)==0) {writes.clear();error.clear();return true;}
+    if(object_address<0x100000U || object_address>0x10ff7bU) {
+        error="main debug status field must lie in RAM";return false;
+    }
+    if(ram[object_address-0x100000U+0x84U]==0) {
+        writes.clear();error.clear();return true;
+    }
+    if(debug.source_cpu_address!=0xd56U || debug.source_rom_offset!=0xd56U ||
+       debug.data.size()!=0xe40U-0xd56U) {
+        error="main debug requires exact native format and argument table window";return false;
+    }
+    const std::vector<FixedDataResource> resources(1,debug);
+    const FixedDataResource unused_font;
+    const std::vector<std::uint8_t> arguments;
+    std::uint16_t style=static_cast<std::uint16_t>(d1);
+    if(!format_fixed_text(ram,resources,unused_font,0xd56,0xdf0,arguments,
+                          0x7066,style,writes,error,0x3650,&style)) return false;
+    d1=(d1&0xffff0000U)|style;
+    return true;
+}
+
 }

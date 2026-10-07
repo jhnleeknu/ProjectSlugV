@@ -808,3 +808,11 @@
 - 원본487조건과포트10,426개,오류13조건통과. 실제d56/df0진단4조건포함. 기존289조건회귀와Python73개/C++전체검사도통과했다.
 - 리뷰: docs/reviews/0111-formatted-direct.md. 분석: docs/analysis/formatted-text.md.
 - 다음은진단format/인자표의정규MS5D추출과ec4조건분기·최종D1전달을연결하는것이다. 실제게임콜백본문,SR/RTE/BIOS·장치시간축/Z80및전체부팅은미완료이며목표는active다.
+
+
+## 2026-10-07 — 메인 진단 리소스와 조건부 출력
+
+- d56..e3f의format/20포인터를정규main_debug.ms5d와manifest로추출했다. step_main_debug로ec4→ef2직전의조건부출력과최종D1을복원했다. 종료제어문자style은RAM상태와별도로반환한다.
+- 원본790조건,포트61,272개,오류11조건통과. Python73개및C++전체검사통과.
+- 리뷰: docs/reviews/0112-main-debug.md. 분석: docs/analysis/main-debug.md.
+- 다음은ec4진단→ef2대기→f12입력을연결하고D3줄위치등필요문맥을확인하는것이다. 실제게임콜백본문,SR/RTE/BIOS·장치시간축/Z80및전체부팅은미완료이며목표는active다.
