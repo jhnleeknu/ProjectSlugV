@@ -1169,3 +1169,11 @@
 - 원본2211조건/오류70조건/7657120 orderedports/26170 handler 실행 비교 통과. 41script의 phase/threshold/register 조합1230, 모든814 command cursor 시작, 실제 CLI carry164, 별도 null/wait/terminal3을 포함한다. 호출 내부 context reset은 없으며 호출간 phase 변경은 명시 host fixture다.
 - Preload 오류를 late API 오류로 잘못 표시한 검증 설명을 수정하고 실제 선행48 이후08 descriptor identity 오류를 추가 검사했다. 최종 report SHA256 `e9cc49c1c4fead4cdb7454f9af6adac3cf9d9c3ff3205b1fcf8936430acc5113`. 전체 make Python139/C++100/경고0. 메인 리뷰0156과 scene-script-run.md에 계약·검증·재현 방법을 기록했다.
 - CLI는 초기 gate 통과시 전체 script dependencies를 미리 로드한다. API의 실행시 접근과 구분한다. 현재도 자연 frame/IRQ 시간축과 일반1a5a4·후속 장면 갱신·직접 조작 가능한 스테이지 화면은 미완료다. 다음은 motion 경로 이동/평가와 일반 scene 초기화를 연결하는 작업이다.
+
+
+## 2026-10-07 — 장면 이동 경로 평가 연결
+
+- 기존MS5D motion37경로/108구간을직접소비하는evaluate_scene_motion API/CLI를추가했다. 원본19938의구간전후이동·기준좌표word누적·36type16.16좌표계산·종료clamp와최종offset을연결했다. N-only분기,NEG-before-ASR,word/longwrap과register보존폭을명시적으로재현한다.
+- 원본12,170조건/오류69조건/MMIO0통과. Strict주소5,466(canonical경계5,168+74양방향CLIcarry290+null8),RAMrelocation합성6,704(36type6,480+N-only경계224)이다. 전체RAM/12register/RTS/A7/ROM불변을비교했고미복귀0이다. 합성은원본RAM경로106000과C++fixed60000간A1/d3b4만정규화하며실제게임데이터와구분한다.
+- 보고서 SHA256 `a9926535334bf76d820277ac25b3da2448e8346599d11f372c4f7fa8755522a9`. 전체make Python139/C++101/경고0. 메인리뷰0157,scene-motion-evaluation.md,inventory/disassembly/dispatch재생성도구에근거와제약을저장했다.
+- 다음은1a7a8 node갱신과일반1a5a4의동일호출연결이다. 기존nullscript초기화만으로일반진입을대체하지않는다. 자연frame/IRQ시간축·직접조작가능한스테이지화면·전체게임복원은미완료다.

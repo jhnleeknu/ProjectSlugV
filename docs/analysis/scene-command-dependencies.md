@@ -1,5 +1,7 @@
 # Scene command의 motion·간접 참조 리소스
 
+후속 진행: `scene-motion-evaluation.md`에서19938 구간 선택·36type 좌표 평가를 구현하고 원본 비교했다. 아래의 미해석 표기는 당시 opcode00 초기화 범위에 관한 기록이며 전체 frame/scheduler는 여전히 미완료다.
+
 이 문서는 `9c20d50`의18-handler/11-register milestone 기록이다. 수치·report hash는 당시 결과이고 같은 report 경로는 후속 검증에서 덮어쓸 수 있다. 현행19-handler/12-register API와 palette banked 의존성은 `scene-palette-command.md`를 참조한다.
 
 ## Source와 지원 경계
