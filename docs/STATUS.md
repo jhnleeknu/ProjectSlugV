@@ -1204,3 +1204,11 @@
 - Typed C++149파일(path72/map77)의218행과190707셀 전체를 재조합해 원본과 대조했다. Root/lookup2파일의77map 연결은 별도 검사했다. 오류39조건 통과. Report SHA256 `7d799705deddddfc37482d63fdc9aa8ee4b903594f8064bf89d048e3df3ed6ec`.
 - 전체 빌드 C++103/경고0, 최종 Python154 tests 통과. 메인 리뷰0160과 scene-map-resources.md에 계약·재생성·근거를 저장했다. Read-only 리소스 검사이며 handler 효과/VRAM 실행 검증은 아니다.
 - 다음은183c6의 맵 clipping/VRAM/cache 전송과 bank2 secondary 자료,19e64 handler 및 일반 scene 진입 연결이다. 직접 조작 가능한 스테이지 화면·자연시간축·전체 게임 복원은 미완료이며 전체 목표는 계속 active다.
+
+
+## 2026-10-07 — Secondary 맵 접근 창 추출
+
+- 원본183c6의clipping/VRAM/bank2 secondary흐름을메인이분석하고scene-map-transfer.md에명령폭·순서·미확정범위를기록했다. 각secondary offset은WORD자신의주소기준이며primary column당2개의offset을소비한다.
+- 비영descriptor40개/selector37개에서8642column 후보를목록화했다. Root/lookup/offset/cell 읽기창8723개의union만기존MS5Dkind2 47파일/164960bytes로추출했다. 겹침·인접merge후hole을추가하지않는다. 전체논리자료extent나collision으로단정하지않는다.
+- Header/CRC/원본전체bytes/metadata및독립endpoint sweep union비교통과. ReportSHA256 `79f4678387ed1d40a8c1257dc992e0b7c622fc6e414ad65e4098f33bf75e597b`. 합성8개포함전체Python162tests통과,리뷰0161완료.
+- 이번resource검증은Python-only다.183c6 C++전송루틴과원본관찰은별도작업중이며아직동등성완료로기록하지않는다. 일반scene실행연결·직접조작가능스테이지화면·전체목표는미완료다.

@@ -179,3 +179,9 @@ Scene opcode04의palette root/lookup/binding은ROM bank200000을사용하므로�
 `primary_root.ms5d`는kind2 CPU200004/ROM300004의4bytes, `primary_lookup.ms5d`는CPU200008/ROM300008의308bytes다. `tilemap_%06x.ms5d`는bank3의개별map을담으며ROMoffset=CPUaddress+100000이다. Map payload는BE16 width,BE16 height,그뒤width×height개의4bytecell이다. 각cell은두BE16 word를그대로보존하고column-major offset은 `4+4*(column*height+row)`다. 파일payload는정확히그길이이며padding이나PNG변환물을포함하지않는다. Map ID는bank간충돌을피하도록 `scene-tilemap:%08x`(물리ROMoffset)다.
 
 Typed C++ loader는kind1 path와kind2 map을구분한다. Map 소비기는양수width/height,bank3주소관계,정확payload길이를검사하고source CPU/ROM을반환한다. Rawheader와캐시dimension을대조하여원본byte를조회기준으로삼는다. 전체77개후보map을보존하되현재descriptor참조없는8개를미사용으로확정하지않는다. 이자료계약은실제183c6 clipping/VRAM쓰기또는19e64 handler의실행완료를뜻하지않으며secondary bank2자료는별도후속범위다.
+
+### MS5D secondary 맵 읽기 창
+
+`extracted/runtime/scene_secondary/secondary_%06x.ms5d`는기존v1kind2이며bank2 CPU주소=물리ROM offset이다. Stable ID는 `scene-secondary:%08x`(물리ROM시작)이다. 원본183c6의알려진비영secondary참조에서root4bytes,각lookup4bytes,descriptor width의두배개수인상대offset WORD들,각offset이참조하는height개의LONG cell 창을수집한다. Offset은각WORD자신의CPU주소를기준으로sign16하여더한다. Table시작기준으로변환하지않는다.
+
+수집한창의겹침·인접구간만합쳐서각container로포장하며미관찰hole은채워넣지않는다. Manifest의coverage_origins는각descriptor/selector/column과원래읽기창을기록한다. 셀재배열·중복제거·PNG변환없이원본bytes와주소관계를보존한다. 이추출범위는source column/row0부터descriptor full width/height의읽기후보union이며전체논리자료의길이나모든동적접근의완전성·collision의미를주장하지않는다. Bank3 primary자료와CPU주소가겹쳐도물리ROM주소로구분한다.
