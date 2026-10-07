@@ -214,3 +214,15 @@ build/restart_object_full D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 INPUT_RAM
 ```
 
 입력 RAM은64KiB, 출력JSON은15개 레지스터와 포트 쓰기 개수다. 포트는 기존9byte 형식이다. 이 함수에는 별도 리소스 입력이 없으며 callback을 실행하지 않는다. 지원 RAM 밖 접근·원본 TRAP·연결 반복 한도는 명시적 오류다. 상세 원본 계약과 검증은 `docs/analysis/object-restart-full.md`를 따른다.
+
+## 스테이지 이벤트 초기화
+
+`ms5::initialize_stage_events`는원본e905c의이벤트오브젝트재시작과target에따른cursor선택을연결한다. A0가stream주소,D0.low가target이며일반A5입력은108000이다. Target0은header직후를선택하고,비영target은원본의부호있는jump와unsigned gate비교를사용한다.
+
+```text
+.venv/bin/python tools/pack_stage_catalog.py
+.venv/bin/python tools/pack_stage_events.py
+build/initialize_stage_events D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS extracted/runtime/stage_events
+```
+
+15register와64KiB RAM,ordered9byteports를입출력한다. Fixed자료는MS5D파일또는directory로전달한다. Nullstream이나RAMstream만쓰면리소스인자를생략할수있다. Nullstream은watchdog만쓰며비영stream은선택후bankreset포트를추가한다. Callbacke9150은저장만하며아직이CLI에서실행하지않는다. 상세범위와재현검증은 `docs/analysis/stage-event-initialization.md`에기록한다.

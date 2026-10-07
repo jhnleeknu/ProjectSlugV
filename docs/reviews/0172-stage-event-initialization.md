@@ -1,0 +1,27 @@
+# 이벤트 자료 추출과 초기화 연결 리뷰
+
+Baseline `711e814`, 브랜치 `codex/stage-event-initialization`. 직전goal turn은전체레지스터재시작검증·기록·커밋을완료한progress다. 이번에는메인이e905c의전체register/자료읽기순서와event길이helper를해석하고sol3개에C++구현,packer,독립원본비교를분담했다.
+
+## 구현과 자료 검토
+
+메인이core/CLI/unit을읽었다. 입력A5로object를먼저계산하고full2a28을호출한다. D0는lowWORD만복원하고D7은입력streamLONG으로놓는다. Null은watchdog만출력하고bankshadow/reset을생략한다. Target0은header만읽고+2cursor를선택한다. 비영target은D1.byte변경의상위24비트보존,부호있는jump,WORD unsigned비교,ff BYTE의홀수주소허용을원본대로처리한다. Callbacke9150은저장만한다.
+
+읽기는RAM LIVE또는유일한완전한fixedMS5D창이고후반오류도전체RAM/state/ports를rollback한다. 1,048,576회임시한도와주소/정렬실패를명시하며원본의미완료상태를완료상태로조작하지않는다. CLI의15인자·파일/directory입력·CRCloader·입출력경로/inode겹침검사·9byte출력을확인했다.
+
+Packer/Python테스트전체를읽었다. Source-verifiedcatalog로inventory를재생성하고47stream의header..ff+1 rawwindow를보존한다. 47pointercell과8byte조회표를합해95개MS5D/48,881payloadbytes다. Opaque명령을길이추측으로잘라내지않는다. Gate순회의positivejump는canonical추출검사이며runtime의signedjump지원과구분한다. 기존MS5D포맷을확장하지않고홀수payload를padding없이저장한다. Manifest는range/hash/role/참조와한계를기록한다.
+
+메인이Makefile runtime-resources에catalog뒤eventpacker를연결했다. 새Python7테스트가추가된후전체make Python182/C++113/경고0을확인했다. 로그 `artifacts/stage_event_initialization_build_test.log`. Packer반복재생성hash동일을확인하고각95containerpayload를원본과별도대조했다.
+
+## 원본 비교와 보강
+
+Observer/verifier전체를읽었다. 원본e905c와재시작callee를연속실행하며callee중간reset/patch는없다. Fixture준비의3ef2호출과native실행을구분한다. ROM불변·MMIO읽기0·RTS/A7+4·전체RAM/15register/orderedports를검사한다. Callback실행이나자연stage진행으로범위를넓혀주장하지않는다.
+
+메인이cachedinventory의sourcehash만으로입력값을신뢰하던검사를발견해sourceinventory재생성과byte동일검사를추가하게했다. 실제값은변하지않았고원본corpus도그대로다. Resource검사의rawBE32정수와hex문자열비교를수정했다. 612개target경계입력의존재뿐아니라실제native방문union에모든612gate가포함됨을필수검사했다.
+
+최종2,443조건/7,275ports와오류120조건이통과했다. RAMheader가재시작중00ff로바뀌어홀수ff주소100d5f를선택하는사례,입력A5변형,negativejump,zerojump/LIVEclear후cycle한도오류를포함한다. 실제CLI승계2sequence6호출중4는이전출력을쓰고D0.low/A0/A5는host입력이다. 47stream/59catalog입력과95container의원본byte·CRC·hash를검증했다.
+
+메인은모든2,443native/verification행·저장RAM/porthash·15register일치와현재ROM/binary/resource/metadatahash를다시대조했다. DirectoryCLI를별도실행해첫canonical조건의전체상태도일치했다. Native `cae0353feda387d994ded125aa4585d633dc589e8dbc9a87d98c46a5244fdb88`,verification `27e2a119c5b7774f2f4f7f05d3b522c0ea50f22dd013a29b85198e3abfa89f6c`,CLI `fc7dd39ac4d0a6c44c596e55f4605140dbd8585ecf8d62de57fb2e0f5d04813c`,manifest `cc1074eefb3698de5ae704e2aaed32240df3f3f4da9d41dc46c6c5d1666590db`.
+
+## 남은 범위
+
+47a94의e8a1c/48398과480bc연결이남았다. 메인은480bc의호출목록과1a73c frame경로를확인했다. 자동해독한짧은창밖분기/각callee전체의미는후속분석이필요하다. e9150event실행·자연frame·직접플레이·전체게임goal은미완료다. 원격이없어로컬리뷰/커밋으로진행하며PR로부르지않는다.

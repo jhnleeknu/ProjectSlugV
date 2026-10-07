@@ -194,3 +194,11 @@ Typed C++ loader는kind1 path와kind2 map을구분한다. Map 소비기는양수
 Typed C++ decoder는aligned first1MiB window와정확한terminal/end를검사한다. Gate8000..fffe는일반record로보존한다. Inlinecount는even/<8000이어야하며odd복사loop와signedskip해석은지원밖오류다. 좌표word/포인터는원시값이며callback과bounds를자동실행·역참조하지않는다. Decoder결과는sourcebytes의소유복사와각record source/next CPU·ROM주소,inlinebytes,terminal주소를포함하며실패시기존결과를보존한다.
 
 Canonical18streams의payload합계422bytes,일반record24개/terminal18개다. Optionalbounds는모두0이므로이번package에는bounds의추측자료를만들지않는다. 이구문형식과로드검증은1a414/1a470 실행,object할당,callback구현또는자연도달검증을대체하지않는다.
+
+### MS5D 이벤트 초기화 자료
+
+`extracted/runtime/stage_events`는기존v1kind1의fixed CPU=ROM 창을사용한다. `event_%06x.ms5d`의stable ID는 `stage-event-stream:%08x`이며47개window는header부터e905c gate-skip이읽는ff BYTE까지모든bytes를보존한다. 모든canonicalpayload는홀수길이다. MS5D는WORD개수가아닌byte길이를기록하므로padding을삽입하지않는다. 중간opcode/payload는해석여부와무관하게원본순서그대로남는다.
+
+`pointer_%06x.ms5d`는47개의4byte간접포인터cell,ID는 `stage-event-indirect:%08x`다. `lookup_0030ec.ms5d`는8byte조회표,ID는 `stage-event-lookup:000030ec`다. 총95resources/48,881payloadbytes이며현재창끼리겹침은없다. Manifest는원본SHA256,CPU/ROM범위,CRC,container/payload SHA256,role,59catalog record와target 참조,header/gate주소,ff read boundary를기록한다.
+
+Packer는기존stage catalog를검증하고inventory를메모리에서재생성한다. Canonicalstream의비음수header jump/양수gate jump를확인한뒤rawwindow를보존하며오래된cached inventory를추출근거로쓰지않는다. Runtime C++은부호있는jump와LIVE RAM도지원하므로packer의canonical목록조건을실행알고리즘제한으로혼동하지않는다. ff는이번read-window 경계이며전체event문법·미사용자료범위·callback실행완료를증명하지않는다.

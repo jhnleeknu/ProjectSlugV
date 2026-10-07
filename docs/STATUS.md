@@ -1304,3 +1304,11 @@
 - Verification SHA256 `6a196fae937d7d558b8d885ec5c237a02236bc216683a0740e820dc4037483d6`. Native SHA256 `ac50d120ef409636185808d039c4a1c0425d20f526f6f74fd83afb3aa86b670c`. 전체make Python175/C++112/경고0. 메인이core/CLI/unit/observer/verifier·597저장결과와현재hash를확인했다. 리뷰0171·object-restart-full.md에계약/재생성/제약을기록했다.
 - 후속e905c의실제입력도목록화했다. Catalog59record중비영stream52/null7,고유stream47/gate612다. 이는선택알고리즘의raw목록이며전체event문법·runtime자료추출·callback실행완료는아니다. Report SHA256 `42dd9abc3b757545521fca62a14dab435b51b236c7f97434d515d6b383394372`.
 - 다음은event리소스추출과e905c실행,47a94후반e8a1c/48398/480bc연결이다. 자연frame·직접플레이화면·전체게임복원은미완료이며goal은active다.
+
+## 2026-10-08 — 이벤트 바이너리 자료와 초기화 연결
+
+- e905c의전체15register계약을복원하고C++ API/CLI에서full2a28→target별stream cursor선택→조건부bankreset을연결했다. 입력A5의주소계산순서,lowWORD/byte상위보존,signedjump,unsignedgate비교,LIVE RAM헤더와홀수ff주소를보존한다.
+- 47stream/47pointercell/조회표1개의95MS5D를추출했다. 48,881payloadbytes,overlap0. 기존v1kind1을사용하고중간미해석명령도원본그대로보존한다. Manifest SHA256 `cc1074eefb3698de5ae704e2aaed32240df3f3f4da9d41dc46c6c5d1666590db`. 전체event문법과미사용영역종료를증명한것은아니다.
+- 원본2,443조건/orderedports7,275개에서전체RAM·15register가C++와일치했다. 모든612gate의실제native방문을확인했다. 오류120조건에서입력/기존출력보존,2CLIsequence6호출중4의출력승계를확인했다. Verification SHA256 `27e2a119c5b7774f2f4f7f05d3b522c0ea50f22dd013a29b85198e3abfa89f6c`,native `cae0353feda387d994ded125aa4585d633dc589e8dbc9a87d98c46a5244fdb88`.
+- 전체make Python182/C++113/경고0. 메인이core/CLI/unit/packer/observer/verifier전체와현재95resources·2443저장결과를검토했다. Cachedinventory근거검사를재생성동일검사로보강했고directoryCLI도별도로원본과대조했다. 리뷰0172·stage-event-initialization.md·공통규격/README에재현과한계를기록했다.
+- 다음은47a94후반e8a1c/48398및480bc연결이다. 480bc는1a73c frame경로등다수callee를실행하므로추가분석이필요하다. e9150 callback실행,자연frame·직접플레이·전체goal은미완료이며goal은active다.
