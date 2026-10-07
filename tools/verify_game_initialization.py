@@ -17,14 +17,15 @@ CALLS=(0xb7a20,0x4d126,0x1bcfe,0x481de,0x1bd12,0xe89fa,0x3d42,0x3dce,
        0x49a8e,0x4aa30,0xb4a24,0x2ef90,0x6f1c2,0x46f2e,0x4d13c,0x4ddb6)
 def word(ram,at):return struct.unpack_from('>H',ram,at)[0]
 def put(ram,at,value):struct.pack_into('>H',ram,at,value&65535)
-def initial(values=(0x12345678,0xabcd1234,0x87654321),phase=0):
-    return dict(next_pc=SUFFIX if phase==4 else ENTRY,d0=values[0],d1=values[1],d3=values[2],
+def initial(values=(0x12345678,0xabcd1234,0x87654321),phase=0,entry=ENTRY):
+    return dict(next_pc=SUFFIX if phase==4 else entry,d0=values[0],d1=values[1],d3=values[2],
                 phase=phase,external_reads=0,word=empty_word(),byte=empty_byte(),returned=False)
 
 
 def main():
     root=Path(__file__).resolve().parents[1];program,source=load_verified_program(root)
     assert source['sha256']==SOURCE_SHA256
+    binaries={name:hashlib.sha256((root/'build'/name).read_bytes()).hexdigest() for name in ('initialize_game','finish_game')}
     resource=root/'extracted/runtime/game_records.ms5d';checked_resource(resource,program,0x4cf64,0x4d0a4)
     folder=root/'artifacts/game_initialization';folder.mkdir(parents=True,exist_ok=True)
     inp,out,report=[folder/name for name in ('input.bin','cpp.bin','verification.json')]
@@ -70,6 +71,9 @@ def main():
             cpu.mem_write(STACK,RETURN.to_bytes(4,'big'))
         else:cpu.context_restore(context)
         for reg,key in zip(REGS,('d0','d1','d3')):cpu.reg_write(reg,pending[key])
+        entry_sp=cpu.reg_read(m.UC_M68K_REG_A7)
+        if pending['next_pc']==WAIT:
+            stack_ret=int.from_bytes(cpu.mem_read(entry_sp,4),'big');entry_sp+={0x3c00:10,0x4759e:4,0x3d4c:12,0x3d42:8}[stack_ret]
         reads.clear();paths.clear();state.update(external=external,waits=0)
         cpu.emu_start(SUFFIX if direct else pending['next_pc'],0xffffff,count=100000)
         pc=cpu.reg_read(m.UC_M68K_REG_PC);assert pc in (RETURN,WAIT),hex(pc)
@@ -78,6 +82,7 @@ def main():
         if pc==WAIT:
             result['next_pc']=WAIT
             sp=cpu.reg_read(m.UC_M68K_REG_A7);ret=int.from_bytes(cpu.mem_read(sp,4),'big')
+            assert sp==entry_sp-{0x3c00:10,0x4759e:4,0x3d4c:12,0x3d42:8}[ret]
             captured=dict(waiting=True,command=cpu.reg_read(REGS[0])&255,
                 tail=cpu.reg_read(m.UC_M68K_REG_A0)-BASE-0x4cf4,next=cpu.reg_read(REGS[1])&65535)
             if ret in (0x3c00,0x4759e):
@@ -88,6 +93,7 @@ def main():
                 assert ret in (0x3d4c,0x3d42),hex(ret)
                 result['phase']=2 if ret==0x3d4c else 3;result['byte']=captured
         else:
+            assert cpu.reg_read(m.UC_M68K_REG_A7)==entry_sp+4
             assert (result['d0'],result['d1'],result['d3'])==(0,0,0)
             for address in CALLS:assert address in paths,(label,hex(address),paths)
             assert paths.count(0x481de)==2
@@ -102,7 +108,7 @@ def main():
             diff=[(hex(index),a,b) for index,(a,b) in enumerate(zip(expected,actual_ram)) if a!=b]
             raise ValueError(repr((label,diff[:16],expected_json,parsed)))
         assert reads==([(1,0xd00046,external)] if pending['phase']==0 and not direct and ram[0x12]==1 and ram[0xfd82]!=0 and ram[0xfe80]==0 else [])
-        rows.append(dict(profile=label,direct_suffix=direct,native_final_pc=pc,result=result,
+        rows.append(dict(profile=label,input_pc=pending['next_pc'],incoming_d0=pending['d0'],direct_suffix=direct,native_final_pc=pc,result=result,
             reads=reads.copy(),native_call_boundaries=paths.copy(),ram_sha256=hashlib.sha256(expected).hexdigest()))
         return bytearray(actual_ram),result if direct else parsed,cpu.context_save()
     for selectors,active,pattern,values in itertools.product(itertools.product((0,1,2,65535),repeat=2),
@@ -128,6 +134,23 @@ def main():
             ram,pending,context=compare(ram,pending,context,label='carried-host-released-wait-to-return')
             rounds+=1;assert rounds<=6
         sequences.append(dict(calls=len(rows)-start,host_sound_head_edits=edits,actual_cli_ram_full_regs_pending_carried=True))
+    for high,selectors,active in itertools.product((0,1,0x7fff,0x8000,0xffff),((0,1),(2,65535)),itertools.product((False,True),repeat=2)):
+        compare(fixture(selectors,active,1),initial((high<<16|0x1234,0xabcd1234,0x87654321),entry=0x47594),label='direct47594-full-initialization-highwords-and-object-state')
+    direct_wait_kinds=set()
+    for high,oldest,head in itertools.product((0x1234,0xffff),(None,0x0455,0x0355,0x5503),(1,2)):
+        ram=fixture((2,65535),(True,False),1);put(ram,0x4d74,head)
+        if oldest is not None:put(ram,0x4d8c,6);put(ram,0x4d82,oldest)
+        ram[0x12],ram[0xfd82],ram[0xfd8d]=1,1,1
+        start=len(rows);ram,pending,context=compare(ram,initial((high<<16|0xabcd,0xabcd1234,0x87654321),entry=0x47594),label='direct47594-initial-wait')
+        edits=[];rounds=0
+        while not pending['returned']:
+            direct_wait_kinds.add((pending['phase'],pending['word']['phase']))
+            prior=bytes(ram);ram,pending,context=compare(ram,pending,context,external=255,label='direct47594-repeated-wait-no-prefix-or-resample');assert ram==prior and pending['external_reads']==0
+            captured=pending['word'] if pending['phase']==1 else pending['byte'];released=(captured['next']+10)&127
+            edits.append(dict(offset=0x4d74,old=word(ram,0x4d74),new=released));put(ram,0x4d74,released)
+            ram,pending,context=compare(ram,pending,context,external=255,label='direct47594-carried-host-release-full-rts');rounds+=1;assert rounds<=6
+        sequences.append(dict(calls=len(rows)-start,entry=0x47594,host_sound_head_edits=edits,actual_cli_ram_full_regs_pending_carried=True))
+    assert {(1,1),(1,2),(2,0),(3,0)}<=direct_wait_kinds,direct_wait_kinds
     sentinel=b'previous-game-initialization-output'
     def reject(ram,pending=None,records=resource,label='invalid',command=None):
         inp.write_bytes(ram);out.write_bytes(sentinel)
@@ -181,14 +204,17 @@ def main():
         actual=subprocess.run(command,capture_output=True,text=True)
         assert actual.returncode and inp.read_bytes()==ram and target.read_bytes()==before,(failure,actual.stderr)
         negatives.append(dict(failure='suffix-cli-'+failure,output_preserved=True))
+    bad=initial(entry=0x47594);bad['phase']=1;reject(fixture(),bad,label='direct47594-inconsistent-phase')
+    reject(fixture(),initial(entry=0x47594),bad_resource,'direct47594-completed-sound-then-invalid-record-window-rollback')
     assert bytes(cpu.mem_read(0,0x100000))==program[:0x100000]
     assert {1,2,3,4}.issubset({row['result']['phase'] for row in rows})
-    report.write_text(json.dumps(dict(source=source,emulator='Unicorn '+unicorn.__version__,program_code_modified=False,
-        entry_cpu_addresses=[ENTRY,SUFFIX],native_cpp_cases=len(rows),negative_cases=len(negatives),
+    assert binaries=={name:hashlib.sha256((root/'build'/name).read_bytes()).hexdigest() for name in binaries}
+    report.write_text(json.dumps(dict(source=source,binaries_sha256=binaries,emulator='Unicorn '+unicorn.__version__,program_code_modified=False,
+        entry_cpu_addresses=[ENTRY,0x47594,SUFFIX],direct47594_wait_kinds=sorted(direct_wait_kinds),direct47594_cases=sum(row['profile'].startswith('direct47594') for row in rows),legacy_cases=sum(not row['profile'].startswith('direct47594') for row in rows),native_a7_wait_and_rts_offsets_verified=True,native_cpp_cases=len(rows),negative_cases=len(negatives),
         whole_ram_full_d0_d1_d3_equal=True,no_native_mmio_writes=True,
         external_reads=sum(len(row['reads']) for row in rows),carry_sequences=sequences,
         results=rows,negative_results=negatives,
-        scope='Whole immutable47570 and475a4 suffix execute all nested original callees to RTS or actual3aea '
+        scope='Direct47594 skips the prelude prefix with varied incoming D0high16 and all four native wait subphases; subsequent suffix is fully executed. Whole immutable47570 and475a4 suffix execute all nested original callees to RTS or actual3aea '
             'producer waits. Complete RAM and full D0/D1/D3 compared; pending state independently captured from '
             'native stack return addresses. Wait sequences carry actual CLI RAM/register/pending outputs and '
             'preserve native context/stack, but explicitly edit sound head word4d74 to release waits; this is '

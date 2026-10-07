@@ -1095,3 +1095,11 @@
 - 475ca공통tail을기존초기화에서분리하고479ee..479fe의두snapshot→tail을연결했다. 원본3372leaf+50area조건/49오류조건/MMIO0/8CLI승계/2실제playercaller→원본분기연결통과. report artifacts/player_record_capture/verification.json SHA256 3be3c5e82d570c78096f49cdff1f34e6947a858efaf832a41af1c0c600cf97cd.
 - 전체make118Python/94C++/경고0. 기존game initialization 회귀562/오류31통과. 메인review0147,분석docs/analysis/player-record-capture.md.
 - 첫구역47594사운드대기경로와4e666, 479fe이후d760a/49c32및scene script 연결은다음범위다. 전체stage/gameplay와자연scheduler는미완료다.
+
+## 2026-10-07 — 첫 구역 사운드 직접 진입
+
+- GamePreludeState phase0의47594 진입을 지원한다.47570 앞부분의 RAM 초기화를 건너뛰고 MOVE.W0720부터 실행하며 D0 상위16비트를 모든 사운드 대기와475a4 완료까지 보존한다. 기존 initialize_game을 통해 전체 suffix와47640 RTS도 연결했다.
+- 원본 비교는 prelude235조건(신규64)/오류50, initialization650조건(신규88)/오류33을 통과했다. 각 신규 CLI 승계16개에서 word high/low·byte08/20 대기, 재개 외부 읽기0과 A7 위치를 확인했다. 신규 승계의 큐 해제는 명시적인 host 입력이다.
+- 보고서 SHA256: prelude `7432265d5ecaabe8603866d176133cfe32a2f58b96aa49580971795e29e68896`, initialization `9610a86247038cb92cf810dde218aa9764dacfe79950e5aa5f7e191f2b8fe876`. 전체make Python118/C++94/경고0. 메인 리뷰 `docs/reviews/0148-first-area-sound.md`.
+- 후속 본문 호출21개/15대상과16개 명시 창을558행으로 목록화했다. 원시 selector lookup128바이트는 논리 테이블 크기나 동작 검증으로 주장하지 않는다. 상세 `docs/analysis/stage-area-body.md`.
+- 다음은479d0 양쪽 분기를 같은 진입으로 연결하고4e666, d760a/49c32와 후속 일반 scene script를 복원하는 것이다. 전체 게임플레이·자연scheduler 및 전체 목표는 계속 미완료다.

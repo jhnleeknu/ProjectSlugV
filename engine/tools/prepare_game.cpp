@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
         }
     }
     if (!have_state || argc - at != 3) {
-        std::cerr << "usage: prepare_game --state PC D0 D1 D3 PHASE [--word PHASE LOW CURSOR COMMAND TAIL NEXT] [--byte COMMAND TAIL NEXT] EXTERNAL INPUT_RAM OUTPUT_RAM\n"; return 2;
+        std::cerr << "usage: prepare_game --state PC D0 D1 D3 PHASE [--word PHASE LOW CURSOR COMMAND TAIL NEXT] [--byte COMMAND TAIL NEXT] EXTERNAL INPUT_RAM OUTPUT_RAM (fresh PC: 0x47570 or 0x47594)\n"; return 2;
     }
     std::uint32_t external = 0;
     if (!parse_integer(argv[at++],255,external)) { std::cerr << "invalid external byte\n"; return 1; }

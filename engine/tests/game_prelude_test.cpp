@@ -60,5 +60,30 @@ int main() {
 
     ram.assign(65536,0); state = ms5::GamePreludeState(); put(ram,0x4d74,128); ram[0xd683] = 0x71; fails(ram,state);
     ram.assign(65536,0); state = ms5::GamePreludeState(); state.byte.command = 8; fails(ram,state);
+    // Direct47594 uses MOVE.W rather than the earlier MOVEQ0. Prefix fields
+    // remain live, while all four byte waits retain the original highword.
+    ram.assign(65536,0); state = ms5::GamePreludeState(); state.next_pc = 0x47594;
+    state.d0 = 0x89abffff; state.d1 = 0x1234ffff; state.d3 = 0xabcdef01;
+    ram[0xd683] = 0x55; ram[0xd694] = 0x66; ram[0xd69c] = 0x77;
+    put(ram,0x000e,0x1234); put(ram,0x089e,0x5678); ram[0xde26] = 0x99;
+    put(ram,0x4d8c,6); put(ram,0x4d82,0x0455); put(ram,0x4d74,1);
+    ram[0x12] = 1; ram[0xfd82] = 1; ram[0xfd8d] = 1;
+    require(ms5::prepare_game_prelude(ram,0,state,reads,error),"direct word high wait");
+    require(state.phase == 1 && state.word.phase == 1 && state.d0 == 0x89ab0704 && reads == 1,"direct high register width");
+    require(ram[0xd683] == 0x55 && ram[0xd694] == 0x66 && ram[0xd69c] == 0x77 && ram[0xe] == 0x12 &&
+        ram[0x89e] == 0x56 && ram[0xde26] == 0x99,"direct skips prefix RAM stores");
+    const std::vector<std::uint8_t> direct_wait = ram; const ms5::GamePreludeState direct_pending = state;
+    require(ms5::prepare_game_prelude(ram,255,state,reads,error) && same(state,direct_pending) && ram == direct_wait && reads == 0,"direct repoll no status read");
+    put(ram,0x4d74,2);
+    require(ms5::prepare_game_prelude(ram,255,state,reads,error) && state.word.phase == 2 && state.d0 == 0x89ab0755,"direct word low wait");
+    put(ram,0x4d74,3);
+    require(ms5::prepare_game_prelude(ram,255,state,reads,error) && state.phase == 2 && state.d0 == 0x89ab0708,"direct byte08 wait");
+    put(ram,0x4d74,4);
+    require(ms5::prepare_game_prelude(ram,255,state,reads,error) && state.phase == 3 && state.d0 == 0x89ab0720,"direct byte20 wait");
+    put(ram,0x4d74,128); fails(ram,state); put(ram,0x4d74,5);
+    require(ms5::prepare_game_prelude(ram,255,state,reads,error) && state.phase == 4 && state.d0 == 0x89ab0720 &&
+        state.d1 == 0x12340004 && state.d3 == 0xabcdef01 && reads == 0,"direct completion widths");
+    ram.assign(65536,0); state = ms5::GamePreludeState(); state.next_pc = 0x47594; state.d0 = 0xfedc1234;
+    require(ms5::prepare_game_prelude(ram,0,state,reads,error) && state.phase == 4 && state.d0 == 0xfedc0720,"direct immediate completion");
     std::cout << "Game prelude prefix, sound waits, register carry and rollback passed\n";
 }

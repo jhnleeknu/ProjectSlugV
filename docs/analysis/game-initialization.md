@@ -8,15 +8,17 @@
 
 `initialize_game`은 먼저 `prepare_game_prelude`로 47570 접두부를 실행한다. RAM d683/d694/d69c byte, 000e/089e word, de14/de1c long, d680/d681 byte를 지운다. de26에 ROM 포인터 `e89e4`를 저장하고 de2e=`ff`, de2f=0을 쓴다. 포인터는 이 함수에서 역참조하지 않는다.
 
-word 사운드 명령 `0720`을 enqueue한 뒤 RAM 4d7e.byte를 지우고 byte 명령 `08`, `20`을 순서대로 보낸다. word overflow 및 두 byte 전송은 각각 producer 대기 PC `3aea`에서 멈출 수 있다. `GamePreludeState` phase는 0=최초 47570, 1=word overflow, 2=byte08, 3=byte20, 4=접두부 완료 475a4다. word pending 내부 phase 1/2는 high/low byte를 구분한다. captured tail/next와 전체 레지스터를 함께 승계하며, 재개는 접두부나 외부 상태 읽기를 반복하지 않는다.
+word 사운드 명령 `0720`을 enqueue한 뒤 RAM 4d7e.byte를 지우고 byte 명령 `08`, `20`을 순서대로 보낸다. word overflow 및 두 byte 전송은 각각 producer 대기 PC `3aea`에서 멈출 수 있다. `GamePreludeState` phase는 0=최초 47570 또는47594, 1=word overflow, 2=byte08, 3=byte20, 4=접두부 완료 475a4다. word pending 내부 phase 1/2는 high/low byte를 구분한다. captured tail/next와 전체 레지스터를 함께 승계하며, 재개는 접두부나 외부 상태 읽기를 반복하지 않는다.
 
-접두부 D3 전체와 D1 상위 word는 보존된다. D1.low는 대기 또는 완료 byte의 captured next다. D0는 word 대기에서 `0700 | command`, byte08에서 `0708`, byte20 및 접두부 완료에서 `0720`이다. RAM12=1, fd82!=0, fe80=0 조건에서만 external status byte를 CPU `d00046`에서 읽으며 `external_reads`로 호출당 읽기 여부를 반환한다. 이 함수 전체에 MMIO 쓰기는 없다.
+접두부 D3 전체와 D1 상위 word는 보존된다. D1.low는 대기 또는 완료 byte의 captured next다. D0.lowword는 word 대기에서 `0700 | command`, byte08에서 `0708`, byte20 및 접두부 완료에서 `0720`이다.47570은 prefix MOVEQ 때문에 D0.highword=0이며 직접47594는 입력 D0.highword를 보존한다. 대기 재개에서도 lowword만 갱신하므로 직접 진입의 상위16bit가 이어진다. RAM12=1, fd82!=0, fe80=0 조건에서만 external status byte를 CPU `d00046`에서 읽으며 `external_reads`로 호출당 읽기 여부를 반환한다. 이 함수 전체에 MMIO 쓰기는 없다.
+
+초기 phase0의 `next_pc=47594`도 지원한다. 이 진입은47570 prefix RAM 저장을 건너뛰며 word0720부터 기존 sound producer 대기를 수행한 뒤 같은475a4 suffix로 합류한다. Prefix-only475a4 완료까지의 D0.highword 보존과 전체 suffix 반환값은 구분한다.4aa30 이후의 최종 D0/D1/D3는 직접 진입도 모두0이다.
 
 접두부가 완료되면 같은 API 호출에서 suffix를 실행한다. `returned=true`이면 원본 47640 RTS까지 완료했고 D0/D1/D3는 최종 반환값이다. 이때 JSON의 next_pc=`475a4`, phase=4는 마지막 내부 경계 표시이며 실제 호출자 반환 PC가 아니다. 이미 returned인 상태를 재호출하면 거부한다. suffix에서 실패하면 그 호출의 접두부 변경까지 포함해 RAM/state/external_reads 전체를 보존한다. 대기 중 C++ API는 레코드 리소스를 사용하지 않지만 CLI는 리소스 파일을 먼저 로드한다.
 
 ## 475a4 suffix의 순서
 
-`finish_game_initialization`은 사운드 접두부 없이 suffix만 실행한다. 구현은 다음 순서를 보존한다.
+`finish_game_initialization`은 사운드 접두부 없이 suffix만 실행한다. 구현은 다음 순서를 보존한다. 공통475ca suffix의 최종 RTS는47640이며47642는 다음 함수 진입이다. `[475ca,47642)` 표기는 RTS 두 바이트를 포함하는 exclusive 범위다.
 
 1. RAM d686.word=0; b7a20, 4d126, 1bcfe를 호출한다.
 2. D0=0/D1=0으로 481de를 호출해 레코드0을 d694에 설정한다. D0=1/D1=0으로 같은 레코드를 d69c에 설정한다.
@@ -88,7 +90,7 @@ python3 tools/verify_game_records.py
 python3 tools/verify_game_initialization.py
 ```
 
-## 검증 결과와 한계
+## 기존 검증 결과와 한계
 
 Unicorn 2.1.4에서 원본 코드는 수정하지 않았다. 다음 수치는 해당 `artifacts/game_*/verification.json`에서 확인했다.
 
@@ -104,8 +106,16 @@ Unicorn 2.1.4에서 원본 코드는 수정하지 않았다. 다음 수치는 �
 
 레코드 승계도 다음 selector/index를 호스트가 제공한다. 오류 index에서 원본 TRAP은 실행하지 않았다. 다른 CPU 레지스터, CCR, stack 동등성, 자연 호출자 실행, 렌더링·전투 및 하드웨어 시간축은 이 검증 범위 밖이다. 저장한 e89e4/e89ec 포인터의 후속 데이터 소비도 미확인이다.
 
-최종 보고서 SHA256 (실제 parsed CLI JSON을 다음 입력으로 전달한 재검증도 동일한 결과다):
+47594 확장 전 보고서 SHA256 (당시 실제 parsed CLI JSON 승계 재검증도 같은 결과다):
 
 - game_objects: `c239a5619c6e929f2cee2ca6f65ccf93635e6f7f35e61d751bedee361d9b75f9`
 - game_records: `aa251956b6b4456c5787ab7bfed501160a7a1e72acfcadfaddc9c52d5615cb1b`
 - game_initialization: `ba538ea67e01041c8b199c889d8f2a225f18b203bf55e6a281da5464af12a3b2`
+
+## 47594 확장 최종 검증
+
+실제 새 `artifacts/game_initialization/verification.json` SHA256은 `9610a86247038cb92cf810dde218aa9764dacfe79950e5aa5f7e191f2b8fe876`이다. Session95311 exit0에서650조건=기존562+직접47594의88, 오류33조건=기존31+추가2, 승계20시퀀스=기존4+새16을 확인했다. External reads는4회이고 모든 재개 read0이다. Full RAM/D0/D1/D3, 원본 suffix의 모든 nested callee와RTS 또는actualwait가 일치했으며 MMIO쓰기0이다.
+
+직접47594는 다양한 D0.high16 입력과 prefix 저장 생략, 네 하위 wait `(1,1),(1,2),(2,0),(3,0)`를 관측했다. 대기 A7 offset10/4/12/8 및 최종RTS endpoint도 검사했다. Actual CLI RAM/full registers/pending을 운반하며 native context/stack을 유지했지만 해제는 명시적 host sound-head word4d74 변경이다. 자연 IRQ/scheduler 일정의 동등성이라고 확대하지 않는다. A7 endpoint 확인도 기타 register/CCR/stack 전체 반환 계약은 아니다.
+
+시작·종료 initialize_game binary SHA256은 동일한 `edbf2c75baea4abbdd6e268be4c399e7326215173d369ce98dae993cf7edc104`이며 원본 fixed1MiB는 불변이다. 전체 `make -j3 all test`는 Python118검사·C++94 test executable·warning/error0, exit0으로 완료됐다. 로그는 `artifacts/first_area_sound_build_test.log`다.47594를 지원해도479d0 이후 caller 전체·일반 scene script·자연 scheduler/gameplay가 완료된 것은 아니다.
