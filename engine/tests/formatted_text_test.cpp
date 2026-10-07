@@ -120,11 +120,34 @@ int main() {
     const std::vector<std::uint8_t> debug_before=ram;
     assert(ms5::step_main_debug(ram,debug,0xffffffffU,d1,writes,error,&final_line));
     assert(ram==debug_before && d1==0x12345678U && writes.empty() && final_line==0xabcd);
+    d3=0xdeadabcdU;
+    assert(ms5::step_main_debug(ram,debug,0xffffffffU,d1,writes,error,&final_line,&d3));
+    assert(ram==debug_before && d1==0x12345678U && d3==0xdeadabcdU && final_line==0xabcd);
+    final_line=0x1234U;
+    writes.assign(1,ms5::VideoPortWrite());writes[0].value=789U;
+    assert(!ms5::step_main_debug(ram,debug,0xffffffffU,d1,writes,error,&final_line,&d3));
+    assert(ram==debug_before && d1==0x12345678U && d3==0xdeadabcdU &&
+           final_line==0x1234U && writes.size()==1 && writes[0].value==789U);
+    final_line=0xabcdU;
     ram[0xf000]=1;ram[0x185]=0;
-    assert(ms5::step_main_debug(ram,debug,0x100101,d1,writes,error));
+    assert(ms5::step_main_debug(ram,debug,0x100101,d1,writes,error,&final_line,&d3));
+    assert(d3==0xdeadabcdU && final_line==0xabcdU && writes.empty());
     ram[0x185]=1;
     const std::vector<std::uint8_t> active_before=ram;
-    assert(!ms5::step_main_debug(ram,debug,0x100101,d1,writes,error));
+    assert(!ms5::step_main_debug(ram,debug,0x100101,d1,writes,error,&final_line,&d3));
     assert(ram==active_before && d1==0x12345678U && writes.empty() && final_line==0xabcd);
+    assert(d3==0xdeadabcdU);
+    debug.source_cpu_address=debug.source_rom_offset=0xd56U;
+    debug.data.assign(0xe40U-0xd56U,0);
+    text(debug,0,"A\\l\2\3");
+    assert(ms5::step_main_debug(ram,debug,0x100101,d1,writes,error,&final_line,&d3));
+    assert(d1==0x12345678U && d3==0x7043U && final_line==0x7043U);
+    const std::vector<std::uint8_t> before_late_debug=ram;
+    d3=0xdeadabcdU;final_line=0xabcdU;
+    text(debug,0,"A\\l\2\3%q");
+    writes.assign(1,ms5::VideoPortWrite());writes[0].value=789U;
+    assert(!ms5::step_main_debug(ram,debug,0x100101,d1,writes,error,&final_line,&d3));
+    assert(ram==before_late_debug && d1==0x12345678U && d3==0xdeadabcdU &&
+           final_line==0xabcdU && writes.size()==1 && writes[0].value==789U);
     std::cout << "Formatted text state, padding, external arguments and rollback passed\n";
 }

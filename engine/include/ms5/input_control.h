@@ -7,7 +7,9 @@ namespace ms5 {
 // f12 input prefix followed by f54 controller/caller when no callback is set.
 // Callback branch stops before f3c; other boundaries follow step_control_caller.
 // result.style is D1.word at the input boundary, not the final CPU D1 value.
-// All failures preserve RAM, result and writes.
+// Optional full D1/D3 must match initial_style/initial_line low words.
+// They return final registers (including the controller when executed).
+// All failures preserve RAM, result, writes and registers.
 bool step_input_control(std::vector<std::uint8_t>& ram,
                         const FixedDataResource& streams,const FixedDataResource& table,
                         const FixedDataResource& menu,const FixedDataResource& pause,
@@ -16,7 +18,8 @@ bool step_input_control(std::vector<std::uint8_t>& ram,
                         std::uint16_t initial_line,std::uint32_t entry_stack,
                         InputFrameResult& result,std::vector<VideoPortWrite>& writes,
                         std::string& error,const FixedDataResource* font = NULL,
-                        const StageGroupMenuContext* stage_context = NULL);
+                        const StageGroupMenuContext* stage_context = NULL,
+                        std::uint32_t* d1 = NULL,std::uint32_t* d3 = NULL);
 // ef2 gate followed by step_input_control only when ready. Waiting is success:
 // next_pc=ef2, style=initial_style, read_count=0 and no writes/RAM changes.
 bool poll_input_control(std::vector<std::uint8_t>& ram,
@@ -28,7 +31,8 @@ bool poll_input_control(std::vector<std::uint8_t>& ram,
                         std::uint16_t initial_line,std::uint32_t entry_stack,
                         InputFrameResult& result,std::vector<VideoPortWrite>& writes,
                         std::string& error,const FixedDataResource* font = NULL,
-                        const StageGroupMenuContext* stage_context = NULL);
+                        const StageGroupMenuContext* stage_context = NULL,
+                        std::uint32_t* d1 = NULL,std::uint32_t* d3 = NULL);
 // f4c callback-path wait, AFTER palette processing. Signal16!=0 alone is
 // sufficient; no threshold17 comparison, video read or RAM18 update occurs.
 // Waiting returns next_pc=f4c, no reads/writes and the incoming style.
@@ -41,7 +45,8 @@ bool poll_callback_input_control(std::vector<std::uint8_t>& ram,
                         std::uint16_t initial_line,std::uint32_t entry_stack,
                         InputFrameResult& result,std::vector<VideoPortWrite>& writes,
                         std::string& error,const FixedDataResource* font = NULL,
-                        const StageGroupMenuContext* stage_context = NULL);
+                        const StageGroupMenuContext* stage_context = NULL,
+                        std::uint32_t* d1 = NULL,std::uint32_t* d3 = NULL);
 
 }
 #endif

@@ -218,7 +218,10 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
 bool step_main_debug(std::vector<std::uint8_t>& ram,
                      const FixedDataResource& debug,std::uint32_t object_address,
                      std::uint32_t& d1,std::vector<VideoPortWrite>& writes,
-                     std::string& error,std::uint16_t* line) {
+                     std::string& error,std::uint16_t* line,std::uint32_t* d3) {
+    if(line!=NULL && d3!=NULL && *line!=(*d3&0xffffU)) {
+        error="main debug line must match D3 low word";return false;
+    }
     if(ram.size()!=65536U) {error="main debug requires 64KiB RAM";return false;}
     if((ram[0xf000]&1U)==0) {writes.clear();error.clear();return true;}
     if(object_address<0x100000U || object_address>0x10ff7bU) {
@@ -236,7 +239,7 @@ bool step_main_debug(std::vector<std::uint8_t>& ram,
     const std::vector<std::uint8_t> arguments;
     std::uint16_t style=static_cast<std::uint16_t>(d1);
     if(!format_fixed_text(ram,resources,unused_font,0xd56,0xdf0,arguments,
-                          0x7066,style,writes,error,0x3650,&style,line)) return false;
+                          0x7066,style,writes,error,0x3650,&style,line,d3)) return false;
     d1=(d1&0xffff0000U)|style;
     return true;
 }

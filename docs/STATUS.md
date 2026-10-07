@@ -921,3 +921,12 @@
 - `.venv/bin/python tools/verify_control_registers.py`: 원본 1,207조건, 포트 208,678개 및 오류 보존 65조건 통과. 10개 시퀀스 445호출은 실제 CLI RAM/전체 레지스터 반환을 승계한다.
 - 보고서 SHA256 `fd6a4249b3831c84cd6bd5da3e5006a7cda88a4a52c5dbff7d99f05a6b5b6431`. 전체 빌드·Python 73개·C++ 검사 통과. 메인 리뷰 `docs/reviews/0125-control-registers.md`.
 - 다음은 입력 접두부/대기 게이트/메인 콜백과 debug 경로에 전체 레지스터를 연결하는 작업이다. fixture 입력·A1 계약 및 BIOS/TRAP/루프 외부 경계는 남아 있으며 전체 게임 복원 목표는 진행 중이다.
+
+
+## 2026-10-07 — 입력·대기·메인 진단 출력 전체 레지스터
+- 입력 접두부와 직접/ef2대기/f4c대기 경로에 전체 D1/D3를 연결했다. 입력의 D1 상위16비트와 D3 보존을 원본31d6/352a/b68에서 확인하고 제어기 최종 반환을 전달한다.
+- 메인 debug의 전체 D3를 formatter와 연결했다. 기존 style/line 계약을 유지하며 선택적 CLI 레지스터 모드를 제공한다.
+- `verify_input_control_registers.py`: 원본810조건, 포트81,005개, 오류 보존69조건 통과. 9개 시퀀스354호출은 실제 CLI RAM/D1/D3 반환을 승계한다. SHA256 `80703108ba7fb17e2be84f1dc583b3270db29e89f1c1a91ea2cfb29038a98174`.
+- `verify_main_debug_registers.py`: 원본 debug806조건/포트62,382개/오류18조건 및 실제 debug→input/controller→ec4 승계8회 통과. SHA256 `c4ae8af3511d1392ea57bf397f7907fde2cc8e9787d3a1b6cc6082407ee16487`.
+- 전체 빌드·Python73개·C++ 검사 통과. 메인 리뷰 `docs/reviews/0126-input-main-debug-registers.md`.
+- 다음은 IRQ가 생성하는 프레임 신호와 callback/팔레트 경로를 포함한 메인 루프의 연속 실행 통합이다. 현재 호스트 신호 fixture와 선택한 경계만 검증했으며 다른 CPU 상태·물리 타이밍·전체 게임 복원은 진행 중이다.

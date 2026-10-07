@@ -96,8 +96,20 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
+    bool registers_mode = false;
+    std::uint32_t d1 = 0U, d3 = 0U;
+    if (argc > 1 && std::string(argv[1]) == "--registers") {
+        if (argc < 4 || !parse_integer(argv[2], 0xffffffffU, d1) ||
+            !parse_integer(argv[3], 0xffffffffU, d3)) {
+            std::cerr << "--registers requires decimal or 0x-prefixed uint32 D1 and D3\n";
+            return 1;
+        }
+        registers_mode = true;
+        argc -= 3;
+        argv += 3;
+    }
     if (argc != 12) {
-        std::cerr << "usage: begin_input_frame INPUT_RAM STREAMS_MS5D TABLE_MS5D OUTPUT_RAM OBJECT_ADDRESS STYLE SYSTEM P1_RAW P2_RAW P1_GAME P2_GAME\n";
+        std::cerr << "usage: begin_input_frame [--registers D1 D3] INPUT_RAM STREAMS_MS5D TABLE_MS5D OUTPUT_RAM OBJECT_ADDRESS STYLE SYSTEM P1_RAW P2_RAW P1_GAME P2_GAME\n";
         return 2;
     }
     std::uint32_t object_address = 0U;
@@ -105,6 +117,10 @@ int main(int argc, char** argv) {
     if (!parse_integer(argv[5], 0xffffffffU, object_address) ||
         !parse_integer(argv[6], 0xffffU, style)) {
         std::cerr << "OBJECT_ADDRESS must be decimal or 0x-prefixed uint32; STYLE must be decimal or 0x-prefixed uint16\n";
+        return 1;
+    }
+    if (registers_mode && style != (d1 & 0xffffU)) {
+        std::cerr << "STYLE must match D1.low16\n";
         return 1;
     }
     std::uint32_t values[5] = {0U, 0U, 0U, 0U, 0U};
@@ -140,7 +156,8 @@ int main(int argc, char** argv) {
     if (!ms5::load_fixed_data_resource(streams_path, streams, error) ||
         !ms5::load_fixed_data_resource(table_path, table, error) ||
         !ms5::begin_input_frame(ram, streams, table, ports, object_address,
-                               static_cast<std::uint16_t>(style), result, error)) {
+                               static_cast<std::uint16_t>(style), result, error,
+                               registers_mode ? &d1 : NULL, registers_mode ? &d3 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -160,6 +177,8 @@ int main(int argc, char** argv) {
               << ",\"callback\":" << result.callback
               << ",\"callback_context\":" << result.callback_context
               << ",\"style\":" << result.style
-              << ",\"read_count\":" << static_cast<unsigned int>(result.read_count) << "}\n";
+              << ",\"read_count\":" << static_cast<unsigned int>(result.read_count);
+    if (registers_mode) std::cout << ",\"d1\":" << d1 << ",\"d3\":" << d3;
+    std::cout << "}\n";
     return 0;
 }

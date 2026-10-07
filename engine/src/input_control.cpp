@@ -9,17 +9,26 @@ bool step_input_control(std::vector<std::uint8_t>& ram,
                         std::uint16_t initial_line,std::uint32_t entry_stack,
                         InputFrameResult& result,std::vector<VideoPortWrite>& writes,
                         std::string& error,const FixedDataResource* font,
-                        const StageGroupMenuContext* stage_context) {
+                        const StageGroupMenuContext* stage_context,
+                        std::uint32_t* d1,std::uint32_t* d3) {
+    if((d1!=NULL && (*d1&0xffffU)!=initial_style) ||
+       (d3!=NULL && (*d3&0xffffU)!=initial_line)) {
+        error="input control register low words must match style and line";return false;
+    }
+    std::uint32_t pending_d1=d1==NULL?initial_style:*d1;
+    std::uint32_t pending_d3=d3==NULL?initial_line:*d3;
     try {
         std::vector<std::uint8_t> candidate(ram);
         InputFrameResult outcome;
         std::vector<VideoPortWrite> pending;
-        if(!begin_input_frame(candidate,streams,table,ports,object_address,initial_style,outcome,error)) return false;
+        if(!begin_input_frame(candidate,streams,table,ports,object_address,initial_style,outcome,error,&pending_d1,&pending_d3)) return false;
         if(outcome.next_pc==0xf54U &&
            !step_control_caller(candidate,menu,pause,records,object_address,outcome.style,
-                                initial_line,entry_stack,outcome.next_pc,pending,error,font,stage_context)) return false;
+                                initial_line,entry_stack,outcome.next_pc,pending,error,font,stage_context,&pending_d1,&pending_d3)) return false;
         ram.swap(candidate);writes.swap(pending);result=outcome;
     } catch(const std::bad_alloc&) {error="cannot allocate input/controller state";return false;}
+    if(d1!=NULL)*d1=pending_d1;
+    if(d3!=NULL)*d3=pending_d3;
     error.clear();return true;
 }
 bool poll_input_control(std::vector<std::uint8_t>& ram,
@@ -31,7 +40,14 @@ bool poll_input_control(std::vector<std::uint8_t>& ram,
                         std::uint16_t initial_line,std::uint32_t entry_stack,
                         InputFrameResult& result,std::vector<VideoPortWrite>& writes,
                         std::string& error,const FixedDataResource* font,
-                        const StageGroupMenuContext* stage_context) {
+                        const StageGroupMenuContext* stage_context,
+                        std::uint32_t* d1,std::uint32_t* d3) {
+    if((d1!=NULL && (*d1&0xffffU)!=initial_style) ||
+       (d3!=NULL && (*d3&0xffffU)!=initial_line)) {
+        error="input control register low words must match style and line";return false;
+    }
+    std::uint32_t pending_d1=d1==NULL?initial_style:*d1;
+    std::uint32_t pending_d3=d3==NULL?initial_line:*d3;
     try {
         std::vector<std::uint8_t> candidate(ram);
         bool ready=false;
@@ -41,12 +57,14 @@ bool poll_input_control(std::vector<std::uint8_t>& ram,
         if(ready) {
             if(!step_input_control(candidate,streams,table,menu,pause,records,ports,
                 object_address,initial_style,initial_line,entry_stack,outcome,pending,error,
-                font,stage_context)) return false;
+                font,stage_context,&pending_d1,&pending_d3)) return false;
         } else {
             outcome.next_pc=0xef2U;outcome.style=initial_style;
         }
         ram.swap(candidate);result=outcome;writes.swap(pending);
     } catch(const std::bad_alloc&) {error="cannot allocate gated input state";return false;}
+    if(d1!=NULL)*d1=pending_d1;
+    if(d3!=NULL)*d3=pending_d3;
     error.clear();return true;
 }
 
@@ -58,12 +76,17 @@ bool poll_callback_input_control(std::vector<std::uint8_t>& ram,
                         std::uint16_t initial_line,std::uint32_t entry_stack,
                         InputFrameResult& result,std::vector<VideoPortWrite>& writes,
                         std::string& error,const FixedDataResource* font,
-                        const StageGroupMenuContext* stage_context) {
+                        const StageGroupMenuContext* stage_context,
+                        std::uint32_t* d1,std::uint32_t* d3) {
+    if((d1!=NULL && (*d1&0xffffU)!=initial_style) ||
+       (d3!=NULL && (*d3&0xffffU)!=initial_line)) {
+        error="input control register low words must match style and line";return false;
+    }
     if(ram.size()!=65536U) {error="callback frame wait requires 64KiB RAM";return false;}
     if(ram[0x16]!=0) {
         return step_input_control(ram,streams,table,menu,pause,records,ports,
             object_address,initial_style,initial_line,entry_stack,result,writes,error,
-            font,stage_context);
+            font,stage_context,d1,d3);
     }
     InputFrameResult waiting;
     waiting.next_pc=0xf4cU;waiting.style=initial_style;

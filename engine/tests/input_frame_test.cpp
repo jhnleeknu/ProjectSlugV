@@ -13,9 +13,14 @@ int main() {
     ms5::InputFrameResult result;result.next_pc=91;result.style=92;
     std::string error;
     const std::vector<std::uint8_t> before=ram;
-    assert(!ms5::begin_input_frame(ram,absent,absent,ports,0x100000,0xabcd,result,error));
+    std::uint32_t d1=0x1357abcdU,d3=0x98767000U;
+    assert(!ms5::begin_input_frame(ram,absent,absent,ports,0x100000,0xabcd,result,error,&d1,&d3));
+    assert(d1==0x1357abcdU && d3==0x98767000U);
+    assert(!ms5::begin_input_frame(ram,absent,table,ports,0x100000,0xabce,result,error,&d1,&d3));
     assert(ram==before && result.next_pc==91 && result.style==92);
-    assert(ms5::begin_input_frame(ram,absent,table,ports,0x100000,0xabcd,result,error));
+    assert(d1==0x1357abcdU && d3==0x98767000U);
+    assert(ms5::begin_input_frame(ram,absent,table,ports,0x100000,0xabcd,result,error,&d1,&d3));
+    assert(d1==0x1357ab08U && d3==0x98767000U);
     assert(result.next_pc==0xf54 && result.callback==0 && result.callback_context==0);
     assert(result.style==0xab08 && result.read_count==5);
     assert(ram[0x1a]==7 && ram[0x16]==0 && ram[0x4ca2]==0 && ram[0x4ca3]==0);

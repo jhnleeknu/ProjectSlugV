@@ -29,3 +29,10 @@ CLI: `build/begin_input_frame INPUT_RAM STREAMS_MS5D TABLE_MS5D OUTPUT_RAM OBJEC
 SHA256: `d6febf3d169511624a0a354ee9740c5ce74c38f6dbdd6cc1fd2d391798951fc1`.
 
 후속 정적 근거로e40은 A0를100896에, e44는 A6를10089a에 저장하고e48에서 반환한다(A5=108000). 이는 루트 오브젝트100820의+76/+7a다. 초기화e60은 현재 A6의+76을0으로 지운다. callback 설정 함수의 존재와 실제로 해당 함수가 실행되는 호출 경로는 구분해야 한다. 현재 callback 경계 지원은 임의 원본 주소의 실행 지원을 뜻하지 않는다.
+
+
+## 전체 D1/D3 전달 (2026-10-07)
+
+`begin_input_frame`의 선택적 D1/D3 포인터는 전체 레지스터를 받는다. D1.lowword는 initial_style과 같아야 한다. 31d6..349a와 ROM selector0의352a..35a0은 D1.byte/word만 쓰며 D3에 쓰지 않는다. 3580 MOVE.W와3586 BCHG는 replay 이벤트의 입력 word를 변경하되 D1 상위16비트를 보존한다. b68..bb4도 D1/D3를 보존한다. 따라서 이미 검증된 input style을 D1.lowword에 합성하고 D3를 그대로 유지한다. 후보 상태가 성공한 뒤에만 레지스터를 확정한다.
+
+`begin_input_frame --registers D1 D3`는 기존 positional 인자/기본 JSON을 유지하며 이 모드에서 전체 d1/d3를 추가 반환한다. 다른 CPU 레지스터/CCR과 외부 스택은 이 API에 포함되지 않는다.

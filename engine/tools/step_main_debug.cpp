@@ -96,8 +96,23 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
+    bool d3_mode = false;
+    std::uint32_t d3 = 0U;
+    if (argc > 1 && std::string(argv[1]) == "--d3") {
+        if (argc < 3 || !parse_integer(argv[2], 0xffffffffU, d3)) {
+            std::cerr << "--d3 requires a decimal or 0x-prefixed uint32 value\n";
+            return 1;
+        }
+        d3_mode = true;
+        argc -= 2;
+        argv += 2;
+        if (argc > 1 && std::string(argv[1]) == "--d3") {
+            std::cerr << "--d3 cannot be repeated\n";
+            return 1;
+        }
+    }
     if (argc != 7 && argc != 8) {
-        std::cerr << "usage: step_main_debug INPUT_RAM DEBUG_MS5D OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS D1 [LINE]\n";
+        std::cerr << "usage: step_main_debug [--d3 D3] INPUT_RAM DEBUG_MS5D OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS D1 [LINE]\n";
         return 2;
     }
     std::uint32_t object_address = 0U;
@@ -107,6 +122,10 @@ int main(int argc, char** argv) {
         !parse_integer(argv[6], 0xffffffffU, d1) ||
         (argc == 8 && !parse_integer(argv[7], 0xffffU, initial_line))) {
         std::cerr << "OBJECT_ADDRESS and D1 must be decimal or 0x-prefixed uint32; LINE uint16\n";
+        return 1;
+    }
+    if (d3_mode && argc == 8 && (d3 & 0xffffU) != initial_line) {
+        std::cerr << "LINE must match D3 low16 bits in --d3 mode\n";
         return 1;
     }
     std::uint16_t line = static_cast<std::uint16_t>(initial_line);
@@ -130,7 +149,8 @@ int main(int argc, char** argv) {
     }
     std::vector<ms5::VideoPortWrite> writes;
     if (!ms5::load_fixed_data_resource(resource_path, debug, error) ||
-        !ms5::step_main_debug(ram, debug, object_address, d1, writes, error, argc == 8 ? &line : NULL)) {
+        !ms5::step_main_debug(ram, debug, object_address, d1, writes, error, argc == 8 ? &line : NULL,
+                              d3_mode ? &d3 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -168,6 +188,7 @@ int main(int argc, char** argv) {
     if (argc == 8) {
         std::cout << ",\"line\":" << line;
     }
+    if (d3_mode) std::cout << ",\"d3\":" << d3;
     std::cout << "}\n";
     return 0;
 }

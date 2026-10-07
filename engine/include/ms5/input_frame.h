@@ -10,10 +10,12 @@ struct InputFrameResult {
 };
 // f12 through the branch before f54 or f3c. Callback context is a native address,
 // not a host pointer. Does not execute a callback or model the external stack.
-// Failure preserves RAM/result. D1.word is propagated for later text rendering.
+// Optional full D1/D3: D1.lowword must equal initial_style. The input
+// path preserves D1.highword and all D3. Failure preserves all outputs.
 bool begin_input_frame(std::vector<std::uint8_t>& ram,const FixedDataResource& streams,
                        const FixedDataResource& table,const InputPortSamples& ports,
                        std::uint32_t object_address,std::uint16_t initial_style,
-                       InputFrameResult& result,std::string& error);
+                       InputFrameResult& result,std::string& error,
+                       std::uint32_t* d1 = NULL,std::uint32_t* d3 = NULL);
 }
 #endif
