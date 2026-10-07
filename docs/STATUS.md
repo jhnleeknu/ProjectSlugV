@@ -670,3 +670,11 @@
 - 별도48156 원본65,536조건에서 signed 타이머, 명령과 전체D0/전체RAM/분기 경계를 확인했다. 생산자는 첫 명령 전에 중단했으며 C++ 타이머 검증은 아니다.
 - Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0094-sound-word.md. 분석: docs/analysis/sound-word.md 및 sound-timer.md.
 - 다음은48156 타이머를 상위 생산자에 연결하고3cac의 생산→소비 및 대기 재개를 구성하는 것이다. 전체 interrupt·자연 스케줄링·Z80·오디오 시간축과 전체 부팅은 미완료이며 목표는 active다.
+
+
+## 2026-10-07 — 사운드 타이머에서 생산·소비까지 연결
+
+- `step_sound`로3cac의48156→3af8→3cb2를 연결하고 `resume_sound`로 생산자 대기 이후를 이어간다. 정상 대기 시 timer/word 상태를 보존하고 소비자는 생산 완료 후에만 실행한다.
+- 원본718조건의 전체RAM/포트/pending/read_count가 일치했다.40회 연속 tick, 실제 원본 문맥의 high/low 대기 재개, 모든status byte와 timer wrap 필터를 확인했다.16개 실패/별칭 조건은 출력 보존을 확인했다.
+- Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0095-sound-service.md. 분석: docs/analysis/sound-service.md.
+- 다음은c8c의 credit/busy 분기, 렌더링·작업 복구 의존성과 사운드 서비스를 연결하는 것이다. 전체 인터럽트·BIOS·자연 스케줄링·Z80·오디오 시간축과 전체 부팅은 미완료이며 목표는 active다.
