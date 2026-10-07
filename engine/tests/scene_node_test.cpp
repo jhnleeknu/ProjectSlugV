@@ -22,7 +22,9 @@ ms5::SceneNodeState state() {
 void fails(std::vector<std::uint8_t>& ram, unsigned int entry, ms5::SceneNodeState& value) {
     const std::vector<std::uint8_t> before = ram; const ms5::SceneNodeState old = value; std::string error;
     require(!ms5::step_scene_node(ram,entry,value,error) && !error.empty() && ram == before &&
-        value.d0 == old.d0 && value.d1 == old.d1 && value.d3 == old.d3 && value.a0 == old.a0 && value.a1 == old.a1,"scene transaction rollback");
+        value.d0 == old.d0 && value.d1 == old.d1 && value.d2 == old.d2 && value.d3 == old.d3 && value.d4 == old.d4 &&
+        value.d5 == old.d5 && value.d6 == old.d6 && value.d7 == old.d7 && value.a0 == old.a0 && value.a1 == old.a1 &&
+        value.a2 == old.a2 && value.a4 == old.a4,"scene transaction rollback");
 }
 }
 int main() {
@@ -62,6 +64,22 @@ int main() {
     ram.assign(65536,0); value = state(); value.a1 = 0; put(ram,0x218,0x69abcdef);
     require(ms5::step_scene_node(ram,0x16fee,value,error) && value.d0 == 0x12345678 && value.d1 == 0x87654321 && value.d3 == 0x69abcdef && value.a1 == 0 &&
         get(ram,0x210) == 0 && ram[0x22c] == 0 && ram[0x22d] == 0,"position prefix and old worldY");
+    //43e08 consumes low WORD coordinates, unlike43e22's full LONG input.
+    ram.assign(65536,0); value = state(); value.a1 = 0;
+    value.d4 = 0xabcd1234; value.d5 = 0x23456789; value.d6 = 0x3456789a; value.d7 = 0x456789ab;
+    value.a2 = 0x56789abc; value.a4 = 0x6789abcd; ram[0xd494] = 0x5a;
+    put(ram,0x214,0x11112222); put(ram,0x218,0x33334444);
+    require(ms5::step_scene_node(ram,0x43e08,value,error),"low-WORD position entry");
+    require(value.d0 == 0x56780000 && value.d1 == 0x43210000 && get(ram,0x200) == 0x56780000 && get(ram,0x204) == 0x43210000 &&
+        value.d2 == 0x11112222 && value.d3 == 0x33334444 && value.d4 == 0xabcd1200 && value.d5 == 0x2345675a &&
+        value.d6 == 0x3456789a && value.d7 == 0 && value.a0 == 0x100200 && value.a1 == 0 && value.a2 == 0x56789abc && value.a4 == 0x6789abcd,
+        "low-WORD conversion and full position scratch");
+    require(get(ram,0x210) == 0 && get(ram,0x21c) == 0x56780000 && get(ram,0x220) == 0x43210000 && ram[0x224] == 0x5a,"low-WORD prefix/history writes");
+    ram.assign(65536,0); value = state(); value.a1 = 0;
+    require(ms5::step_scene_node(ram,0x43e22,value,error) && value.d0 == 0x12345678 && value.d1 == 0x87654321,"LONG position entry remains distinct");
+    ram.assign(65536,0xa5); value = state(); value.a1 = 0x100001;
+    value.d2 = 0x11223344; value.d4 = 0x22334455; value.d5 = 0x33445566; value.d6 = 0x44556677; value.d7 = 0x55667788;
+    value.a2 = 0x66778899; value.a4 = 0x778899aa; fails(ram,0x43e08,value);
     ram.assign(65536,0xa5); value = state(); value.a1 = 1; fails(ram,0x16fee,value);
     ram.assign(65536,0); value = state(); put(ram,0x210,0x10ffff); fails(ram,0x43ea8,value);
     value = state(); value.a0 = 0x100201; fails(ram,0x43dda,value);

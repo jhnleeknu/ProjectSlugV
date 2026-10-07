@@ -65,7 +65,7 @@ bool step_scene_node(std::vector<std::uint8_t>& ram, std::uint32_t entry,
     case 0x16fac: span = 0x7b; break;
     case 0x16fee: case 0x1724c: case 0x1726c: span = 0x2e; break;
     case 0x17292: span = 0x2080; break;
-    case 0x43dda: case 0x43e22: case 0x43e38: case 0x43ea8: case 0x1728c: break;
+    case 0x43dda: case 0x43e08: case 0x43e22: case 0x43e38: case 0x43ea8: case 0x1728c: break;
     default: error = "unsupported scene node entry"; return false;
     }
     if (ram.size() != 65536 || (state.a0 & 1U) != 0 || state.a0 < 0x100000 || state.a0 > 0x110000 - span) {
@@ -89,7 +89,8 @@ bool step_scene_node(std::vector<std::uint8_t>& ram, std::uint32_t entry,
         else if (entry == 0x1726c) scale(candidate,at,next,true);
         else {
             if (entry == 0x16fee) put_word(candidate,at + 0x2c,0);
-            if (entry == 0x43e22 || entry == 0x16fee) {
+            if (entry == 0x43e08) { next.d0 <<= 16; next.d1 <<= 16; }
+            if (entry == 0x43e08 || entry == 0x43e22 || entry == 0x16fee) {
                 put(candidate,at + 0x10,next.a1); put(candidate,at,next.d0); put(candidate,at + 4,next.d1); put_word(candidate,at + 0x24,0);
             }
             const bool advance = entry == 0x43ea8 || entry == 0x1728c;

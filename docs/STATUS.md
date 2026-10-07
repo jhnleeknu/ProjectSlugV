@@ -1270,3 +1270,11 @@
 - 신규report SHA256 `1759ae535202062c79b78cfa9e760d09449dfd14ed3505fdc8e07a679eceebb6`. 메인은원본비대칭·공유selector·CLI/unit·독립observer/verifier를리뷰했고resource37개/manifest/native/binary의현재hash를확인했다. 입력RAM불변과resource전후hash검사를보강한뒤C++전체를재비교했다.
 - 전체make Python175/C++109/경고0. 기존19938 회귀12,170조건/오류69조건/MMIO0/미복귀0도통과했다. Report SHA256 `ab2460c368136e41266e0cf982f99628c3a5d64b46a83818c22588b22942a2f9`,binary SHA256 `8e2a9567a004d4c48f0e2aff092478e8af40dfc1d542a3de5cc325bb93694c35`. 리뷰0167과scene-motion-time.md에계약·재생성·임시반복한계를기록했다.
 - 다음은1a470의bounds/object할당/43e08position/inlinecopy와1a414 gate를연결하고일반1a5a4로통합하는작업이다. 직접조작가능한스테이지화면과전체게임복원은미완료이며goal은active다.
+
+
+## 2026-10-08 — 배치용 WORD 좌표 초기화
+
+- 원본43e08의lowWORD→16.16변환과parent/local/stamp초기화를기존position경로에연결했다. 43e22의LONG입력과구분하며전체RAM/12register transaction을유지한다. 메인이원본·core/unit·독립verifier를리뷰했다.
+- 원본2,020조건/오류72조건/MMIO0통과. Parent/self/overlap/stamp aliases와유효RAM경계,할당거절후에도원본이쓰는100ec6주소를포함한다. 실제CLI승계4sequence/20호출중16이직전출력을소비한다. 신규report SHA256 `69cc9998a64b73427ac99aa46579e4c6032dbce91862391f6accd33b588598b6`.
+- 기존좌표회귀5,248/오류135/MMIO0,전체make Python175/C++109/경고0. 회귀report SHA256 `ca8a3b769e504965d2c2e2ad0f2d531433576cef5861bced5212be35d2ac7066`. 리뷰0168과scene-placement-execution.md에근거·재현·한계를기록했다.
+- 다음작업의1a414/1a470전체원본순서를분석했다. X bounds도d3a6을읽는점,allocation실패시에도position쓰기,WORD inlinecopy와signedskip차이를보존해야한다. 이전체배치실행·일반1a5a4·자연frame·플레이화면·전체게임goal은아직미완료다.
