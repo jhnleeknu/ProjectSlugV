@@ -1022,3 +1022,10 @@
 - 제거원본343조건/오류50조건,watchdog382개통과. 메인리뷰로reset전반환값이노출되는deferred150조건을추가했다. SHA256 `4422458b5cfcf56ddb232cc46c1a5f21b2a92df94f16c0eb7b49d01f33fcca3f`. 기존staticrestart506조건/오류5조건회귀도통과했다.
 - ca9e/caf0화면초기화는104조건/오류23조건,147940순서있는포트를비교했다. SHA256 `328476653aa7648ceb08c18ea78a72b77425e09dc2591ef520c38d46e9a0227a`. 실제5회35a2호출을포함하며픽셀렌더링완료를주장하지않는다.
 - 전체빌드·Python88개·C++전체통과. 메인리뷰 `docs/reviews/0138-object-removal-screen.md`. 다음은실제c610호출자에서난수→제거→화면→47570대기/재개→stage/input초기화를연결하는작업이다. 자연부팅/전체게임플레이목표는계속진행중이다.
+
+
+## 2026-10-07 — c610 실제 호출자와 초기화 대기·재개 연결
+- 난수→오브젝트제거→화면초기화→47570→stage/input선택을하나의재개가능C++API로연결했다. 대기시앞선단계를반복하지않고완료시A6.callback=c654를설정한다. 실제MS5D게임레코드와입력stream을사용하며늦은오류도전체transaction으로보존한다.
+- 최종원본144경계/오류38조건,166360포트/외부읽기56회통과. 실제controller1008e4의32승계시퀀스,네사운드대기분류및LIVEf02a선택을확인했다. SHA256 `eff31a72a6ac06645d6cb99f52b78a9103a10ff2a51810043073c468302fdd30`. head해제는명시적hostfixture이며자연IRQ동등성은미검증이다.
+- 전체빌드·Python88개·C++전체통과. 메인리뷰 `docs/reviews/0139-game-restart.md`, 상세 `docs/analysis/game-restart.md`. 원본wordwait조건과실제A6범위를리뷰에서보완했다.
+- 다음c654/c66a및477e4콜백후보144명령/21호출을목록화하고메인이활성/replay판정을정적분석했다. callback본문과자연scheduler,전체스테이지게임플레이는미완료이며목표는계속진행중이다.
