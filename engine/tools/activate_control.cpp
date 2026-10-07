@@ -18,11 +18,59 @@ bool same_file(const std::string& left, const std::string& right) {
          left_stat.st_ino == right_stat.st_ino);
 }
 
+bool parse_integer(const std::string& text, std::uint32_t maximum,
+                   std::uint32_t& result) {
+    unsigned int base = 10;
+    std::size_t start = 0;
+    if (text.size() >= 2 && text[0] == '0' &&
+        (text[1] == 'x' || text[1] == 'X')) {
+        base = 16;
+        start = 2;
+    }
+    if (start == text.size()) {
+        return false;
+    }
+    std::uint32_t value = 0;
+    for (std::size_t index = start; index < text.size(); ++index) {
+        const char c = text[index];
+        unsigned int digit;
+        if (c >= '0' && c <= '9') {
+            digit = static_cast<unsigned int>(c - '0');
+        } else if (base == 16 && c >= 'a' && c <= 'f') {
+            digit = static_cast<unsigned int>(c - 'a') + 10U;
+        } else if (base == 16 && c >= 'A' && c <= 'F') {
+            digit = static_cast<unsigned int>(c - 'A') + 10U;
+        } else {
+            return false;
+        }
+        if (digit >= base || digit > maximum || value > (maximum - digit) / base) {
+            return false;
+        }
+        value = value * base + digit;
+    }
+    result = value;
+    return true;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
+    const bool trace_d1 = argc > 1 && std::string(argv[1]) == "--d1";
+    std::uint32_t d1 = 0U;
+    if (trace_d1) {
+        if (argc != 5) {
+            std::cerr << "usage: activate_control [--d1 INPUT_D1] INPUT_RAM OUTPUT_RAM\n";
+            return 2;
+        }
+        if (!parse_integer(argv[2], 0xffffffffU, d1)) {
+            std::cerr << "INPUT_D1 must be decimal or 0x-prefixed uint32\n";
+            return 1;
+        }
+        argc -= 2;
+        argv += 2;
+    }
     if (argc != 3) {
-        std::cerr << "usage: activate_control INPUT_RAM OUTPUT_RAM\n";
+        std::cerr << "usage: activate_control [--d1 INPUT_D1] INPUT_RAM OUTPUT_RAM\n";
         return 2;
     }
     const std::string input_path(argv[1]);
@@ -45,7 +93,7 @@ int main(int argc, char** argv) {
     input.close();
     std::uint8_t status = 0;
     std::string error;
-    if (!ms5::activate_control(ram, status, error)) {
+    if (!ms5::activate_control(ram, status, error, trace_d1 ? &d1 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -60,6 +108,10 @@ int main(int argc, char** argv) {
         std::cerr << "cannot write RAM output\n";
         return 1;
     }
-    std::cout << "{\"status\":" << static_cast<unsigned int>(status) << "}\n";
+    std::cout << "{\"status\":" << static_cast<unsigned int>(status);
+    if (trace_d1) {
+        std::cout << ",\"d1\":" << d1;
+    }
+    std::cout << "}\n";
     return 0;
 }

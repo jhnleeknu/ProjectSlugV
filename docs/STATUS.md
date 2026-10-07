@@ -832,3 +832,11 @@
 - 원본322조건/27,858포트/오류14조건통과. Python73개/C++전체검사및추가롤백단위검사통과.
 - 리뷰: docs/reviews/0114-control-caller-registers.md. 분석: docs/analysis/control-caller.md.
 - 다음은9136컨트롤러본체의반환D1/D3를복원하여이번tail과연결하는것이다. 실제게임콜백본문,SR/RTE/BIOS·장치시간축/Z80및전체부팅은미완료이며목표는active다.
+
+
+## 2026-10-07 — 요청·비활성 컨트롤러 D1 연결
+
+- 요청 판정과 비활성 진입 API에 선택적 전체D1을 추가했다. 요청필터 후0에도 남는 byte변경과 pending/게이트 우회 시 보존을 반영했다. 원본D3는 불변이다.
+- 원본3,141조건, 오류25조건, 활성화→f5a 연속5조건/포트1,305개 통과. Python73개 및 C++전체 검사 통과.
+- 리뷰: docs/reviews/0115-control-activation-registers.md. 분석: docs/analysis/control-request.md.
+- 다음은 활성대기91c2와 메뉴92fc의 반환D1/D3를 복원하고 step_control 및 호출자에 연결하는 것이다. 이번 변경은 비활성경로만 포함한다. 실제게임콜백본문, SR/RTE/BIOS·장치시간축/Z80 및 전체부팅은 미완료이며 목표는active다.

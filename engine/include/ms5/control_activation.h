@@ -11,9 +11,11 @@ namespace ms5 {
 // RAM is a caller-owned 65536-byte image based at CPU 0x100000.
 // Success returns status 0 for activation or 1 for an unchanged idle state.
 // Invalid RAM size or an already active state preserves RAM and status and
-// sets error. Success clears error. CPU register state is not modeled.
+// sets error. Success clears error. Optional D1 receives the native result
+// only when request evaluation runs; errors preserve it. Native D3 is unchanged.
+// Other CPU scratch registers and flags are not modeled.
 bool activate_control(std::vector<std::uint8_t>& ram,
-                      std::uint8_t& status, std::string& error);
+                      std::uint8_t& status, std::string& error, std::uint32_t* d1 = NULL);
 
 } // namespace ms5
 

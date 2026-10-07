@@ -4,7 +4,7 @@
 namespace ms5 {
 
 bool activate_control(std::vector<std::uint8_t>& ram,
-                      std::uint8_t& status, std::string& error) {
+                      std::uint8_t& status, std::string& error, std::uint32_t* d1) {
     if (ram.size() != 65536u) {
         error = "RAM image must contain exactly 65536 bytes";
         return false;
@@ -16,7 +16,7 @@ bool activate_control(std::vector<std::uint8_t>& ram,
     std::uint8_t selected = ram[0x7df1];
     if (selected == 0 && ((ram[0xf000] & 2u) != 0 || ram[0x7def] == 0)) {
         std::uint8_t request = 0;
-        if (!read_control_request(ram, request, error)) {
+        if (!read_control_request(ram, request, error, d1)) {
             return false;
         }
         if ((request & 2u) != 0) {

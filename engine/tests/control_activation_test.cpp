@@ -68,7 +68,22 @@ int main() {
     verify(ram, 2);
     ram[0xfdb7] = 0;
     verify(ram, 0);
-    // The activation API must reject every active byte before any write.
+    // A filtered-out request still changes D1; bypasses preserve the full input.
+    for (unsigned int bypass = 0; bypass < 3; ++bypass) {
+        ram = inactive_ram();
+        ram[0xfd82] = ram[0xf002] = 1;
+        ram[0x4cb4] = 255;
+        ram[0xfdb6] = ram[0xfdb7] = 0;
+        ram[0x7def] = bypass == 2 ? 1 : 0;
+        ram[0xf000] = 0;
+        ram[0x7df1] = bypass == 1 ? 7 : 0;
+        std::uint32_t d1 = 0xabcdefffU;
+        std::uint8_t output = 0;
+        std::string message;
+        assert(ms5::activate_control(ram, output, message, &d1));
+        assert(d1 == (bypass == 0 ? 0xabcdef0aU : 0xabcdefffU));
+    }
+
     std::string error;
     std::uint8_t status = 0x42;
     for (unsigned int active = 1; active < 256; ++active) {
@@ -76,14 +91,18 @@ int main() {
         ram[0x7df0] = static_cast<std::uint8_t>(active);
         ram[0x7df1] = 7;
         const std::vector<std::uint8_t> before = ram;
-        assert(!ms5::activate_control(ram, status, error));
+        std::uint32_t d1 = 0xabcdef12U;
+        assert(!ms5::activate_control(ram, status, error, &d1));
+        assert(d1 == 0xabcdef12U);
         assert(ram == before && status == 0x42 && !error.empty());
     }
     const unsigned int sizes[] = {0, 1, 65535, 65537};
     for (unsigned int index = 0; index < 4; ++index) {
         ram.assign(sizes[index], 0x5a);
         const std::vector<std::uint8_t> before = ram;
-        assert(!ms5::activate_control(ram, status, error));
+        std::uint32_t d1 = 0xabcdef12U;
+        assert(!ms5::activate_control(ram, status, error, &d1));
+        assert(d1 == 0xabcdef12U);
         assert(ram == before && status == 0x42 && !error.empty());
     }
     std::cout << "Control activation requests, pending bytes, idle and failure preservation passed\n";

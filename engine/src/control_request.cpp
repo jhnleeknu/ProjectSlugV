@@ -17,7 +17,7 @@ std::uint8_t read_input_bits(const std::vector<std::uint8_t>& ram) {
 } // namespace
 
 bool read_control_request(const std::vector<std::uint8_t>& ram,
-                          std::uint8_t& result, std::string& error) {
+                          std::uint8_t& result, std::string& error, std::uint32_t* d1) {
     if (ram.size() != 65536u) {
         error = "RAM image must contain exactly 65536 bytes";
         return false;
@@ -38,6 +38,9 @@ bool read_control_request(const std::vector<std::uint8_t>& ram,
         }
     } else if (ram[0xf002] != 0) {
         value = read_input_bits(ram);
+    }
+    if (d1 != NULL && ram[0x12] == 2 && ram[0xfd82] != 0 && ram[0xf002] != 0) {
+        *d1 = (*d1 & 0xffffff00U) | (ram[0x4cb4] & 10U);
     }
     result = value;
     error.clear();

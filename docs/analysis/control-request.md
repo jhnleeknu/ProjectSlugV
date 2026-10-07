@@ -131,3 +131,17 @@ build/step_control INPUT_RAM MENU_MS5D PAUSE_MS5D OUTPUT_RAM OUTPUT_PORTS STYLE 
 실제 원본 hook에서919a 활성화97회,91c2 활성 분기731회,92ce 메뉴 시작97회,92fc/9302 메뉴 프레임255회,928e 종료8회,9602 area callback38회,9802 group callback18회를 확인했다. 미지원 종료 콜백의 늦은 실패2조건은 출력 파일을 보존했다. 전체 `make all test`(Python61개와 C++ 전체), API 분기 우선순위·오류 시 상태 보존과 CLI 숫자/별칭 검사가 통과했다.
 
 보고서 `artifacts/control/verification.json` SHA256: `123e0774c0313c8fc741e753f3155004aeeb381c9f8ad06adddc3c60371b550e`. 실제 호출자의 효과·카운터 연결은 `control-caller.md`의 별도 분석이며,9136 통합만으로 게임 한 프레임이나 전체 부팅의 완료를 의미하지 않는다.
+
+## 요청·비활성 진입의 D1/D3 반환
+
+`read_control_request`와 `activate_control`은 선택적 `std::uint32_t* d1` 입출력을 받는다. 기존 호출은 그대로 유효하다. 원본9086은 RAM12==2, fd82!=0, f002!=0일 때만 D1.low byte를 `RAM4cb4 & 10`으로 바꾸고 상위24비트를 보존한다. 이후 상태 필터가 요청을 모두 지워도 D1 변경은 남는다. 다른 요청 경로는 전체 D1을 보존한다.
+
+비활성9136은 pending7df1!=0이면 요청 판정을 건너뛴다. pending이0이어도 f000 bit1이0이고7def!=0이면 건너뛴다. 313c의word 저장과92a8의공통꼬리는 D1/D3를 변경하지 않는다. 따라서 이 API는 실제9086 호출에만 D1을 전달한다. 두 원본 경로 모두 D3는 그대로이며 별도 출력필드를 추가하지 않았다. 크기오류·활성상태거절은 선택적 D1도 보존한다.
+
+```
+build/read_control_request --d1 0xabcdab68 INPUT_RAM OUTPUT_MASK
+build/activate_control --d1 0xabcdab68 INPUT_RAM OUTPUT_RAM
+.venv/bin/python tools/verify_control_activation_registers.py
+```
+
+새CLI모드만 JSON `d1`을 추가하며 기존1바이트 mask 및RAM파일 형식은 유지한다. 이 변경은 활성 대기·열린메뉴의 최종 D1/D3를 아직 반환하지 않는다. 통합 `step_control`의 전체 레지스터 전달은 후속 작업이다.
