@@ -104,6 +104,20 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
+    const bool poll = argc > 1 && std::string(argv[1]) == "--poll";
+    std::uint32_t video = 0U;
+    if (poll) {
+        if (argc != 20 && argc != 21 && argc != 22) {
+            std::cerr << "usage: step_input_control --poll VIDEO followed by the ordinary arguments\n";
+            return 2;
+        }
+        if (!parse_integer(argv[2], 0xffffU, video)) {
+            std::cerr << "VIDEO must be decimal or 0x-prefixed uint16\n";
+            return 1;
+        }
+        argv += 2;
+        argc -= 2;
+    }
     if (argc != 18 && argc != 19 && argc != 20) {
         std::cerr << "usage: step_input_control INPUT_RAM STREAMS_MS5D STATUS_TABLE_MS5D MENU_MS5D PAUSE_MS5D PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS STYLE LINE ENTRY_STACK SYSTEM P1_RAW P2_RAW P1_GAME P2_GAME [FONT_MS5D [STAGES_DIRECTORY]]\n";
         return 2;
@@ -221,11 +235,15 @@ int main(int argc, char** argv) {
         !ms5::load_fixed_data_resource(resource_path, resource, error) ||
         !ms5::load_fixed_data_resource(pause_path, pause, error) ||
         !ms5::load_palette_resource(palette_path, records, error) ||
-        !ms5::step_input_control(ram, streams, table, resource, pause, records, ports, object_address,
-                               static_cast<std::uint16_t>(style),
-                               static_cast<std::uint16_t>(line),
-                              entry_stack, result, writes, error,
-                              font_pointer, context_pointer)) {
+        !(poll ? ms5::poll_input_control(ram, streams, table, resource, pause, records, ports,
+                                         static_cast<std::uint16_t>(video), object_address,
+                                         static_cast<std::uint16_t>(style),
+                                         static_cast<std::uint16_t>(line), entry_stack,
+                                         result, writes, error, font_pointer, context_pointer) :
+                  ms5::step_input_control(ram, streams, table, resource, pause, records, ports,
+                                         object_address, static_cast<std::uint16_t>(style),
+                                         static_cast<std::uint16_t>(line), entry_stack,
+                                         result, writes, error, font_pointer, context_pointer))) {
         std::cerr << error << '\n';
         return 1;
     }

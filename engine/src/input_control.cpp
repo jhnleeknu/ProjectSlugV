@@ -22,4 +22,32 @@ bool step_input_control(std::vector<std::uint8_t>& ram,
     } catch(const std::bad_alloc&) {error="cannot allocate input/controller state";return false;}
     error.clear();return true;
 }
+bool poll_input_control(std::vector<std::uint8_t>& ram,
+                        const FixedDataResource& streams,const FixedDataResource& table,
+                        const FixedDataResource& menu,const FixedDataResource& pause,
+                        const std::vector<PaletteRecord>& records,const InputPortSamples& ports,
+                        std::uint16_t video,
+                        std::uint32_t object_address,std::uint16_t initial_style,
+                        std::uint16_t initial_line,std::uint32_t entry_stack,
+                        InputFrameResult& result,std::vector<VideoPortWrite>& writes,
+                        std::string& error,const FixedDataResource* font,
+                        const StageGroupMenuContext* stage_context) {
+    try {
+        std::vector<std::uint8_t> candidate(ram);
+        bool ready=false;
+        if(!poll_frame_gate(candidate,video,ready,error)) return false;
+        InputFrameResult outcome;
+        std::vector<VideoPortWrite> pending;
+        if(ready) {
+            if(!step_input_control(candidate,streams,table,menu,pause,records,ports,
+                object_address,initial_style,initial_line,entry_stack,outcome,pending,error,
+                font,stage_context)) return false;
+        } else {
+            outcome.next_pc=0xef2U;outcome.style=initial_style;
+        }
+        ram.swap(candidate);result=outcome;writes.swap(pending);
+    } catch(const std::bad_alloc&) {error="cannot allocate gated input state";return false;}
+    error.clear();return true;
+}
+
 }

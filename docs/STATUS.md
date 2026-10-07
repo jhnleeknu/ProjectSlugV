@@ -639,3 +639,10 @@
 - f54 직전 레지스터 보정 없이 A1=b58 상태로 검증했다. D3/A6/스택 보존과 자식callback 깊이, BIOS·trap·callback 경계를 확인했다. 늦은 팔레트 오류2조건은 출력을 보존한다.
 - Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0090-input-control.md. 보고서: artifacts/input_control/verification.json.
 - 다음은ec4의 대기 신호와 video counter 취득을 입력 진입에 연결하고, 인터럽트·외부callback 의존성을 복원하는 것이다. 전체 게임 부팅과 실제 시간축은 미완료이며 목표는 active다.
+
+## 2026-10-07 — 대기 신호와 비디오 읽기 연결
+
+- `poll_frame_gate`로ef2의 unsigned 대기 조건과 조건부3c0006 word 읽기·0018 저장을 복원했다. `poll_input_control`은 준비된 경우에만 기존 입력/컨트롤러를 실행한다.
+- 모든 signal/threshold 조합과 video word 총131,072조건에서 원본과 일치했다. 대기32,640건은 비디오 읽기가 없었고 준비98,432건은 정확히1회였다.
+- C++ 전체RAM48조건, 통합14조건과 늦은 오류2조건 통과. 호스트 신호를 명시적으로 바꾸는8회 승계로 대기/준비 재진입을 확인했다. Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0091-frame-gate.md.
+- 다음은ec4의 선택적 디버그 출력과 인터럽트 신호 생산을 연결하는 것이다. 현재 호스트 신호 fixture는 실제 interrupt 구현이 아니다. BIOS·사운드·작업 복구·장치 시간축·전체 부팅은 남아 있으며 목표는 active다.
