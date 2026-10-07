@@ -57,5 +57,30 @@ int main() {
     assert(result.next_pc==91 && result.callback==92 && result.callback_context==93 &&
            result.style==94 && result.read_count==95);
     assert(writes.size()==1 && writes[0].address==123 && writes[0].size==2 && writes[0].value==456);
-    std::cout << "Main frame debug-once, wait resume and transactional failure passed\n";
+    // The full entry runs preparation once, then continues into the existing
+    // debug/input gate in the same call. Pending palette suppresses resources.
+    ram.assign(65536, 0); ram[0x17] = 1; ram[0x7ded] = 0x80;
+    state = ms5::MainFrameState();
+    state.next_pc = 0xe74; state.object_address = 0x100100;
+    state.d1 = 0x13570603; state.d3 = 0x98767000;
+    assert(ms5::step_main_frame(ram, absent, absent, absent, absent, absent,
+                               records, ports, 0xffff, 1, state, result, writes, error));
+    assert(state.next_pc == 0xef2 && result.next_pc == 0xef2 && result.read_count == 0);
+    assert(state.d1 == 0x13570000 && state.d3 == 0 && writes.size() == 8);
+    assert(writes[0].address == 0x3c0004 && writes[1].value == 0x82000000);
+    assert(ram[0x18] == 255 && (ram[0x1b] & 128) && ram[0x8d3d] == 255);
+    const std::vector<std::uint8_t> prepared_wait = ram;
+    assert(ms5::step_main_frame(ram, absent, absent, absent, absent, absent,
+                               records, ports, 0xffff, 1, state, result, writes, error));
+    assert(ram == prepared_wait && writes.empty() && state.next_pc == 0xef2);
+    // Failure in the later debug stage must roll back successful preparation.
+    ram.assign(65536, 0); ram[0xf000] = 1; ram[0x184] = 1; ram[0x7ded] = 128;
+    state = ms5::MainFrameState(); state.next_pc = 0xe74; state.object_address = 0x100100;
+    const std::vector<std::uint8_t> failed_prefix = ram;
+    writes.resize(1); writes[0].value = 999; result.next_pc = 123;
+    assert(!ms5::step_main_frame(ram, absent, absent, absent, absent, absent,
+                                records, ports, 0xffff, 1, state, result, writes, error));
+    assert(ram == failed_prefix && state.next_pc == 0xe74 && !state.sprite.waiting &&
+           state.sound.kind == 0 && writes.size() == 1 && writes[0].value == 999 && result.next_pc == 123);
+    std::cout << "Main frame preparation, debug-once, wait resume and transactional failure passed\n";
 }

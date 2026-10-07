@@ -11,8 +11,11 @@ bool step_main_frame(std::vector<std::uint8_t>& ram,
                      MainFrameState& state,InputFrameResult& result,
                      std::vector<VideoPortWrite>& writes,std::string& error,
                      const FixedDataResource* font,
-                     const StageGroupMenuContext* stage_context) {
-    if(state.next_pc!=0xec4U && state.next_pc!=0xef2U &&
+                     const StageGroupMenuContext* stage_context,
+                     const std::vector<CompositionResource>* compositions) {
+    const bool preparation = state.next_pc==0xe74U || state.next_pc==0x3aeaU ||
+                             state.next_pc==0x16bd0U;
+    if(!preparation && state.next_pc!=0xec4U && state.next_pc!=0xef2U &&
        state.next_pc!=0xf12U && state.next_pc!=0xf4cU) {
         error="main frame requires a supported resume boundary";return false;
     }
@@ -21,9 +24,21 @@ bool step_main_frame(std::vector<std::uint8_t>& ram,
         MainFrameState next=state;
         InputFrameResult outcome;
         std::vector<VideoPortWrite> pending,frame_writes;
+        if(preparation) {
+            const std::vector<CompositionResource> empty;
+            if(!prepare_main_frame(candidate,compositions != NULL ? *compositions : empty,
+                                   records,video,next,pending,error)) return false;
+            if(next.next_pc!=0xec4U) {
+                outcome.next_pc=next.next_pc;
+                outcome.style=static_cast<std::uint16_t>(next.d1);
+                ram.swap(candidate);writes.swap(pending);state=next;result=outcome;
+                error.clear();return true;
+            }
+        }
         if(next.next_pc==0xec4U) {
             if(!step_main_debug(candidate,debug,next.object_address,next.d1,
-                                pending,error,NULL,&next.d3))return false;
+                                frame_writes,error,NULL,&next.d3))return false;
+            pending.insert(pending.end(),frame_writes.begin(),frame_writes.end());
             next.next_pc=0xef2U;
         }
         const std::uint16_t style=static_cast<std::uint16_t>(next.d1);

@@ -963,3 +963,11 @@
 - `verify_sprite_prepare_registers.py`: 원본1,873경계, 470승계시퀀스, 전체 포트688,064개(VRAM681,860개), 오류42조건 통과. 실제2/3/2블록 리소스도 포함한다. sprite 반환 RAM/D1/D3→scene좌표 준비4조건/포트16개도 통과했다.
 - 보고서 SHA256 `5fc87b656fd8679312163060e7c58a0557511148f4081f7f0a574296ac77a04b`. 전체 빌드·Python73개·C++전체 검사 통과. 메인 리뷰 `docs/reviews/0130-sprite-prepare-registers.md`.
 - 다음은 sound3c08 대기·재개 및 e74→ec4 순서 연결이다. 원본 D0/기타scratch/CCR, 자연 IRQ와 물리 시간·전체 게임 복원은 남아 있으며 전체 목표는 진행 중이다.
+
+
+## 2026-10-07 — e74 메인 준비와 두 소비 대기 연결
+- `prepare_main_frame`을 추가하고 상위`step_main_frame`에 연결했다. 초기 화면 명령→sound3c08→sprite16bba→scene1ae56→palette5728→영상delta를 실행한다. sound3aea/sprite16bd0 대기는 pending을 승계하며 앞선 작업을 반복하지 않는다.
+- 실제 MS5P/MS5C를 사용하는 전용CLI와 JSON상태를 제공한다. 준비 완료는ec4이며 기존 main debug/gate/input과도 이어진다. 후속 실패는 앞선 준비의 변경까지 롤백한다.
+- `verify_main_prelude.py`: 원본182경계, 포트58,136개, 영상읽기134회, 오류33조건 통과. 10승계시퀀스와 대기 중 word명령 추가6조건, 준비→기존main연결4조건(후속읽기12회)을 확인했다. SHA256 `9356a45524c67501dfdec3da7746796895fdf83df3922473a19f4f2256e6c6a5`.
+- 전체 빌드·Python73개·C++전체 검사와 기존 main/IRQ54경계 회귀 검사 통과. 메인 리뷰 `docs/reviews/0131-main-prelude.md`.
+- 다음은 실제 IRQ 소비 서비스의 sound head/sprite cursor 진행으로 새 준비 대기를 해제하는 통합이다. 현재 해제는 호스트fixture이며 e4a초기화/자연callback·task/BIOS·물리시간/전체게임 복원은 미완료다. 전체 목표는 진행 중이다.
