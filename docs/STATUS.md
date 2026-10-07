@@ -1015,3 +1015,10 @@
 - `verify_object_allocation.py`: 원본439조건과오류50조건통과. 실제CLI승계3시퀀스중하나는원본2790과MS5I초기화RAM을비교하고freepool80→79→78을확인했다. MMIO쓰기0,원본ROM불변. 보고서SHA256 `9e6e6ad033a3683950fec1eeb40bdc66526b1b31f1c250e83b015c1c7e3abf6c`.
 - 전체빌드·Python88개·C++전체통과. 메인리뷰 `docs/reviews/0137-object-allocation.md`. 실제callback4fb64 실행과자연스케줄러는아직범위밖이다.
 - 제거경로5개진입59명령후보/22제어참조를목록화하고메인이정적분석했다. `docs/analysis/object-removal.md`. 자식이남은비활성노드의지연제거와연쇄회수를다음구현에서원본검증해야한다. BIOS전환과전체게임복원목표는계속진행중이다.
+
+
+## 2026-10-07 — 지연 제거·연쇄 회수와 화면 초기화
+- 299c/2a0a/2a84/c4cc를복원했다. 자식이남으면inactive노드를유지하고마지막자식제거후이전inactive노드를연쇄회수한다. palette/coordinate정리와live순회,전체D0D1D3/A6 및watchdog순서를연결했다. 팔레트해제optionalD1을추가했다.
+- 제거원본343조건/오류50조건,watchdog382개통과. 메인리뷰로reset전반환값이노출되는deferred150조건을추가했다. SHA256 `4422458b5cfcf56ddb232cc46c1a5f21b2a92df94f16c0eb7b49d01f33fcca3f`. 기존staticrestart506조건/오류5조건회귀도통과했다.
+- ca9e/caf0화면초기화는104조건/오류23조건,147940순서있는포트를비교했다. SHA256 `328476653aa7648ceb08c18ea78a72b77425e09dc2591ef520c38d46e9a0227a`. 실제5회35a2호출을포함하며픽셀렌더링완료를주장하지않는다.
+- 전체빌드·Python88개·C++전체통과. 메인리뷰 `docs/reviews/0138-object-removal-screen.md`. 다음은실제c610호출자에서난수→제거→화면→47570대기/재개→stage/input초기화를연결하는작업이다. 자연부팅/전체게임플레이목표는계속진행중이다.

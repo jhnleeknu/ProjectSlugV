@@ -161,18 +161,20 @@ bool acquire_palette(std::vector<std::uint8_t>& ram, std::size_t object,
 }
 
 bool release_palettes(std::vector<std::uint8_t>& ram, std::size_t object,
-                      std::string& error, std::uint32_t* d3) {
+                      std::string& error, std::uint32_t* d3, std::uint32_t* d1) {
     if (!validate_input(ram, object, error)) {
         return false;
     }
     std::vector<std::uint8_t> result(ram);
     std::uint32_t pending_d3=d3!=NULL?*d3:0U;
+    std::uint32_t pending_d1=d1!=NULL?*d1:0U;
     unsigned int count = result[object + 0x1d];
     while (count != 0) {
         --count;
         const std::uint16_t node = static_cast<std::uint16_t>(
             result[object + 0x19 + count] * 16);
         const std::uint16_t references = read_word(result, node_base + node + 8);
+        pending_d1=(pending_d1&0xffff0000U)|references;
         if (references == 0 || references == 0xffff) {
             continue;
         }
@@ -198,6 +200,7 @@ bool release_palettes(std::vector<std::uint8_t>& ram, std::size_t object,
     result[object + 0x1d] = 0;
     ram.swap(result);
     if(d3!=NULL)*d3=pending_d3;
+    if(d1!=NULL)*d1=pending_d1;
     error.clear();
     return true;
 }

@@ -18,9 +18,11 @@ bool acquire_palette(std::vector<std::uint8_t>& ram, std::size_t object,
                      bool& allocated, std::string& error);
 // Release optionally returns D3: each node moved to the free ring replaces
 // its low word with the old free tail; otherwise it is preserved. Errors
-// preserve RAM and D3 together.
+// preserve RAM and D3 together. D1 optionally receives each slot reference
+// word before subtraction, retaining its upper word; count zero preserves it.
 bool release_palettes(std::vector<std::uint8_t>& ram, std::size_t object,
-                      std::string& error, std::uint32_t* d3 = NULL);
+                      std::string& error, std::uint32_t* d3 = NULL,
+                      std::uint32_t* d1 = NULL);
 
 } // namespace ms5
 
