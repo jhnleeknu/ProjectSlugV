@@ -566,3 +566,12 @@
 - `analyze_control_caller.py`는 실제f5a 이후512조건에서 helper 호출 순서, video word/포트, 효과 저장/복구, 카운터 wrap/trap 경계와 좌표 단계byte를 확인했다. 전체RAM 비교가 아닌 관측·명시적 조건 검사임을 구분했다.
 - `make all test`: Python61개와 C++ 전체 통과. 리뷰: docs/reviews/0081-control-dispatch.md. 분석: docs/analysis/control-request.md 및 control-caller.md.
 - 다음은3d7e/3db2의 video 제어와43dbc 단계byte 갱신을 구현하고,9136의 반환값 소비·팔레트 효과 API를 f54 호출자 순서로 연결하는 것이다. ec4의 동기화·입력 수집과 실제 게임 갱신은 아직 미완료다. 전체 목표는 active다.
+
+
+## 2026-10-07 — 호출자의 비디오 제어 word 복원
+
+- 3db2 조회와3d7e 설정을 `query_video_control`/`set_video_control`로 구현했다. RAM shadow4d90/91과3c0006의word쓰기를 보존한다. 입력257 이상을 clamp하지 않고 원본 byte 저장을 따른다.
+- 모든16비트 입력65,536개, 모든shadow65,536개 경계 설정 배치와 별도 조회65,536개가 원본과 일치했다. CLI194조건에서 전체64KiB RAM/조회값/포트를 비교했다.
+- 전체 `make all test`(Python61개/C++ 전체),CLI 숫자·별칭·배치 framing 오류 검사 통과. 리뷰: docs/reviews/0082-video-control.md.
+- ec4의100016/100017 대기 및3c0006 **읽기** 경로도 명령 근거로 문서화했다. 쓰기shadow가 읽기결과를 대신한다고 가정하지 않는다.
+- 다음은43dbc의 단계byte와 호출자 카운터,기존 팔레트 효과 API를 f54/f5a 순서로 연결하는 것이다. 인터럽트·실제 입력·타이밍·전체 부팅은 미완료이며 전체 목표는 active다.

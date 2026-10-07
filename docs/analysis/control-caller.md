@@ -35,3 +35,28 @@ f5a는 object(A6)+84의 이전 상태 byte를D1로 읽고, f5e는 반환D0의 �
 실제 helper 호출 순서, 상태 byte, video shadow/포트, 효과 저장/복구와 목표/첫 tick, 카운터 비교·wrap, 단계byte를 명시적으로 검사했다. 원본mapped1MiB 불변도 확인했다. 팔레트 준비는7ded bit7의 원본 gate로 연기했다. RAM 전체 해시는 관측 기록이며 독립적인 전체RAM 모델 비교가 아니다. 모든 CPU 상태,trap handler,ec4 이후 루프,실제 입력/부팅/하드웨어 타이밍은 미검증이다.
 
 보고서 `artifacts/control_caller/analysis.json` SHA256: `33eb12994474a8dd3ea8ab035be5e35dc83bbb5c6400e1585b18471509a1d120`.
+
+
+## C++ 비디오 제어 shadow와 포트
+
+```
+build/video_control INPUT_RAM OUTPUT_RAM OUTPUT_PORTS VALUE
+.venv/bin/python tools/verify_video_control.py
+```
+
+`query_video_control`과 `set_video_control`을3db2/3d7e에 대응하여 추가했다. 조회는 RAM shadow를 읽으며 하드웨어 포트를 읽지 않는다. 설정 입력은 임의의16비트 word다. 예를 들어256을 설정하면 조회값256,257을 설정하면 조회값1,ffff를 설정하면 조회값255다. 입력을256으로 제한하거나 clamp하면 원본과 달라진다. 입력0은bit3을 설정하고 나머지 입력은bit3을 지운다. 다른low-byte bit는 보존한다.
+
+설정은3c0006에word쓰기 한 번을 출력한다. API는 새 포트 목록의 메모리를 확보한 다음 RAM 두 byte와 출력을 함께 확정한다. 잘못된 RAM 크기나 할당 실패는 RAM과 포트 목록을 보존한다. 출력 포트를 실제 하드웨어나 렌더링 호스트에 적용하는 것은 별도 계층의 역할이다.
+
+`--batch`는 대량 비교용 진단 형식이다. stdin의4바이트 record는BE16 초기shadow와BE16 설정값이며, stdout의15바이트 record는BE16 조회전/조회후/최종shadow 및9바이트 포트 기록이다. 게임 리소스 규격을 추가한 것이 아니다. 정상 CLI는 전체64KiB 입력/출력 RAM과 기존9바이트 포트 형식을 사용한다.
+
+## ec4 대기 루프의 후속 분석 경계
+
+원본ec4는10f000 bit0과object+84에 따라3a70의 진단 텍스트 출력을 거친다. ef2..efa는RAM100016 byte가100017 byte 이상이 될 때까지 unsigned 비교로 기다린다. efc는3c0006을word 읽고7비트 shift 후100을 뺀다. borrow가 있으면0으로 만든 뒤하위byte를100018에 쓴다. 이 포트의 읽기 결과를 위의 쓰기 shadow와 같은 값으로 간주하면 안 된다.
+
+f12는100016을10001a에 복사하고100016과104ca2 word를0으로 만든 뒤31d6과b68을 호출한다. 이후object+76이0이면f54의 컨트롤러로 간다. 비영이면 간접콜백·5728 실행 후100016의 비영 값을 기다리고f12로 돌아간다. 현재 이 루프의 동기화 신호를 생산하는 인터럽트와 실제 입력 수집을 연결하지 않았으므로 호스트 쪽 대기를 임의로 제거하거나 한 번의 호출을 한 프레임으로 취급하지 않는다.
+
+
+비디오 제어 검증은 모든16비트 설정 입력65,536개와, 모든shadow65,536개에 경계 설정값을 순환 적용한 배치131,072건이 통과했다. 이는 모든 입력×shadow의 Cartesian 조합을 검사했다는 뜻은 아니다. 별도 원본 조회 sweep65,536건에서 D0 전체 결과와 RAM/포트 불변을 확인했다. C++ 배치는 조회전/조회후 값, 최종shadow와 단일 포트를 비교하고, 별도 CLI194조건은 서로 다른 초기64KiB RAM 전체와 포트를 비교했다. 원본setter 입력D0의 상위word도 비영으로 두었다. setter가 반환하는 기타 레지스터/flags는 API 범위 밖이다.
+
+원본mapped1MiB 불변과 전체 `make all test`(Python61개/C++ 전체)가 통과했다. 단위 검사는 조회256,설정257/ffff의 하위byte wrap,다른RAM 보존과잘못된 크기에서 출력 보존을 포함한다. 보고서 `artifacts/video_control/verification.json` SHA256: `10f00ea2352dd0b6354521e436b79b386c58b279e14415dfdd3ec99b5989654c`.
