@@ -14,6 +14,7 @@ except ImportError:
 
 SOURCE_SHA256 = '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f'
 OPERANDS = (8, 2, 4, 4, 4, 6, 6, 4, 2, 6, 2, 6, 8, 2, 8, 2, 2, 4, 2, 4)
+NODE_POINTERS = 0x1a08e
 
 
 def command_span(program, address):
@@ -83,8 +84,15 @@ def pack(program, source, folder):
     folder.mkdir(parents=True, exist_ok=True)
     for name, data, metadata in prepared:
         (folder / name).write_bytes(data)
+    node_payload = program[NODE_POINTERS:NODE_POINTERS + 16]
+    node_data = wrap(node_payload, NODE_POINTERS)
+    (folder / 'node_pointers.ms5d').write_bytes(node_data)
     manifest = dict(schema_version=1, id='scene-scripts:stage-catalog', format='MS5D', version=1,
         source=source, references=references, scripts=[p[2] for p in prepared],
+        node_pointers=dict(id='scene-node-pointers:0001a08e', file='node_pointers.ms5d',
+            source_cpu_address=NODE_POINTERS, source_rom_offset=NODE_POINTERS, payload_size=16,
+            sha256=hashlib.sha256(node_data).hexdigest(),
+            scope='Four known long pointers used with selectors0/4/8/12. General signed-index lookup unsupported.'),
         scope='Exact contiguous syntax spans through negative-word terminator, including opaque inline bytes. '
               'Null pointers have no resource. Referenced maps, paths and other external targets are not bundled. '
               'No script execution, logical ownership or natural reachability claim.')

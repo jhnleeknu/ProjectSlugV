@@ -1126,3 +1126,12 @@
 - C++ SceneScript loader/decoder와inspect_scene_script CLI를추가했다. 명령주소/opcode/operand/inline/다음주소및원본bytes를보존하며종료뒤추가bytes와지원밖구문은오류로처리한다. 실제interpreter handler실행은아직아니다.
 - 실제41개파일의C++출력을재조합해원본전체bytes와대조했고814개원본dispatch에서목적주소/A1/D7를확인했다. Handler실행직전정지이며효과동등성검증은아니다. 부정CLI10조건통과. 보고서SHA256 `624fdd85a3d34445a37421e5df4413b0a70d84dd94f027a90715ff6f907ec560`.
 - 전체make Python131/C++98/경고0. 메인리뷰0151,분석scene-script-resources.md,빌드로그artifacts/scene_script_resources_build_test.log. 이번sol 재시도는실행되었다. 다음은handler와외부map/path리소스및일반scene초기화실행연결이며전체목표는계속미완료다.
+
+
+## 2026-10-07 — 장면 명령의 RAM·레지스터·영상 쓰기 연결
+
+- 추출한41개 MS5D script를 직접 사용하는 scene_command API/CLI에15종 handler를 연결했다. 고정 node table1a08e의16바이트도 같은 MS5D 규격으로 보존했다. A1 명령 경계는 raw source 재디코딩으로 검사하며 미지원5종은 오류로 처리한다.
+- 원본 실행 비교에서 발견한1c의 watchdog/64 VRAM long 쓰기와14의 scratch register 결과를 수정했다. 최종 API는 D0..D7/A0/A1을 승계하며 WORD·BYTE 보존폭과32비트 wrap, 노드 history/global stamp alias 순서를 반영한다.
+- 원본3385조건/부정65조건/18720순서 있는 ports/118지원명령 CLI승계 run 통과. Canonical814명령 중 지원586회(14종), 미지원228회(5종)다.15번째4c는 canonical occurrence가 없어 합성 unit 범위로 명시한다. 보고서 SHA256 `ea129b9adc8158c195cd1bd92ee4488d24aae78ca87e6327a3a0dad5ffe9e65d`.
+- 전체빌드 Python131/C++99/경고0. 메인리뷰0152와분석scene-command.md에검증·제약을기록했다. 이전 사용자 상태응답은 소스 변경 없는 상태 확인이었으며 이번에는 실제 누락수정·확장검증을 완료했다.
+- 미지원00/04/08/10/24는각39/75/41/1/72회다. 다음은 외부map/path/palette 의존성 및1a26a phase loop를 연결하는 작업이다. 현재도 직접 조작 가능한 스테이지 화면, 자연scheduler와전체게임플레이는미완료이며 전체목표는계속진행중이다.
