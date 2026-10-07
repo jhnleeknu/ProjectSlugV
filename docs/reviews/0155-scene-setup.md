@@ -1,0 +1,29 @@
+# 장면 표시 초기화 명령 리뷰
+
+Baseline `c96d141`. 이전 goal turn은palette opcode04·kind2 loader·공유코어회귀를완료한progress다. 메인이43ffc와호출helper의제어흐름·word폭·저장순서를분석하고sol에원시목록/추출·C++구현·원본관찰/비교를분담했다. 원본SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. 코드와descriptor는고정첫1MiB CPU=ROMoffset이며RAM node와PVC bank창은구분한다.
+
+## 확인한 실행 계약
+
+08의1a1c2는A0에descriptor pointer를읽고A1을저장한채43ffc를실행한뒤A1을복구한다.43f3e는ccd6 sprite queue초기화,1ad9a의bank3MiB→네node비활성slot설정→bank2MiB복구,43efa의380slot영상초기화,할당경계d496=0/d498=17c 순서다. 기존initialize_sprite_queue/configure_sprite_pool의RAM효과를재사용하며레지스터결과는별도wrapper로노출한다.
+
+Prefix는d49a=ff로상한에서할당한다. Type0이후suffix주소를모아역순처리하며d49a=0의하한할당을사용한다. Type1은요청word수의sprite pool,Type2는20hex slots와RAM node초기화를설정한다.440c8의WORD연산은unsigned비교와16비트wrap을보존한다. 원본의부족슬롯TRAP이나미지원descriptor는API오류로전체transaction을되돌리며TRAP후부분RAM효과까지에뮬레이트한다고주장하지않는다.
+
+16f9a는node26을저장한후1829a의2048long쓰기/1701a의64long쓰기/182d0의64byte초기화를수행한다. 음수slot에서는두영상clear와watchdog를건너뛰지만flagclear와RAM초기화는수행한다. Parent/후속맵tile의실행을추측해추가하지않았다.
+
+MOVEM.W의D0/D1은WORD복사가아니라32비트sign-extension이다. Suffix역순loop는D7.low의count만복원하며영상clear가바꾼high16은남는다. A0는마지막처리record의next이며강제로terminal주소로치환하지않았다. 마지막4410c/cd1c는남은범위를pool0으로설정하고A4=108d3e를반환한다.08 wrapper만scriptA1을다음명령으로복구한다.
+
+## 리소스와 리뷰 수정
+
+41canonical참조의15고유descriptor,84records를조사했다. Type1 14개,Type2 40개,Type0/3 각15개다. 원시524bytes를기존MS5Dkind1의15파일에보존했다. Firstword는signedstride,secondword는type이며skipgap도보존한다. 일반record는최소필드길이를덮는양수짝수stride의지원범위를명시했다. Type3은주소전진하지않으므로초기추출검사의불필요한odd/negative terminalword거부를리뷰에서제거했다. Raw terminalword는suffix MOVEM.W 결과에영향을주므로보존한다.
+
+Null descriptor와terminalfirstffff가만드는D0ffff0000은합성unit으로검사한다. Canonical41개는모두비영descriptor이므로이를자연실행관찰이라고주장하지않는다. 현재확정의미는장면표시용slot/queue/node설정이며실제맵tile데이터의전체해석·frame업데이트완료가아니다.
+
+## 검증
+
+원본단독관찰164조건(41명령×2RAM×2registerprofile)은RTS까지도달했고orderedMMIO1372384개를보존했다. 보고서 `artifacts/scene_setup/native_observation.json` SHA256 `f1f2d26f9b315f96929619e4d7001162de8be4f6ea44afdf349241419b06a673`. 이단계는C++비교가아니며그뒤전체scene verifier로통합비교한다.
+
+전체scene C++비교4535조건/오류104조건/순서있는ports1737175개가통과했다. Canonical814명령×4=3256조건,41script 순차814호출,기존slot/video경계455조건,별도palette재지정10호출이다. Carry는41script814호출+2palette구간10호출=43구간824호출이다.08 subset205조건에서1715480포트를비교하며전체9byte/binary일치를검사한뒤case별파일과SHA를기록해과도한JSON중복을피했다.
+
+최종보고서 `artifacts/scene_command/verification.json` SHA256 `a7941afc795daf3895485ed76c1afd493f3b3b6b3941d36c43aeaf5010522ee8`. Binary SHA256 `f20d9a1830f449b4089f8d49a89711a52f4e3c3870240a2ab8ba0253304779a6`. RAM전체·D0..D7/A0/A1/A2/A4·RTS/A7와orderedport가같고fixedROM/현재선택된bank창(overlay제외)불변을확인했다. 메인이검증코드·보고서·실행파일해시를직접검토했다.
+
+최종make는exit0/Python139/C++99/경고0이며로그는 `artifacts/scene_command_build_test.log`. 기존공유sprite코드는수정하지않았다. 지원20종중canonical에존재하는것은19종이고4c는합성unit검증이다. 모든canonical명령을처리한다고모든입력값·비정상descriptor·미사용코드의동등성이증명된것은아니다. Phase gate1a26a를호출하지않는개별명령과순차CLI승계검사이며전체시간축/scheduler/스테이지화면완료를뜻하지않는다.

@@ -1,6 +1,7 @@
 #include "ms5/scene_command.h"
 #include "ms5/scene_node.h"
 #include "ms5/main_startup.h"
+#include "ms5/scene_setup.h"
 #include <new>
 namespace ms5 {
 namespace {
@@ -17,7 +18,7 @@ void put_long(std::vector<std::uint8_t>& bytes, std::size_t at, std::uint32_t va
     put_word(bytes,at,static_cast<std::uint16_t>(value >> 16)); put_word(bytes,at + 2,static_cast<std::uint16_t>(value));
 }
 bool supported(unsigned int opcode) {
-    return opcode == 0 || opcode == 4 || opcode == 0x10 || opcode == 0x24 || opcode == 0x0c || opcode == 0x14 || opcode == 0x18 || opcode == 0x1c || opcode == 0x20 ||
+    return opcode == 0 || opcode == 4 || opcode == 8 || opcode == 0x10 || opcode == 0x24 || opcode == 0x0c || opcode == 0x14 || opcode == 0x18 || opcode == 0x1c || opcode == 0x20 ||
         opcode == 0x28 || opcode == 0x2c || opcode == 0x30 || opcode == 0x34 || opcode == 0x38 ||
         opcode == 0x3c || opcode == 0x40 || opcode == 0x44 || opcode == 0x48 || opcode == 0x4c;
 }
@@ -73,7 +74,16 @@ bool execute_scene_command(std::vector<std::uint8_t>& ram, const SceneScript& sc
         const unsigned int opcode = command->opcode;
         next.d7 = (next.d7 & 0xffff0000U) | opcode;
         next.a1 = command->source_cpu_address + 2;
-        if (opcode == 4) {
+        if (opcode == 8) {
+            next.a0 = longword(operands,0);
+            const FixedDataResource* descriptor = NULL;
+            if (next.a0 != 0 && dependencies != NULL) {
+                for (std::size_t i = 0; i < dependencies->size(); ++i) {
+                    if ((*dependencies)[i].source_cpu_address == next.a0) descriptor = &(*dependencies)[i];
+                }
+            }
+            if (!setup_scene_resources(candidate,descriptor,next,output,error)) return false;
+        } else if (opcode == 4) {
             next.d0 = (next.d0 & 0xffff0000U) | word(operands,0);
             put_word(candidate,0x10,0);
             VideoPortWrite write; write.size = 2; write.address = 0x2ffff2; write.value = 0x1000; output.push_back(write);

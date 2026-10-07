@@ -85,6 +85,35 @@ def motion_span(program, address):
 
 
 
+
+def descriptor_span(program, address):
+    """Exact contiguous prefix/suffix window including stride gaps and terminal."""
+    if address <= 0 or address & 1 or address >= min(len(program), 0x100000):
+        raise ValueError('Scene descriptor requires aligned nonzero fixed-ROM address')
+    cursor = address
+    limit = min(len(program), 0x100000, address + 65536)
+    phase = 'prefix'; visited = set(); rows = []
+    while cursor + 4 <= limit:
+        if cursor in visited:
+            raise ValueError('Scene descriptor visited loop')
+        visited.add(cursor)
+        stride, kind = struct.unpack_from('>hH',program,cursor)
+        if kind not in (0, 1, 2, 3) or (phase == 'suffix' and kind == 0):
+            raise ValueError('Unsupported scene descriptor type or suffix0')
+        minimum = 6 if kind == 1 else 8 if kind == 2 else 4
+        if cursor + minimum > limit:
+            raise ValueError('Truncated scene descriptor fields')
+        row = dict(cpu_address=cursor, rom_offset=cursor, phase=phase, type_word=kind,
+                   stride_signed=stride, minimum_field_size=minimum)
+        rows.append(row)
+        if kind == 3:
+            return cursor + 4, rows
+        if stride < minimum or stride & 1:
+            raise ValueError('Scene descriptor requires even forward stride covering fields')
+        cursor += stride
+        if kind == 0: phase = 'suffix'
+    raise ValueError('Scene descriptor lacks bounded type3 terminal')
+
 def palette_lookup_address(root, selector):
     shifted = (selector << 2) & 0xffff
     signed_offset = shifted - 65536 if shifted & 0x8000 else shifted
@@ -142,10 +171,15 @@ def pack(program, source, folder):
     motion_references = {}
     indirect_references = {}
     palette_references = {}
+    descriptor_references = {}
     for address in sorted({r['script_cpu_address'] for r in references} - {0}):
         end, commands, terminator = command_span(program, address)
         for command in commands:
             operands = bytes.fromhex(command['operand_hex'])
+            if command['opcode'] == 8:
+                pointer = struct.unpack_from('>I',operands,0)[0]
+                descriptor_references.setdefault(pointer, []).append(dict(script_cpu_address=address,
+                    command_cpu_address=command['source_cpu_address'], opcode=8, operand_pointer=pointer))
             if command['opcode'] == 4:
                 selector = struct.unpack_from('>H', operands, 0)[0]
                 palette_references.setdefault(selector, []).append(dict(script_cpu_address=address,
@@ -181,6 +215,11 @@ def pack(program, source, folder):
         dependencies.append(dependency(program, address, address + 4, 'indirect_%06x.ms5d' % address,
             'scene-indirect:%08x' % address, refs, raw_be32=struct.unpack_from('>I',program,address)[0],
             scope='Single raw indirect BE32 read; pointed target not extracted or interpreted.'))
+    for address, refs in sorted(descriptor_references.items()):
+        end, rows = descriptor_span(program, address)
+        dependencies.append(dependency(program,address,end,'descriptor_%06x.ms5d' % address,
+            'scene-setup:%08x' % address,refs,descriptor_records=rows,
+            scope='Contiguous raw prefix/suffix descriptor window with stride gaps and four-byte type3 terminal. No helper execution or natural reachability claim.'))
     root_address = struct.unpack_from('>I', program, PALETTE_ROOT)[0]
     root_refs = [ref for refs in palette_references.values() for ref in refs]
     dependencies.append(dependency(program, PALETTE_ROOT, PALETTE_ROOT + 4, 'palette_root.ms5d',
@@ -241,7 +280,8 @@ def main():
                           dependency_payload_bytes=sum(s['payload_size'] for s in result['dependencies']),
                           motion_files=sum(s['file'].startswith('motion_') for s in result['dependencies']),
                           palette_lookup_files=sum(s['file'].startswith('palette_lookup_') for s in result['dependencies']),
-                          palette_binding_files=sum(s['file'].startswith('palette_bindings_') for s in result['dependencies']))))
+                          palette_binding_files=sum(s['file'].startswith('palette_bindings_') for s in result['dependencies']),
+                          descriptor_files=sum(s['file'].startswith('descriptor_') for s in result['dependencies']))))
 
 
 if __name__ == '__main__':

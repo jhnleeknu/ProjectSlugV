@@ -1,6 +1,7 @@
 #include "ms5/scene_command.h"
 #include "ms5/main_startup.h"
 #include "ms5/palette_state.h"
+#include "ms5/scene_setup.h"
 #include <cassert>
 #include <iostream>
 namespace {
@@ -162,19 +163,45 @@ int main() {
     palette_dependencies[2].data[0] = 1;
     assert(!ms5::execute_scene_command(ram,script(4,{0}),empty,state,ports,error,&palette_dependencies));
     assert(ram == palette_ram && same(state,palette_before));
+    // Null setup resets queue/pools and clears all380 sprite columns.
+    state = initial(); state.a0 = 0; ram[0x8d3c] = 1; ram[0xd49a] = 0x55;
+    assert(ms5::setup_scene_resources(ram,NULL,state,ports,error));
+    assert(ports.size() == 2284 && state.d0 == 0 && state.d1 == 0x17c && state.d2 == 0xffff017c);
+    assert(state.a0 == 0 && state.a1 == 0x10d350 && state.a4 == 0x108d3e && ram[0x8d3c] == 1 && ram[0xd49a] == 0x55);
+    assert(get(ram,0xd496,2) == 380 && get(ram,0xd498,2) == 380 && get(ram,0x8d3e,2) == 0 && get(ram,0x8d40,2) == 380);
+    assert(ports[4].size == 4 && ports[4].value == 0x82010000 && ports[5].size == 1 && ports[5].value == 0x7b);
+    ms5::FixedDataResource descriptor; descriptor.source_cpu_address = descriptor.source_rom_offset = 0x80000;
+    const unsigned int setup_words[11] = {4,0,6,1,10,8,2,0x10,0x9156,0xffff,3};
+    for (unsigned int i = 0; i < 11; ++i) append(descriptor.data,setup_words[i]);
+    state = initial(); state.a0 = 0x80000;
+    assert(ms5::setup_scene_resources(ram,&descriptor,state,ports,error));
+    assert(ports.size() == 4398 && state.a0 == 0x8000a && state.a1 == 0x1091d0 && state.a4 == 0x108d3e);
+    assert(get(ram,0x8d3e,2) == 42 && get(ram,0x8d40,2) == 380 && get(ram,0x8d46,2) == 32 && get(ram,0x8d48,2) == 42);
+    assert(get(ram,0x917c,2) == 0 && ram[0xd49a] == 0 && state.d7 == 0x82210000);
+    ms5::FixedDataResource empty_suffix; empty_suffix.source_cpu_address = empty_suffix.source_rom_offset = 0x90000;
+    const unsigned int empty_words[4] = {4,0,0xffff,3};
+    for (unsigned int i = 0; i < 4; ++i) append(empty_suffix.data,empty_words[i]);
+    state = initial(); state.a0 = 0x90000;
+    assert(ms5::setup_scene_resources(ram,&empty_suffix,state,ports,error));
+    assert(state.d0 == 0xffff0000 && state.a0 == 0x90004 && state.d7 == 0 && ports.size() == 2284);
+    state = initial(); state.a0 = 0x80000; const ms5::SceneCommandState setup_state = state; const std::vector<std::uint8_t> setup_before = ram;
+    descriptor.data[5] = 9; // Invalid later type rolls back the entire reset prefix.
+    ports.assign(1,ms5::VideoPortWrite{123,456,2});
+    assert(!ms5::setup_scene_resources(ram,&descriptor,state,ports,error));
+    assert(ram == setup_before && same(state,setup_state) && ports[0].value == 456);
+    descriptor.data[5] = 1; put(descriptor.data,8,381,2);
+    assert(!ms5::setup_scene_resources(ram,&descriptor,state,ports,error));
+    assert(ram == setup_before && same(state,setup_state) && ports[0].value == 456);
+    state = initial();
+    assert(ms5::execute_scene_command(ram,script(8,{0,0}),empty,state,ports,error));
+    assert(state.a1 == 0x50006 && state.a0 == 0 && ports.size() == 2284);
     // Forged decoded metadata cannot redirect execution away from raw source.
     ms5::SceneScript forged = script(0x4c,{0x1234,0x5678}); forged.commands[0].opcode = 0x40; forged.commands[0].operands.clear();
     state = initial();
     assert(ms5::execute_scene_command(ram,forged,empty,state,ports,error));
     assert(get(ram,0xd434) == 0x12345678 && state.d7 == 0x4567004c);
     // Failed resource/node checks preserve every output.
-    const unsigned int unsupported[1] = {8}; const unsigned int counts[1] = {2};
     ms5::VideoPortWrite marker = {123,456,2}; ports.assign(1,marker);
-    for (unsigned int i = 0; i < 1; ++i) {
-        state = initial(); const ms5::SceneCommandState old = state; const std::vector<std::uint8_t> before = ram;
-        assert(!ms5::execute_scene_command(ram,script(unsupported[i],std::vector<unsigned int>(counts[i],0)),empty,state,ports,error));
-        assert(ram == before && same(state,old) && ports.size() == 1 && ports[0].value == 456);
-    }
     state = initial(); const ms5::SceneCommandState old = state; const std::vector<std::uint8_t> before = ram;
     assert(!ms5::execute_scene_command(ram,script(0x14,{2,0,0}),table,state,ports,error));
     assert(ram == before && same(state,old) && ports[0].value == 456);

@@ -139,11 +139,11 @@ int main(int argc, char** argv) {
             if (address64 < 0 || address64 > 0xffffffffLL) { std::cerr << "palette lookup overflow\n"; return 1; }
             if (!load_dependency(directory,resource_name("palette_lookup_",static_cast<std::uint32_t>(address64)),paths,canonical,dependencies,error) || dependencies.back().data.size() != 4) { std::cerr << error << '\n'; return 1; }
             if (!load_dependency(directory,resource_name("palette_bindings_",read_long(dependencies.back().data)),paths,canonical,dependencies,error)) { std::cerr << error << '\n'; return 1; }
-        } else if (command.opcode == 0 || command.opcode == 0x10) {
+        } else if (command.opcode == 0 || command.opcode == 8 || command.opcode == 0x10) {
             const std::size_t at = command.opcode == 0 ? 4 : 0;
             for (unsigned int j = 0; j < 4; ++j) address = (address << 8) | command.operands[at + j];
             if (command.opcode == 0x10 || address != 0) {
-                std::ostringstream name; name << (command.opcode == 0 ? "motion_" : "indirect_") << std::hex << std::setfill('0') << std::setw(6) << address << ".ms5d"; filename = name.str();
+                std::ostringstream name; name << (command.opcode == 0 ? "motion_" : command.opcode == 8 ? "descriptor_" : "indirect_") << std::hex << std::setfill('0') << std::setw(6) << address << ".ms5d"; filename = name.str();
             }
         } else if (command.opcode == 0x24) filename = "path_nodes.ms5d";
         if (!filename.empty()) {

@@ -1152,3 +1152,12 @@
 - 원본4330조건/오류99조건/19875ports/길이2이상carry42구간781호출통과. Palette상태는원본3ef2로준비하며전체자연부팅으로간주하지않는다. 최종보고서 SHA256 `308312679576dba7914c1bf16662b0443fb6136ce415346d789f700e327e4b51`.
 - 공유코어mainstartup209/32회귀는기존SHA와동일하며stageprep101/37회귀도통과했다. 전체make Python137/C++99/경고0. 메인리뷰0154,분석scene-palette-command.md,공통resource-format.md에규격·한계·검증을기록했다.
 - 다음은08의43ffc 맵/스프라이트초기화와외부데이터연결,이후1a26a실행루프다. 팔레트등록을색상전송·전체스테이지화면완료로취급하지않으며전체목표는계속미완료다.
+
+
+## 2026-10-07 — 장면 표시 초기화 명령 연결
+
+- 마지막opcode08을scene_setup API에연결했다. Sprite queue와네node초기화,bank3MiB/2MiB선택,380slot영상clear,상한prefix/하한suffix역순할당,잔여sprite pool설정을원본순서로재구성했다. MOVEM.W sign-extension과역순loop D7상위word,마지막A0를보존한다. 기존sprite RAM API는재사용하고수정하지않았다.
+- Canonical41참조의15고유descriptor524bytes를기존MS5Dkind1으로추출했다. 전체dependencies199개9000bytes이다. Type3 terminalword는주소전진에쓰이지않아odd/negative값도보존하도록초기검사제약을수정했다. 비정상record/원본TRAP조건은transactional API오류로구분한다.
+- 독립원본관찰164조건/1372384MMIO를보존했고,통합C++원본비교4535조건/오류104조건/1737175ports가통과했다. 전체814canonical명령이포함되며43carry구간824호출을검사했다.08 subset205조건1715480포트는case별binarytrace/fullbyte비교로검증했다. 최종보고서 SHA256 `a7941afc795daf3895485ed76c1afd493f3b3b6b3941d36c43aeaf5010522ee8`.
+- 전체make Python139/C++99/경고0. 메인리뷰0155,scene-setup.md,inventory/observation도구에근거·재생성·제약을저장했다. 지원20종중4c는canonical에없어합성unit만이며전체게임복원완료율로환산하지않는다.
+- 다음은1a26a phase gate와일반scene 초기화/후속frame을연결하는작업이다. 현재검증은standalone명령과순차helper승계이며원본시간축의전체script실행·실제맵tile/frame업데이트·플레이가능스테이지화면은아직미완료다.

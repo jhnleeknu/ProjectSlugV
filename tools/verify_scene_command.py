@@ -7,7 +7,7 @@ from verify_object_reset import make_cpu
 from verify_stage_catalog import SOURCE_SHA256,checked_resource
 from pack_scene_scripts import command_span
 BASE,STACK,RETURN,ENTRY=0x100000,0x1feffc,0xff000,0x1a0b6
-SUPPORTED={0x04,0x00,0x10,0x24,0x0c,0x14,0x18,0x1c,0x20,0x28,0x2c,0x30,0x34,0x38,0x3c,0x40,0x44,0x48,0x4c}
+SUPPORTED={0x08,0x04,0x00,0x10,0x24,0x0c,0x14,0x18,0x1c,0x20,0x28,0x2c,0x30,0x34,0x38,0x3c,0x40,0x44,0x48,0x4c}
 REGS=(m.UC_M68K_REG_D0,m.UC_M68K_REG_D1,m.UC_M68K_REG_D2,m.UC_M68K_REG_D3,m.UC_M68K_REG_D4,m.UC_M68K_REG_D5,m.UC_M68K_REG_D6,m.UC_M68K_REG_D7,m.UC_M68K_REG_A0,m.UC_M68K_REG_A1,m.UC_M68K_REG_A2,m.UC_M68K_REG_A4);KEYS=('d0','d1','d2','d3','d4','d5','d6','d7','a0','a1','a2','a4')
 def dependency_negatives(root,prepared,exe,node,folder):
  scripts=root/'extracted/runtime/scene_scripts';manifest=json.loads((scripts/'manifest.json').read_text())
@@ -24,9 +24,10 @@ def dependency_negatives(root,prepared,exe,node,folder):
   actual=subprocess.run(args,capture_output=True,text=True)
   assert actual.returncode and output.read_bytes()==before and portfile.read_bytes()==sentinel and inp.read_bytes()==ram,(label,actual.stdout,actual.stderr)
   results.append(dict(failure=label,opcode=op,outputs_preserved=True,native_executed=False,temporary_dependencies_only=True))
- for op in (0,4,0x10,0x24):
+ for op in (0,4,8,0x10,0x24):
   script,command=next((p,c) for p,cs,t in prepared for c in cs if c['opcode']==op)
-  if op==4:address=0x20000c
+  if op==8:address=int.from_bytes(bytes.fromhex(command['operand_hex']),'big')
+  elif op==4:address=0x20000c
   elif op==0:address=int.from_bytes(bytes.fromhex(command['operand_hex'])[4:8],'big')
   elif op==0x10:address=int.from_bytes(bytes.fromhex(command['operand_hex']),'big')
   else:address=0x1a0a6
@@ -37,7 +38,7 @@ def dependency_negatives(root,prepared,exe,node,folder):
   raw=bytearray(good);struct.pack_into('<I',raw,12,address+2);struct.pack_into('<I',raw,16,address+2);target.write_bytes(raw)
   reject(op,script,command,copied,'crc-valid-dependency-wrong-cpu-window')
   target.write_bytes(good)
-  if op in (0,4):reject(op,script,command,copied,'dependency-resource-output-same-path-alias',target)
+  if op in (0,4,8):reject(op,script,command,copied,'dependency-resource-output-same-path-alias',target)
  # Opcode04 resolves a root, selector lookup and binding table in order.
  script,command=next((p,c) for p,cs,t in prepared for c in cs if c['opcode']==4)
  selector=int.from_bytes(bytes.fromhex(command['operand_hex'])[:2],'big');shifted=(selector<<2)&65535;offset=shifted if shifted<32768 else shifted-65536
@@ -70,13 +71,15 @@ def main():
  folder=root/'artifacts/scene_command';folder.mkdir(parents=True,exist_ok=True)
  inp,out,portfile,report=[folder/n for n in ('input.bin','cpp.bin','ports.bin','verification.json')];report.unlink(missing_ok=True)
  exe=root/'build/step_scene_command';binary=hashlib.sha256(exe.read_bytes()).hexdigest()
- cpu=make_cpu(program);cpu.mem_map(0x200000,0x200000);cpu.mem_write(0x200000,program[0x200000:0x300000]);trace,paths,rows,negatives,sequences=[],[],[],[],[];current={}
+ cpu=make_cpu(program);cpu.mem_map(0x200000,0x200000);cpu.mem_write(0x200000,program[0x200000:0x300000]);trace,paths,rows,negatives,sequences=[],[],[],[],[];current={};bank={'source':0x200000}
  def code(cpu,address,size,user):
   if address==RETURN:cpu.emu_stop()
-  elif address in (0x16fee,0x17012,0x1701a,0x3d7e,0x1a086,0x8da2,0x8e7a):paths.append(address)
+  elif address in (0x16fee,0x17012,0x1701a,0x3d7e,0x1a086,0x8da2,0x8e7a,0x43f3e,0xccd6,0x1ad9a,0x43efa,0x440c8,0x16f9a,0x1829a,0x182d0,0x4410c,0xcd1c):paths.append(address)
  def write(cpu,access,address,size,value,user):
   if address in (0x3c0006,0x300001,0x3c0000,0x2ffff0,0x2ffff2):
    assert size==(4 if address==0x3c0000 else 2 if address==0x3c0006 else 2 if address in (0x2ffff0,0x2ffff2) else 1);trace.append((size,address,value&((1<<(8*size))-1)))
+   if address==0x2ffff2:
+    assert value in (0x1000,0x2000);bank['source']=0x200000 if value==0x1000 else 0x300000;cpu.mem_write(0x200000,program[bank['source']:bank['source']+0xffff0])
   else:assert BASE<=address and address+size<=BASE+65536 or STACK-4096<=address and address+size<=STACK+4,(hex(address),size,value,current)
  cpu.hook_add(UC_HOOK_CODE,code);cpu.hook_add(UC_HOOK_MEM_WRITE,write)
  def fixture(seed):
@@ -86,6 +89,7 @@ def main():
  def args(values,script,nodefile=node):return [str(exe)]+list(map(str,values))+list(map(str,(inp,out,portfile,script,nodefile,scripts)))
  def compare(ram,values,script,command,label):
   current.update(command=command,label=label,pc=values[9])
+  cpu.reg_write(m.UC_M68K_REG_A3,0);cpu.reg_write(m.UC_M68K_REG_A6,0)
   cpu.mem_write(BASE,bytes(ram));cpu.reg_write(m.UC_M68K_REG_A5,0x108000);cpu.reg_write(m.UC_M68K_REG_A7,STACK);cpu.reg_write(m.UC_M68K_REG_SR,0x2000);cpu.mem_write(STACK,RETURN.to_bytes(4,'big'))
   for reg,value in zip(REGS,values):cpu.reg_write(reg,value)
   trace.clear();paths.clear();cpu.emu_start(ENTRY,0xffffff,count=100000)
@@ -95,8 +99,12 @@ def main():
   inp.write_bytes(ram);actual=subprocess.run(args(values,script),capture_output=True,text=True);assert not actual.returncode,(label,command,actual.stderr)
   parsed=json.loads(actual.stdout);actual_ram=out.read_bytes();ports=b''.join(struct.pack('>BII',*event) for event in trace)
   if actual_ram!=expected or parsed!=result or portfile.read_bytes()!=ports:
-   diff=[(hex(at),a,b) for at,(a,b) in enumerate(zip(expected,actual_ram)) if a!=b];raise ValueError(repr((label,command,diff[:20],result,parsed,trace)))
-  rows.append(dict(profile=label,script_file=script.name,command_cpu_address=command['source_cpu_address'],opcode=command['opcode'],operand_hex=command['operand_hex'],incoming=dict(zip(KEYS,values)),result=parsed,native_calls=paths.copy(),ports=trace.copy(),ram_sha256=hashlib.sha256(expected).hexdigest()))
+   diff=[(hex(at),a,b) for at,(a,b) in enumerate(zip(expected,actual_ram)) if a!=b];raise ValueError(repr((label,command,diff[:20],result,parsed,{'port_count':len(trace),'port_prefix':trace[:16]})))
+  port_evidence={'ports':trace.copy()}
+  if command['opcode']==8:
+   name='setup-case-%04d.ports.bin'%len(rows);(folder/name).write_bytes(ports);port_evidence=dict(ports_file=name,ports_sha256=hashlib.sha256(ports).hexdigest(),ports_prefix=trace[:8],ports_count=len(trace))
+  assert bytes(cpu.mem_read(0x200000,0xffff0))==program[bank['source']:bank['source']+0xffff0]
+  rows.append(dict(profile=label,script_file=script.name,command_cpu_address=command['source_cpu_address'],opcode=command['opcode'],operand_hex=command['operand_hex'],incoming=dict(zip(KEYS,values)),result=parsed,native_calls=paths.copy(),**port_evidence,ram_sha256=hashlib.sha256(expected).hexdigest()))
   return bytearray(actual_ram),tuple(parsed[key] for key in KEYS)
  highs=((0,0,0,0,0,0,0,0,0,0,0),(0xabcd1234,0xfedcba98,0x98765432,0x87654321,0xbeefabcd,0x76543210,0x12345678,0xffff5678,0xdeadbeef,0xcafebabe,0xface1234))
  def incoming(high,pc):return high[:9]+(pc,high[9],high[10])
@@ -145,7 +153,8 @@ def main():
  for index,value in itertools.product(range(12),('-1','4294967296','0x','1x','')):
   incoming=list(values);incoming[index]=value;reject(incoming=incoming,label='invalid-register-parser')
  for pc in (0,command['source_cpu_address']+1,command['source_cpu_address']+2,0xffffffff):reject(incoming=values[:9]+(pc,values[10],values[11]),label='invalid-command-boundary')
- unsupported=next((p,c) for p,cs,t in prepared for c in cs if c['opcode'] not in SUPPORTED);reject(incoming=values[:9]+(unsupported[1]['source_cpu_address'],values[10],values[11]),selected=unsupported[0],label='unsupported-canonical-opcode')
+ # All canonical nonnegative opcodes are supported; negative terminator remains outside command execution.
+ reject(incoming=values[:9]+(prepared[0][2],values[10],values[11]),selected=prepared[0][0],label='negative-terminator-not-command')
  malformed=folder/'bad.ms5d';malformed.write_bytes(b'bad');reject(selected=malformed,label='malformed-script-resource');reject(nodefile=malformed,label='malformed-node-resource')
  raw=bytearray(script.read_bytes());raw[-1]^=1;malformed.write_bytes(raw);reject(selected=malformed,label='script-crc-error')
  raw=bytearray(script.read_bytes());offset=command['source_cpu_address']-struct.unpack_from('<I',raw,12)[0]+34;struct.pack_into('>H',raw,offset,2);struct.pack_into('<I',raw,24,zlib.crc32(raw[32:])&0xffffffff);malformed.write_bytes(raw);reject(selected=malformed,label='controlled-resource-invalid-node-selector-no-native-execution')
@@ -159,8 +168,8 @@ def main():
   negatives.append(dict(failure='input-output-'+kind+'-alias',outputs_preserved=True,native_executed=False))
  negatives.extend(dependency_negatives(root,prepared,exe,node,folder))
  observed=set(row['opcode'] for row in rows);assert observed==SUPPORTED-{0x4c},observed # canonical catalog contains no4c command.
- assert bytes(cpu.mem_read(0x200000,0xffff0))==program[0x200000:0x2ffff0]
+ assert bytes(cpu.mem_read(0x200000,0xffff0))==program[bank['source']:bank['source']+0xffff0]
  assert bytes(cpu.mem_read(0,0x100000))==program[:0x100000] and hashlib.sha256(exe.read_bytes()).hexdigest()==binary
- report.write_text(json.dumps(dict(source=source,binary_sha256=binary,node_resource_sha256=node_sha,dependencies_verified_against_canonical_rom=dependencies,script_files=len(prepared),canonical_total_commands=sum(len(cs) for p,cs,t in prepared),canonical_supported_occurrences=sum(c['opcode'] in SUPPORTED for p,cs,t in prepared for c in cs),canonical_unsupported_occurrences=sum(c['opcode'] not in SUPPORTED for p,cs,t in prepared for c in cs),canonical_unsupported_opcodes=sorted({c['opcode'] for p,cs,t in prepared for c in cs if c['opcode'] not in SUPPORTED}),cases=len(rows),negative_cases=len(negatives),ports=sum(row['result']['writes'] for row in rows),canonical_supported_opcode_counts={hex(op):sum(c['opcode']==op for p,cs,t in prepared for c in cs) for op in sorted(SUPPORTED)},unreached_canonical_opcode_4c=True,full_ram_d0_to_d7_a0_a1_a2_a4_ordered_ports_equal=True,program_code_modified=False,bank_mapping_scope="Physical200000..2fffef uses original ROM2MiB source; PVC register tail excluded from immutable check.",native_a7_rts_endpoint_verified=True,carry_sequences=sequences,results=rows,negative_results=negatives,scope='Actual canonical41MS5D scripts run original1a0b6 dispatcher at each supported opcode address throughhandlerRTS. AllfixedROM bytes unchanged. RandomworkRAM then actual3ef2 palette initialization/highregisters are explicit fixtures, not naturalstageexecution. Canonical scripts contain18of19supportedopcodes;4c hasno canonical occurrence and is not claimed verified. Adjacent supportedruns carry actualCLI RAM/fullreturnedregisters/A1/A2/A4, resettingstandalone callcontext and stoppingat unsupportedopcode or negativeterminator; no fullscript/schedulerclaim. Mutated resource invalidselector negatives are C++validationonly, neverwritteninto originalROM/nativeexecuted. Otherregisters/CCR and hardwaretiming excluded.'),indent=2)+'\n')
+ report.write_text(json.dumps(dict(source=source,binary_sha256=binary,node_resource_sha256=node_sha,dependencies_verified_against_canonical_rom=dependencies,script_files=len(prepared),canonical_total_commands=sum(len(cs) for p,cs,t in prepared),canonical_supported_occurrences=sum(c['opcode'] in SUPPORTED for p,cs,t in prepared for c in cs),canonical_unsupported_occurrences=sum(c['opcode'] not in SUPPORTED for p,cs,t in prepared for c in cs),canonical_unsupported_opcodes=sorted({c['opcode'] for p,cs,t in prepared for c in cs if c['opcode'] not in SUPPORTED}),cases=len(rows),negative_cases=len(negatives),ports=sum(row['result']['writes'] for row in rows),canonical_supported_opcode_counts={hex(op):sum(c['opcode']==op for p,cs,t in prepared for c in cs) for op in sorted(SUPPORTED)},unreached_canonical_opcode_4c=True,full_ram_d0_to_d7_a0_a1_a2_a4_ordered_ports_equal=True,program_code_modified=False,bank_mapping_scope="Physical200000..2fffef uses original ROM2MiB/3MiB source selected by PVC1000/2000; PVC register tail excluded from immutable check.",native_a7_rts_endpoint_verified=True,carry_sequences=sequences,results=rows,negative_results=negatives,scope='Actual canonical41MS5D scripts run original1a0b6 dispatcher at each supported opcode address throughhandlerRTS. AllfixedROM bytes unchanged. RandomworkRAM then actual3ef2 palette initialization/highregisters are explicit fixtures, not naturalstageexecution. Canonical scripts contain19of20supportedopcodes;4c hasno canonical occurrence and is not claimed verified. Sequential helper runs do not execute scene phase gates. Adjacent supportedruns carry actualCLI RAM/fullreturnedregisters/A1/A2/A4, resettingstandalone callcontext and stoppingat unsupportedopcode or negativeterminator; no fullscript/schedulerclaim. Mutated resource invalidselector negatives are C++validationonly, neverwritteninto originalROM/nativeexecuted. Otherregisters/CCR and hardwaretiming excluded.'),indent=2)+'\n')
  print(json.dumps(dict(cases=len(rows),negative_cases=len(negatives),ports=sum(row['result']['writes'] for row in rows),sha256=hashlib.sha256(report.read_bytes()).hexdigest())))
 if __name__=='__main__':main()

@@ -6,7 +6,7 @@ import unittest
 import zlib
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from pack_scene_scripts import command_span, motion_span, palette_lookup_address, palette_binding_span, PALETTE_BANK_START, wrap, OPERANDS
+from pack_scene_scripts import command_span, motion_span, descriptor_span, palette_lookup_address, palette_binding_span, PALETTE_BANK_START, wrap, OPERANDS
 
 
 class SceneScriptPackTests(unittest.TestCase):
@@ -127,6 +127,32 @@ class PaletteDependencyTests(unittest.TestCase):
         near_end[0x2fffec:0x2ffff0] = bytes.fromhex('00010000')
         with self.assertRaises(ValueError):
             palette_binding_span(near_end, 0x2fffec)
+
+
+class DescriptorSpanTests(unittest.TestCase):
+    def scan(self, payload):
+        return descriptor_span(bytes(2) + payload, 2)
+
+    def test_prefix_suffix_gap_and_terminal_raw_window(self):
+        payload = struct.pack('>3H',8,1,64) + b'AB' + struct.pack('>2H',6,0) + b'CD' + struct.pack('>2HI',8,2,0x109156) + struct.pack('>2H',0,3)
+        end, rows = self.scan(payload + b'following')
+        self.assertEqual(end,len(payload)+2)
+        self.assertEqual([r['phase'] for r in rows],['prefix','prefix','suffix','suffix'])
+        self.assertEqual([r['type_word'] for r in rows],[1,0,2,3])
+        self.assertEqual(wrap(payload,2)[32:],payload)
+        for terminal_word in (0, 1, 0xffff, 0x8000):
+            end, terminal_rows = self.scan(struct.pack('>2H',terminal_word,3))
+            self.assertEqual(end,6)
+            self.assertEqual(terminal_rows[0]['type_word'],3)
+
+    def test_bad_stride_type_suffix_and_truncation(self):
+        cases = [struct.pack('>3H',v,1,64) for v in (0,4,7,0xfffe)]
+        cases += [struct.pack('>2H',4,4),struct.pack('>2H',4,0)+struct.pack('>2H',4,0),
+                  struct.pack('>2H',4,2),struct.pack('>2H',4,0)]
+        for raw in cases:
+            with self.assertRaises(ValueError):self.scan(raw)
+        for address in (0,1,0x100000):
+            with self.assertRaises(ValueError):descriptor_span(bytes(16),address)
 
 
 if __name__ == '__main__':

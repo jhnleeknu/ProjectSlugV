@@ -1,5 +1,7 @@
 # Scene opcode04의 palette binding 의존성
 
+이 문서는 `c96d141`의19-handler/12-register milestone 기록이다. 아래 report hash·수치는 당시 결과이며 같은 경로는 후속검증에서 덮어쓸 수 있다. 현행20-handler의장면표시설정과최종검증은 `scene-setup.md`를참조한다.
+
 ## Source와 bank mapping
 
 Baseline은 `9c20d50`다. Canonical decrypted8MiB 프로그램 SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이다. Opcode04 handler1a192는 첫1MiB 고정 ROM의 같은 파일 offset이다. 아래 palette root·lookup·bindings는 메인이 원본에서 확인한 bank2MiB 전환 뒤 CPU200000 영역의 조회를 canonical ROM offset200000부터 대응시킨다. 이를 모든 임의 bank mapping의 검증으로 확대하지 않는다.

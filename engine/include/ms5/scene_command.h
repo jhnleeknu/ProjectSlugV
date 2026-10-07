@@ -9,10 +9,10 @@ struct SceneCommandState {
 };
 // A1 identifies an exact opcode address in the redecoded raw script source.
 // Opcode1c flag-clear additionally emits the confirmed1701a slot clear.
-// Nineteen confirmed handlers only; unsupported/terminator is API error.
+// Twenty confirmed handlers; terminator is API error.
 // Native1a0b6 dispatch through handler RTS. Node table is required only for
 // 14/18/1c. Dependencies are borrowed only during this call.
-// 00/04/10/24 consume exact fixed resource windows only when used. Errors preserve full RAM/state/ordered ports; no caller execution.
+// 00/04/08/10/24 consume exact fixed resource windows only when used. Errors preserve full RAM/state/ordered ports; no caller execution.
 bool execute_scene_command(std::vector<std::uint8_t>& ram, const SceneScript& script,
     const FixedDataResource& node_pointers, SceneCommandState& state,
     std::vector<VideoPortWrite>& ports, std::string& error,
