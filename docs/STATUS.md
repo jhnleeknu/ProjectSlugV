@@ -913,3 +913,11 @@
 - 총 950프레임 중 414프레임은 초기화된 메뉴에서 실제 CLI RAM/전체 레지스터 반환을 연속 전달했다. 재시작·BIOS 경계·닫기 후 빈 프레임도 포함한다.
 - 전체 빌드, Python 73개 및 C++ 전체 검사 통과. 메인 리뷰 `docs/reviews/0124-menu-frame-registers.md`.
 - 다음은 step_control_menu/step_control/step_control_caller와 입력·메인 루프로 레지스터를 전달하는 통합이다. A1 진입 계약과 다른 CPU 상태·타이밍/픽셀/사운드의 미복원 범위는 유지하며 전체 목표는 진행 중이다.
+
+
+## 2026-10-07 — 상위 제어기와 호출자 전체 레지스터
+- 92fc 메뉴 제어기, 9136 분기 및 f54 호출자에 전체 D1/D3를 연결했다. 메뉴의 실제 반환 스타일로 종료를 처리하고, f5a의 byte 덮어쓰기·팔레트 효과/복구까지 전달한다.
+- 선택적 CLI `--registers D1 D3`와 입력 lowword 일치/실패 트랜잭션 검사를 제공한다. 기존 기본 JSON은 유지한다.
+- `.venv/bin/python tools/verify_control_registers.py`: 원본 1,207조건, 포트 208,678개 및 오류 보존 65조건 통과. 10개 시퀀스 445호출은 실제 CLI RAM/전체 레지스터 반환을 승계한다.
+- 보고서 SHA256 `fd6a4249b3831c84cd6bd5da3e5006a7cda88a4a52c5dbff7d99f05a6b5b6431`. 전체 빌드·Python 73개·C++ 검사 통과. 메인 리뷰 `docs/reviews/0125-control-registers.md`.
+- 다음은 입력 접두부/대기 게이트/메인 콜백과 debug 경로에 전체 레지스터를 연결하는 작업이다. fixture 입력·A1 계약 및 BIOS/TRAP/루프 외부 경계는 남아 있으며 전체 게임 복원 목표는 진행 중이다.

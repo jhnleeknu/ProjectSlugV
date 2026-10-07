@@ -9,16 +9,22 @@ bool step_control(std::vector<std::uint8_t>& ram,
                   std::uint32_t entry_stack,MenuFrameResult& result,
                   std::vector<VideoPortWrite>& writes,std::string& error,
                   const FixedDataResource* font,
-                  const StageGroupMenuContext* stage_context) {
+                  const StageGroupMenuContext* stage_context,
+                         std::uint32_t* d1,std::uint32_t* d3) {
+    if ((d1 != NULL && (*d1 & 0xffffU) != initial_style) ||
+        (d3 != NULL && (*d3 & 0xffffU) != initial_line)) {
+        error="control register low words must match style and line";return false;
+    }
+
     if(ram.size()!=65536U) {error="control requires exactly 65536 RAM bytes";return false;}
     if(ram[0x7df0]==0) {
         std::uint8_t status=0;
-        if(!activate_control(ram,status,error))return false;
+        if(!activate_control(ram,status,error,d1))return false;
         MenuFrameResult outcome;outcome.status=status;outcome.line=initial_line;
         result=outcome;writes.clear();return true;
     }
     if(ram[0x7dee]==0)
-        return step_control_wait(ram,menu,pause,initial_style,initial_line,entry_stack,result,writes,error);
-    return step_control_menu(ram,menu,pause,initial_style,initial_line,entry_stack,result,writes,error,font,stage_context);
+        return step_control_wait(ram,menu,pause,initial_style,initial_line,entry_stack,result,writes,error,d1,d3);
+    return step_control_menu(ram,menu,pause,initial_style,initial_line,entry_stack,result,writes,error,font,stage_context,d1,d3);
 }
 }
