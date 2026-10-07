@@ -686,3 +686,11 @@
 - 원본1,326조건의 전체RAM/전체D0가 일치했다. 모든256개 크레딧/요청 byte와32회 승계를 포함하며7개 크기/별칭 오류에서 출력 보존을 확인했다.
 - Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0096-credit-request.md. 분석: docs/analysis/credit-request.md.
 - 다음은c8c 호출자와 요청 처리·사운드 서비스를 연결하고 렌더링/작업 복구 의존성을 복원하는 것이다. 전체IRQ 레지스터/CCR·BIOS·자연 시간축·Z80와 전체 부팅은 미완료이며 목표는 active다.
+
+
+## 2026-10-07 — 인터럽트 열 위치 제어와 네 구조체 호출자
+
+- `refresh_column_controls`와 `refresh_scene_columns`로187d8/1adf8을 복원했다.32개 열의 위치/보정, 요청bit 제거, 주소·좌표word 순환과 네 구조체/PVC 쓰기 순서를 보존한다.
+- 원본1,441조건의 전체RAM/D0와78,272개 포트 기록이 일치했다.전체256flags·각축512유효좌표·16활성 조합과11개 오류/별칭 보존 검사를 통과했다.
+- Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0097-column-control.md. 분석: docs/analysis/column-control.md.
+- 다음은c8c에 기존팔레트·열제어·일반스프라이트·사운드를 연결하기 위한 레지스터 전달과 작업 복구를 복원하는 것이다. 전체IRQ·상위맵자료·장치시간축·Z80와 전체 부팅은 미완료이며 목표는 active다.
