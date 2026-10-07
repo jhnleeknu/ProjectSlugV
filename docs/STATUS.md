@@ -1177,3 +1177,12 @@
 - 원본12,170조건/오류69조건/MMIO0통과. Strict주소5,466(canonical경계5,168+74양방향CLIcarry290+null8),RAMrelocation합성6,704(36type6,480+N-only경계224)이다. 전체RAM/12register/RTS/A7/ROM불변을비교했고미복귀0이다. 합성은원본RAM경로106000과C++fixed60000간A1/d3b4만정규화하며실제게임데이터와구분한다.
 - 보고서 SHA256 `a9926535334bf76d820277ac25b3da2448e8346599d11f372c4f7fa8755522a9`. 전체make Python139/C++101/경고0. 메인리뷰0157,scene-motion-evaluation.md,inventory/disassembly/dispatch재생성도구에근거와제약을저장했다.
 - 다음은1a7a8 node갱신과일반1a5a4의동일호출연결이다. 기존nullscript초기화만으로일반진입을대체하지않는다. 자연frame/IRQ시간축·직접조작가능한스테이지화면·전체게임복원은미완료다.
+
+
+## 2026-10-07 — 카메라·네 노드 좌표 갱신 연결
+
+- SceneNodeState를D0..D7/A0/A1/A2/A4로확장하고기존5registerCLI를유지했다. 곱셈/ASR/분수carry scratch와부모좌표·history/globalstamp alias의읽기순서를원본대로반환한다. 기존position_state RAM-only코어는수정하지않았다.
+- 1a7a8부터1a8ca직전까지카메라와네노드의좌표prefix를연결했다. LIVE mask로축별scale을선택하고worldY상위word에scroll을적용한다. 1afda및네19e64 tail은포함하지않으며전체1a7a8완료로취급하지않는다.
+- 신규원본5248조건(leaf1132/prefix4116)/오류135/MMIO0/CLIcarry20호출통과. Prefix는1a8ca직전A7초기값,leaf는RTS후A7+4를검사하며호출내contextreset은없다. 보고서SHA256 `f903e4444ad1f690bc8a4ae0aa016e20418479fa34ec5cc634189dbd6fd8bf0a`.
+- 기존node1904/94회귀는동일SHA c900dfc01d94c31633856b8ffae34478ce9ad281366b9322e23ccebd85a0c1c6이며scene command4535/104/1737175ports도통과했다(최신reportSHA256 `1a08295adfc94be432f14a46b013a760808ef0706679220b0f6355cb0d1b1019`). 전체make Python139/C++102/경고0. 메인리뷰0158과scene-coordinates.md에범위·검증·재생성을기록했다.
+- 다음은미연결1afda와19e64 path/display처리및추가리소스다. 일반1a5a4와47a94이후전체진입·자연시간축·실제스테이지화면및전체게임복원은미완료다.
