@@ -661,3 +661,12 @@
 - 원본523조건의 전체RAM/pending이 일치했다. 모든 command/tail,260회 대기와 실제 소비자를 끼운 두 문맥 보존 시퀀스,16개 오류/별칭 검사를 통과했다.
 - Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0093-sound-byte.md. 분석: docs/analysis/sound-byte.md.
 - 다음은48156/3af8의 word 명령 생산과3c08 배출을 연결하는 것이다. 자연적인 대기 재개 스케줄링, 전체 interrupt·Z80·오디오 시간축과 게임 부팅은 미완료이며 전체 목표는 active다.
+
+
+## 2026-10-07 — 상위 사운드 명령 큐와 배출 복원
+
+- `enqueue_sound_word`, `drain_sound_words`, `resume_sound_word`로3af8/3c08을 복원했다. 필터와 한 슬롯 중복 교환, overflow의 선행 head 갱신, 배출의 지연 head 저장과 상·하위 byte 대기를 보존한다.
+- 원본2,241조건의 전체RAM/pending이 일치했다. 필터2,048조합, 실제 CPU 문맥 재개22회와25개 실패/별칭 보존 검사를 통과했다. 메인 리뷰에서 필터에 걸려 큐를 검증하지 못하던 fixture를 수정하고 실제 경로 도달 assertion을 추가했다.
+- 별도48156 원본65,536조건에서 signed 타이머, 명령과 전체D0/전체RAM/분기 경계를 확인했다. 생산자는 첫 명령 전에 중단했으며 C++ 타이머 검증은 아니다.
+- Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0094-sound-word.md. 분석: docs/analysis/sound-word.md 및 sound-timer.md.
+- 다음은48156 타이머를 상위 생산자에 연결하고3cac의 생산→소비 및 대기 재개를 구성하는 것이다. 전체 interrupt·자연 스케줄링·Z80·오디오 시간축과 전체 부팅은 미완료이며 목표는 active다.
