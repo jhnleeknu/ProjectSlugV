@@ -760,3 +760,11 @@
 - 정적 슬롯 조사와 메인 원본 확인에서3dce가100006/10000a에3dcc RTS를 설정한다. 초기화 호출 후보를 기록했으며 자연 도달성은 별도다.
 - 입력mslug5.zip의13항목은게임P/C/M/V이며 BIOS가 없다. BIOS 내부 실행 검증은 미완료이나 다른 게임 코드 작업은 계속 가능하다.
 - 다음은c42/3dce 초기화 및 기본 콜백 연결, IRQ/메인 루프의 경계 연결이다. RTE·SR/CCR·BIOS·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는 active다.
+
+
+## 2026-10-07 — 인터럽트 초기화와 기본 콜백에서 첫 서비스까지
+
+- `initialize_interrupt_state`와 `initialize_irq_callbacks`로 c42/3dce를 복원하고 `return_default_irq_callback`으로3dcc의 실제 스택 반환을 연결했다. 기존 작업 프레임과 RAM18 등 초기화 대상 밖의 bytes는 보존한다.
+- 초기화640조건, envelope/콜백35조건, 초기화→20c→실제3dcc→23c의JSR c8c→242 연결16조건 및 오류/별칭13조건 통과. Python73개 및 C++ 전체 검사 통과.
+- 검증 도구의 캐시된 실행이 중단 경계를 넘는 문제를 code hook 중단으로 수정했다. 원본 ROM은 변경하지 않았다. 리뷰: docs/reviews/0106-interrupt-init.md. 분석: docs/analysis/interrupt-init.md.
+- 다음은 IRQ 서비스의 메인 루프 입력/프레임 대기 연결 및 남은 raster IRQ29c/비디오 제어 경계다. BIOS/RTE/SR/CCR·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는 active다.

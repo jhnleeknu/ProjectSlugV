@@ -80,4 +80,17 @@ bool finish_irq_envelope(std::vector<std::uint8_t>& ram,
     restored.a[7]=sp+64U;next.next_pc=0x29a;
     ram.swap(next_ram);stack.swap(next_stack);registers=restored;result=next;ports.swap(hardware);error.clear();return true;
 }
+bool return_default_irq_callback(const std::vector<std::uint8_t>& stack,
+                                 std::uint32_t stack_base,InterruptRegisters& registers,
+                                 IrqEnvelopeResult& result,
+                                 std::vector<VideoPortWrite>& ports,std::string& error) {
+    const std::uint32_t sp=registers.a[7];
+    if(sp<0x110000U || sp>0xfffffaU || (sp&1U)!=0 ||
+       !valid_span(stack,stack_base,sp,sp+4U)) {
+        error="default IRQ callback requires an external return long";return false;
+    }
+    IrqEnvelopeResult next;next.next_pc=read(stack,sp-stack_base,4);
+    registers.a[7]+=4U;result=next;ports.clear();error.clear();return true;
+}
+
 }

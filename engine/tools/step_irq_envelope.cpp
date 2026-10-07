@@ -121,8 +121,9 @@ int main(int argc, char** argv) {
     const std::string mode = argc > 1 ? argv[1] : "";
     const bool begin = mode == "begin";
     const bool finish = mode == "finish";
-    if ((!begin && !finish) || (begin && argc != 10) || (finish && argc != 11)) {
-        std::cerr << "usage: step_irq_envelope begin INPUT_RAM INPUT_STACK INPUT_REGS OUTPUT_RAM OUTPUT_STACK OUTPUT_REGS OUTPUT_PORTS STACK_BASE\n"
+    const bool callback = mode == "callback";
+    if ((!begin && !finish && !callback) || ((begin || callback) && argc != 10) || (finish && argc != 11)) {
+        std::cerr << "usage: step_irq_envelope begin|callback INPUT_RAM INPUT_STACK INPUT_REGS OUTPUT_RAM OUTPUT_STACK OUTPUT_REGS OUTPUT_PORTS STACK_BASE\n"
                   << "       step_irq_envelope finish INPUT_RAM INPUT_STACK INPUT_REGS OUTPUT_RAM OUTPUT_STACK OUTPUT_REGS OUTPUT_PORTS STACK_BASE VIDEO_STATUS\n";
         return 2;
     }
@@ -188,6 +189,7 @@ int main(int argc, char** argv) {
     std::string error;
     const bool succeeded = begin ?
         ms5::begin_irq_envelope(ram, stack, stack_base, registers, result, writes, error) :
+        callback ? ms5::return_default_irq_callback(stack, stack_base, registers, result, writes, error) :
         ms5::finish_irq_envelope(ram, stack, stack_base, registers,
                                  static_cast<std::uint16_t>(video_status), result, writes, error);
     if (!succeeded) {

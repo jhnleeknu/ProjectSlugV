@@ -27,5 +27,13 @@ bool finish_irq_envelope(std::vector<std::uint8_t>& ram,
                          InterruptRegisters& registers,std::uint16_t video_status,
                          IrqEnvelopeResult& result,std::vector<VideoPortWrite>& ports,
                          std::string& error);
+// Native3dcc default callback RTS. Consume the return long from the explicit
+// stack, preserve all other registers and memory, and emit no MMIO. This is
+// only the known default callback, not an implementation of arbitrary targets.
+bool return_default_irq_callback(const std::vector<std::uint8_t>& stack,
+                                 std::uint32_t stack_base,InterruptRegisters& registers,
+                                 IrqEnvelopeResult& result,
+                                 std::vector<VideoPortWrite>& ports,std::string& error);
+
 }
 #endif

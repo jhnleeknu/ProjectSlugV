@@ -16,13 +16,15 @@ int main() {
     assert(ms5::begin_irq_envelope(ram,stack,1,regs,result,ports,error));
     assert(result.bios_handoff && result.next_pc==0xc00438 && result.stack_writes.empty());
     assert(regs.a[5]==original.a[5] && ports.size()==1 && ports[0].value==6);
-    ram[0xfd80]=0x80;put(ram,6,4,0x3456);put(ram,0x10,2,0xffff);put(ram,0x4d8e,2,0x4567);
+    ram[0xfd80]=0x80;put(ram,6,4,0x3dcc);put(ram,0x10,2,0xffff);put(ram,0x4d8e,2,0x4567);
     assert(ms5::begin_irq_envelope(ram,stack,0x110000,regs,result,ports,error));
-    assert(!result.bios_handoff && result.next_pc==0x3456 && result.stack_writes.size()==18);
-    assert(regs.a[0]==0x3456 && regs.a[5]==0x108000 && regs.a[7]==0x11003c);
+    assert(!result.bios_handoff && result.next_pc==0x3dcc && result.stack_writes.size()==18);
+    assert(regs.a[0]==0x3dcc && regs.a[5]==0x108000 && regs.a[7]==0x11003c);
     assert(result.stack_writes[0].value==original.a[6] && result.stack_writes[17].value==0x23c);
-    // Host callback and BIOS have returned: their scratch registers differ.
-    regs.a[7]+=4;regs.a[5]=0;regs.d[0]=0xaabbccdd;regs.d[7]=0x11223344;
+    // Execute the default callback, then supply explicit host BIOS scratch state.
+    assert(ms5::return_default_irq_callback(stack,0x110000,regs,result,ports,error));
+    assert(result.next_pc==0x23c && result.stack_writes.empty() && ports.empty());
+    regs.a[5]=0;regs.d[0]=0xaabbccdd;regs.d[7]=0x11223344;
     assert(ms5::finish_irq_envelope(ram,stack,0x110000,regs,8,result,ports,error));
     assert(result.next_pc==0x29a && !result.bios_handoff && result.stack_writes.size()==2);
     assert(result.stack_writes[0].address==0x110040 && result.stack_writes[0].value==0x3344);
@@ -34,5 +36,8 @@ int main() {
     assert(ram==before_ram && stack==before_stack && result.next_pc==0x29a && ports.size()==4);
     assert(!ms5::begin_irq_envelope(ram,ram,0x110000,regs,result,ports,error));
     assert(ram==before_ram && result.next_pc==0x29a);
+    regs.a[7]=0x110080;
+    assert(!ms5::return_default_irq_callback(stack,0x110000,regs,result,ports,error));
+    assert(regs.a[7]==0x110080 && result.next_pc==0x29a && ports.size()==4);
     std::cout<<"IRQ envelope saved frame, explicit stack writes and rollback passed\n";
 }
