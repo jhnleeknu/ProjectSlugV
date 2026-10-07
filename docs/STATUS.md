@@ -751,3 +751,12 @@
 - 메인 리뷰에서 검증 CLI 인자와 전체 dirty fixture 도달성을 수정하고 예상 밖 장치 쓰기 및 작업→사운드 대기 경로를 보강했다. 리뷰: docs/reviews/0104-interrupt-service.md. 분석: docs/analysis/interrupt-service.md.
 - 고정 첫1MiB에서 c64 직접 JSR/BSR 후보가 발견되지 않았다. 간접/뱅크 코드와 자연 사용 여부는 미확인이며 큐의 기능 검증과 구분한다.
 - 다음은20c IRQ의 외부 callback/BIOS 경계와 bank·VRAM 복구, 초기화 c42 및 메인 루프와의 연결이다. 전체 IRQ·작업 본문·SR/CCR·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는 active다.
+
+
+## 2026-10-07 — IRQ 외부 스택 저장과 복구
+
+- `begin_irq_envelope`와 `finish_irq_envelope`로20c 진입→callback/BIOS 경계,248→RTE 직전 경계를 복원했다. 실제 스택 bytes 및 쓰기 순서, bank/VRAM/비디오 상태와15개 저장 레지스터를 다룬다.
+- 원본1,342조건·오류/별칭20조건에서 전체 RAM/스택/16레지스터/포트가 일치했다.16개 진입/종료 쌍을 포함한다. Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0105-irq-envelope.md.
+- 정적 슬롯 조사와 메인 원본 확인에서3dce가100006/10000a에3dcc RTS를 설정한다. 초기화 호출 후보를 기록했으며 자연 도달성은 별도다.
+- 입력mslug5.zip의13항목은게임P/C/M/V이며 BIOS가 없다. BIOS 내부 실행 검증은 미완료이나 다른 게임 코드 작업은 계속 가능하다.
+- 다음은c42/3dce 초기화 및 기본 콜백 연결, IRQ/메인 루프의 경계 연결이다. RTE·SR/CCR·BIOS·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는 active다.

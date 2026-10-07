@@ -1,0 +1,31 @@
+#ifndef MS5_IRQ_ENVELOPE_H
+#define MS5_IRQ_ENVELOPE_H
+#include "ms5/interrupt_task.h"
+namespace ms5 {
+struct IrqEnvelopeResult {
+    std::uint32_t next_pc;
+    bool bios_handoff;
+    std::vector<VideoPortWrite> stack_writes;
+    IrqEnvelopeResult() : next_pc(0),bios_handoff(false) {}
+};
+// Native20c to callback entry or BIOS c00438. No callback/BIOS execution.
+// Stack is an explicit external memory span: aligned base>=110000, even size,
+// ending at or below1000000. Active entry needs bytes[A7-68,A7) and A7<=fffffe.
+// BIOS branch does not access or validate the unused stack span.
+// MMIO and chronological stack writes are separate; stack bytes are updated.
+// Failure preserves RAM/stack/registers/result/ports; SR/CCR is not represented.
+bool begin_irq_envelope(std::vector<std::uint8_t>& ram,
+                        std::vector<std::uint8_t>& stack,std::uint32_t stack_base,
+                        InterruptRegisters& registers,IrqEnvelopeResult& result,
+                        std::vector<VideoPortWrite>& ports,std::string& error);
+// Native248 after BIOS call returns, stopping at29a BEFORE RTE.
+// Stack[A7,A7+64) supplies saved bank, VRAM address and15 saved registers.
+// Temporary MOVEM.W uses bytes[A7-2,A7+2); caller mutations of saved state are
+// observed. Final A7=A7+64<=fffffe. video_status is the word read at3c0006.
+bool finish_irq_envelope(std::vector<std::uint8_t>& ram,
+                         std::vector<std::uint8_t>& stack,std::uint32_t stack_base,
+                         InterruptRegisters& registers,std::uint16_t video_status,
+                         IrqEnvelopeResult& result,std::vector<VideoPortWrite>& ports,
+                         std::string& error);
+}
+#endif
