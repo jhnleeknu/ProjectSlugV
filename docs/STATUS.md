@@ -1056,3 +1056,12 @@
 - `verify_scene_initialization.py`: 원본576조건(debug524/initializer52), 오류 보존24조건, 순서 있는 포트672744개 및 실제 CLI 승계7시퀀스 통과. 전체 RAM/D0/D1/D3가 일치했고256 index×4 upper flag의1024조합을 실제 lookup에서 관측했다. MMIO read0·원본 코드 변경0이며 시작/종료 binary hash가 동일하다. 보고서 SHA256 `451015b835b3a4e741bddf61b43e21cf5c8d72d1d4dc30ff4c4c5107f7554bb4`.
 - 전체 `make -j3 all test` exit0: Python95검사·C++88 test executable, warning/error0. 로그 `artifacts/scene_initialization_build_test.log`, 메인 리뷰 `docs/reviews/0142-scene-initialization.md`, 상세 `docs/analysis/scene-initialization.md`. 이전 원본1a5a4 probe16조건과 이번 C++ 동등성576조건을 구분한다.
 - 다음은477ee stage catalog 연결과3d58의 two-byte queue 대기/재개다.4814e의d68c.word=1,3d58의0a 전송→원래D0.byte 복구·ADD.B20/SCS.B/OR.W→두 번째3ac8 호출을 메인이 확인했으며 wrapper 구현은 아직 남아 있다. 일반 nonzero script·전체477e4·자연 scheduler/물리 timing·전체 스테이지 게임플레이와 복원 목표는 계속 진행 중이다.
+
+## 2026-10-07 — 스테이지 진입과 두 바이트 사운드 연결
+- sound pair3d58/3d64를 C++11로 복원했다. carry 입력의 suffixff와 두 대기의 캡처된 queue 상태를 보존한다. 원본2180/오류67조건,40승계시퀀스 통과. 이 중8시퀀스는 실제c8c IRQ28회로 해제했다.
+- stage entry477e4/477ee부터 catalog 선택·flag 갱신·sound 대기/재개·ca9e 화면 초기화·LIVE 레코드 재조회 및 여섯 분기 목적지까지 연결했다. 분기 본문은 아직 실행하지 않는다.
+- 원본19그룹59레코드를 모두 검증했다. 7빈그룹의 원본 반복은 API bounded 오류로 구분한다. canonical selector는0/4/c/14이고8/10은 독립 분기 매핑 검증이다.
+- stage 원본526/오류81조건,401942 ordered ports,8실제CLI 승계 통과. 이 stage 승계의 queue 해제는 host 입력이다. 보고서 artifacts/stage_initialization/verification.json, SHA256 6ba246a33c26b91b841443ed3f26a023eb5abd150dd4f16e2b7626d775bd31fa.
+- 전체 make -j3 all test: Python95/C++90 통과, 경고0. 문서 docs/analysis/sound-pair.md 및 stage-entry.md, 메인 리뷰 docs/reviews/0143-stage-entry.md.
+- 다음 구간478c4..47b00 목록화 완료:134행/35직접호출/23대상. 마지막 잘린 명령은 미완료로 보존했다. 다음은 팔레트 효과·대기 callback·오브젝트 할당 분기와 이후 스테이지 본문 연결이다.
+- 전체 리소스/게임플레이 복원 목표는 진행 중이다. 전체 진행률25~30%는 범위 기반 추정이며 측정된 코드 커버리지가 아니다.
