@@ -1161,3 +1161,11 @@
 - 독립원본관찰164조건/1372384MMIO를보존했고,통합C++원본비교4535조건/오류104조건/1737175ports가통과했다. 전체814canonical명령이포함되며43carry구간824호출을검사했다.08 subset205조건1715480포트는case별binarytrace/fullbyte비교로검증했다. 최종보고서 SHA256 `a7941afc795daf3895485ed76c1afd493f3b3b6b3941d36c43aeaf5010522ee8`.
 - 전체make Python139/C++99/경고0. 메인리뷰0155,scene-setup.md,inventory/observation도구에근거·재생성·제약을저장했다. 지원20종중4c는canonical에없어합성unit만이며전체게임복원완료율로환산하지않는다.
 - 다음은1a26a phase gate와일반scene 초기화/후속frame을연결하는작업이다. 현재검증은standalone명령과순차helper승계이며원본시간축의전체script실행·실제맵tile/frame업데이트·플레이가능스테이지화면은아직미완료다.
+
+
+## 2026-10-07 — 장면 스크립트 조건부 실행 루프 통합
+
+- 원본1a26a의 A1 최초 load, LIVE unsigned phase gate,20종 handler 반복, cursor publication과 음수 종료를 C++ run_scene_script API/CLI로 연결했다. 종료 후 cursor를 유지하며 다음 호출도 phase 조건을 다시 적용한다. Raw MS5D를 직접 소비하고 호출 전체 RAM/12register/result/ports를 transaction으로 처리한다.
+- 원본2211조건/오류70조건/7657120 orderedports/26170 handler 실행 비교 통과. 41script의 phase/threshold/register 조합1230, 모든814 command cursor 시작, 실제 CLI carry164, 별도 null/wait/terminal3을 포함한다. 호출 내부 context reset은 없으며 호출간 phase 변경은 명시 host fixture다.
+- Preload 오류를 late API 오류로 잘못 표시한 검증 설명을 수정하고 실제 선행48 이후08 descriptor identity 오류를 추가 검사했다. 최종 report SHA256 `e9cc49c1c4fead4cdb7454f9af6adac3cf9d9c3ff3205b1fcf8936430acc5113`. 전체 make Python139/C++100/경고0. 메인 리뷰0156과 scene-script-run.md에 계약·검증·재현 방법을 기록했다.
+- CLI는 초기 gate 통과시 전체 script dependencies를 미리 로드한다. API의 실행시 접근과 구분한다. 현재도 자연 frame/IRQ 시간축과 일반1a5a4·후속 장면 갱신·직접 조작 가능한 스테이지 화면은 미완료다. 다음은 motion 경로 이동/평가와 일반 scene 초기화를 연결하는 작업이다.

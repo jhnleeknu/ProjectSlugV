@@ -1,0 +1,61 @@
+# Scene script phase gate와 단일 호출 실행
+
+## 원본과 milestone 범위
+
+Baseline은 `a6b4158`이며 canonical decrypted 프로그램 SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. 원본1a26a..1a29c는first1MiB 고정CPU주소이며같은파일offset이다. 여기서는terminalRTS1a29c의2바이트를포함한 `[1a26a,1a29e)`를직접bounded decode했다. RAM주소는별도CPU주소다. 주소·상수는16진수,개수는10진수다.
+
+앞선단일20handler 검증은phasegate를실행하지않고command별standalone호출을검사했다. 이번범위는원본1a26a의cursorload·unsignedgate·handler뒤publish·동일호출반복이다. Frameclock이나자연scheduler를자동진행하는milestone은아니다. ROM/추출게임데이터는Git에추가하지않는다.
+
+## 직접 확인한 명령 순서
+
+1a26a의MOVEA.L은RAM10d412의long을A1에한번만읽는다. Null이면1a276RTS로즉시반환한다. 비영이면1a278에서LIVE RAMd418.word를D0.lowword로읽고D0상위16비트를보존한다.1a27c CMP.W d416과1a280 BCS는unsigned phase<threshold일때1a29cRTS로반환한다.
+
+Gate를통과한뒤1a284TST.W(A1),1a286BPL이opcode를검사한다. 음수word면1a28a가RAMd416.word=ffff를저장하고1a290RTS로반환한다. 이경로는A1과RAMd412를다음으로전진시키지않는다. Terminalstatus는영구disable이아니다. 이후호출에서phaseffff가thresholdffff를통과하면같은음수word를다시검사할수있다. Phase가그보다작으면먼저gate에서waiting반환한다.
+
+비음수opcode는1a292 BSR1a0b6로기존handler를실행한다. 복귀한A1next를1a296 MOVE.L로RAMd412에publish한뒤1a29a BRA로다시LIVE d418/d416을읽는다. Handler가threshold나phase를바꿀수있으므로loop초기의한값을cache하지않는다. A1은호출초기에한번읽고handler의nextcursor를계속사용하며loop마다RAMd412를다시읽지않는다.
+
+## Resource와 cursor 경계
+
+기존rawMS5D `SceneScript.source`와typeddecoder를사용한다. Script에없는cursor·operand안주소·truncatedresource·unknownopcode는원본의임의memory접근을지원입력으로일반화하지않는다. Opcode2c의inlinebytes는opaque로보존하며그skip뒤nextopcodecursor로전진한다. Inline내용을추가opcode로실행하지않는다.
+
+기존20handler는RAM/fullD0..D7/A0/A1/A2/A4와orderedports를연결한다. 실제core의호출전체RAM/register/ports transaction과looperror경계는아래API·검증에기록한다. Host가frameclock을자동증가시키지않으며phase변경은실제handlereffect또는명시host입력으로구분한다.
+
+## 실행 API
+
+`scene_script_run.h/.cpp`의 `run_scene_script(ram,script,node_pointers,state,result,ports,error,dependencies=NULL)`는기존full12-register `SceneCommandState`와borrowed optionaldependencyvector를사용한다. `SceneScriptRunResult`는reason과commands_executed를반환한다. Reason은 `NoScript=0/Waiting=1/Terminator=2`다. Commandcount는이번호출에서성공한handler수이며이전호출과누적하지않는다.
+
+Nullcursor는A1=0을반환하고D0를보존한다. Initialwaiting은D0.lowword에LIVEphase를남기고A1=RAMd412를반환한다. 이두API경로는script/node/dependencies를검사하지않는다. Gate를통과하면script.source를다시typeddecode하고현재A1은정확한command주소또는negative terminator주소여야한다. Operand내부·script범위밖cursor는error다. 동일호출중성공handler수는decodedcommand수이하로제한한다. 이bound는원본전체scheduler의시간제약이아니라잘못된입력의비종료방지정책이다.
+
+각command의12register/RAM/port효과를승계하고portsequence를aggregate한다. 성공handler마다A1을RAMd412에publish하고gate를LIVE다시읽는다. Terminal은d416ffff를저장하며cursor는terminal주소다. 다음호출의waiting/terminal결과는LIVEphase로결정하며Terminator를영구disabledflag로저장하지않는다.
+
+전체호출은candidateRAM/state/result/aggregateports에서진행하고성공시교체한다. 앞선handler여러개가완료됐어도뒤의resource·cursor·handler오류는이번호출전체를취소한다. 이전성공호출의결과까지rollback하는것은아니다. API는frameclock을증가시키지않으며hostphase변경은명시적인외부입력이다.
+
+## CLI
+
+```text
+build/run_scene_script D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS SCRIPT_MS5D NODE_POINTERS_MS5D DEPENDENCIES_DIR
+```
+
+JSON은full12register와 `reason` 문자열 `no_script/waiting/terminator`, `commands`, `writes`를반환한다. InputA1은원본처럼RAMd412의초기load로덮어쓴다. RAM과9byteorderedport파일을저장한다. Unsignedparser·exactRAM·각input/output/resource와로드한dependency의canonicalpath/inodealias검사를유지한다.
+
+CLI는API와달리script/node파일을항상로드한다. 초기cursor비영이고phase>=threshold이면typedscript내모든command의필요dependency를먼저로드한다. 현재cursor앞·뒤의미도달command도이preload조건에포함된다. 따라서CLI의추가file검사조건을원본의미도달handler메모리read와동일하다고주장하지않는다. Null/initialwaiting에서는dependency를로드하지않으며dir인자는usage상필수지만읽지않을수있다. Palette파일은kind2bankedloader,나머지는kind1fixedloader를사용한다.
+
+## 최종 검증
+
+실제 `artifacts/scene_script_run/verification.json` SHA256은 `e9cc49c1c4fead4cdb7454f9af6adac3cf9d9c3ff3205b1fcf8936430acc5113`이다. 최종2,211 native/70negative/7,657,120orderedports/26,170commands를통과했다. 전체RAM/full12registers와reason/commands/orderedports 및RTSendpoint가일치했다. Reason분포는terminator1657/waiting553/no_script1이다. Binary SHA256 `8c57516bc0f861da15f8f8b9d16d434f7e3be4d0a4d40fc3f6a3d2a6afe8289c`와원본ROM은시작·끝에같았다.
+
+Canonical41script의814모든commandcursor에서원본1a26a loop와기존handler를실행했다. 한호출안에서phasegate와handler사이CPUcontext를재설정하지않았으며LIVEphase/threshold·cursorpublish·negativeword와null/initialwaiting을비교했다. Initialwaiting은invalidcursor를읽지않는원본조건도검사했다. Terminalstatus가영구disable이아닌조건은LIVEgate와음수word반복관찰로검증했다. Existingcommand-only결과를이번matrix에합산하지않는다.
+
+ActualCLIcarry41sequence×4호출=164회는RAM/full12registers를다음호출에전달한다. Hostphase값0/1/7fff/ffff 변경은명시적fixture이며frameclock을자동진행하지않는다. 호출사이entry stack/SR를재설정하고A3/A6=0,A5=108000은공개contract밖의원본fixture다. 한호출내context유지와호출사이hostboundary설정을분리한다. PVC1000/2000의2MiB/3MiBdynamicbankpayload는MMIOtail제외불변이며임의bankoffset까지검증하지않는다.
+
+Native session35811은2,211/69negative로exit0이었다. 이후negative-only1개를추가해최종70이됐으며native행을보존하고전체native를다시실행한것은아니다. Malformeddescriptor의실패는CLIpreloaderror로표기한다. 별도의CRC-valid wrongCPU descriptor는loader를통과해첫opcode48뒤opcode08의APIidentitycheck에서실패했다. 이descriptor CLIcase는파일출력보존을확인했다. 내부RAM/registers/result/aggregateports rollback은별도C++unit에서opcode40영상쓰기후opcode10 missingdependency실패로검사했다. CLI파일결과와unit의내부상태관찰을같은근거로취급하지않는다. Errorfixture는temporary resource이고원본ROM을patch하거나invalidfixture를native실행하지않았다.
+
+전체`make -j3 all test`는exit0/Python139/C++100/warning0으로통과했다. 메인이로그와terminal결과를확인했다. 로그는 `artifacts/scene_script_run_build_test.log`다. 이번완료는1a26a phase-gated script호출과20handler연결이다. 자연frame scheduler·IRQtiming·실제maptile/frame update·게임전체실행은미완료다.
+
+
+재현명령은다음과같다.
+
+```text
+make -j3 all test
+.venv/bin/python tools/verify_scene_script_run.py
+```

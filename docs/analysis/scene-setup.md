@@ -1,5 +1,7 @@
 # Scene opcode08의 장면 표시 설정과 descriptor
 
+이 문서는 `a6b4158`의단일20-handler/장면표시설정milestone기록이다. 당시검증은원본phasegate를실행하지않았다. 현행phasegate와script실행계약은 `scene-script-run.md`를참조한다. 같은report경로의후속결과와당시hash를구분한다.
+
 ## Source와 목록 범위
 
 Baseline은 `c96d141`이며 canonical decrypted 프로그램 SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. Script·descriptor CPU 주소는 first1MiB 고정 ROM이며 같은 파일 offset이다. Descriptor payload의 node pointer는 CPU RAM 주소로 분리한다. 주소·상수는16진수,개수는10진수다.
