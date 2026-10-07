@@ -1029,3 +1029,11 @@
 - 최종원본144경계/오류38조건,166360포트/외부읽기56회통과. 실제controller1008e4의32승계시퀀스,네사운드대기분류및LIVEf02a선택을확인했다. SHA256 `eff31a72a6ac06645d6cb99f52b78a9103a10ff2a51810043073c468302fdd30`. head해제는명시적hostfixture이며자연IRQ동등성은미검증이다.
 - 전체빌드·Python88개·C++전체통과. 메인리뷰 `docs/reviews/0139-game-restart.md`, 상세 `docs/analysis/game-restart.md`. 원본wordwait조건과실제A6범위를리뷰에서보완했다.
 - 다음c654/c66a및477e4콜백후보144명령/21호출을목록화하고메인이활성/replay판정을정적분석했다. callback본문과자연scheduler,전체스테이지게임플레이는미완료이며목표는계속진행중이다.
+
+
+## 2026-10-07 — c654 ready gate와 후속 준비 경계
+- c654/c66a/c686/c6c0을 재개 가능한 진입 경계로 복원했다. 고정100b30의 정적 restart→활성/replay gate, 오브젝트 제거→화면 reset→동적 할당 및 현재 callback/flag 설정을 원본 순서로 연결했다. 종료는 실제c724/c73e/BIOS c00444 경계이며 body나 가상RTS를 실행하지 않는다. ROM180.word=0만 지원하고 ROM 변경 경로는 제외한다.
+- `verify_game_ready.py`: 원본246조건/오류39조건, 순서 있는 포트274484개 및4승계시퀀스를 통과했다. 전체 RAM/D0/D1/D3/A6가 일치하며 실제 restart CLI→원본c610 반환→c654 연결은 두caller에서 확인했다. 재진입의+62 flag 변경은 명시적hostfixture다. 보고서 SHA256 `4f09a7ef5db74efe5b5ab29bf8a4646cf9cb49145dc5c05a2508e0dcffc1fe17`.
+- 전체 `make -j3 all test` 통과: Python88검사·C++86 test executable, 경고·오류0. 로그 `artifacts/game_ready_build_test.log`. 상세 `docs/analysis/game-ready.md`, 메인리뷰 `docs/reviews/0140-game-ready.md`.
+- stage startup을5개 명시진입/111명령후보/23직접호출/17helper후보 및14 API family 후보로 목록화했다. `artifacts/stage_startup/report.json` SHA256 `6664908c593cd78cb6b8b8763b6df4e4541d093b84eae917e81a08c769330928`. Capstone5.0.6의 bounded 디코딩이며 원본 실행은 관측하지 않았다. 후보분류·기존API 참조를 의미확정이나 동등성 근거로 취급하지 않는다.
+- 다음은477e4가 호출하는1a5a4의 복잡한 초기화와 후속 stage 연결 분석이다. 이번에 callbacks477e4/e66aa는 설치만 확인하고 실행하지 않았으며 BIOS c00444도 경계에서 멈췄다. 자연scheduler·전체스테이지게임플레이와 전체복원 목표는 계속 진행 중이다.
