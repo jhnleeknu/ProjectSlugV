@@ -47,5 +47,24 @@ int main() {
     assert(ms5::poll_input_control(ram,absent,table,absent,absent,records,ports,
         0xffff,0x100100,0,0,1,result,writes,error));
     assert(result.next_pc==0xf3c && ram[0x18]==255 && ram[0x1a]==2 && ram[0x16]==0);
+    // Callback wait requires one signal even when threshold is zero.
+    ram.assign(65536,0);ram[0x18]=91;
+    const std::vector<std::uint8_t> callback_wait=ram;
+    assert(ms5::poll_callback_input_control(ram,absent,absent,absent,absent,records,ports,
+        0,0xbeef,0,1,result,writes,error));
+    assert(ram==callback_wait && result.next_pc==0xf4c && result.style==0xbeef &&
+        result.read_count==0 && result.callback==0 && writes.empty());
+    // One signal suffices even below threshold255; RAM18 stays untouched.
+    ram[0x16]=1;ram[0x17]=255;ram[0x176]=1;
+    assert(ms5::poll_callback_input_control(ram,absent,table,absent,absent,records,ports,
+        0x100100,0xbeef,0,1,result,writes,error));
+    assert(result.next_pc==0xf3c && ram[0x18]==91 && ram[0x1a]==1 && ram[0x16]==0);
+    ram[0x16]=1;const std::vector<std::uint8_t> callback_before=ram;
+    const ms5::InputFrameResult old_result=result;
+    writes.resize(1);writes[0].address=123;
+    assert(!ms5::poll_callback_input_control(ram,absent,absent,absent,absent,records,ports,
+        0x100100,0,0,1,result,writes,error));
+    assert(ram==callback_before && result.next_pc==old_result.next_pc &&
+        result.style==old_result.style && writes.size()==1 && writes[0].address==123);
     std::cout<<"Input/controller activation, resume, callback bypass and late rollback passed\n";
 }

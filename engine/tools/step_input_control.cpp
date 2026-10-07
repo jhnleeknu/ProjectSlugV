@@ -105,6 +105,7 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 
 int main(int argc, char** argv) {
     const bool poll = argc > 1 && std::string(argv[1]) == "--poll";
+    const bool callback_poll = argc > 1 && std::string(argv[1]) == "--callback-poll";
     std::uint32_t video = 0U;
     if (poll) {
         if (argc != 20 && argc != 21 && argc != 22) {
@@ -118,8 +119,16 @@ int main(int argc, char** argv) {
         argv += 2;
         argc -= 2;
     }
+    if (callback_poll) {
+        if (argc != 19 && argc != 20 && argc != 21) {
+            std::cerr << "usage: step_input_control --callback-poll followed by the ordinary arguments\n";
+            return 2;
+        }
+        ++argv;
+        --argc;
+    }
     if (argc != 18 && argc != 19 && argc != 20) {
-        std::cerr << "usage: step_input_control INPUT_RAM STREAMS_MS5D STATUS_TABLE_MS5D MENU_MS5D PAUSE_MS5D PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS STYLE LINE ENTRY_STACK SYSTEM P1_RAW P2_RAW P1_GAME P2_GAME [FONT_MS5D [STAGES_DIRECTORY]]\n";
+        std::cerr << "usage: step_input_control [--poll VIDEO | --callback-poll] INPUT_RAM STREAMS_MS5D STATUS_TABLE_MS5D MENU_MS5D PAUSE_MS5D PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS STYLE LINE ENTRY_STACK SYSTEM P1_RAW P2_RAW P1_GAME P2_GAME [FONT_MS5D [STAGES_DIRECTORY]]\n";
         return 2;
     }
     std::uint32_t entry_stack = 0U;
@@ -234,16 +243,26 @@ int main(int argc, char** argv) {
         !ms5::load_fixed_data_resource(table_path, table, error) ||
         !ms5::load_fixed_data_resource(resource_path, resource, error) ||
         !ms5::load_fixed_data_resource(pause_path, pause, error) ||
-        !ms5::load_palette_resource(palette_path, records, error) ||
-        !(poll ? ms5::poll_input_control(ram, streams, table, resource, pause, records, ports,
-                                         static_cast<std::uint16_t>(video), object_address,
-                                         static_cast<std::uint16_t>(style),
-                                         static_cast<std::uint16_t>(line), entry_stack,
-                                         result, writes, error, font_pointer, context_pointer) :
-                  ms5::step_input_control(ram, streams, table, resource, pause, records, ports,
-                                         object_address, static_cast<std::uint16_t>(style),
-                                         static_cast<std::uint16_t>(line), entry_stack,
-                                         result, writes, error, font_pointer, context_pointer))) {
+        !ms5::load_palette_resource(palette_path, records, error)) {
+        std::cerr << error << '\n';
+        return 1;
+    }
+    bool succeeded;
+    if (poll) {
+        succeeded = ms5::poll_input_control(ram, streams, table, resource, pause, records, ports,
+                     static_cast<std::uint16_t>(video), object_address,
+                     static_cast<std::uint16_t>(style), static_cast<std::uint16_t>(line),
+                     entry_stack, result, writes, error, font_pointer, context_pointer);
+    } else if (callback_poll) {
+        succeeded = ms5::poll_callback_input_control(ram, streams, table, resource, pause, records, ports,
+                     object_address, static_cast<std::uint16_t>(style), static_cast<std::uint16_t>(line),
+                     entry_stack, result, writes, error, font_pointer, context_pointer);
+    } else {
+        succeeded = ms5::step_input_control(ram, streams, table, resource, pause, records, ports,
+                     object_address, static_cast<std::uint16_t>(style), static_cast<std::uint16_t>(line),
+                     entry_stack, result, writes, error, font_pointer, context_pointer);
+    }
+    if (!succeeded) {
         std::cerr << error << '\n';
         return 1;
     }

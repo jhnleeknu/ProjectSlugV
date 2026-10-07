@@ -29,5 +29,19 @@ bool poll_input_control(std::vector<std::uint8_t>& ram,
                         InputFrameResult& result,std::vector<VideoPortWrite>& writes,
                         std::string& error,const FixedDataResource* font = NULL,
                         const StageGroupMenuContext* stage_context = NULL);
+// f4c callback-path wait, AFTER palette processing. Signal16!=0 alone is
+// sufficient; no threshold17 comparison, video read or RAM18 update occurs.
+// Waiting returns next_pc=f4c, no reads/writes and the incoming style.
+// Call once per observation; never rerun the preceding palette tick on wait.
+bool poll_callback_input_control(std::vector<std::uint8_t>& ram,
+                        const FixedDataResource& streams,const FixedDataResource& table,
+                        const FixedDataResource& menu,const FixedDataResource& pause,
+                        const std::vector<PaletteRecord>& records,const InputPortSamples& ports,
+                        std::uint32_t object_address,std::uint16_t initial_style,
+                        std::uint16_t initial_line,std::uint32_t entry_stack,
+                        InputFrameResult& result,std::vector<VideoPortWrite>& writes,
+                        std::string& error,const FixedDataResource* font = NULL,
+                        const StageGroupMenuContext* stage_context = NULL);
+
 }
 #endif

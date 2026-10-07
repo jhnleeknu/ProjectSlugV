@@ -792,3 +792,11 @@
 - 원본566조건과 MMIO43,684개, 오류14조건 통과. 전체RAM/32비트D1/시간순 포트를 비교했다. Python73개 및 C++ 전체 검사 통과.
 - 리뷰: docs/reviews/0109-palette-d1.md. 분석: docs/analysis/palette-d1.md.
 - 다음은 복구된D1을 f46 팔레트 호출→f4c 대기→f12 입력에 연결하는 것이다. ec4 앞부분, 실제 콜백 본문, SR/RTE/BIOS·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는active다.
+
+
+## 2026-10-07 — 콜백·팔레트·IRQ 신호에서 다음 입력까지 연결
+
+- `poll_callback_input_control`로 f4c의 신호!=0 대기를 연결했다. RAM17 임계값을 무시하고 비디오를 읽지 않으며 RAM18을 유지한다. 대기 시 팔레트 타이머를 재실행하지 않는다.
+- 원본537조건, 포트286개 및 오류5조건 통과. 네 가지 팔레트D1 전달과 실제3dcc 콜백→팔레트→대기→IRQ신호→다음입력 주기를 비교했다. 인터럽트 사이의 CPU 문맥 복구는 명시적 호스트 동작이다.
+- Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0110-callback-frame-flow.md. 분석: docs/analysis/callback-frame-flow.md.
+- 다음은 ec4 앞부분의 진단 텍스트 출력과 ef2 대기를 연결하는 것이다. 이 경로는 renderer3650을 사용하며 기존 포맷터는e84c8 전용이므로 렌더러 차이를 먼저 반영해야 한다. 실제 게임 콜백 본문, SR/RTE/BIOS·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는active다.
