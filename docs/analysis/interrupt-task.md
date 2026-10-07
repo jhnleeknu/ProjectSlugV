@@ -59,3 +59,9 @@ build/queue_interrupt_task INPUT_RAM INPUT_REGS OUTPUT_RAM OUTPUT_REGS IMMEDIATE
 입력 A7은 작업의 RTS가 반환 주소 d2a를 이미 소비한 시점이다. API가 추가로 스택을 pop하지 않는다. 다음 작업이 있으면 새 d2a/작업 PC를 push한 뒤 작업으로 진입한 A7을 반환하고, 없으면 d36 경계로 나간다. 이 API는 작업 본문을 실행하지 않는다. CLI는 기존 `restore_interrupt_task`에 `--resume`을 붙인다.
 
 검증: `.venv/bin/python tools/verify_interrupt_task_resume.py`, 원본 312조건 및 오류/별칭 24조건 통과. 전체 RAM·16개 레지스터·포트·외부 스택 쓰기를 비교했다. 32개 연속 작업 뒤 빈 큐까지 포함하며 callback 본문 대신 명시적 레지스터 변경과 A7 +4를 입력했다. 보고서 SHA256: `3d1ff4b22cee4b4def59839de82ef68153d99066ca45d0da305673036d51d5ba`.
+
+## 호출 지점의 정적 조사
+
+`tools/analyze_task_queue_callers.py`는 고정 ROM 첫1MiB의 모든 짝수 주소에서 직접 JSR/BSR 후보를 조사한다. c42 초기화 호출은a08, c8c 서비스 호출은23c에서 발견된다. c64 직접 호출 후보는 발견되지 않았다. c64의4-byte 값과 일치하는 네 위치는 모두 홀수 오프셋이며 호출 근거로 취급하지 않는다.
+
+이는 c64가 사용되지 않는다는 증명이 아니다. 간접 호출·분기 stub·뱅크 코드·변형 코드와 자연 실행 도달성은 조사 범위 밖이다. 기존 작업 큐 검증은 원본 함수를 명시적으로 진입시킨 것이며 실제 게임이 이 큐를 사용한다는 관찰과 구분한다. 보고서: `artifacts/task_queue_callers/report.json`, SHA256 `54a77311fe489add556dfc29cd3a7dd99ed6035c10bb416e145edf7d8640ed9b`.

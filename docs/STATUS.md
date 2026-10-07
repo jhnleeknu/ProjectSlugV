@@ -742,3 +742,12 @@
 - 원본 312조건, 오류/별칭 24조건 통과. 32개 연속 작업과 마지막 빈 큐에서 전체 RAM·레지스터·포트·스택 쓰기가 일치했다. 작업 본문은 실행하지 않았으며 호스트 입력 변화를 명시했다.
 - Python 73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0103-interrupt-task-resume.md.
 - 다음은 c8c의 busy/credit/렌더링/작업/사운드 경계를 연결하는 것이다. 전체 IRQ·작업 본문·SR/CCR·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는 active다.
+
+
+## 2026-10-07 — c8c 렌더링·작업·사운드 서비스 통합
+
+- `begin_interrupt_service`, `continue_interrupt_service`, `resume_interrupt_service_sound`로 busy/카운터/크레딧/팔레트/열 제어/실제 MS5C 스프라이트/작업/사운드 흐름을 연결했다. 중단 시 busy를 유지하며 정상 완료에만 전체 byte를 지운다.
+- 원본676조건과54,586개 장치 쓰기, 오류/별칭18조건을 통과했다. 두 bank/전체 RAM 및 작업 경계 레지스터·스택, 사운드 문맥 재개를 비교했다. Python73개 및 C++ 전체 검사 통과.
+- 메인 리뷰에서 검증 CLI 인자와 전체 dirty fixture 도달성을 수정하고 예상 밖 장치 쓰기 및 작업→사운드 대기 경로를 보강했다. 리뷰: docs/reviews/0104-interrupt-service.md. 분석: docs/analysis/interrupt-service.md.
+- 고정 첫1MiB에서 c64 직접 JSR/BSR 후보가 발견되지 않았다. 간접/뱅크 코드와 자연 사용 여부는 미확인이며 큐의 기능 검증과 구분한다.
+- 다음은20c IRQ의 외부 callback/BIOS 경계와 bank·VRAM 복구, 초기화 c42 및 메인 루프와의 연결이다. 전체 IRQ·작업 본문·SR/CCR·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는 active다.
