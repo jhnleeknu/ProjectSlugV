@@ -1212,3 +1212,11 @@
 - 비영descriptor40개/selector37개에서8642column 후보를목록화했다. Root/lookup/offset/cell 읽기창8723개의union만기존MS5Dkind2 47파일/164960bytes로추출했다. 겹침·인접merge후hole을추가하지않는다. 전체논리자료extent나collision으로단정하지않는다.
 - Header/CRC/원본전체bytes/metadata및독립endpoint sweep union비교통과. ReportSHA256 `79f4678387ed1d40a8c1257dc992e0b7c622fc6e414ad65e4098f33bf75e597b`. 합성8개포함전체Python162tests통과,리뷰0161완료.
 - 이번resource검증은Python-only다.183c6 C++전송루틴과원본관찰은별도작업중이며아직동등성완료로기록하지않는다. 일반scene실행연결·직접조작가능스테이지화면·전체목표는미완료다.
+
+
+## 2026-10-07 — 맵 사각형의 영상·보조 캐시 전송 연결
+
+- 183c6 clipping→bank3 primary VRAM쓰기→bank2 secondary RAMring쓰기→flag/carry를C++ API와CLI로연결했다. 앞서추출한scene_maps/scene_secondary MS5D를직접소비하며D0..D7/A0..A4 13register를보존한다. MOVEM.W sign-extension,ADD.B폭과LIVE descriptor읽기를반영했다.
+- 원본492조건/CLI오류29조건/ordered16620ports 비교통과. 전체RAM·13register·copied가일치하며복사420/거부72,RAMdescriptor-bankshadowalias4조건을포함한다. ReportSHA256 `ba687e364602ab08a4074d3aa09f5b17ae8396576132a30c75d5ae99f611acef`.
+- 전체make Python162/C++104/경고0,메인리뷰0162완료. Sentinel secondary는canonical원본관찰에없어합성unit범위이며다회호출승계/자연streaming은아직검증하지않았다. 임시primary/secondary각1048576cell실행한계초과는명시API오류다.
+- 다음은18702 wrapping/16f0e columncontrol/1861a·18656 refresh와19e64 handler를연결하는작업이다. 영상메모리쓰기복원은실제스테이지화면완료가아니다. 일반scene진입·자연시간축·직접플레이·전체게임복원목표는계속미완료다.

@@ -45,3 +45,33 @@ Pointer ffffffff는 sentinel이다. 같은2배 column 수에 LONG0을 쓰지만 
 Primary는 기존 scene_maps MS5D를 사용한다. Secondary는 알려진 descriptor의 full width/height,source column/row0을 기준으로 offset entry와각cell 읽기 창을 목록화한다. 동일 source span 공유와 overlap을 보존하고, 추출할 때 실제 읽기 창의 union만 기존MS5D kind2로 포장한다. 이 union은 전체 논리 자료의 길이나 전체 게임의 모든 동적 접근을 증명하지 않는다. Secondary 자료를 collision이라고 단정하지 않는다.
 
 현재 전체1a7a8,19e64 handler,일반1a5a4와47a94 이후 자연 실행 연결 및 직접 조작 가능한 스테이지 화면은 미완료다.
+
+## C++ API와 재현
+
+`transfer_scene_map`은64KiB RAM, borrowed FixedDataResource 창 목록, D0..D7/A0..A4의13register 상태를 받아원본183c6의결과와copied bool,순서있는VideoPortWrite목록을반환한다. A5=108000과진입bank2를전제로한다. A0는정렬된RAM주소여야하며개별접근마다범위를검사한다. A1 descriptor는고정ROM이나RAM에서읽는다. 호출자RAM/상태/copied/ports는성공시만게시하며clipping reject는성공/copied=false다. 다른CCR flags와stack bytes는API결과에포함하지않는다.
+
+Bank별source CPU/물리ROM관계를검사하고읽기범위가없거나둘이상겹치거나개별창경계를넘으면오류다. 인접창을자동결합하지않는다. CLI는디렉터리의정렬된 `.ms5d` 파일을기존로더로읽으며manifest JSON을파싱하지않는다. 모든리소스를먼저읽는CLI와필요한주소만조회하는API를구분한다. 동일입출력경로·symlink·hardlink alias를거부한다. API의transaction을파일두개의filesystem-wide atomic publication으로주장하지않는다.
+
+```text
+make -j3 all test
+.venv/bin/python tools/observe_scene_map_transfer.py
+.venv/bin/python tools/verify_scene_map_transfer.py
+build/transfer_scene_map D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS extracted/runtime/scene_maps extracted/runtime/scene_secondary
+```
+
+Registers는unsigned decimal또는0xhex다. Output RAM은65536bytes,ports는각9bytes(size1+BE32address+BE32value),stdout은13regs/copied/writes JSON이다. 화면실행명령이아니다.
+
+Zero WORD loop count는SUBQ.W/BNE와같이65536반복으로처리한다. 임시보호한계로primary/secondary각1048576cell초과는전체호출오류로되돌린다. 이한계밖의원본실행을지원한다고주장하지않으며전체목표의완료전에해결하거나실제도달조건을확인해야할항목이다.
+
+## 검증 결과
+
+원본492조건:72canonical descriptor×slot0/ffff×highregister2의288개,zero/nonzero secondary대표의경계좌표·1/2/32범위200개,RAMdescriptor10000a가bankshadow100010과겹치는4개다. 복사420/거부72,ordered ports16620건이다. 원본루틴내context reset은없으며각독립호출전에만baseline을복원한다. Fixture입력은자연게임도달상태가아니다.
+
+동일fixture에서전체RAM/13register/copied/모든9byteport trace가C++와일치했다. CLI오류29조건의입력·기존출력파일보존도통과했다. 메인리뷰에서일부negative주소가합법일수있음을발견해실제로범위를넘는주소로수정했다. C++ unit은secondary ffffffff sentinel과late failure rollback,상대offset,bankshadow LIVE height,MOVEM.W sign-extension을별도로다룬다. Sentinel은canonical원본실행관찰에없으므로동등성검증범위밖이다. 다회CLI호출상태승계·자연streaming·전체frame검증도포함하지않는다.
+
+- 원본관찰 SHA256 `242bdc3703c6c57ea771c94439d3c094b83a7c52f62bdbc3a37d2b33204bef56`.
+- C++비교 SHA256 `ba687e364602ab08a4074d3aa09f5b17ae8396576132a30c75d5ae99f611acef`.
+- C++binary SHA256 `80a3fd5811521e0389ca646fbd9acd3511b2efaa9a4f839a86d284f8dbd64660`.
+- 전체make Python162/C++104/경고0. 로그 `artifacts/scene_map_transfer_build_test.log`.
+
+관찰의초기window는bank3이고C++의암시진입bank는2이지만검증descriptor는fixed/RAM이며첫banked읽기전에명시bank3선택이있다. 이fixture의일치를임의진입bank동등성으로확대하지않는다. 현재확인한bank전환은정렬된2MiB/3MiB창이며일반PVC전동작의검증이아니다.
