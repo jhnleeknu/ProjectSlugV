@@ -107,7 +107,7 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
                        std::uint32_t arguments_address,const std::vector<std::uint8_t>& argument_bytes,
                        std::uint16_t cursor,std::uint16_t style,
                        std::vector<VideoPortWrite>& writes,std::string& error,std::uint32_t renderer,
-                       std::uint16_t* final_style) {
+                       std::uint16_t* final_style,std::uint16_t* final_line) {
     if(renderer!=0x3650U && renderer!=0xe84c8U) {
         error="formatted text supports renderer3650 or e84c8";return false;
     }
@@ -145,6 +145,7 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
         if(glyph==0) {
             ram.swap(pending_ram);writes.swap(pending);
             if(final_style!=NULL) *final_style=style;
+            if(final_line!=NULL) *final_line=line;
             error.clear();return true;
         }
         putword(pending_ram,state,cursor);putword(pending_ram,state+2,line);
@@ -214,7 +215,7 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
 bool step_main_debug(std::vector<std::uint8_t>& ram,
                      const FixedDataResource& debug,std::uint32_t object_address,
                      std::uint32_t& d1,std::vector<VideoPortWrite>& writes,
-                     std::string& error) {
+                     std::string& error,std::uint16_t* line) {
     if(ram.size()!=65536U) {error="main debug requires 64KiB RAM";return false;}
     if((ram[0xf000]&1U)==0) {writes.clear();error.clear();return true;}
     if(object_address<0x100000U || object_address>0x10ff7bU) {
@@ -232,7 +233,7 @@ bool step_main_debug(std::vector<std::uint8_t>& ram,
     const std::vector<std::uint8_t> arguments;
     std::uint16_t style=static_cast<std::uint16_t>(d1);
     if(!format_fixed_text(ram,resources,unused_font,0xd56,0xdf0,arguments,
-                          0x7066,style,writes,error,0x3650,&style)) return false;
+                          0x7066,style,writes,error,0x3650,&style,line)) return false;
     d1=(d1&0xffff0000U)|style;
     return true;
 }

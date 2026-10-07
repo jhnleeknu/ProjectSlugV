@@ -96,17 +96,20 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 7) {
-        std::cerr << "usage: step_main_debug INPUT_RAM DEBUG_MS5D OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS D1\n";
+    if (argc != 7 && argc != 8) {
+        std::cerr << "usage: step_main_debug INPUT_RAM DEBUG_MS5D OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS D1 [LINE]\n";
         return 2;
     }
     std::uint32_t object_address = 0U;
     std::uint32_t d1 = 0U;
+    std::uint32_t initial_line = 0U;
     if (!parse_integer(argv[5], 0xffffffffU, object_address) ||
-        !parse_integer(argv[6], 0xffffffffU, d1)) {
-        std::cerr << "OBJECT_ADDRESS and D1 must be decimal or 0x-prefixed uint32\n";
+        !parse_integer(argv[6], 0xffffffffU, d1) ||
+        (argc == 8 && !parse_integer(argv[7], 0xffffU, initial_line))) {
+        std::cerr << "OBJECT_ADDRESS and D1 must be decimal or 0x-prefixed uint32; LINE uint16\n";
         return 1;
     }
+    std::uint16_t line = static_cast<std::uint16_t>(initial_line);
     const std::string ram_path(argv[1]);
     const std::string resource_path(argv[2]);
     const std::string output_ram_path(argv[3]);
@@ -127,7 +130,7 @@ int main(int argc, char** argv) {
     }
     std::vector<ms5::VideoPortWrite> writes;
     if (!ms5::load_fixed_data_resource(resource_path, debug, error) ||
-        !ms5::step_main_debug(ram, debug, object_address, d1, writes, error)) {
+        !ms5::step_main_debug(ram, debug, object_address, d1, writes, error, argc == 8 ? &line : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -161,6 +164,10 @@ int main(int argc, char** argv) {
         std::cerr << "cannot write output files\n";
         return 1;
     }
-    std::cout << "{\"next_pc\":3826,\"d1\":" << d1 << "}\n";
+    std::cout << "{\"next_pc\":3826,\"d1\":" << d1;
+    if (argc == 8) {
+        std::cout << ",\"line\":" << line;
+    }
+    std::cout << "}\n";
     return 0;
 }

@@ -34,3 +34,20 @@ JSON next_pc는ef2(3826)이고d1은최종unsigned32값이다. ef2대기/비디�
 
 보고서: `artifacts/main_debug/verification.json`.
 SHA256: `bbe8deb1e9bd518172600538a3eb79a5295cff5edd8000fe9efb3bad0c5c38ee`.
+
+## 줄 위치의 반환과 입력 연결
+
+`format_fixed_text`는선택적final_line으로종료시D3.word도반환한다. `step_main_debug`의선택적line입출력은진단을생략하면유지되고활성출력시종료파서의값으로갱신된다. D3상위word는이계약에포함하지않는다. CLI에마지막선택인자LINE을주면JSON에도line을반환하며기존호출의JSON은유지한다.
+
+```sh
+build/step_main_debug INPUT_RAM DEBUG_MS5D OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS D1 LINE
+```
+
+단순`A\n`포맷에서는RAM104cd8.word가7000이어도반환line은7001이다. 실제진단문자열역시마지막줄바꿈뒤바로종료하므로저장된RAMline을읽어서다음입력의LINE으로쓰면일치하지않는다. 진단이끝나면반환D1.lowword와line을`poll_input_control`의style/initial_line에전달한다. 기다리는동안진단출력은다시실행하지않는다.
+
+`.venv/bin/python tools/verify_debug_input_flow.py`는진단5회·IRQ서비스10회·메인poll14회총29경계와포트469개,잘못된LINE6조건을검증했다. 원본종료D3.word와저장RAMline의차이를직접확인하고CLI의D1/line출력을poll에전달했다. 진단전후A5/A6/A7보존,대기중재출력없음과실제c8c의신호생성을검사했다.
+
+두번째프레임은원본CPU문맥을계속실행하지만,현재pollAPI는컨트롤러종료의모든scratch레지스터를출력하지않는다. 따라서다음debug의D1/D3입력은원본에서얻은외부검증조건이며완전히자립한C++연속CPU상태라고주장하지않는다. IRQ간문맥복구도호스트동작이다.
+
+보고서: `artifacts/debug_input_flow/verification.json`.
+SHA256: `f8554a23827ace276e07b389230258d3ec00a0ecaaf439d925b3d814d344fb12`.

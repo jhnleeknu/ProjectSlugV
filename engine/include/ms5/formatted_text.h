@@ -21,14 +21,16 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
                        std::uint16_t cursor, std::uint16_t style,
                        std::vector<VideoPortWrite>& writes, std::string& error,
                        std::uint32_t renderer = 0xe84c8U,
-                       std::uint16_t* final_style = NULL);
+                       std::uint16_t* final_style = NULL,
+                       std::uint16_t* final_line = NULL);
 // ec4 through ef2 (before frame gate): conditional direct diagnostic text.
+// Optional line supplies/receives D3.word; bypass preserves its input.
 // D1 upper word is preserved; lower word follows terminal formatter parsing.
 // Disabled f000 bit0 bypasses object/resource; zero object+84 bypasses resource.
 // Failure preserves RAM, D1 and writes. Other CPU registers/flags not returned.
 bool step_main_debug(std::vector<std::uint8_t>& ram,
                      const FixedDataResource& debug,std::uint32_t object_address,
                      std::uint32_t& d1,std::vector<VideoPortWrite>& writes,
-                     std::string& error);
+                     std::string& error,std::uint16_t* line = NULL);
 }
 #endif
