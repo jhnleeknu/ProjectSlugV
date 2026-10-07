@@ -1,6 +1,6 @@
 # C++ 런타임 기반
 
-현재 구현은 MS5T 타일 카탈로그 로더와 원본 오브젝트 필드 초기화 함수다. 플레이 가능한 게임이나 애니메이션 엔진은 아직 아니다.
+현재 구현은 추출 바이너리 리소스를 읽는 C++ 라이브러리와 원본 비교용 CLI들이다. 타일·스프라이트·애니메이션·입력·사운드 제어·오브젝트 관리와 장면 스크립트·맵 갱신·배치 등 복원한 루틴을 포함한다. 실행 가능한 게임 창, 자연 프레임 진행과 전체 스테이지 게임플레이의 연결은 아직 미완료다.
 C++11 기본 문법으로 작성하며, 리소스 규격은 ../docs/resource-format.md를 따른다.
 
 저장소 루트에서:
@@ -191,3 +191,16 @@ make all test
 ```
 
 CLI: `step_animation_data INPUT_RAM INPUT_SCRIPT OUTPUT_RAM OUTPUT_STATUS OBJECT_OFFSET SCRIPT_BASE [MS5D ...]`. 원본전체ROM을런타임에읽지않고추출된MS5D창만사용한다. 다른14 callback선택자는아직거부한다.
+
+## 일반 장면 초기화 연결
+
+`initialize_scene`은 원본1a5a4의 스크립트·phase 반복·장면 갱신·배치를 한 호출로 연결한다. 입력은 D0.low의 목표 phase와 A0의 script CPU주소, A6의 할당 부모,64KiB RAM이다. 게임 프로젝트에서는 `ms5::initialize_scene`에 로드된 MS5D 창과 상태를 전달한다. PNG나 원본 ROM을 런타임 리소스로 읽지 않는다.
+
+```text
+make -j3 all test
+build/initialize_scene D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS RESOURCE_FILE_OR_DIR...
+```
+
+필요한 바이너리 자료는 `extracted/runtime/scene_scripts`, `scene_maps`, `scene_secondary`, `scene_placements` 및 `scene_debug.ms5d`다. 위 경로들의 생성·검증 방법과 세부 지원 범위는 `docs/analysis/scene-general-initialization.md`에 기록한다. 입력 RAM의 palette/object 초기 상태도 갖춰야 한다. 임의의0 채움 RAM을 모든script의 유효한 게임 초기 상태로 가정하지 않는다.
+
+출력은 RAM,14개 레지스터와 쓰기 개수의JSON,순서 있는9byte 비디오/뱅크/기타 포트 명령이다. 이 CLI는 화면 창을 띄우거나 키보드로 플레이하는 실행 파일이 아니다. 원본과 비교하는 Python 도구는 분석 입력으로 ROM을 사용하며 C++ 실행 파일의 런타임 입력과 구분된다.

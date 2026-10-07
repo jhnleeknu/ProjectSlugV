@@ -1,6 +1,6 @@
 # 일반 장면 초기화 1a5a4의 연결 계약
 
-원본 프로그램 SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. 고정 CPU 주소는 ROM 파일 오프셋과 같고 A5=108000이다. 메인이 원본 1a5a4..1a73c와 아래 callee를 직접 대조한 후속 구현용 분석이다. 현재 `initialize_stage_scene`은 null-script 호출자477e4에 특화되어 있으므로 이 일반 계약의 구현 완료 근거로 사용할 수 없다.
+원본 프로그램 SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. 고정 CPU 주소는 ROM 파일 오프셋과 같고 A5=108000이다. 메인이 원본 1a5a4..1a73c와 아래 callee를 직접 대조하고 별도 `initialize_scene` API로 연결했다. 기존 `initialize_stage_scene`은 null-script 호출자477e4에 특화된 계약을 유지한다. 일반 호출의 검증 결과는 아래에 기록한다.
 
 ## 초기 상태와 보존할 값
 
@@ -35,3 +35,51 @@ Camera10d38e의local0/4를D0/D1로읽고A1=0으로43e22를호출한다. 네node�
 D7.low=d41e를읽고 unsigned d41e<d41c이면1a29e를호출한다. 이어1a414 전체배치를실행한다. Script opcode0c가d40e를설정했을수있으므로초기값0을근거로배치를생략하면안된다.
 
 마지막에RAM10.word=0,2ffff2.word=1000,2ffff0.word=0을순서대로쓰고1a73a RTS한다. Port목록은각callee의출력을호출순서대로연결해야한다. Native stack/CCR 전체노출과자연frame scheduling은별도계약이며, 현재조각들의시험통과만으로이일반호출완료를주장하지않는다.
+
+## C++ API 및 재생성
+
+`initialize_scene`은 위 일반 호출을 `SceneMapTransferState`의13개 레지스터(D0-D7/A0-A4)와 별도 A6 입력으로 연결한다. A6는 변하지 않는다. 기존12register helper를 연결할 때 A3를 보존하고, 전체 장면 갱신은13register 결과를 승계한다. 기존 null-script 특화 API를 이 함수로 임의 대체하지 않았다.
+
+Script/motion은 사용 시 유일한 fixed MS5D 창을 선택한다. Palette/map은 기존 banked 리소스와 helper 계약을 따른다. Debug table은1af12의512byte 창이다. 각 helper가 반환한 포트 목록을 순서대로 이어붙이며 전체 초기화에 성공한 경우에만 RAM·레지스터·포트 결과를 게시한다. 후반 배치에서 실패해도 앞선 script/map 출력은 외부에 게시되지 않는다.
+
+임시 phase 반복 한도는1,048,576회다. Duration scan에도같은record한도를두며자료읽기가먼저지원창을벗어나면오류다. RAMmotion과각하위helper의지원범위밖동작은명시적으로미지원이다. Callback주소저장과callback실행을구분한다.
+
+```text
+make -j3 all test
+.venv/bin/python tools/inventory_scene_general_initialization.py
+.venv/bin/python tools/observe_scene_general_initialization.py
+.venv/bin/python tools/verify_scene_general_initialization.py
+build/initialize_scene D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS RESOURCE_FILE_OR_DIR...
+```
+
+리소스입력은scene_scripts/scene_maps/scene_secondary/scene_placements의MS5D와scene_debug.ms5d다. CLI는파일또는directory를읽고fixed/banked loader를선택한다. Header/CRC검증은loader가담당한다. Resource와RAM·port출력의경로/symlink/hardlink alias를거부한다. 포트파일은기존size8/addressBE32/valueBE32의9byte record다.
+
+## 실제 caller 입력 목록
+
+원본47a94는A4=LONG(A6+76), A0=LONG(A4+2), D0.low=WORD(A4+0e) 뒤47aa0에서1a5a4를호출한다. Catalog59record는41개비영script와4개null record를포함한다. Target은0×49,60×1,80×3,130×1,220×1,500×1,580×2,830×1이다(값은16진수). Raw catalog값과자연도달가능성은구분한다.
+
+명시한10개원본창은211행이며미해독0이다. Disassembly SHA256 `26cb5b0aa51a69e3cd457dbbd82a26df28c3ca988fce3346e3814dd3c50c688c`,contexts SHA256 `dae6f294d18510d56d1a795b70460dbfdc1a74816818267ae51851048b8f2ed0`. Stage catalog manifest SHA256 `8df755304fc28f981c0eb3c6f400be40ff06014e78f074d5a661b91fe3401ffd`. 자동역어셈블과literal목록만으로실행동등성을판정하지않는다.
+
+## 다음 caller 연결의 경계
+
+1a5a4 반환 뒤47aa6은A6+76의record를LIVE로다시읽고+6 포인터를e8a1c에전달한다. e8a1c는null일때e89e4를선택하여de26.LONG에쓰고de2e.byte=ff/de2f.byte=0으로놓는다. 다음47ab4..47ac0은d683의bit1/3/5를설정한다.
+
+48398은30f4의byte lookup 뒤d67e.byte=D0.byte,d67f.byte=ff로쓴다. 30f4는fd8c.byte를D0.byte로읽고ANDI.W7을적용한후30ec의8byte table을조회한다. D0상위WORD는보존된다. 이표의리소스추출과호출연결은별도남은작업이다.
+
+47aca는record를다시읽고+0a 포인터가비영이면그포인터의LONG을한번역참조한다. D0.low=record+0e로e905c를호출한다. e905c는정적객체100bf4/callbacke9150으로2a28을호출한뒤입력포인터와target에따라후속stream cursor를선택한다. 기존restart_static_object는D1/D3만선택적으로반환하므로전체register caller연결을그대로대체하지못한다. e905c의stream자료와2a28 전체register계약도추가확인이필요하다. e905c 완료후47ae6은A6callback을47af0으로설정하고480bc로분기한다. 여기서관찰한명령만으로47a94전체실행완료를주장하지않는다.
+
+## 전체 호출 검증 결과
+
+221조건에서원본1a5a4부터RTS까지전체64KiB RAM·14register·순서있는3,176,113포트명령이C++와일치했다. 각포트는size/address/value9byte record를그대로비교한다. 원본코드patch나callee대체는없으며호출중contextreset도없다. 입력fixture는원본2790/3ef2로준비한후debugflag/bounds/allocation조건을명시적으로설정했다. 이준비는실제게임boot/scheduler관찰이아니다.
+
+Corpus는41script target0,59catalog실제script/target쌍,41script의추가debug/할당조건82개,null target경계10개,선택한3script의7fff/8000/ffff target9개,비영target의debug8/16·할당조건12개,실제CLI승계8호출이다. 59catalog쌍을단독함수입력으로실행한것이며각stage의모든callback실행·자연도달·직접플레이를의미하지않는다.
+
+실제phase루프332회(호출당최대13회),map전송진입904회중185f2성공856회,배치/43e08각102회,allocator거절23회를관찰했다. Debug8/16분기의lookup호출은각38,400회다. 메인검토후추가한guard는multi-loop,실제map전송과ports,placement,debug두분기,할당거절후100ec6쓰기를요구한다.
+
+4CLIsequence의8호출중4호출은직전CLI RAM/register출력을사용한다. Host는D0.low target,A0 script,A6 parent를다시제공한다. 나머지상태의승계를전체게임프레임진행으로표현하지않는다. 오류111조건에서입력과기존RAM/port출력을보존했다. Lateallocation실패,script/map/placement/secondary자료누락,숫자범위와파일alias를포함한다.
+
+- Native observation SHA256 `7cf8f965dd1b774eafff1ad73400eab54dca1a8373f8a75ce6cb14557ddffa6e`.
+- Verification SHA256 `950e3dd90209d2efd6a6629bf1568996396fb6005bede6e79df0f2ae290316eb`.
+- CLI SHA256 `ec40eaeb8e7f0d379c841c331629552fc38a47851a84385cafc5d1ce2c13c163`.
+
+458resource·5manifest·contextinventory·binary의전후불변을확인했고메인도현재hash와각native/report행을대조했다. 전체make Python175/C++111/경고0. 메인은실제directory인자경로로canonical첫조건을추가실행해RAM/orderedports일치도확인했다. 물리bank는CPU주소와ROM주소를모두사용해구분한다. Nativefixture instruction cap은2,000,000이며이는C++ API의phase한도와별개다.

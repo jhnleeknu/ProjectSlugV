@@ -30,6 +30,6 @@ A5=108000 문맥에서4e666은 RAM10dd2a, 이어10dd2b selector를 처리한다.
 
 ## 미확정 후속 범위
 
-47a1c 이후는 레코드word10과 RAM10d686의 비교 및 사운드 선택으로 이어진다.47a94에서는 record+2의 scene script 포인터를1a5a4에 전달하며 nonzero 경로는 미완료다. 현재 null-script 초기화 계약을 이 일반 scene script에 그대로 적용하지 않는다. e8a1c/48398/e905c 등의 전체 nested behavior와 register/port 계약은 메인의 추가 제어 흐름·자료구조 해석 대상이다.
+47a1c 이후는 레코드word10과 RAM10d686의 비교 및 사운드 선택으로 이어진다.47a94에서는 record+2의 scene script 포인터와record+0e의target WORD를1a5a4에전달한다. 일반1a5a4는별도initialize_scene으로구현·검증했으며scene-general-initialization.md에기록했다. 47a94전체caller와의연결은아직남아있다. e8a1c/48398/e905c 등의 전체 nested behavior와 register/port 계약은 메인의 추가 제어 흐름·자료구조 해석 대상이다.
 
 이 문서의 완료 범위는 source 불변 확인, 지정 전체 decode 창, 원시 주소/호출 관계·lookup evidence와 메인의 위 정적 확인이다. Native47594 결과나 전체479d0 body 구현·자연 scheduler·스테이지 gameplay 동등성은 아직 확정하지 않는다.

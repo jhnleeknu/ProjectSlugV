@@ -1287,3 +1287,12 @@
 - Verification SHA256 `341085cfa6992a09e44fefc3d23cfe18b3f409c88e5d1d65abf6102ae994996b`. Native SHA256 `716b54add2b2733cbd04b7274e6d6fe852e7762cc8558f32056720da457b2820`. 전체make Python175/C++110/경고0. 메인이core/CLI/unit/observer/verifier를읽고검증fixture의bounds우회·잘못된복사겹침·RAM끝계산을보강했다. 최종전체재실행과현재hash를확인했다.
 - 리뷰0169와scene-placement-execution.md에재생성·지원제약을기록했다. RAMmotion과odd/8000이상inline길이,임시record한도밖은지원밖오류다. Callback은저장만하며실행하지않는다.
 - 다음은일반1a5a4 초기화의script/phase반복/전체update/배치연결이다. 메인이원본을대조해scene-general-initialization.md에후속계약을저장했다. 자연frame·직접플레이화면·전체게임복원은미완료이며goal은active다.
+
+
+## 2026-10-08 — 일반 장면 초기화 통합
+
+- 일반1a5a4의script실행→phase선택/반복→motion→전체scene update→좌표정리→placement를C++ API/CLI로연결했다. 초기D0.low target/A0script를보존하고14register와orderedports를승계한다. 기존null-script특화API는변경하지않았다.
+- 221조건/오류111조건에서전체64KiB RAM·14register·3,176,113orderedports가원본과일치했다. 모든41script와59catalog실제입력쌍,큰target경계,debug8/16,할당성공/거절을포함한다. Phase최대13회,map성공856회,placement102회,allocator거절23회를관찰했다. 4CLI승계sequence8호출중4는직전출력을소비하되D0.low/A0/A6는host가명시한다.
+- Verification SHA256 `950e3dd90209d2efd6a6629bf1568996396fb6005bede6e79df0f2ae290316eb`. Native SHA256 `7cf8f965dd1b774eafff1ad73400eab54dca1a8373f8a75ce6cb14557ddffa6e`. 전체make Python175/C++111/경고0. 메인이core/CLI/unit/observer/verifier와현재458resource/binary/report hash를확인했다. DirectoryCLI도별도canonical조건에서RAM/ports일치했다.
+- 리뷰0170·scene-general-initialization.md에재생성·입력fixture·지원제약·한계를확정했다. engine/README.md의오래된현재상태설명을갱신하고CLI사용법을추가했다. 현재결과는직접플레이화면이나전체stagecallback실행을뜻하지않는다.
+- 다음은47a94 caller의e8a1c/48398/e905c및480bc연결이다. e905c의stream자료와2a28전체register계약은추가복원이필요하다. 메인이후속원본을직접확인해분석문서에저장했다. 자연frame·전체게임복원은미완료이며goal은active다.
