@@ -971,3 +971,10 @@
 - `verify_main_prelude.py`: 원본182경계, 포트58,136개, 영상읽기134회, 오류33조건 통과. 10승계시퀀스와 대기 중 word명령 추가6조건, 준비→기존main연결4조건(후속읽기12회)을 확인했다. SHA256 `9356a45524c67501dfdec3da7746796895fdf83df3922473a19f4f2256e6c6a5`.
 - 전체 빌드·Python73개·C++전체 검사와 기존 main/IRQ54경계 회귀 검사 통과. 메인 리뷰 `docs/reviews/0131-main-prelude.md`.
 - 다음은 실제 IRQ 소비 서비스의 sound head/sprite cursor 진행으로 새 준비 대기를 해제하는 통합이다. 현재 해제는 호스트fixture이며 e4a초기화/자연callback·task/BIOS·물리시간/전체게임 복원은 미완료다. 전체 목표는 진행 중이다.
+
+
+## 2026-10-07 — 실제 IRQ 소비로 메인 준비 대기 해제
+- 기존 준비/IRQ C++ API를 공유 RAM으로 연결했다. 초기 fixture 이후 sound head와 sprite read cursor를 호스트가 수정하지 않아도 IRQ 소비로 main이 재개된다. 실제 MS5P/MS5C와 두 팔레트 bank를 사용한다.
+- `verify_main_prelude_irq.py`: 82시퀀스, main292경계 및 완료 IRQ187회, 순서 있는 포트124,884개 통과. 영상 읽기82회/sound status 읽기187회도 일치한다. IRQ timer16이 word명령19c0을 실제 추가하고 main이 소비하는2시퀀스를 포함한다.
+- 보고서 SHA256 `6d930aea7824a4dc5ba7bebc5b1a451c903da8aadaaf9fe3584c5b83ca054ad4`. 전체 빌드·Python73개·C++전체 검사 통과. 메인 리뷰 `docs/reviews/0132-main-prelude-irq.md`.
+- 다음 e4a 초기화의 고정 팔레트 등록17레코드와 직접 호출을 `docs/analysis/main-startup.md`에 분석했다. 구현은 아직 남아 있다. IRQ context 복원은 호스트가 수행하며 자연 task/callback·BIOS/SR/RTE·물리 시간과 전체 게임 복원 목표는 진행 중이다.

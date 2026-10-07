@@ -56,3 +56,12 @@ build/prepare_main_frame --state PC D1 D3 \
 C++ step_main_frame의 compositions 인자는 NULL이면 빈 리소스 목록으로 취급한다. nonempty sprite 큐는 해당 MS5C를 제공해야 한다. 준비와 기존 gate에서 각각 영상 값을 읽는 경우 현재 API는 같은 VIDEO 표본을 사용하며, 개별 물리 시각을 계산하는 API가 아니다.
 
 `tools/verify_main_prelude.py`: 182준비경계(sound대기28/sprite대기20/ec4완료134), 전체RAM/fullD1D3/pending 및 순서 있는 포트58,136개, 영상 읽기134회, 오류 보존33조건 통과. 원본 PVC에 따라2/3/4MiB bank window를 전환한다. 10승계시퀀스 중6개는 sound 대기 중 새 word 명령을 추가하여 live tail까지 비운다. 반환 A5/A6/A7 보존을 확인한 뒤 실제 CLI 상태로 main ef2대기2조건/f3c진입2조건을 잇는 검사도 통과했다. 후속 영상·입력 읽기는12회다. 보고서 SHA256 `9356a45524c67501dfdec3da7746796895fdf83df3922473a19f4f2256e6c6a5`. 실제 소비 IRQ와 물리 시간은 후속 통합 대상으로 남는다.
+
+
+## 실제 IRQ 소비와 준비 재개
+
+`tools/verify_main_prelude_irq.py`는 초기 fixture 이후 sound head/sprite read cursor를 직접 쓰지 않는다. 준비 API가3aea 또는16bd0에서 대기하면 원본 c8c 및 C++ IRQ 서비스를 실행하고, 그 RAM 반환으로 준비를 재개한다. sprite는 이전 준비 구간과 새 정렬 구간을 분리한다. IRQ가 이전 구간을 소비하여 read cursor를 옮기고 방향을 뒤집으면 main은 새 방향으로 준비를 마친다. 다음 IRQ는 새로 준비한 구간을 소비한다.
+
+82시퀀스에서 main292경계(sound82/sprite128/ec4완료82), IRQ187완료 및 순서 있는 포트124,884개가 일치했다. 실제 MS5P/MS5C, 전체 RAM/fullD1D3/pending, 두 palette bank와 display를 비교한다. IRQ timer16의 word명령19c0 추가2조건도 포함한다. 보고서 SHA256 `6d930aea7824a4dc5ba7bebc5b1a451c903da8aadaaf9fe3584c5b83ca054ad4`.
+
+main CPU context는 호스트가 IRQ 전후에 보존·복원하며 IRQ 진입 scratch register는 fixture다. 빈 task queue를 사용하고 IRQ 완료 후에만 main을 재개한다. BIOS/SR/RTE와 자연 시간축을 구현했다는 뜻은 아니다. e74 이전의 미구현 초기화는 [main-startup.md](main-startup.md)에 정리했다.
