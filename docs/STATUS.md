@@ -718,3 +718,11 @@
 - 원본608조건의전체RAM/D0와378,428포트(PVC4,448/비디오373,980)가일치했다. 네flip/양방향/0레코드/승계8회및8개실패/별칭을확인했다. 실제리소스는bank2범위다.
 - Python73개및C++전체검사통과. 리뷰: docs/reviews/0100-sprite-refresh-ports.md. 분석: docs/analysis/sprite-refresh-queue.md.
 - 다음은c8c의기존하위함수연결과대기작업복구를복원하는것이다. 전체IRQ/장치시간축/Z80/상위맵자료와전체부팅은미완료이며목표는active다.
+
+
+## 2026-10-07 — 인터럽트 저장 작업 프레임 복구
+
+- `restore_interrupt_task`로ce2부터d28 RTS의작업진입경계까지복원했다. D0..D7/A0..A7,복원A5기준포인터쓰기,후속PC/A6읽기와외부스택쓰기를보존한다.
+- 원본279조건의전체RAM/16레지스터/포트/실제스택쓰기가일치했다.32개정규프레임·alias·경계와25개실패/별칭보존을확인했다.
+- Python73개및C++전체검사통과. 리뷰: docs/reviews/0101-interrupt-task.md. 분석: docs/analysis/interrupt-task.md.
+- 다음은c64등록과작업복귀d2a반복및c8c전체호출자연결이다. 작업본문실행·SR/CCR·장치시간축/Z80/상위맵자료와전체부팅은미완료이며목표는active다.
