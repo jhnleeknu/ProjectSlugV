@@ -53,7 +53,10 @@ void fails_preserving_outputs(std::vector<std::uint8_t>& ram,
     writes[0U].size = 2U;
     writes[0U].value = 0x89abU;
     std::string error;
-    assert(!ms5::step_menu_frame(ram, menu, 0x7123U, stack, result, writes, error));
+    std::uint32_t d1=0xabcd1234U, d3=0x98767123U;
+    assert(!ms5::step_menu_frame(ram, menu, 0x7123U, stack, result, writes, error,
+                                NULL,NULL,&d1,&d3));
+    assert(d1==0xabcd1234U && d3==0x98767123U);
     assert(ram == before);
     assert(result.status == 19 && result.external_jump == 0x123456U &&
            result.line == 0x4567U);
@@ -110,9 +113,38 @@ int main() {
     result.line = 0x4567U;
     std::vector<ms5::VideoPortWrite> writes(1U);
     error = "old error";
+    std::uint32_t d1=0xabcd1234U, d3=0x98767123U;
     assert(ms5::step_menu_frame(ram, supported, 0x7123U, 0x120000U,
-                                result, writes, error));
+                                result, writes, error,NULL,NULL,&d1,&d3));
+    assert(d1==0xabcd1234U && d3==0x98767123U);
     assert(ram == before && writes.empty() && error.empty());
     assert(result.status == -1 && result.external_jump == 0U && result.line == 0x7123U);
+    // Active idle input clears D1 fully, then supplies the enabled P2 byte.
+    ram=active_ram();
+    ram[0x7f0bU]=2U;
+    d1=0xabcd1234U;d3=0x98767123U;
+    assert(ms5::step_menu_frame(ram,supported,0x7123U,0x120000U,
+                                result,writes,error,NULL,NULL,&d1,&d3));
+    assert(d1==0U && d3==0x98767123U && writes.empty());
+    ram[0x4cc0U]=0x80U; // No menu action, but the byte remains in D1.
+    d1=0xabcd1234U;
+    assert(ms5::step_menu_frame(ram,supported,0x7123U,0x120000U,
+                                result,writes,error,NULL,NULL,&d1,&d3));
+    assert(d1==0x80U && d3==0x98767123U && writes.empty());
+    const std::vector<std::uint8_t> idle_before=ram;
+    const ms5::MenuFrameResult idle_result=result;
+    writes.resize(1U);writes[0].value=123U;
+    assert(!ms5::step_menu_frame(ram,supported,0x7124U,0x120000U,
+                                 result,writes,error,NULL,NULL,&d1,&d3));
+    assert(ram==idle_before && d1==0x80U && d3==0x98767123U);
+    assert(result.status==idle_result.status && result.line==idle_result.line &&
+           result.external_jump==idle_result.external_jump && writes.size()==1U && writes[0].value==123U);
+    // Closing a zero-height head still writes the base cursor lowword.
+    ram=active_ram();ram[0x7f02U]=0U;ram[0x7f1bU]=2U;
+    ram[0x7f07U]=4U;ram[0x7f08U]=8U;
+    d1=0xabcd1234U;d3=0x98767123U;
+    assert(ms5::step_menu_frame(ram,supported,0x7123U,0x120000U,
+                                result,writes,error,NULL,NULL,&d1,&d3));
+    assert(d3==0x98767088U && result.line==0x7088U && result.status==-1 && writes.empty());
     std::cout << "Menu frame empty head, stack bounds and late-error rollback passed\n";
 }

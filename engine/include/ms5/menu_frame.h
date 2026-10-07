@@ -15,12 +15,15 @@ struct MenuFrameResult {
 // original external diagnostic A7, not a host pointer. Context provides
 // resources; its callback_stack is replaced by each actual call depth.
 // Success replaces outputs. Failure preserves RAM/result/writes. A BIOS
-// external_jump ends the frame before firmware execution.
+// external_jump ends the frame before firmware execution. Optional full D1/D3
+// are carried through every call; initial_line must match D3.low16.
+// Failure preserves both register outputs.
 bool step_menu_frame(std::vector<std::uint8_t>& ram,
                      const FixedDataResource& resource,
                      std::uint16_t initial_line, std::uint32_t entry_stack,
                      MenuFrameResult& result, std::vector<VideoPortWrite>& writes,
                      std::string& error, const FixedDataResource* font = NULL,
-                     const StageGroupMenuContext* stage_context = NULL);
+                     const StageGroupMenuContext* stage_context = NULL,
+                     std::uint32_t* d1 = NULL, std::uint32_t* d3 = NULL);
 }
 #endif

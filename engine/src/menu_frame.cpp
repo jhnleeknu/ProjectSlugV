@@ -34,11 +34,13 @@ struct Frame {
     std::uint32_t stack;
     std::uint32_t renderer;
     MenuFrameResult out;
+    std::uint32_t d1,d3;
     std::vector<VideoPortWrite> writes;
     std::string& error;
     Frame(std::vector<std::uint8_t>& r,const FixedDataResource& d,const FixedDataResource* f,
-          const StageGroupMenuContext* c,std::uint32_t s,std::uint16_t line,std::string& e)
-        :ram(r),resource(d),font(f),resources(c),stack(s),renderer(get(r,0x7f16)),error(e) {out.line=line;}
+          const StageGroupMenuContext* c,std::uint32_t s,std::uint16_t line,std::string& e,
+          std::uint32_t incoming_d1,std::uint32_t incoming_d3)
+        :ram(r),resource(d),font(f),resources(c),stack(s),renderer(get(r,0x7f16)),d1(incoming_d1),d3(incoming_d3),error(e) {out.line=line;}
 };
 const StageGroupMenuContext* context(Frame& f,unsigned int depth,StageGroupMenuContext& c) {
     if(f.resources==NULL)return NULL;
@@ -65,40 +67,34 @@ void append_border(Frame& f,const std::vector<FixedWrite>& writes) {
         w.value=(static_cast<std::uint32_t>(writes[i].address)<<16)|writes[i].value;f.writes.push_back(w);
     }
 }
-void border_line(Frame& f,std::size_t slot,unsigned int height) {
-    if(height!=0)f.out.line=static_cast<std::uint16_t>(base(f.ram,slot)+(height<2?2:height));
-}
 bool motion(Frame& f,bool closing) {
-    const std::size_t slot=get(f.ram,0x7f12)-0x100000U;
-    const unsigned int old_height=f.ram[slot+4];
     std::vector<FixedWrite> writes;
-    if(!(closing?close_menu_step(f.ram,f.resource,writes,f.error):
-                 open_menu_step(f.ram,f.resource,writes,f.error)))return false;
-    border_line(f,slot,closing?f.ram[slot+4]:old_height);
+    if(!(closing?close_menu_step(f.ram,f.resource,writes,f.error,&f.d1,&f.d3):
+                 open_menu_step(f.ram,f.resource,writes,f.error,&f.d1,&f.d3)))return false;
+    f.out.line=static_cast<std::uint16_t>(f.d3);
     append_border(f,writes);f.renderer=0xa008U;return true;
 }
 bool text(Frame& f,unsigned int depth,bool border) {
-    const std::size_t slot=get(f.ram,0x7f12)-0x100000U;
     if(border) {
         std::vector<FixedWrite> writes;
-        if(!trace_menu_border(f.ram,f.resource,writes,f.error))return false;
-        append_border(f,writes);border_line(f,slot,f.ram[slot+4]);
+        if(!trace_menu_border(f.ram,f.resource,writes,f.error,&f.d3))return false;
+        append_border(f,writes);f.out.line=static_cast<std::uint16_t>(f.d3);
     }
     StageGroupMenuContext c;std::vector<VideoPortWrite> writes;
     if(!draw_menu_text(f.ram,f.resource,f.renderer==0xa008U,f.out.line,writes,f.error,
-                      &f.out.line,f.font,context(f,depth,c),f.renderer==0xa008U?0x3650U:f.renderer))return false;
+                      &f.out.line,f.font,context(f,depth,c),f.renderer==0xa008U?0x3650U:f.renderer,&f.d1,&f.d3))return false;
     append(f,writes);return true;
 }
 bool redraw(Frame& f,std::uint32_t last,unsigned int depth) {
     StageGroupMenuContext c;std::vector<VideoPortWrite> writes;
     if(!redraw_menu_stack(f.ram,f.resource,last,f.out.line,writes,f.error,f.font,
-                          context(f,depth,c),&f.out.line))return false;
+                          context(f,depth,c),&f.out.line,&f.d1,&f.d3))return false;
     append(f,writes);f.renderer=0xa008U;return true;
 }
 bool event(Frame& f,std::uint16_t value,unsigned int depth) {
     StageGroupMenuContext c;MenuEventResult result;std::vector<VideoPortWrite> writes;
     if(!dispatch_menu_event(f.ram,f.resource,value,f.out.line,result,writes,f.error,
-                            f.font,context(f,depth,c),&f.out.line))return false;
+                            f.font,context(f,depth,c),&f.out.line,&f.d1,&f.d3))return false;
     append(f,writes);f.out.external_jump=result.external_jump;return true;
 }
 bool pending(Frame& f,std::uint32_t current) {
@@ -134,6 +130,7 @@ bool run(Frame& f) {
         if(f.ram[slot+4]!=0)return motion(f,true);
         // 9e94 with zero visible height still initializes D3 from slot xy.
         f.out.line=base(f.ram,slot);
+        f.d3=(f.d3&0xffff0000U)|f.out.line;
         current+=16U;put(f.ram,0x7f0e,current);
         if(current==0x107f0eU) {f.out.status=-1;return true;}
         f.ram[0x7f1b]=0;put(f.ram,0x7f12,current);
@@ -168,16 +165,16 @@ bool run(Frame& f) {
     MenuDescriptor d;if(!descriptor(f,current,d))return false;
     if(d.callback6==0x9430U) {
         std::uint32_t a2=current;
-        if(!update_menu_header(f.ram,a2,f.error))return false;
+        if(!update_menu_header(f.ram,a2,f.error,&f.d1))return false;
     }
     put(f.ram,0x7f12,current);f.ram[slot+8]=f.ram[slot+7];
     if(!pending(f,current) || f.out.external_jump!=0)return f.out.external_jump!=0;
-    MenuInput input;if(!select_menu_input(f.ram,input,f.error))return false;
+    MenuInput input;if(!select_menu_input(f.ram,input,f.error,&f.d1))return false;
     if(input.kind==MenuInputPrevious || input.kind==MenuInputNext) {
         f.ram[slot+15]=static_cast<std::uint8_t>((f.ram[slot+15]&253U)|
             (input.kind==MenuInputPrevious?2U:0U));
         StageGroupMenuContext c;std::vector<VideoPortWrite> writes;
-        if(!navigate_menu(f.ram,f.resource,false,0,writes,f.error,f.font,context(f,24,c),&f.out.line))return false;
+        if(!navigate_menu(f.ram,f.resource,false,0,writes,f.error,f.font,context(f,24,c),&f.out.line,&f.d1,&f.d3))return false;
         append(f,writes);f.renderer=0xa008U;
     } else if(input.kind==MenuInputEvent)f.ram[slot+14]=input.event;
     else return true;
@@ -188,7 +185,10 @@ bool step_menu_frame(std::vector<std::uint8_t>& ram,const FixedDataResource& res
                      std::uint16_t initial_line,std::uint32_t entry_stack,
                      MenuFrameResult& result,std::vector<VideoPortWrite>& writes,
                      std::string& error,const FixedDataResource* font,
-                     const StageGroupMenuContext* stage_context) {
+                     const StageGroupMenuContext* stage_context,std::uint32_t* d1,std::uint32_t* d3) {
+    if(d3!=NULL && static_cast<std::uint16_t>(*d3)!=initial_line) {
+        error="menu frame line must match D3 low word";return false;
+    }
     if(ram.size()!=65536U || !valid(get(ram,0x7f0e),true)) {
         error="menu frame requires 65536 RAM bytes and an aligned stack head";return false;
     }
@@ -201,9 +201,12 @@ bool step_menu_frame(std::vector<std::uint8_t>& ram,const FixedDataResource& res
     }
     try {
         std::vector<std::uint8_t> candidate(ram);
-        Frame f(candidate,resource,font,stage_context,entry_stack,initial_line,error);
+        Frame f(candidate,resource,font,stage_context,entry_stack,initial_line,error,
+                d1==NULL?0U:*d1,d3==NULL?initial_line:*d3);
         if(!run(f))return false;
         ram.swap(candidate);writes.swap(f.writes);result=f.out;
+        if(d1!=NULL)*d1=f.d1;
+        if(d3!=NULL)*d3=f.d3;
     } catch(const std::bad_alloc&) {error="cannot allocate menu frame state";return false;}
     error.clear();return true;
 }

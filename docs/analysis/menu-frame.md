@@ -96,3 +96,18 @@ JSON 결과는 `status`(계속0/종료−1), `external_jump`, `line`이다. BIOS
 CLI의 선행 `--registers D1 D3`는 기존 line JSON에 두 레지스터를 추가한다. 콜백 문맥은 기존과 같이 원본 a6da 진입 stack S의 S−28이다. 실제 슬롯별 그리기 순서와 동적 콜백 진입을 원본 실행에서 관찰한다. a370 전체 프레임의 레지스터 전달 완료를 뜻하지는 않는다.
 
 - `.venv/bin/python tools/verify_menu_redraw_registers.py`: 원본 698조건, 포트 428,143개, 출력 보존 오류 검사 7조건 통과. 보고서 SHA256 `68711c1438609585d43f68612cb6300b3cba8c042a0e817d9ad1c05262de1159`.
+
+## a370 프레임 전체 D1/D3 연결
+
+`step_menu_frame`은 선택적 전체 D1/D3를 받아 배경 닫기·다시그리기, 현재 메뉴 열기/닫기, 전체 텍스트, 헤더, pending event, 입력 판정, 선택 이동 순서로 전달한다. 기존 line 인자와 D3 하위 word가 다르면 거절하고, 오류 시 후보 RAM/포트/결과/레지스터를 보존한다. 테두리/닫기 뒤 line의 수동 계산을 제거해 실제 하위 API의 D3 반환을 사용한다.
+
+원본 a370..a6d8에서 하위 호출 밖의 D1 변경은 a474의 입력 초기화에 있으며 입력 API에 반영되어 있다. 닫기 높이0의 a67a→9e94는 아직 D3 하위 word를 슬롯 기준 좌표로 설정하므로 상위 word를 보존해 별도로 반영한다. 빈 스택과 잘못된 모드의 정상 반환 경계는 그때까지의 D1/D3를 유지한다.
+
+CLI 선행 `--registers D1 D3`는 기존 status/external_jump/line JSON에 두 전체 레지스터를 추가한다. 기본 호출은 유지한다. BIOS 점프는 실행 직전 경계이며 status=0은 기존 API 계약이다.
+
+프레임 진입 A1은 기존 계약대로 RAM7f16의 렌더러로 설정한다. 연속 검증에서 실제 CLI RAM/D1/D3를 이어 쓰되 다른 CPU 레지스터나 인터럽트 상태까지 연속 실행했다고 주장하지 않는다. init_menu CLI는 전체 레지스터를 노출하지 않으므로 초기 프레임의 레지스터 fixture와 이후 C++ 반환값 전달을 구분한다.
+
+- `.venv/bin/python tools/verify_menu_frame_registers.py`: 834프레임, 순서 있는 포트 155,889개 통과. 보고서 SHA256 `bb9f90db18860eb32323838f4934aafedc762967f639b6de294fc91246ca3a45`.
+- `.venv/bin/python tools/verify_menu_frame_register_sequences.py`: 116프레임, 순서 있는 포트 9,584개 통과. 보고서 SHA256 `46a1403dee75aaad5b9824b22bb7d33b600b4427f592c61b6e9d895014ff0263`.
+
+기본 행렬의 실제 스테이지 콜백 697회와 오류 보존 29조건을 확인했다. 초기화된 하위 메뉴 흐름 10개/298프레임 및 종료 흐름 8개/116프레임은 실제 CLI RAM/D1/D3를 다음 원본·C++ 호출에 전달한다. 후자는 팔레트/좌표를 정리하는 재시작 4회, BIOS 경계 2회와 빈 스택의 다음 프레임 보존 6회를 포함한다. 초기화 이후 RAM 주입은 명시한 두 입력 byte뿐이며 원본 첫 1MiB는 불변이다.

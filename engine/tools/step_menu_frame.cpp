@@ -104,8 +104,20 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
+    bool registers_mode = false;
+    std::uint32_t d1 = 0U, d3 = 0U;
+    if (argc > 1 && std::string(argv[1]) == "--registers") {
+        if (argc < 4 || !parse_integer(argv[2], 0xffffffffU, d1) ||
+            !parse_integer(argv[3], 0xffffffffU, d3)) {
+            std::cerr << "--registers requires decimal or 0x-prefixed uint32 D1 and D3\n";
+            return 1;
+        }
+        registers_mode = true;
+        argc -= 3;
+        argv += 3;
+    }
     if (argc != 7 && argc != 8 && argc != 9) {
-        std::cerr << "usage: step_menu_frame INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LINE ENTRY_STACK [FONT_MS5D [STAGES_DIRECTORY]]\n";
+        std::cerr << "usage: step_menu_frame [--registers D1 D3] INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LINE ENTRY_STACK [FONT_MS5D [STAGES_DIRECTORY]]\n";
         return 2;
     }
     std::uint32_t entry_stack = 0U;
@@ -113,6 +125,10 @@ int main(int argc, char** argv) {
     if (!parse_integer(argv[5], 0xffffU, line) ||
         !parse_integer(argv[6], 0xffffffU, entry_stack)) {
         std::cerr << "LINE must be decimal or 0x-prefixed uint16; ENTRY_STACK must be decimal or 0x-prefixed uint24\n";
+        return 1;
+    }
+    if (registers_mode && line != (d3 & 0xffffU)) {
+        std::cerr << "LINE must match D3.low16\n";
         return 1;
     }
     const std::string ram_path(argv[1]);
@@ -186,7 +202,8 @@ int main(int argc, char** argv) {
     if (!ms5::load_fixed_data_resource(resource_path, resource, error) ||
         !ms5::step_menu_frame(ram, resource, static_cast<std::uint16_t>(line),
                               entry_stack, result, writes, error,
-                              font_pointer, context_pointer)) {
+                              font_pointer, context_pointer,
+                              registers_mode ? &d1 : NULL, registers_mode ? &d3 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -222,6 +239,8 @@ int main(int argc, char** argv) {
     }
     std::cout << "{\"status\":" << result.status
               << ",\"external_jump\":" << result.external_jump
-              << ",\"line\":" << result.line << "}\n";
+              << ",\"line\":" << result.line;
+    if (registers_mode) std::cout << ",\"d1\":" << d1 << ",\"d3\":" << d3;
+    std::cout << "}\n";
     return 0;
 }

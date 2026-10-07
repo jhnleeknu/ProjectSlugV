@@ -905,3 +905,11 @@
 - `.venv/bin/python tools/verify_restart_registers.py`: 원본 506조건 및 오류 보존 5조건 통과. 보고서 SHA256 `05862a1870c440e1ab16e914f038db0dcfce6f1b52c83201f1b8172e15ad4dad`.
 - 전체 빌드·Python 73개·C++ 검사 통과. 메인 리뷰: `docs/reviews/0123-menu-event-restart-registers.md`.
 - 다음은 a370 전체 메뉴 프레임의 분기와 호출 사이 레지스터 전달, 이후 제어기/메인 루프 통합이다. 전체 게임 복원 목표는 진행 중이다.
+
+## 2026-10-07 — a370 전체 메뉴 프레임 레지스터
+- 배경 닫기/다시그리기부터 텍스트·헤더·이벤트·입력·이동까지 전체 D1/D3를 전달한다. 높이0 닫기의 D3 하위 word와 빈 스택의 보존을 반영했다. 오류 시 기존 출력은 모두 보존한다.
+- `.venv/bin/python tools/verify_menu_frame_registers.py`: 834프레임, 순서 있는 포트 155,889개 통과. 보고서 SHA256 `bb9f90db18860eb32323838f4934aafedc762967f639b6de294fc91246ca3a45`.
+- `.venv/bin/python tools/verify_menu_frame_register_sequences.py`: 116프레임, 순서 있는 포트 9,584개 통과. 보고서 SHA256 `46a1403dee75aaad5b9824b22bb7d33b600b4427f592c61b6e9d895014ff0263`.
+- 총 950프레임 중 414프레임은 초기화된 메뉴에서 실제 CLI RAM/전체 레지스터 반환을 연속 전달했다. 재시작·BIOS 경계·닫기 후 빈 프레임도 포함한다.
+- 전체 빌드, Python 73개 및 C++ 전체 검사 통과. 메인 리뷰 `docs/reviews/0124-menu-frame-registers.md`.
+- 다음은 step_control_menu/step_control/step_control_caller와 입력·메인 루프로 레지스터를 전달하는 통합이다. A1 진입 계약과 다른 CPU 상태·타이밍/픽셀/사운드의 미복원 범위는 유지하며 전체 목표는 진행 중이다.
