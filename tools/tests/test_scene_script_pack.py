@@ -6,7 +6,7 @@ import unittest
 import zlib
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from pack_scene_scripts import command_span, wrap, OPERANDS
+from pack_scene_scripts import command_span, motion_span, wrap, OPERANDS
 
 
 class SceneScriptPackTests(unittest.TestCase):
@@ -55,6 +55,35 @@ class SceneScriptPackTests(unittest.TestCase):
         self.assertEqual(struct.unpack('<4s7I', raw[:32]),
                          (b'MS5D', 1, 1, 2, 2, 6, zlib.crc32(raw[32:]), 0))
         self.assertEqual(raw[32:], bytes.fromhex('00480003ffff'))
+
+
+class MotionSpanTests(unittest.TestCase):
+    def scan(self, payload):
+        return motion_span(bytes(2) + payload, 2)
+
+    def test_type_is_second_word_not_time(self):
+        for time, kind in ((1, 0x14), (0xffff, 0x64), (3, 0x80)):
+            ordinary = struct.pack('>5H', time, kind, 2, 3, 4)
+            end, records, first_type, terminal = self.scan(ordinary + struct.pack('>HH', 9, 0xffff) + b'ignored')
+            self.assertEqual((end, records, first_type, terminal), (16, 1, kind, 12))
+        for kind in (0x90, 1, 0x7fff):
+            with self.assertRaisesRegex(ValueError, 'first type'):
+                self.scan(struct.pack('>5H', 0, kind, 2, 3, 4) + struct.pack('>HH', 0, 0xffff))
+
+    def test_terminal_prefix_and_subsequent_type_are_raw(self):
+        raw = struct.pack('>5H', 1, 0x14, 2, 3, 4) + struct.pack('>5H', 2, 0xdead, 5, 6, 7)
+        terminal = struct.pack('>HH', 0xbeef, 0xffff)
+        end, records, kind, at = self.scan(raw + terminal + b'not-included')
+        self.assertEqual((end, records, kind, at), (26, 2, 0x14, 22))
+        packed = wrap((bytes(2) + raw + terminal)[2:end], 2)
+        self.assertEqual(packed[32:], raw + terminal)
+        self.assertEqual(zlib.crc32(packed[32:]), struct.unpack('<4s7I', packed[:32])[6])
+
+    def test_first_terminal_and_truncated_records_rejected(self):
+        for raw in (struct.pack('>HH', 1, 0xffff), struct.pack('>HH', 1, 0x14),
+                    struct.pack('>5H', 1, 0x14, 2, 3, 4), b'\x00'):
+            with self.assertRaises(ValueError):
+                self.scan(raw)
 
 
 if __name__ == '__main__':

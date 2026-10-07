@@ -23,7 +23,7 @@ ms5::SceneScript script(unsigned int opcode, const std::vector<unsigned int>& wo
 }
 ms5::SceneCommandState initial() {
     ms5::SceneCommandState state; state.d0 = 0x12345678; state.d1 = 0x23456789; state.d2 = 0x24681357; state.d4 = 0x13572468; state.d3 = 0x3456789a;
-    state.d5 = 0x76543210; state.d6 = 0x6543210f; state.d7 = 0x456789ab; state.a0 = 0x56789abc; state.a1 = 0x50000; return state;
+    state.d5 = 0x76543210; state.d6 = 0x6543210f; state.d7 = 0x456789ab; state.a0 = 0x56789abc; state.a1 = 0x50000; state.a2 = 0xabcdefff; return state;
 }
 ms5::FixedDataResource pointers() {
     ms5::FixedDataResource result; result.source_cpu_address = result.source_rom_offset = 0x1a08e; result.data.assign(16,0);
@@ -31,7 +31,7 @@ ms5::FixedDataResource pointers() {
     return result;
 }
 bool same(const ms5::SceneCommandState& a, const ms5::SceneCommandState& b) {
-    return a.d0 == b.d0 && a.d1 == b.d1 && a.d2 == b.d2 && a.d4 == b.d4 && a.d3 == b.d3 && a.d5 == b.d5 && a.d6 == b.d6 && a.d7 == b.d7 && a.a0 == b.a0 && a.a1 == b.a1;
+    return a.d0 == b.d0 && a.d1 == b.d1 && a.d2 == b.d2 && a.d4 == b.d4 && a.d3 == b.d3 && a.d5 == b.d5 && a.d6 == b.d6 && a.d7 == b.d7 && a.a0 == b.a0 && a.a1 == b.a1 && a.a2 == b.a2;
 }
 }
 int main() {
@@ -98,15 +98,54 @@ int main() {
     assert(ms5::execute_scene_command(ram,script(0x14,{0,0,0}),alias_table,state,ports,error));
     assert(state.d5 == 0x765432ab && ram[0xd494] != 0xab);
     assert(state.d4 == 0x13572400 && state.d7 == 0 && state.d6 == 0x6543210f);
+    std::vector<ms5::FixedDataResource> dependencies;
+    ms5::FixedDataResource indirect; indirect.source_cpu_address = indirect.source_rom_offset = 0x60000; indirect.data.assign(4,0); dependencies.push_back(indirect);
+    state = initial();
+    assert(ms5::execute_scene_command(ram,script(0x10,{6,0}),empty,state,ports,error,&dependencies));
+    assert(state.a0 == 0xe89ec && get(ram,0xde2a) == 0xe89ec && state.a2 == 0xabcdefff);
+    put(dependencies[0].data,0,0x12345678); state = initial();
+    assert(ms5::execute_scene_command(ram,script(0x10,{6,0}),empty,state,ports,error,&dependencies));
+    assert(state.a0 == 0x12345678 && get(ram,0xde2a) == 0x12345678);
+    ms5::FixedDataResource paths; paths.source_cpu_address = paths.source_rom_offset = 0x1a0a6; paths.data.assign(16,0);
+    put(paths.data,4,0x101234); dependencies.push_back(paths); state = initial();
+    assert(ms5::execute_scene_command(ram,script(0x24,{4,0xffff,0xffff}),empty,state,ports,error,&dependencies));
+    assert(get(ram,0x1234) == 0xffffffff && state.a2 == 0xffffffff && state.d7 == 0x45670004 && state.a1 == 0x50008);
+    state = initial(); put(ram,0xd3a2,0x12345678); put(ram,0xd3a6,0x87654321); ram[0xd494] = 0x5a;
+    assert(ms5::execute_scene_command(ram,script(0,{1,2,0,0}),empty,state,ports,error));
+    assert(state.d0 == 0xffff0000 && state.d1 == 0x00fe0000 && state.d2 == 0x12345678 && state.d3 == 0x87654321);
+    assert(state.d4 == 0x13572400 && state.d5 == 0x7654325a && state.d7 == 0x7fff && state.a0 == 0x10d38e && state.a2 == 0);
+    ms5::FixedDataResource motion; motion.source_cpu_address = motion.source_rom_offset = 0x70000;
+    const unsigned int motion_words[7] = {1,0x14,0,2,4,10,0xffff};
+    for (unsigned int i = 0; i < 7; ++i) append(motion.data,motion_words[i]);
+    dependencies.push_back(motion); state = initial();
+    assert(ms5::execute_scene_command(ram,script(0,{1,2,7,0}),empty,state,ports,error,&dependencies));
+    assert(get(ram,0xd3ba,2) == 4 && get(ram,0xd3c0,2) == 6 && state.d1 == 0x00fa0000 && state.d4 == 0x13570000 && state.d7 == 9);
+    dependencies.back().data[3] = 0x64; state = initial();
+    assert(ms5::execute_scene_command(ram,script(0,{1,2,7,0}),empty,state,ports,error,&dependencies));
+    assert(get(ram,0xd3b8,2) == 3 && get(ram,0xd3bc,2) == 5 && state.d0 == 0xfffb0000);
+    const std::vector<std::uint8_t> invalid_before = ram; state = initial(); const ms5::SceneCommandState invalid_state = state;
+    dependencies.back().data[3] = 1; ports.assign(1,ms5::VideoPortWrite{123,456,2});
+    assert(!ms5::execute_scene_command(ram,script(0,{1,2,7,0}),empty,state,ports,error,&dependencies));
+    assert(ram == invalid_before && same(state,invalid_state) && ports[0].value == 456);
+    dependencies.back().data[3] = 0x14; dependencies.back().data.pop_back();
+    assert(!ms5::execute_scene_command(ram,script(0,{1,2,7,0}),empty,state,ports,error,&dependencies));
+    assert(ram == invalid_before && same(state,invalid_state) && ports[0].value == 456);
+    assert(!ms5::execute_scene_command(ram,script(0x10,{6,0}),empty,state,ports,error));
+    assert(ram == invalid_before && same(state,invalid_state) && ports[0].value == 456);
+    assert(!ms5::execute_scene_command(ram,script(0x24,{2,0,0}),empty,state,ports,error,&dependencies));
+    assert(ram == invalid_before && same(state,invalid_state) && ports[0].value == 456);
+    put(dependencies[1].data,4,0x10fffe);
+    assert(!ms5::execute_scene_command(ram,script(0x24,{4,0,0}),empty,state,ports,error,&dependencies));
+    assert(ram == invalid_before && same(state,invalid_state) && ports[0].value == 456);
     // Forged decoded metadata cannot redirect execution away from raw source.
     ms5::SceneScript forged = script(0x4c,{0x1234,0x5678}); forged.commands[0].opcode = 0x40; forged.commands[0].operands.clear();
     state = initial();
     assert(ms5::execute_scene_command(ram,forged,empty,state,ports,error));
     assert(get(ram,0xd434) == 0x12345678 && state.d7 == 0x4567004c);
     // Failed resource/node checks preserve every output.
-    const unsigned int unsupported[5] = {0,4,8,0x10,0x24}; const unsigned int counts[5] = {4,1,2,2,3};
+    const unsigned int unsupported[2] = {4,8}; const unsigned int counts[2] = {1,2};
     ms5::VideoPortWrite marker = {123,456,2}; ports.assign(1,marker);
-    for (unsigned int i = 0; i < 5; ++i) {
+    for (unsigned int i = 0; i < 2; ++i) {
         state = initial(); const ms5::SceneCommandState old = state; const std::vector<std::uint8_t> before = ram;
         assert(!ms5::execute_scene_command(ram,script(unsupported[i],std::vector<unsigned int>(counts[i],0)),empty,state,ports,error));
         assert(ram == before && same(state,old) && ports.size() == 1 && ports[0].value == 456);

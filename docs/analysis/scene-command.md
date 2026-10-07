@@ -1,5 +1,7 @@
 # Scene command의 부분 실행 계약
 
+이 문서는 `e495c44`의15-handler/10-register milestone 기록이다. 아래 report hash·수치는 당시 결과이며 같은 report 경로는 후속 검증에서 덮어쓸 수 있다. 현행18-handler/11-register API와 의존성·최종 검증은 `scene-command-dependencies.md`를 참조한다.
+
 ## 원본과 resource 범위
 
 Canonical decrypted 프로그램 SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. Script·handler·pointer table 주소는 첫1MiB 고정 ROM이며 같은 파일 offset이다. RAM pointer는 CPU RAM 주소로 따로 기록한다. 주소·opcode·상수는16진수, 개수는10진수다.

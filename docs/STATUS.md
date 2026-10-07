@@ -1135,3 +1135,11 @@
 - 원본3385조건/부정65조건/18720순서 있는 ports/118지원명령 CLI승계 run 통과. Canonical814명령 중 지원586회(14종), 미지원228회(5종)다.15번째4c는 canonical occurrence가 없어 합성 unit 범위로 명시한다. 보고서 SHA256 `ea129b9adc8158c195cd1bd92ee4488d24aae78ca87e6327a3a0dad5ffe9e65d`.
 - 전체빌드 Python131/C++99/경고0. 메인리뷰0152와분석scene-command.md에검증·제약을기록했다. 이전 사용자 상태응답은 소스 변경 없는 상태 확인이었으며 이번에는 실제 누락수정·확장검증을 완료했다.
 - 미지원00/04/08/10/24는각39/75/41/1/72회다. 다음은 외부map/path/palette 의존성 및1a26a phase loop를 연결하는 작업이다. 현재도 직접 조작 가능한 스테이지 화면, 자연scheduler와전체게임플레이는미완료이며 전체목표는계속진행중이다.
+
+
+## 2026-10-07 — 장면 이동 초기화와 경로 리소스 연결
+
+- 장면명령00/10/24를추가해18종을지원한다. 기존MS5D로37 motion span·간접word1·path-node table1(총1248payloadbytes)을보존하고C++에서직접소비한다. A2를포함한11레지스터를승계하며00의좌표WORD변경과43e22 초기화/종결시간조회,10의간접pointer fallback,24의경로pointer저장을원본순서대로연결했다.
+- 메인리뷰에서packer의time/type field혼동을발견해offset2 type검사로수정했다. 회귀3개를추가했으며실제firsttype은14/64/80이다. 후속운동명령의의미해석완료를주장하지않는다.
+- 원본3945조건/오류83조건/18720orderedports/79 CLI승계run 통과. 지원698 canonical명령,미지원116명령(04:75,08:41),4c는합성unit만이다. 추가dependency오류13조건은임시파일로검사했으며원본리소스와고정ROM은보존했다. 최종보고서 SHA256 `a69e2b5b136e4db0c14245b7602c36ec0ccd03b5868ed864b894eb5b3cc0f6fb`.
+- 전체빌드 Python134/C++99/경고0. 메인리뷰0153 및scene-command-dependencies.md에재생성/CLI/검증범위를기록했다. 다음은04의bank/palette 등록과08의map 초기화,이후1a26a phase loop 연결이다. 전체목표와직접실행가능한스테이지화면은미완료다.

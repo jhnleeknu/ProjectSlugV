@@ -2,6 +2,8 @@
 
 #include <cstdlib>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -81,15 +83,15 @@ bool parse_integer(const std::string& text, std::uint32_t maximum, std::uint32_t
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 16) { std::cerr << "usage: step_scene_command D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS SCRIPT_MS5D NODE_POINTERS_MS5D\n"; return 2; }
-    std::uint32_t values[10] = {0};
-    for (unsigned int i = 0; i < 10; ++i) {
+    if (argc != 17 && argc != 18) { std::cerr << "usage: step_scene_command D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS SCRIPT_MS5D NODE_POINTERS_MS5D [DEPENDENCIES_DIR]\n"; return 2; }
+    std::uint32_t values[11] = {0};
+    for (unsigned int i = 0; i < 11; ++i) {
         if (!parse_integer(argv[i + 1],0xffffffffU,values[i])) { std::cerr << "invalid unsigned number\n"; return 1; }
     }
     ms5::SceneCommandState state; state.d0 = values[0]; state.d1 = values[1]; state.d2 = values[2]; state.d3 = values[3];
-    state.d4 = values[4]; state.d5 = values[5]; state.d6 = values[6]; state.d7 = values[7]; state.a0 = values[8]; state.a1 = values[9];
+    state.d4 = values[4]; state.d5 = values[5]; state.d6 = values[6]; state.d7 = values[7]; state.a0 = values[8]; state.a1 = values[9]; state.a2 = values[10];
     std::vector<std::string> paths, canonical;
-    for (int i = 11; i < argc; ++i) {
+    for (int i = 12; i < 17; ++i) {
         paths.push_back(argv[i]); std::string resolved;
         if (!canonical_path(paths.back(),resolved)) { std::cerr << "cannot resolve path\n"; return 1; }
         for (std::size_t j = 0; j < canonical.size(); ++j) {
@@ -102,8 +104,34 @@ int main(int argc, char** argv) {
     input.seekg(0); std::vector<std::uint8_t> ram(65536);
     if (!input.read(reinterpret_cast<char*>(&ram[0]),65536)) { std::cerr << "cannot read RAM\n"; return 1; }
     ms5::SceneScript script; ms5::FixedDataResource pointers; std::vector<ms5::VideoPortWrite> ports; std::string error;
-    if (!ms5::load_scene_script(paths[3],script,error) || !ms5::load_fixed_data_resource(paths[4],pointers,error) ||
-        !ms5::execute_scene_command(ram,script,pointers,state,ports,error)) { std::cerr << error << '\n'; return 1; }
+    if (!ms5::load_scene_script(paths[3],script,error) || !ms5::load_fixed_data_resource(paths[4],pointers,error)) { std::cerr << error << '\n'; return 1; }
+    std::vector<ms5::FixedDataResource> dependencies;
+    for (std::size_t i = 0; i < script.commands.size(); ++i) {
+        const ms5::SceneCommand& command = script.commands[i];
+        if (command.source_cpu_address != state.a1) continue;
+        std::string filename;
+        std::uint32_t address = 0;
+        if (command.opcode == 0 || command.opcode == 0x10) {
+            const std::size_t at = command.opcode == 0 ? 4 : 0;
+            for (unsigned int j = 0; j < 4; ++j) address = (address << 8) | command.operands[at + j];
+            if (command.opcode == 0x10 || address != 0) {
+                std::ostringstream name; name << (command.opcode == 0 ? "motion_" : "indirect_") << std::hex << std::setfill('0') << std::setw(6) << address << ".ms5d"; filename = name.str();
+            }
+        } else if (command.opcode == 0x24) filename = "path_nodes.ms5d";
+        if (!filename.empty()) {
+            if (argc != 18) { std::cerr << "command requires DEPENDENCIES_DIR\n"; return 1; }
+            const std::string path = std::string(argv[17]) + "/" + filename; std::string resolved;
+            if (!canonical_path(path,resolved)) { std::cerr << "cannot resolve dependency\n"; return 1; }
+            for (std::size_t j = 0; j < paths.size(); ++j) {
+                if (canonical[j] == resolved || same_inode(path,paths[j])) { std::cerr << "all files must be distinct\n"; return 1; }
+            }
+            ms5::FixedDataResource resource;
+            if (!ms5::load_fixed_data_resource(path,resource,error)) { std::cerr << error << '\n'; return 1; }
+            dependencies.push_back(resource);
+        }
+        break;
+    }
+    if (!ms5::execute_scene_command(ram,script,pointers,state,ports,error,&dependencies)) { std::cerr << error << '\n'; return 1; }
     std::vector<std::uint8_t> bytes;
     for (std::size_t i = 0; i < ports.size(); ++i) {
         bytes.push_back(ports[i].size);
@@ -112,6 +140,6 @@ int main(int argc, char** argv) {
     }
     if (!save_bytes(paths[1],ram) || !save_bytes(paths[2],bytes)) { std::cerr << "cannot write outputs\n"; return 1; }
     std::cout << "{\"d0\":" << state.d0 << ",\"d1\":" << state.d1 << ",\"d2\":" << state.d2 << ",\"d3\":" << state.d3 << ",\"d4\":" << state.d4 << ",\"d5\":" << state.d5 << ",\"d6\":" << state.d6 << ",\"d7\":" << state.d7
-        << ",\"a0\":" << state.a0 << ",\"a1\":" << state.a1 << ",\"writes\":" << ports.size() << "}\n";
+        << ",\"a0\":" << state.a0 << ",\"a1\":" << state.a1 << ",\"a2\":" << state.a2 << ",\"writes\":" << ports.size() << "}\n";
     return 0;
 }

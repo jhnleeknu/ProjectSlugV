@@ -16,9 +16,21 @@ void put_long(std::vector<std::uint8_t>& bytes, std::size_t at, std::uint32_t va
     put_word(bytes,at,static_cast<std::uint16_t>(value >> 16)); put_word(bytes,at + 2,static_cast<std::uint16_t>(value));
 }
 bool supported(unsigned int opcode) {
-    return opcode == 0x0c || opcode == 0x14 || opcode == 0x18 || opcode == 0x1c || opcode == 0x20 ||
+    return opcode == 0 || opcode == 0x10 || opcode == 0x24 || opcode == 0x0c || opcode == 0x14 || opcode == 0x18 || opcode == 0x1c || opcode == 0x20 ||
         opcode == 0x28 || opcode == 0x2c || opcode == 0x30 || opcode == 0x34 || opcode == 0x38 ||
         opcode == 0x3c || opcode == 0x40 || opcode == 0x44 || opcode == 0x48 || opcode == 0x4c;
+}
+const FixedDataResource* dependency(const std::vector<FixedDataResource>* resources,
+    std::uint32_t address, std::size_t size, std::string& error) {
+    if (resources != NULL) {
+        for (std::size_t i = 0; i < resources->size(); ++i) {
+            const FixedDataResource& resource = (*resources)[i];
+            if (resource.source_cpu_address == address && resource.source_rom_offset == address &&
+                address != 0 && (address & 1U) == 0 && address < 0x100000 &&
+                size <= 0x100000 - address && resource.data.size() == size) return &resource;
+        }
+    }
+    error = "missing or invalid exact scene command dependency"; return NULL;
 }
 bool select_node(const FixedDataResource& pointers, unsigned int selector, std::size_t span,
                  std::uint32_t& address, std::size_t& offset, std::string& error) {
@@ -33,7 +45,8 @@ bool select_node(const FixedDataResource& pointers, unsigned int selector, std::
 }
 bool execute_scene_command(std::vector<std::uint8_t>& ram, const SceneScript& script,
     const FixedDataResource& pointers, SceneCommandState& state,
-    std::vector<VideoPortWrite>& ports, std::string& error) {
+    std::vector<VideoPortWrite>& ports, std::string& error,
+    const std::vector<FixedDataResource>* dependencies) {
     if (ram.size() != 65536) { error = "scene command requires exactly64KiB RAM"; return false; }
     try {
         SceneScript decoded;
@@ -48,7 +61,66 @@ bool execute_scene_command(std::vector<std::uint8_t>& ram, const SceneScript& sc
         const unsigned int opcode = command->opcode;
         next.d7 = (next.d7 & 0xffff0000U) | opcode;
         next.a1 = command->source_cpu_address + 2;
-        if (opcode == 0x0c) {
+        if (opcode == 0) {
+            next.a2 = longword(operands,4);
+            put_word(candidate,0xd3b8,word(operands,0)); put_word(candidate,0xd3ba,word(operands,2));
+            next.d0 = static_cast<std::uint32_t>(word(operands,0)) << 16;
+            next.d1 = static_cast<std::uint32_t>(word(operands,2)) << 16;
+            put_long(candidate,0xd3bc,next.d0); put_long(candidate,0xd3c0,next.d1); put_long(candidate,0xd3b4,next.a2);
+            std::uint16_t duration = 0x7fff;
+            if (next.a2 != 0) {
+                const FixedDataResource* motion = NULL;
+                if (dependencies != NULL) {
+                    for (std::size_t i = 0; i < dependencies->size(); ++i) {
+                        const FixedDataResource& resource = (*dependencies)[i];
+                        if (resource.source_cpu_address == next.a2 && resource.source_rom_offset == next.a2) motion = &resource;
+                    }
+                }
+                if (motion == NULL || (next.a2 & 1U) || next.a2 >= 0x100000 || motion->data.size() > 65536 ||
+                    motion->data.size() > 0x100000 - next.a2) { error = "invalid scene motion dependency"; return false; }
+                const std::vector<std::uint8_t>& data = motion->data;
+                std::size_t cursor = 0; bool terminal = false;
+                while (cursor + 4 <= data.size()) {
+                    if (word(data,cursor + 2) == 0xffff) {
+                        if (cursor == 0 || cursor + 4 != data.size()) { error = "invalid scene motion terminal"; return false; }
+                        duration = static_cast<std::uint16_t>(word(data,cursor) - 1U); terminal = true; break;
+                    }
+                    if (data.size() - cursor < 10) break;
+                    cursor += 10;
+                }
+                if (!terminal || word(data,2) > 0x8c || (word(data,2) & 3U)) { error = "invalid scene motion records"; return false; }
+                const std::uint16_t type = word(data,2);
+                next.d4 = (next.d4 & 0xffff0000U) | type;
+                next.d0 = (next.d0 & 0xffff0000U) | word(data,6); next.d1 = (next.d1 & 0xffff0000U) | word(data,8);
+                const std::size_t coordinate = type < 0x58 ? 0xd3ba : 0xd3b8;
+                const std::size_t local = type < 0x58 ? 0xd3c0 : 0xd3bc;
+                put_word(candidate,coordinate,static_cast<std::uint16_t>(word(candidate,coordinate) + next.d0));
+                put_word(candidate,local,static_cast<std::uint16_t>(word(candidate,local) + next.d1));
+            }
+            next.d0 = 0U - longword(candidate,0xd3bc); next.d1 = 0x01000000U - longword(candidate,0xd3c0);
+            next.a0 = 0x10d38e; next.d2 = longword(candidate,0xd3a2);
+            SceneNodeState position; position.d0 = next.d0; position.d1 = next.d1; position.d3 = next.d3; position.a0 = next.a0;
+            if (!step_scene_node(candidate,0x43e22,position,error)) return false;
+            next.d0 = position.d0; next.d1 = position.d1; next.d3 = position.d3; next.d4 &= 0xffffff00U;
+            next.d5 = (next.d5 & 0xffffff00U) | candidate[0xd494]; next.d7 = duration;
+            put_word(candidate,0xd41e,duration); put_word(candidate,0xd420,duration);
+        } else if (opcode == 0x10) {
+            const FixedDataResource* resource = dependency(dependencies,longword(operands,0),4,error);
+            if (resource == NULL) return false;
+            next.a0 = longword(resource->data,0);
+            if (next.a0 == 0) next.a0 = 0xe89ec;
+            put_long(candidate,0xde2a,next.a0);
+        } else if (opcode == 0x24) {
+            const unsigned int selector = word(operands,0);
+            next.d7 = (next.d7 & 0xffff0000U) | selector;
+            next.a2 = longword(operands,2);
+            const FixedDataResource* resource = dependency(dependencies,0x1a0a6,16,error);
+            if (resource == NULL) return false;
+            if (selector > 12 || (selector & 3U)) { error = "invalid scene path selector"; return false; }
+            const std::uint32_t address = longword(resource->data,selector);
+            if ((address & 1U) || address < 0x100000 || address > 0x10fffc) { error = "invalid scene path RAM span"; return false; }
+            put_long(candidate,address - 0x100000,next.a2);
+        } else if (opcode == 0x0c) {
             next.a0 = longword(operands,0); put_long(candidate,0xd40e,next.a0);
         } else if (opcode == 0x30) {
             for (unsigned int i = 0; i < 4; ++i) put_word(candidate,0xd426 + i*2,word(operands,i*2));
