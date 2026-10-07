@@ -35,7 +35,10 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
                          std::vector<VideoPortWrite>& writes, std::string& error,
                          const FixedDataResource* font,
                          const StageGroupMenuContext* stage_context,
-                         std::uint16_t* final_line) {
+                         std::uint16_t* final_line,std::uint32_t* d1,std::uint32_t* d3) {
+    if(d3!=NULL && static_cast<std::uint16_t>(*d3)!=initial_line) {
+        error="menu event line must match D3 low word";return false;
+    }
     bool covered=false;
     if (!menu_position_occluded(ram,0x7000U,covered,error)) return false;
     const std::uint32_t current=read_u32(ram,0x7f12U);
@@ -58,20 +61,18 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
         MenuEventResult outcome;
         outcome.a2=current;
         std::uint16_t local_line=initial_line;
+        std::uint32_t pending_d1=(d1==NULL?0U:(*d1&0xffff0000U))|descriptor.items[index].argument;
+        std::uint32_t pending_d3=d3==NULL?initial_line:*d3;
         if (callback==0x9602U) {
             if (!dispatch_stage_area_menu(candidate,resource,font,stage_context,event,
-                                           local_line,outcome.a2,pending,error)) return false;
+                                           local_line,outcome.a2,pending,error,&pending_d1,&pending_d3)) return false;
         } else if (callback==0x9802U) {
             if (!dispatch_stage_group_menu(candidate,resource,font,stage_context,event,
-                                            outcome.a2,pending,error)) return false;
-            if (event==5U) {
-                local_line=static_cast<std::uint16_t>(
-                    (static_cast<std::uint16_t>(candidate[0x4cd8U])<<8) |
-                    candidate[0x4cd9U]);
-            }
+                                            outcome.a2,pending,error,&pending_d1,&pending_d3)) return false;
+            local_line=static_cast<std::uint16_t>(pending_d3);
         } else if (callback==0x9aa8U) {
             if (!dispatch_debug_menu(candidate,resource,font,event,local_line,
-                                     outcome.a2,pending,error)) return false;
+                                     outcome.a2,pending,error,&pending_d1,&pending_d3)) return false;
         } else if (callback!=0U) {
             if (event==7U && (callback==0x949aU || callback==0x94b8U)) {
                 if (candidate[0x7dfaU]==0U && candidate[0x7dfbU]==1U) {
@@ -83,7 +84,8 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
                 } else if (callback==0x9532U) {
                     outcome.external_jump=0xc00444U;
                 } else if (callback==0x950cU) {
-                    if (!restart_static_object(candidate,0x1008e4U,0xca22U,3U,pending,error)) return false;
+                    if (!restart_static_object(candidate,0x1008e4U,0xca22U,3U,pending,error,&pending_d1,&pending_d3)) return false;
+                    local_line=static_cast<std::uint16_t>(pending_d3);
                     mark_exit(candidate);
                     close_menu(candidate,outcome);
                 } else {
@@ -104,8 +106,9 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
                         parent_context.callback_stack-=40U;
                         parent_context_pointer=&parent_context;
                     }
+                    pending_d1=y; // 9f36 clears the full D1, then adds byte coordinates.
                     if (!push_menu(candidate,resource,child,x,y,local_line,pending,error,font,
-                                   parent_context_pointer,&local_line)) return false;
+                                   parent_context_pointer,&local_line,&pending_d1,&pending_d3)) return false;
                     outcome.a2=read_u32(candidate,0x7f0eU);
                 }
             } else if (event==4U) {
@@ -117,6 +120,8 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
         writes.swap(pending);
         result=outcome;
         if (final_line!=NULL) *final_line=local_line;
+        if(d1!=NULL)*d1=pending_d1;
+        if(d3!=NULL)*d3=pending_d3;
     } catch (const std::bad_alloc&) {
         error="cannot allocate menu event state";
         return false;

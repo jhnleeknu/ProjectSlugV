@@ -20,6 +20,9 @@ struct MenuEventResult {
 // event callback entry A7; nested push redraw adjusts it by 40 bytes.
 // Failure preserves RAM, result, writes and final_line. Pending slot+14 is
 // not cleared here; that is the frame loop's responsibility.
+// Optional D1/D3 are transactional full registers. initial_line must match
+// D3.low16. Dispatch first replaces D1.low16 with the item argument, even
+// for a null callback, then carries callback results to the caller.
 bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
                          const FixedDataResource& resource,
                          std::uint16_t event, std::uint16_t initial_line,
@@ -27,6 +30,7 @@ bool dispatch_menu_event(std::vector<std::uint8_t>& ram,
                          std::vector<VideoPortWrite>& writes, std::string& error,
                          const FixedDataResource* font = NULL,
                          const StageGroupMenuContext* stage_context = NULL,
-                         std::uint16_t* final_line = NULL);
+                         std::uint16_t* final_line = NULL,
+                         std::uint32_t* d1 = NULL, std::uint32_t* d3 = NULL);
 }
 #endif

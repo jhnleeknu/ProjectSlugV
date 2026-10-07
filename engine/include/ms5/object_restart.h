@@ -17,12 +17,14 @@ namespace ms5 {
 // installs callback at object +0, and clears error. Failure preserves RAM and
 // writes. Nonzero +0x10 (the original TRAP path) and coordinate indices >=8
 // without their high bit set are rejected. Linked object lists are outside
-// this static-object path; CPU registers and stack effects are not modeled.
+// this static-object path. Optional D1/D3 model the returned values and are
+// preserved on failure; other registers and external stack effects are not modeled.
 bool restart_static_object(std::vector<std::uint8_t>& ram,
                            std::uint32_t object_address,
                            std::uint32_t callback, std::uint8_t watchdog,
                            std::vector<VideoPortWrite>& writes,
-                           std::string& error);
+                           std::string& error, std::uint32_t* d1 = NULL,
+                           std::uint32_t* d3 = NULL);
 
 } // namespace ms5
 

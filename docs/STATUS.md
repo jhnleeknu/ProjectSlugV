@@ -897,3 +897,11 @@
 - `.venv/bin/python tools/verify_menu_redraw_registers.py`: 원본 698조건, 포트 428,143개, 출력 보존 오류 검사 7조건 통과. 보고서 SHA256 `68711c1438609585d43f68612cb6300b3cba8c042a0e817d9ad1c05262de1159`.
 - 전체 빌드·Python 73개·C++ 전체 검사 통과. 메인 리뷰: `docs/reviews/0122-menu-stack-redraw-registers.md`.
 - 다음은 9b3e 상위 이벤트 디스패처에서 항목 argument와 콜백별 레지스터를 연결하고, a370/제어기/메인 루프로 이어 가는 작업이다. 전체 목표는 진행 중이다.
+
+## 2026-10-07 — 상위 메뉴 이벤트·정적 재시작 전체 레지스터
+- 9b3e 항목 argument와 모든 지원 콜백의 전체 D1/D3를 연결했다. 하위 메뉴 열기의 D1 초기화와 BIOS 외부 점프 경계를 반영한다.
+- 2a28 정적 재시작에서 팔레트 해제 후 D3, 연결 좌표의 이전 absolute Y, 최종 D1=ffffffff를 복원했다. 오류 시 전체 후보 출력은 보존한다.
+- `.venv/bin/python tools/verify_menu_event_registers.py`: 원본 5,551조건 및 오류 보존 28조건 통과. 보고서 SHA256 `5504bf49e774fc5e4bdf51cddc8fadc36471860d23495784550510bf86eeab81`.
+- `.venv/bin/python tools/verify_restart_registers.py`: 원본 506조건 및 오류 보존 5조건 통과. 보고서 SHA256 `05862a1870c440e1ab16e914f038db0dcfce6f1b52c83201f1b8172e15ad4dad`.
+- 전체 빌드·Python 73개·C++ 검사 통과. 메인 리뷰: `docs/reviews/0123-menu-event-restart-registers.md`.
+- 다음은 a370 전체 메뉴 프레임의 분기와 호출 사이 레지스터 전달, 이후 제어기/메인 루프 통합이다. 전체 게임 복원 목표는 진행 중이다.

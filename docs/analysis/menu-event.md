@@ -60,3 +60,13 @@ build/dispatch_menu_event INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES EVENT LI
 포트 기록은 size byte + BE32 CPU 주소 + BE32 값의 기존 9-byte 진단 형식이다. stdout JSON은 a2/external_jump다. 리소스는 `control_menu_tree.ms5d`를 그대로 사용한다.
 
 헤더 콜백9430의 프레임 입력 확인, 자식 메뉴9602/9802/9aa8의 동적 출력/선택, 전체a370 및 최종 화면·음향은 아직 남아 있다. 현재 검증을 전체 게임의 자연스러운 실행 경로 검증으로 해석하지 않는다.
+
+## 전체 D1/D3 반환
+
+`dispatch_menu_event`는 선택적 전체 D1/D3를 전달한다. 9b48은 콜백이 없어도 항목 argument를 D1 하위 word에 넣는다. 나머지 상위 word는 실제 콜백이 바꾸기 전까지 유지한다. debug/구역/그룹 콜백은 구현된 전체 레지스터 반환을 그대로 전달한다. 하위 메뉴를 여는 949a/94b8/94d6의 event3은 9f36이 D1 전체를 지운 뒤 byte 좌표를 계산하므로 이 값을 `push_menu`에 전달한다.
+
+950c의 event3 재시작은 2730의 MOVEQ #-1에 따라 최종 D1=ffffffff다. D3는 8ff4 팔레트 해제, 46ef4 연결 좌표 갱신의 순서를 반영한다. 연결 좌표가 있으면 43e3e가 좌표의 이전 절대 Y(+18.long)를 D3 전체에 읽는다. 뒤의 오브젝트 필드 초기화는 D3를 바꾸지 않는다. 연결 좌표가 없으면 팔레트 해제의 D3가 유지된다. 이 값은 텍스트 좌표일 필요가 없으며 line 출력도 실제 D3 하위 word를 반환한다.
+
+CLI 선행 `--registers D1 D3`는 LINE=D3.low16을 요구하고 기존 A2/외부점프 JSON에 line/D1/D3를 추가한다. c00444는 BIOS에 진입하기 직전 경계까지만 비교한다. 해당 BIOS를 실행하거나 복원했다는 뜻은 아니다. 실패 시 RAM·포트·결과·레지스터 모두 보존한다.
+
+- `.venv/bin/python tools/verify_menu_event_registers.py`: 원본 5,551조건 및 오류 보존 28조건 통과. 보고서 SHA256 `5504bf49e774fc5e4bdf51cddc8fadc36471860d23495784550510bf86eeab81`.

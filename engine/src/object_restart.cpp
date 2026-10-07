@@ -30,7 +30,7 @@ bool restart_static_object(std::vector<std::uint8_t>& ram,
                            std::uint32_t object_address,
                            std::uint32_t callback, std::uint8_t watchdog,
                            std::vector<VideoPortWrite>& writes,
-                           std::string& error) {
+                           std::string& error, std::uint32_t* d1, std::uint32_t* d3) {
     if (ram.size() != 65536U) {
         error = "RAM must contain exactly 65536 bytes at CPU 0x100000";
         return false;
@@ -51,6 +51,7 @@ bool restart_static_object(std::vector<std::uint8_t>& ram,
     }
     try {
         std::vector<std::uint8_t> candidate(ram);
+        std::uint32_t pending_d3=d3!=NULL?*d3:0U;
         std::vector<VideoPortWrite> pending;
         VideoPortWrite watchdog_write;
         watchdog_write.address = 0x300001U;
@@ -60,7 +61,7 @@ bool restart_static_object(std::vector<std::uint8_t>& ram,
 
         // CPU 0x00299c calls 0x008ff4 before 0x046ef4. Read the
         // coordinate index after releasing palettes to preserve write order.
-        if (!release_palettes(candidate, object, error)) {
+        if (!release_palettes(candidate, object, error, &pending_d3)) {
             return false;
         }
         const std::uint8_t index = candidate[object + 0x6cU];
@@ -75,6 +76,10 @@ bool restart_static_object(std::vector<std::uint8_t>& ram,
             write_word(candidate, offset + 0x26U, 0xffffU);
             write_word(candidate, offset + 0x2aU, 2U);
             candidate[object + 0x6cU] = 0xffU;
+            // 43e3e loads the old absolute Y before updating the coordinate.
+            pending_d3=(static_cast<std::uint32_t>(candidate[offset+0x18U])<<24)|
+                (static_cast<std::uint32_t>(candidate[offset+0x19U])<<16)|
+                (static_cast<std::uint32_t>(candidate[offset+0x1aU])<<8)|candidate[offset+0x1bU];
             if (!update_position(&candidate[0], candidate.size(), coordinate,
                                  false, error)) {
                 return false;
@@ -92,6 +97,8 @@ bool restart_static_object(std::vector<std::uint8_t>& ram,
         write_long(candidate, object, callback);
         ram.swap(candidate);
         writes.swap(pending);
+        if(d1!=NULL)*d1=0xffffffffU;
+        if(d3!=NULL)*d3=pending_d3;
     } catch (const std::bad_alloc&) {
         error = "cannot allocate static object restart";
         return false;
