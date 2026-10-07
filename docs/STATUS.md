@@ -1008,3 +1008,10 @@
 - 원본 비교: 오브젝트149조건/오류24, 레코드168조건/오류32, 전체초기화562조건/오류31 통과. 전체 RAM과 계약된 레지스터 및 pending을 비교했다. 전체초기화 보고서SHA256 `ba538ea67e01041c8b199c889d8f2a225f18b203bf55e6a281da5464af12a3b2`. 실제CLI JSON 상태 승계로 재검증했고 결과가 같다.
 - 전체빌드·Python88개·C++전체 통과. 메인리뷰 `docs/reviews/0136-game-initialization.md`, 상세 `docs/analysis/game-initialization.md`. whole-function 대기 해제4시퀀스는 호스트sound head 수정이며 IRQ/스케줄러 동등성으로 확대하지 않는다.
 - 다음c58a 경로94명령후보/22직접호출/23분기·JMP를 목록화하고 메인이 분기/콜백 fallthrough를 분석했다. `docs/analysis/game-continuation.md`. BIOS c00444 경계와 하위호출4fb1a/28ae/c4cc/caf0 연결이 다음 대상이다. 자연부팅·전투·모든스테이지와 전체게임 복원은 미완료이며 목표는 진행 중이다.
+
+
+## 2026-10-07 — 동적 오브젝트 할당과 실제 풀 연결
+- 28ae의 free-list 할당과4fb1a 조건부요청을C++로복원했다. unsigned reserve threshold,전체callback0검사,depth word wrap,live링크/상속byte순서와carry를유지한다. 정상실패와잘못된포인터API오류를구분한다.
+- `verify_object_allocation.py`: 원본439조건과오류50조건통과. 실제CLI승계3시퀀스중하나는원본2790과MS5I초기화RAM을비교하고freepool80→79→78을확인했다. MMIO쓰기0,원본ROM불변. 보고서SHA256 `9e6e6ad033a3683950fec1eeb40bdc66526b1b31f1c250e83b015c1c7e3abf6c`.
+- 전체빌드·Python88개·C++전체통과. 메인리뷰 `docs/reviews/0137-object-allocation.md`. 실제callback4fb64 실행과자연스케줄러는아직범위밖이다.
+- 제거경로5개진입59명령후보/22제어참조를목록화하고메인이정적분석했다. `docs/analysis/object-removal.md`. 자식이남은비활성노드의지연제거와연쇄회수를다음구현에서원본검증해야한다. BIOS전환과전체게임복원목표는계속진행중이다.
