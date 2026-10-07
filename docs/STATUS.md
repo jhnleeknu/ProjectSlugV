@@ -1186,3 +1186,12 @@
 - 신규원본5248조건(leaf1132/prefix4116)/오류135/MMIO0/CLIcarry20호출통과. Prefix는1a8ca직전A7초기값,leaf는RTS후A7+4를검사하며호출내contextreset은없다. 보고서SHA256 `f903e4444ad1f690bc8a4ae0aa016e20418479fa34ec5cc634189dbd6fd8bf0a`.
 - 기존node1904/94회귀는동일SHA c900dfc01d94c31633856b8ffae34478ce9ad281366b9322e23ccebd85a0c1c6이며scene command4535/104/1737175ports도통과했다(최신reportSHA256 `1a08295adfc94be432f14a46b013a760808ef0706679220b0f6355cb0d1b1019`). 전체make Python139/C++102/경고0. 메인리뷰0158과scene-coordinates.md에범위·검증·재생성을기록했다.
 - 다음은미연결1afda와19e64 path/display처리및추가리소스다. 일반1a5a4와47a94이후전체진입·자연시간축·실제스테이지화면및전체게임복원은미완료다.
+
+
+## 2026-10-07 — 장면 경로와 맵 데이터 참조 조사
+
+- 후속19e64의8종구문과descriptor참조를원본에서확인했다. Scene opcode24의72고유root를218행으로목록화했다(00/04각72,18두개,terminal72). CFG양쪽조건edge를보존하되canonical에는조건명령이없어자연도달검증으로간주하지않는다.
+- 원본dispatch654조건은handler진입직전/terminalRTS까지만통과했으며RAM·stack쓰기0/ROM불변이다. Handler본문이나C++실행완료가아니다. ReportSHA256 `f50925f4e467cf4fda90309e3cf2cab58bf9ba07cb746fdc273fea5795204e11`.
+- Bank3 primary map 후보77개는모든header/범위가유효하고gap/overlap0,합계763136bytes/190707cells다. 참조72descriptor의69selector치수가모두일치한다. 나머지8selector는현재알려진참조없음으로기록하며미사용확정하지않는다. TilemapreportSHA256 `4249e94dcb069c477494b40ec91a312cde0ee076ec9ac978d35db9daf1a50262`. Bank2 secondary자료는별도참조로확인했고collision의미는미확정이다.
+- 메인리뷰에서재귀한도와descriptor metadata대조를보완했다. 합성구문7개포함전체Python146tests통과. 리뷰0159와scene-paths.md/scene-tilemaps.md에원본창·재생성·사실/후보범위를기록했다. 이번에는C++/MS5D규격을바꾸지않았다.
+- 다음은경로/맵MS5D추출과C++실제소비,19e64/표시helper연결이다. JSON조사를최종게임리소스로대체하지않으며일반scene/스테이지화면/전체게임목표는계속미완료다.
