@@ -1119,3 +1119,10 @@
 - Primitive2525/오류34와기존큐회귀2241/25통과. Caller556/오류50,59canonical레코드/12대기하위단계/CLI승계8/앞선구역출력연결2통과. Caller보고서SHA256 `74d5eda9bdc667ff3590807b5ef1dd8e63a389abddec62a34b205335f9aa2b80`.
 - 전체make Python125/C++97/경고0. 공유코어prelude235/50회귀도통과했으며최신SHA256 `f9f3a9cc50175db1ca4c5c5111b7f954dafb8abb17eb811e0a52bcc13fabbe5e`. 메인리뷰0150과stage-sound-initialization.md에범위/한계를기록했다.
 - sol 두 작업이workspace credits오류로종료되어메인이남은보고서확인·회귀·문서를완료했다. 다음은47a94 일반scene script와후속엔진연결이다. 자연scheduler/IRQ/오디오시간축·전체게임플레이를포함한전체목표는미완료다.
+
+## 2026-10-07 — 장면 스크립트 리소스의 실제 C++ 소비
+
+- stage record59개가참조하는비영script41개를기존MS5D로추출했다. 합계5486payload bytes,814일반명령+41terminator,9opaque inline block을보존한다. Null과외부map/path참조를별도구분하며이미지/오디오변환물은사용하지않는다.
+- C++ SceneScript loader/decoder와inspect_scene_script CLI를추가했다. 명령주소/opcode/operand/inline/다음주소및원본bytes를보존하며종료뒤추가bytes와지원밖구문은오류로처리한다. 실제interpreter handler실행은아직아니다.
+- 실제41개파일의C++출력을재조합해원본전체bytes와대조했고814개원본dispatch에서목적주소/A1/D7를확인했다. Handler실행직전정지이며효과동등성검증은아니다. 부정CLI10조건통과. 보고서SHA256 `624fdd85a3d34445a37421e5df4413b0a70d84dd94f027a90715ff6f907ec560`.
+- 전체make Python131/C++98/경고0. 메인리뷰0151,분석scene-script-resources.md,빌드로그artifacts/scene_script_resources_build_test.log. 이번sol 재시도는실행되었다. 다음은handler와외부map/path리소스및일반scene초기화실행연결이며전체목표는계속미완료다.
