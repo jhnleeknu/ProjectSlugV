@@ -14,62 +14,78 @@ void put(std::vector<std::uint8_t>& bytes, std::size_t at, std::uint32_t value) 
     bytes[at] = static_cast<std::uint8_t>(value >> 24); bytes[at + 1] = static_cast<std::uint8_t>(value >> 16);
     bytes[at + 2] = static_cast<std::uint8_t>(value >> 8); bytes[at + 3] = static_cast<std::uint8_t>(value);
 }
-std::uint16_t lookup(const std::vector<std::uint8_t>& ram, const FixedDataResource& tables,
-                     std::size_t node, unsigned int column, unsigned int row,
-                     std::uint32_t& d0, std::uint32_t& d1) {
-    const unsigned int x = (column * 8U - word(ram,node + 0x14)) & 0x1f8U;
-    const unsigned int y = ((row * 8U + word(ram,node + 0x18)) & 0x1f8U) >> 2;
-    const unsigned int offset = (x << 4) + y + 0x80;
-    d0 = (d0 & 0xffff0000U) | offset; d1 = (d1 & 0xffff0000U) | y;
-    const std::uint16_t tile = word(ram,node + offset);
-    const unsigned int index = (static_cast<unsigned int>(tile) + 0x58U) & 255U;
-    std::uint16_t result = word(tables.data,index * 2U);
-    if (result != 0x320) result = static_cast<std::uint16_t>(result | word(tables.data,0xc0U + ((tile & 0xc000U) >> 13)));
-    return result;
+void debug_word(std::uint32_t& value, std::uint32_t word) { value = (value & 0xffff0000U) | static_cast<std::uint16_t>(word); }
+void debug_byte(std::uint32_t& value, std::uint32_t byte) { value = (value & 0xffffff00U) | (byte & 255U); }
+void debug_lookup(const std::vector<std::uint8_t>& ram, const FixedDataResource& tables, SceneMapTransferState& s) {
+    const std::size_t node = s.a[0]-0x100000;
+    const unsigned int x = (static_cast<std::uint16_t>(s.d[2])*8U-word(ram,node+0x14)) & 0x1f8U;
+    const unsigned int y = ((static_cast<std::uint16_t>(s.d[3])*8U+word(ram,node+0x18)) & 0x1f8U) >> 2;
+    debug_word(s.d[0],(x<<4)+y+0x80); debug_word(s.d[1],y);
+    debug_word(s.d[7],word(ram,node+static_cast<std::uint16_t>(s.d[0])));
+    debug_byte(s.d[7],s.d[7]+0x58U); s.d[6] = s.d[7] & 255U; debug_word(s.d[6],s.d[6]+s.d[6]);
+    debug_word(s.d[4],word(tables.data,static_cast<std::uint16_t>(s.d[6])));
+    if (static_cast<std::uint16_t>(s.d[4]) != 0x320) {
+        const std::uint16_t bits = static_cast<std::uint16_t>(s.d[7]) & 0xc000U;
+        debug_word(s.d[7],static_cast<std::uint16_t>((bits<<3)|(bits>>13)));
+        debug_word(s.d[4],s.d[4] | word(tables.data,0xc0+static_cast<std::uint16_t>(s.d[7])));
+    }
 }
 }
-bool update_scene_debug(std::vector<std::uint8_t>& ram, const FixedDataResource& tables,
-                        std::uint32_t& d0, std::uint32_t& d1, std::uint32_t& d3,
-                        std::vector<VideoPortWrite>& ports, std::string& error) {
+bool update_scene_debug_registers(std::vector<std::uint8_t>& ram, const FixedDataResource& tables,
+    SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error) {
     if (ram.size() != 65536 || tables.source_cpu_address != 0x1af12 || tables.source_rom_offset != 0x1af12 || tables.data.size() != 512) {
         error = "scene debug requires64KiB RAM and512-byte fixed tables at1af12"; return false;
     }
     try {
-        std::vector<std::uint8_t> candidate = ram; std::uint32_t next0 = d0, next1 = d1, next3 = d3;
-        std::vector<VideoPortWrite> output; const unsigned int bits = candidate[0xf000] & 0x18U; const std::uint8_t oldflag = candidate[0xd44e];
+        std::vector<std::uint8_t> candidate = ram; SceneMapTransferState next = state; std::vector<VideoPortWrite> output;
+        next.d[7] = 0; next.d[6] = 0;
+        const unsigned int bits = candidate[0xf000] & 0x18U;
         if (bits == 0) {
-            candidate[0xd44e] = 0;
-            if (oldflag != 0 && !reset_game_screen(candidate,0xcaf0,next0,next1,next3,output,error)) return false;
+            debug_byte(next.d[6],candidate[0xd44e]); candidate[0xd44e] = 0;
+            if (next.d[6] != 0) {
+                if (!reset_game_screen(candidate,0xcaf0,next.d[0],next.d[1],next.d[3],output,error)) return false;
+                next.d[2] = 0; next.d[6] = 0; next.d[7] = 0x75007000; next.a[4] = 0x3c0000;
+            }
         } else {
+            next.d[7] = 0xffffffffU; next.d[6] = 0xfff80000U;
             const std::size_t masks[] = {0xd3a2,0xd3a6,0x916a,0x916e,0xb1ea,0xb1ee};
-            for (unsigned int index = 0; index < 6; ++index) put(candidate,masks[index],get(candidate,masks[index]) & 0xfff80000U);
-            candidate[0xd44e] = 255; bool draw = oldflag == 0;
+            for (unsigned int i = 0; i < 6; ++i) put(candidate,masks[i],get(candidate,masks[i]) & next.d[6]);
+            debug_byte(next.d[6],candidate[0xd44e]); candidate[0xd44e] = 255;
+            bool draw = (next.d[6] & 255U) == 0;
             if (!draw) {
-                //Native secondLEA selectsA1, but MOVEs continue usingA0=109156.
+                next.a[0] = 0x109156;
                 for (unsigned int check = 0; check < 2; ++check) {
-                    next0 = get(candidate,0x916a); next1 = get(candidate,0x916e);
+                    next.d[0] = get(candidate,0x916a); next.d[1] = get(candidate,0x916e);
                     const std::uint32_t previous_x = get(candidate,0x9172), previous_y = get(candidate,0x9176);
-                    next3 = previous_y - next1 - (previous_x < next0 ? 1U : 0U);
-                    if (previous_x != next0 || next3 != 0) { draw = true; break; }
+                    next.d[2] = previous_x-next.d[0]; next.d[3] = previous_y-next.d[1]-(previous_x < next.d[0] ? 1U : 0U);
+                    if (next.d[2] != 0 || next.d[3] != 0) { draw = true; break; }
+                    next.a[1] = 0x10b1d6;
                 }
             }
             if (draw) {
-                next3 = (next3 & 0xffff0000U) | 31U;
-                for (int row = 31; row >= 0; --row) {
-                    for (int column = 39; column >= 0; --column) {
-                        std::uint16_t tile = 0x320;
-                        if ((bits & 8U) != 0) tile = lookup(candidate,tables,0x9156,column,row,next0,next1);
-                        if (tile == 0x320 && (bits & 16U) != 0) tile = lookup(candidate,tables,0xb1d6,column,row,next0,next1);
-                        VideoPortWrite write; write.size = 4; write.address = 0x3c0000;
-                        write.value = ((0x7000U + static_cast<unsigned int>(column) * 32U + static_cast<unsigned int>(row)) << 16) | tile;
-                        output.push_back(write);
-                    }
-                }
-                next3 = (next3 & 0xffff0000U) | 0xffffU;
+                debug_word(next.d[2],39); debug_word(next.d[3],31);
+                do {
+                    do {
+                        debug_word(next.d[4],(static_cast<std::uint16_t>(next.d[2])<<5)+static_cast<std::uint16_t>(next.d[3])+0x7000);
+                        next.d[4] = (next.d[4]<<16)|(next.d[4]>>16); debug_word(next.d[4],0x320);
+                        next.a[1] = 0x1af12; next.a[2] = 0x1afd2;
+                        if ((candidate[0xf000]&8U) != 0) { next.a[0] = 0x109156; debug_lookup(candidate,tables,next); }
+                        if (static_cast<std::uint16_t>(next.d[4]) == 0x320 && (candidate[0xf000]&16U) != 0) { next.a[0] = 0x10b1d6; debug_lookup(candidate,tables,next); }
+                        VideoPortWrite write; write.size = 4; write.address = 0x3c0000; write.value = next.d[4]; output.push_back(write);
+                        debug_word(next.d[2],next.d[2]-1U);
+                    } while (static_cast<std::uint16_t>(next.d[2]) != 0xffffU);
+                    debug_word(next.d[2],39); debug_word(next.d[3],next.d[3]-1U);
+                } while (static_cast<std::uint16_t>(next.d[3]) != 0xffffU);
             }
         }
-        ram.swap(candidate); d0 = next0; d1 = next1; d3 = next3; ports.swap(output); error.clear(); return true;
+        ram.swap(candidate); state = next; ports.swap(output); error.clear(); return true;
     } catch (const std::bad_alloc&) { error = "cannot allocate scene debug transaction"; return false; }
+}
+bool update_scene_debug(std::vector<std::uint8_t>& ram, const FixedDataResource& tables,
+    std::uint32_t& d0, std::uint32_t& d1, std::uint32_t& d3, std::vector<VideoPortWrite>& ports, std::string& error) {
+    SceneMapTransferState state; state.d[0] = d0; state.d[1] = d1; state.d[3] = d3;
+    if (!update_scene_debug_registers(ram,tables,state,ports,error)) return false;
+    d0 = state.d[0]; d1 = state.d[1]; d3 = state.d[3]; return true;
 }
 namespace {
 void put_word(std::vector<std::uint8_t>& ram, std::size_t at, std::uint16_t value) {

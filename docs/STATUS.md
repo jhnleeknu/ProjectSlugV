@@ -1236,3 +1236,19 @@
 - 원본2,958조건/오류36조건/130,388 orderedports의전체RAM·13register 비교통과. 72canonical경로와218cursor,합성RAM분기,메인리뷰에서추가한256 highflag×oldmap유무512조건을포함한다. 조건opcode의canonical사용이나자연도달을주장하지않는다.
 - 전체비교 SHA256 `9f4d41d3bd8c55215a56f060f138603e0e972f8c59293715e4db85dd8a8ff687`. 전체make Python170/C++106/경고0,기존refresh회귀1,744/35/23,636ports 통과. 메인이최종binary/resource/report hash와추가분기범위를확인했다. 리뷰0164와scene-path-execution.md에계약·재생성·제약을기록했다.
 - 다음은기존1afda debug의전체register승계확장과1a7a8 좌표prefix→debug→네path의동일호출통합이다. 이어일반1a5a4 및47a94 진입을연결해야한다. 임시명령/탐색/전송예산,자연frame/직접조작가능한스테이지화면및전체게임목표는미완료이며goal은active다.
+
+
+## 2026-10-08 — 전체 장면 갱신 연결 작업 중
+
+- 직전goal turn은path통합70dc096으로progress였다. 이번에는메인이1afda/lookup/reset의전체register변화와1a7a8 tail호출순서를확인하고,sol이13register debug API·좌표prefix→debug→네path composite와CLI를구현했다. 기존3register debug API는wrapper로유지한다.
+- 현재fullmake Python170/C++107/경고0. 신규unit은A3보존,네RAMpath순서,debug1280ports 후네번째path실패의전체rollback을포함한다. Main core/CLI/unit 리뷰에서현재까지추가수정사항은없다. step_scene_update SHA256 `062b79fd12f7d16098ac7d845e07c0b7605bb28aa3d2a0a6a9c13de8e478e5c7`.
+- 기존scene_initialization 회귀576/오류24/672744ports/7승계sequence통과. Report SHA256 `bfa2403632a17fe814710ae03897243fab189646848ed6e7e5c61d2d7bbd2566`. 이회귀는기존D0/D1/D3만비교하므로신규13register 전체update검증을대체하지않는다.
+- 신규독립원본observer/verifier는담당agent control_finish_verify가작업중이다. 최종전체RAM/13register/ports 비교,메인harness리뷰,리뷰0165와로컬commit은아직남았다. 원본창5개336행과분석계약은inventory_scene_update.py 및scene-update.md에보존했다. 직접플레이화면·일반1a5a4·전체goal은계속미완료다.
+
+
+## 2026-10-08 — 전체 장면 갱신 원본 비교·통합 완료
+
+- 위작업중항목의1afda 전체13register와1a7a8 좌표→debug→네path 연결을검증했다. 원본1,417조건/오류44조건/1,403,936orderedports의전체RAM·13register가일치한다. Actual CLI RAM/regs승계20호출/11sequence도통과했다.
+- 메인리뷰에서native포트allowlist의3c0004누락과slot0이지만전부clip되는mapfixture를발견해보완했다. 기존극단좌표를보존하고추가visible72에서원본전송성공/3c0000쓰기를필수검사했다. 이72조건에실제96,616ports가있다. 최종native와C++를전체재실행했으며재사용positive는없다.
+- Report SHA256 `b9a0e96aa5e041411a578da4756e71cd716e8f96eb1452f5fe253ff1b87b58c5`. Native SHA256 `a04fd624e808e1f58f3c22d1ba5ead5fbdb4cb411bde008b20e4c2c14157e030`. 전체make Python170/C++107/경고0과기존초기화회귀576/24를확인했고리뷰0165·scene-update.md에원본계약/재생성/한계를확정했다.
+- 다음은일반1a5a4 초기화와phase반복연결이다. 종료후1a414가소비하는opcode0c pointed자료18개는현재41script/199dependency에포함되지않는것을원본명령과manifest로확인했다. 해당배치자료추출·1a470/object할당·position·inlinepayload까지연결해야한다. 현재전체update검증을일반초기화나자연frame·직접플레이화면완료로취급하지않으며전체goal은active다.
