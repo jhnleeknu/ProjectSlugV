@@ -66,3 +66,8 @@ ENTRY는0x16f0e/0x18702/0x1861a/0x18656중하나다. 숫자는unsigned decimal�
 증분도구는이전자료를재사용하기전에동일binary/resources와nativeprefix전체해시·행수·case별결과를확인한다. Observer의--extra는기본fixture가정확히일치해야하며중복추가를거부한다. 재생성은위의기본관찰→extra관찰→전체C++비교명령을권장한다. 초기A1미설정fixture실패는 `artifacts/scene_map_refresh/invalid_a1_fixture_observation.json`에남겼으며최종결과와섞지않는다.
 
 증분guard의재현가능한합성8개를추가한후전체Python170tests가통과했다. `.venv/bin/python -m unittest discover -s tools/tests`로실행한다. 이메타데이터검사를추가native실행조건으로계산하지않는다.
+
+
+## Path 실행 통합 후 회귀
+
+19e64를 같은 번역단위에 추가한 뒤 전체1,744조건/오류35/23,636ports를 재비교했다. 자료 재사용 없이 통과했고 원본관찰 hash는 그대로다. 현재 비교 SHA256 `baa483f1209b6388603b2d61e1282ee531dfb91f83cfc5d26f98fb2d31f20531`, binary SHA256 `7123eda6bbe40b7b8b5c6fc342d853175d68c45b98f8b74380e229d53da96697`. 기존 helper 본문은 변경하지 않았다.

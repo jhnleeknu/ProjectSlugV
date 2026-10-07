@@ -1228,3 +1228,11 @@
 - 원본1744조건/오류35조건/ordered23636ports에서전체RAM·13register가일치했다. 72canonicaldescriptor와경계/이동/null/합성RAMcolumn경로,비power-height와초기A1≠node2e10조건을포함한다. 최종전체비교SHA256 `2ec30f6b5727a14a977d3d1d525a5a1c02d253580749d134790dc4bd7ba45944`.
 - 메인리뷰에서LIVEwidth unit의변별력을수정하고증분검증의자료재사용검사를보강했다. 최종결과는자료재사용없이1744조건전체를재대조했다. 합성guard8개포함Python170/C++105/경고0,기존183c6 회귀492/29/16620ports통과. 리뷰0163과scene-map-refresh.md에근거·한계·재생성을저장했다.
 - 다음은19e64 path handler와16ff8 descriptor설정,1afda 전체register승계,전체1a7a8/일반1a5a4/47a94진입연결이다. 임시탐색/전송예산한계,자연frame/다회호출승계·직접플레이화면과전체게임복원은미완료이며goal은active다.
+
+
+## 2026-10-07 — 장면 경로 실행과 맵 교체 통합
+
+- 19e64의8종명령과16ff8 descriptor설정을C++ API/CLI로연결했다. 기존MS5D path/map/secondary bytes를직접소비하고initial moved refresh,descriptor 교체,조건분기와cursor게시를원본순서로실행한다. 전체호출RAM/13register/ports는실패시보존한다.
+- 원본2,958조건/오류36조건/130,388 orderedports의전체RAM·13register 비교통과. 72canonical경로와218cursor,합성RAM분기,메인리뷰에서추가한256 highflag×oldmap유무512조건을포함한다. 조건opcode의canonical사용이나자연도달을주장하지않는다.
+- 전체비교 SHA256 `9f4d41d3bd8c55215a56f060f138603e0e972f8c59293715e4db85dd8a8ff687`. 전체make Python170/C++106/경고0,기존refresh회귀1,744/35/23,636ports 통과. 메인이최종binary/resource/report hash와추가분기범위를확인했다. 리뷰0164와scene-path-execution.md에계약·재생성·제약을기록했다.
+- 다음은기존1afda debug의전체register승계확장과1a7a8 좌표prefix→debug→네path의동일호출통합이다. 이어일반1a5a4 및47a94 진입을연결해야한다. 임시명령/탐색/전송예산,자연frame/직접조작가능한스테이지화면및전체게임목표는미완료이며goal은active다.

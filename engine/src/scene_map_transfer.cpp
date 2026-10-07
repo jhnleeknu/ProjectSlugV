@@ -1,5 +1,6 @@
 #include "ms5/scene_map_transfer.h"
 #include "ms5/scene_map_refresh.h"
+#include "ms5/scene_path_execution.h"
 #include <new>
 namespace ms5 {
 namespace {
@@ -301,5 +302,147 @@ bool update_scene_columns(std::vector<std::uint8_t>& ram, const std::vector<Fixe
 bool transfer_wrapped_scene_map(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error) { return refresh_transaction(ram,windows,state,ports,error,1); }
 bool refresh_scene_map(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error) { return refresh_transaction(ram,windows,state,ports,error,2); }
 bool refresh_moved_scene_map(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error) { return refresh_transaction(ram,windows,state,ports,error,3); }
+
+namespace {
+bool configure_descriptor(std::vector<std::uint8_t>& ram, SceneMapTransferState& s, std::string& error) {
+    if (!write(ram,s.a[0]+0x2e,4,s.a[1],error) || !write(ram,s.a[0]+0x36,4,s.a[2],error)) return false;
+    for (unsigned int i = 0; i < 2; ++i) { set_word(s.d[i],s.d[i]<<4); set_word(s.d[i],asr4(s.d[i])); }
+    return write(ram,s.a[0]+0x32,2,s.d[0],error) && write(ram,s.a[0]+0x34,2,s.d[1],error);
+}
+bool path_read(const std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, unsigned int size, std::uint32_t& value, std::string& error) {
+    if (!read(ram,windows,2,s.a[2],size,value,error)) return false; s.a[2] += size; return true;
+}
+bool metadata_word(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, unsigned int offset, std::uint32_t value, bool subtract, std::string& error) {
+    std::uint32_t old = 0; if (!read(ram,windows,2,s.a[1]+offset,2,old,error)) return false;
+    return write(ram,s.a[1]+offset,2,subtract ? old-value : old+value,error);
+}
+bool clear_metadata_bit(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, unsigned int bit, bool& old, std::string& error) {
+    std::uint32_t value = 0; if (!read(ram,windows,2,s.a[1]+12,1,value,error)) return false;
+    old = (value & (1U<<bit)) != 0; return write(ram,s.a[1]+12,1,value & ~(1U<<bit),error);
+}
+bool path_refresh(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, std::vector<VideoPortWrite>& ports, bool full, std::string& error) {
+    const std::uint32_t saved1 = s.a[1], saved2 = s.a[2]; std::vector<VideoPortWrite> output;
+    if (!(full ? refresh_scene_map(ram,windows,s,output,error) : refresh_moved_scene_map(ram,windows,s,output,error))) return false;
+    ports.insert(ports.end(),output.begin(),output.end()); s.a[1] = saved1; s.a[2] = saved2; return true;
+}
+bool path_flags(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, bool branch, std::string& error) {
+    std::uint32_t value = 0, old = 0;
+    if (!path_read(ram,windows,s,2,value,error)) return false; set_word(s.d[0],value);
+    if (!read(ram,windows,2,s.a[1]+12,2,old,error) || !write(ram,s.a[1]+12,2,old | low(s.d[0]),error)) return false;
+    if (!path_read(ram,windows,s,2,value,error) || !write(ram,s.a[1]+8,2,value,error)) return false;
+    if (!path_read(ram,windows,s,2,value,error) || !write(ram,s.a[1]+10,2,value,error)) return false;
+    if (branch) {
+        if (!read(ram,windows,2,s.a[2],4,s.a[2],error) || !write(ram,s.a[1],4,s.a[2],error)) return false;
+    }
+    return true;
+}
+bool path_execute(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, std::vector<VideoPortWrite>& ports, std::string& error) {
+    if (!read(ram,windows,2,s.a[1],4,s.a[2],error)) return false;
+    if (s.a[2] == 0) return true;
+    if (!path_refresh(ram,windows,s,ports,false,error)) return false;
+    for (unsigned int commands = 0; commands < 1048576U; ++commands) {
+        std::uint32_t value = 0; bool enabled = false;
+        if (!path_read(ram,windows,s,2,value,error)) return false; set_word(s.d[7],value);
+        if (value & 0x8000U) return true;
+        const unsigned int opcode = value;
+        if (opcode > 0x1c || (opcode&3U)) { error = "unknown scene path opcode"; return false; }
+        if (opcode == 0) {
+            if (!write(ram,s.a[1]+12,1,0x10,error)) return false;
+            if (!path_read(ram,windows,s,2,value,error) || !write(ram,s.a[1]+4,2,value,error)) return false;
+            if (!path_read(ram,windows,s,2,value,error) || !write(ram,s.a[1]+6,2,value,error)) return false;
+            if (!write(ram,s.a[1]+8,2,0,error) || !write(ram,s.a[1]+10,2,0,error)) return false;
+        } else if (opcode == 0x1c) {
+            if (!path_read(ram,windows,s,2,value,error)) return false; set_word(s.d[0],value);
+            if (!metadata_word(ram,windows,s,4,s.d[0],false,error)) return false;
+            if (!path_read(ram,windows,s,2,value,error)) return false; set_word(s.d[0],value);
+            if (!metadata_word(ram,windows,s,6,s.d[0],false,error)) return false;
+        } else if (opcode == 0x18) {
+            if (!path_flags(ram,windows,s,false,error)) return false;
+        } else if (opcode == 4) {
+            if (!node_read(ram,windows,s,0x2e,4,s.a[3],error)) return false;
+            if (s.a[3] != 0) {
+                if (!clear_metadata_bit(ram,windows,s,1,enabled,error)) return false;
+                if (enabled) {
+                    if (!read(ram,windows,2,s.a[3]+4,2,value,error)) return false; set_word(s.d[0],value);
+                    if (!metadata_word(ram,windows,s,4,s.d[0],false,error)) return false;
+                }
+                if (!clear_metadata_bit(ram,windows,s,3,enabled,error)) return false;
+                if (enabled) {
+                    if (!read(ram,windows,2,s.a[3]+6,2,value,error)) return false; set_word(s.d[0],value);
+                    if (!metadata_word(ram,windows,s,6,s.d[0],true,error)) return false;
+                }
+            }
+            for (unsigned int axis = 0; axis < 2; ++axis) {
+                if (!clear_metadata_bit(ram,windows,s,axis*2,enabled,error)) return false;
+                if (enabled) {
+                    if (!read(ram,windows,2,s.a[2]+4+axis*2,2,value,error)) return false; set_word(s.d[0],value);
+                    if (!metadata_word(ram,windows,s,4+axis*2,s.d[0],axis == 0,error)) return false;
+                }
+            }
+            for (unsigned int axis = 0; axis < 2; ++axis) {
+                if (!read(ram,windows,2,s.a[1]+8+axis*2,2,value,error)) return false; set_word(s.d[0],value);
+                if (!metadata_word(ram,windows,s,4+axis*2,s.d[0],false,error)) return false;
+            }
+            if (!node_read(ram,windows,s,0x7a,1,value,error)) return false; set_byte(s.d[7],value & 0xe7U);
+            for (unsigned int axis = 0; axis < 2; ++axis) {
+                if (!clear_metadata_bit(ram,windows,s,5+axis,enabled,error)) return false;
+                if (enabled) set_byte(s.d[7],s.d[7] | (1U<<(3+axis)));
+            }
+            if (!write(ram,s.a[0]+0x7a,1,s.d[7],error)) return false;
+            if (!read(ram,windows,2,s.a[1]+4,2,value,error)) return false; set_word(s.d[0],value);
+            if (!read(ram,windows,2,s.a[1]+6,2,value,error)) return false; set_word(s.d[1],value);
+            const std::uint32_t metadata = s.a[1], descriptor = s.a[2];
+            s.a[1] = descriptor;
+            if (!read(ram,windows,2,s.a[1]+8,4,s.a[2],error) || !configure_descriptor(ram,s,error)) return false;
+            s.a[1] = metadata;
+            if (!clear_metadata_bit(ram,windows,s,4,enabled,error) || !path_refresh(ram,windows,s,ports,enabled,error)) return false;
+            s.a[1] = metadata; s.a[2] = descriptor+12;
+            if (!write(ram,s.a[1],4,s.a[2],error)) return false;
+        } else {
+            if (!path_read(ram,windows,s,2,value,error)) return false; set_word(s.d[7],value);
+            const bool y = opcode == 0x10 || opcode == 0x14;
+            if (!node_read(ram,windows,s,y ? 0x18 : 0x14,2,value,error)) return false; set_word(s.d[0],value);
+            if (!node_read(ram,windows,s,y ? 0x20 : 0x1c,2,value,error)) return false; set_word(s.d[1],value); set_word(s.d[1],s.d[1]-s.d[0]);
+            const bool negative = (low(s.d[1])&0x8000U) != 0;
+            bool take = opcode == 8 || opcode == 0x14 ? negative : !negative && low(s.d[1]) != 0;
+            if (take) {
+                if (opcode == 0x0c || opcode == 0x14) {
+                    if (!node_read(ram,windows,s,0x2e,4,s.a[3],error)) return false;
+                }
+                if (!node_read(ram,windows,s,y ? 0x34 : 0x32,2,value,error)) return false; set_word(s.d[1],value);
+                if (opcode == 0x0c || opcode == 0x14) {
+                    if (!read(ram,windows,2,s.a[3]+(y ? 6 : 4),2,value,error)) return false;
+                    set_word(s.d[1],opcode == 0x14 ? s.d[1]-value : s.d[1]+value);
+                }
+                set_word(s.d[1],s.d[1]+s.d[7]); set_word(s.d[1],s.d[1]<<4); set_word(s.d[0],s.d[0]+s.d[1]);
+                const unsigned int threshold = opcode == 8 ? 0xffa0 : opcode == 0x0c ? 0x1a1 : opcode == 0x10 ? 0x270 : 0x71;
+                set_word(s.d[0],s.d[0]-threshold);
+                const bool n = (low(s.d[0])&0x8000U) != 0;
+                take = opcode == 8 || opcode == 0x14 ? !n : n;
+            }
+            if (take) { if (!path_flags(ram,windows,s,true,error)) return false; }
+            else s.a[2] += 10;
+        }
+    }
+    error = "scene path temporary command budget exceeded"; return false;
+}
+bool path_transaction(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error, bool execute) {
+    if (ram.size() != 65536 || (state.a[0]&1U) || state.a[0] < 0x100000 || state.a[0] >= 0x110000) { error = "scene path requires64KiB RAM and aligned node"; return false; }
+    try {
+        std::vector<std::uint8_t> candidate = ram; SceneMapTransferState next = state; std::vector<VideoPortWrite> output;
+        if (!(execute ? path_execute(candidate,windows,next,output,error) : configure_descriptor(candidate,next,error))) return false;
+        ram.swap(candidate); state = next; ports.swap(output); error.clear(); return true;
+    } catch (const std::bad_alloc&) { error = "cannot allocate scene path transaction"; return false; }
+}
+}
+bool configure_scene_map_descriptor(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error) { return path_transaction(ram,windows,state,ports,error,false); }
+bool execute_scene_path(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error) { return path_transaction(ram,windows,state,ports,error,true); }
 
 }
