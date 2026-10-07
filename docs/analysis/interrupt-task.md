@@ -19,7 +19,7 @@ MOVEM후A6를프레임+64로만든뒤 **복원된A5-77e4** 위치에그값을쓴
 
 지원입력은64KiB RAM, 입력A5=108000, 작업이있을때100000..1007dc의word정렬프레임이다. 원본c64가생성하는32개정규프레임은10001c..1007dc의64바이트간격이다. 프레임이큐끝을넘거나RAM밖을읽는상태는지원하지않는다. 저장A5의포인터쓰기목적지는word정렬된100000..10fffc여야한다. 외부스택A7은word정렬된110008..fffffc를지원하여스택쓰기가작업RAM과겹치지않게한다. 빈큐는사용하지않는스택을검사하지않는다.
 
-오류는RAM/레지스터/결과/포트목록을보존한다. CCR/SR은아직표현하지않는다. 작업함수실행,작업이RTS로d2a에돌아온뒤의반복, c64등록과c8c전체스케줄링은후속연결이다.
+오류는RAM/레지스터/결과/포트목록을보존한다. CCR/SR은아직표현하지않는다. 작업함수실행,작업이RTS로d2a에돌아온뒤의반복, c8c전체스케줄링은후속연결이다. c64등록은아래추가API로구현한다.
 
 ```sh
 build/restore_interrupt_task INPUT_RAM INPUT_REGS OUTPUT_RAM OUTPUT_REGS OUTPUT_PORTS
@@ -31,3 +31,23 @@ REGS파일은검증용으로D0..D7/A0..A7의16개BE32를연결한64바이트다.
 원본279조건의전체RAM/16개레지스터/포트/실제외부스택쓰기와메모리가일치했다.32개정규프레임과저장A5쓰기목적지가전역포인터/A6/PC/RAM0010인경우,word정렬경계,스택양끝과unsigned빈포인터를포함한다.25개잘못된입력/별칭에서출력을보존했다. 원본ROM은불변이다.
 
 보고서: `artifacts/interrupt_task/verification.json`, SHA256 `1d7b1abce22d3efe70639ad1de9b8745a62ae0debeca56a5132618cf8c4216a6`.
+
+
+## c64 작업 등록과 스택 정리
+
+`queue_interrupt_task`는c64..c8a를구현한다. 입력A7의long을immediate_return, 입력A7+4의long을deferred_return으로받는다. 원본은A6를외부스택A7-4에보관한뒤RAM10081c에서현재큐포인터를읽는다. unsigned포인터가10001c이하이면등록을건너뛴다.
+
+공간이있으면프레임을아래로확보하며deferred_return,원래A6,A5..A0,D7..D0순서로long을쓴다. 최종프레임레이아웃은앞절복구형식과같다. RAM10081c는이전값-64로갱신한다. 큐는후입선출이며정규빈상태10081c에서32개를등록하면10001c가되어다음등록을건너뛴다.
+
+등록여부와관계없이외부스택의A6를복원한뒤immediate_return을입력A7+4에복사하고RTS한다. 최종A7은입력A7+8이며다음PC는immediate_return이다. deferred_return은즉시실행되는주소가아니라작업프레임에저장하는주소다. D0..D7/A0..A6은그대로다. 결과는queued/next_pc와두외부스택쓰기(A7-4의A6,A7+4의immediate_return)를반환한다. 이경로는하드웨어포트를쓰지않는다.
+
+지원RAM은64KiB, 외부A7은word정렬된110004..fffff4다. 실제프레임을저장할때큐포인터는word정렬된100040..10081c로제한하여전체프레임이RAM및큐경계안에있게한다. unsigned10001c이하의등록생략은사용하지않는프레임주소검사를하지않는다. 등록에는A5기준주소접근이없어입력A5를제한하지않는다. 오류는RAM/레지스터/결과를보존한다.
+
+```sh
+build/queue_interrupt_task INPUT_RAM INPUT_REGS OUTPUT_RAM OUTPUT_REGS IMMEDIATE_RETURN DEFERRED_RETURN
+.venv/bin/python tools/verify_interrupt_task_queue.py
+```
+
+입력스택이RAM이나프레임과겹치는경우,정규영역밖프레임,SR/CCR와실제작업본문의동작은현재범위밖이다.
+
+등록 검증: `.venv/bin/python tools/verify_interrupt_task_queue.py`에서 176조건과 같은 RAM의 32회 역순 복구를 비교했다. 모든 RAM·16개 레지스터·실제 외부 스택 쓰기가 일치하며 19개 오류/별칭 검사가 통과했다. 보고서 SHA256: `3d8d0f8a716339ed91318ebecc751c574793c5a96ed45400b311b444d6f46320`. 원본 프로그램은 변경하지 않았다.

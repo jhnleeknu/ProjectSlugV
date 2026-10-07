@@ -726,3 +726,11 @@
 - 원본279조건의전체RAM/16레지스터/포트/실제스택쓰기가일치했다.32개정규프레임·alias·경계와25개실패/별칭보존을확인했다.
 - Python73개및C++전체검사통과. 리뷰: docs/reviews/0101-interrupt-task.md. 분석: docs/analysis/interrupt-task.md.
 - 다음은c64등록과작업복귀d2a반복및c8c전체호출자연결이다. 작업본문실행·SR/CCR·장치시간축/Z80/상위맵자료와전체부팅은미완료이며목표는active다.
+
+
+## 2026-10-07 — 인터럽트 작업 등록과 역순 복구 연결
+
+- `queue_interrupt_task`로 c64 등록을 복원했다. 두 복귀 주소, 레지스터 저장 순서와 큐가 가득 찼을 때의 스택 정리를 보존한다.
+- 원본 등록/건너뛰기 176조건과 동일 RAM의 32개 작업 역순 복구에서 전체 RAM·16개 레지스터·스택 쓰기가 일치했다. 오류/별칭 19조건도 통과했다.
+- Python 73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0102-interrupt-task-queue.md. 분석: docs/analysis/interrupt-task.md.
+- 다음은 작업 복귀 d2a 반복 및 c8c 호출자 연결이다. 작업 본문 실행·SR/CCR·장치 시간축/Z80/상위 맵 자료와 전체 부팅은 미완료이며 목표는 active다.

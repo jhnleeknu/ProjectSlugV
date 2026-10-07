@@ -12,6 +12,33 @@ void emit(std::vector<VideoPortWrite>& ports,std::uint8_t size,std::uint32_t at,
     VideoPortWrite write;write.size=size;write.address=at;write.value=value;ports.push_back(write);
 }
 }
+bool queue_interrupt_task(std::vector<std::uint8_t>& ram,InterruptRegisters& registers,
+                          std::uint32_t immediate_return,std::uint32_t deferred_return,
+                          InterruptTaskEnqueueResult& result,std::string& error) {
+    if(ram.size()!=65536U || registers.a[7]<0x110004U || registers.a[7]>0xfffff4U || (registers.a[7]&1U)!=0) {
+        error="task enqueue requires 64KiB RAM and a supported external stack";return false;
+    }
+    const std::uint32_t head=read_long(ram,0x81c);
+    const bool enqueue=head>0x10001cU;
+    if(enqueue && (head<0x100040U || head>0x10081cU || (head&1U)!=0)) {
+        error="task enqueue frame must fit aligned work RAM below queue pointer";return false;
+    }
+    std::vector<std::uint8_t> candidate=ram;
+    if(enqueue) {
+        const unsigned int at=head-64U-0x100000U;
+        // Predecrement writes PC, A6, then A5..A0/D7..D0.
+        put_long(candidate,at+60U,deferred_return);
+        put_long(candidate,at+56U,registers.a[6]);
+        for(unsigned int i=0;i<6;++i) put_long(candidate,at+52U-4U*i,registers.a[5U-i]);
+        for(unsigned int i=0;i<8;++i) put_long(candidate,at+28U-4U*i,registers.d[7U-i]);
+        put_long(candidate,0x81c,head-64U);
+    }
+    InterruptTaskEnqueueResult next;
+    next.queued=enqueue;next.next_pc=immediate_return;
+    next.stack_address[0]=registers.a[7]-4U;next.stack_value[0]=registers.a[6];
+    next.stack_address[1]=registers.a[7]+4U;next.stack_value[1]=immediate_return;
+    ram.swap(candidate);registers.a[7]+=8U;result=next;error.clear();return true;
+}
 bool restore_interrupt_task(std::vector<std::uint8_t>& ram,InterruptRegisters& registers,
                             InterruptTaskResult& result,std::vector<VideoPortWrite>& ports,
                             std::string& error) {

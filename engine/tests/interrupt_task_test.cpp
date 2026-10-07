@@ -26,5 +26,21 @@ int main() {
     const std::vector<std::uint8_t> before=ram;const std::uint32_t d0=r.d[0];
     assert(!ms5::restore_interrupt_task(ram,r,result,ports,error));
     assert(ram==before && r.d[0]==d0 && result.restored && ports.size()==3);
+    ram.assign(65536,0);put(ram,0x81c,0x10081c);
+    r=ms5::InterruptRegisters();r.a[5]=0x108000;r.a[6]=0xcafebabe;r.a[7]=0x1feffc;r.d[0]=0x12345678;
+    ms5::InterruptTaskEnqueueResult queued;
+    assert(ms5::queue_interrupt_task(ram,r,0x1110,0x2220,queued,error));
+    assert(queued.queued && queued.next_pc==0x1110 && r.a[7]==0x1ff004 && r.a[6]==0xcafebabe);
+    assert(queued.stack_address[0]==0x1feff8 && queued.stack_address[1]==0x1ff000 && queued.stack_value[1]==0x1110);
+    r.d[0]=0;r.a[6]=0;r.a[7]=0x1feffc;
+    assert(ms5::restore_interrupt_task(ram,r,result,ports,error));
+    assert(result.next_pc==0x2220 && r.d[0]==0x12345678 && r.a[6]==0xcafebabe);
+    put(ram,0x81c,0x10001c);const std::vector<std::uint8_t> full=ram;
+    const std::uint32_t old_sp=r.a[7];
+    assert(ms5::queue_interrupt_task(ram,r,0x3330,0x4440,queued,error));
+    assert(!queued.queued && ram==full && r.a[7]==old_sp+8 && queued.next_pc==0x3330);
+    put(ram,0x81c,0x10001e);const std::uint32_t fail_sp=r.a[7];
+    assert(!ms5::queue_interrupt_task(ram,r,0,0,queued,error));
+    assert(r.a[7]==fail_sp && queued.next_pc==0x3330);
     std::cout<<"Interrupt task unsigned empty check, restored A5 alias and rollback passed\n";
 }
