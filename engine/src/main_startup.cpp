@@ -51,7 +51,7 @@ void watchdog(std::vector<ms5::VideoPortWrite>& ports,std::uint8_t value) {
 }
 }
 namespace ms5 {
-static bool initialize_main_palettes(std::vector<std::uint8_t>& ram,
+bool initialize_main_palettes(std::vector<std::uint8_t>& ram,
                            const FixedDataResource& bindings,std::uint32_t& d0,
                            std::uint32_t& d1,std::uint32_t& d3,
                            std::vector<VideoPortWrite>& ports,std::string& error) {
