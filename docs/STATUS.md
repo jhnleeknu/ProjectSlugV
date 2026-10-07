@@ -1112,3 +1112,10 @@
 - 전체make Python125/C++95/경고0. 상세 `docs/analysis/stage-area-initialization.md`,메인리뷰 `docs/reviews/0149-stage-area-initialization.md`.
 - 후속 장면 포인터42개(59레코드,41비영/4개레코드의null)를 목록화했다.41개 스크립트의855구문행이 종료점까지 읽혔고9개inline block은원시보존했다. 구문보고서 SHA256 `21b526531039763241fb8a01bc240df657ce0a357e240d21fab50ec8a42dd1a6`;실행검증은아니다.
 - 다음은47a1c 이후 사운드 선택/대기 묶음과47a94 일반 scene interpreter다. 설치한d764a callback 실행·자연scheduler·전체게임플레이를 포함한 전체 목표는 미완료다.
+
+## 2026-10-07 — 스테이지 사운드 설정 연결
+
+- 공유sound_word 큐에원본D0/D1 결과와conditional read count를 추가하고47a1c..47a94의선택명령→1890/91/92→08/20을 연결했다. 대기 중record를다시읽지않으며새명령의외부읽기는구분한다. 기존StageCatalog MS5D를직접소비한다.
+- Primitive2525/오류34와기존큐회귀2241/25통과. Caller556/오류50,59canonical레코드/12대기하위단계/CLI승계8/앞선구역출력연결2통과. Caller보고서SHA256 `74d5eda9bdc667ff3590807b5ef1dd8e63a389abddec62a34b205335f9aa2b80`.
+- 전체make Python125/C++97/경고0. 공유코어prelude235/50회귀도통과했으며최신SHA256 `f9f3a9cc50175db1ca4c5c5111b7f954dafb8abb17eb811e0a52bcc13fabbe5e`. 메인리뷰0150과stage-sound-initialization.md에범위/한계를기록했다.
+- sol 두 작업이workspace credits오류로종료되어메인이남은보고서확인·회귀·문서를완료했다. 다음은47a94 일반scene script와후속엔진연결이다. 자연scheduler/IRQ/오디오시간축·전체게임플레이를포함한전체목표는미완료다.
