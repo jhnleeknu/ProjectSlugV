@@ -120,7 +120,7 @@ kind2 하위 header byte의 비영 값은 표시 소비기에서 출력에 영�
 
 ## 고정 ROM 데이터 창 MS5D
 
-ASCII MS5D + LE32 7개(version1,kind1,CPUbase,ROMoffset,payloadsize,CRC32,reserved0)의32byte 헤더다. CPUbase=ROMoffset<100000이고payload는1byte이상이며고정ROM끝을넘지않는다. byte는원본그대로보존하며파일길이는정확히32+payloadsize다. MS5A와주소표현을공유하되MS5D는명령스트림이아닌불변데이터창이다.
+ASCII MS5D + LE32 7개(version1,kind1,CPUbase,ROMoffset,payloadsize,CRC32,reserved0)의32byte 헤더다. CPUbase=ROMoffset<100000이고payload는1byte이상이며고정ROM끝을넘지않는다. byte는원본그대로보존하며파일길이는정확히32+payloadsize다. MS5A와주소표현을공유하며MS5D자체는불변ROM데이터창이다. 개별소비기가원시payload를표·레코드·장면명령스트림으로해석한다.
 
 `pack_animation_data.py`는필드테이블후보범위4a76c..4a88e(290byte)와callback1e의byte인덱스조회창6431a..6471a(1024byte)를포장한다. 뒤의창이하나의논리테이블전체라는주장은하지않으며manifest에이차이를명시한다. 실행기는필요한BE16/BE32읽기가제공된한창안에완전히들어가야한다. 창의중첩은거부하고인접창을자동결합하지않는다.
 
@@ -170,3 +170,12 @@ kind1의 고정 첫1MiB 계약은 유지한다. kind2는 같은32-byte header에
 매핑은 `position = CPUbase - 200000`, `bank_base = ROMoffset - position`이다. ROMoffset은position이상이고bank_base는100000이상700000이하의100000배수여야한다. ROMoffset+payloadsize는canonical8MiB를넘지않는다. 이는정렬된1MiB bank 창의주소표현이며모든PVC bank offset을지원한다는뜻이아니다. `load_fixed_data_resource`는kind1만, `load_banked_data_resource`는kind2만받는다. 공통FixedDataResource의source CPU/ROM필드로매핑을보존한다.
 
 Scene opcode04의palette root/lookup/binding은ROM bank200000을사용하므로이경우CPU와ROMoffset이수치상같다. 이를고정ROM으로잘못분류하지않으며manifest에도bank_base=200000을남긴다. 실제bank선택의word2ffff2=1000,word2ffff0=0은scene command의순서있는hardware writes로별도보존한다. Rawbinding은6-byte records와마지막BE16ffff이며구조는기존main startup팔레트등록표와같다. Palette색상자체의전송및후속frame표시는이데이터창규격에포함하지않는다.
+
+
+### MS5D 장면 경로와 primary tilemap
+
+`extracted/runtime/scene_maps/`는기존MS5D v1 header를그대로사용한다. `path_%06x.ms5d`는kind1의고정ROM명령span이며원본WORD opcode와operand,마지막negativeWORD를원시순서대로보존한다. Opcode00/1c는4operandbytes,04/08/0c/10/14는12,18은6이다. Conditional pointer는operand안의원본주소로남기며decoder가분기실행을대신하지않는다. Stable ID는 `scene-path:%08x`(고정CPU주소)다.
+
+`primary_root.ms5d`는kind2 CPU200004/ROM300004의4bytes, `primary_lookup.ms5d`는CPU200008/ROM300008의308bytes다. `tilemap_%06x.ms5d`는bank3의개별map을담으며ROMoffset=CPUaddress+100000이다. Map payload는BE16 width,BE16 height,그뒤width×height개의4bytecell이다. 각cell은두BE16 word를그대로보존하고column-major offset은 `4+4*(column*height+row)`다. 파일payload는정확히그길이이며padding이나PNG변환물을포함하지않는다. Map ID는bank간충돌을피하도록 `scene-tilemap:%08x`(물리ROMoffset)다.
+
+Typed C++ loader는kind1 path와kind2 map을구분한다. Map 소비기는양수width/height,bank3주소관계,정확payload길이를검사하고source CPU/ROM을반환한다. Rawheader와캐시dimension을대조하여원본byte를조회기준으로삼는다. 전체77개후보map을보존하되현재descriptor참조없는8개를미사용으로확정하지않는다. 이자료계약은실제183c6 clipping/VRAM쓰기또는19e64 handler의실행완료를뜻하지않으며secondary bank2자료는별도후속범위다.

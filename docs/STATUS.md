@@ -1195,3 +1195,12 @@
 - Bank3 primary map 후보77개는모든header/범위가유효하고gap/overlap0,합계763136bytes/190707cells다. 참조72descriptor의69selector치수가모두일치한다. 나머지8selector는현재알려진참조없음으로기록하며미사용확정하지않는다. TilemapreportSHA256 `4249e94dcb069c477494b40ec91a312cde0ee076ec9ac978d35db9daf1a50262`. Bank2 secondary자료는별도참조로확인했고collision의미는미확정이다.
 - 메인리뷰에서재귀한도와descriptor metadata대조를보완했다. 합성구문7개포함전체Python146tests통과. 리뷰0159와scene-paths.md/scene-tilemaps.md에원본창·재생성·사실/후보범위를기록했다. 이번에는C++/MS5D규격을바꾸지않았다.
 - 다음은경로/맵MS5D추출과C++실제소비,19e64/표시helper연결이다. JSON조사를최종게임리소스로대체하지않으며일반scene/스테이지화면/전체게임목표는계속미완료다.
+
+
+## 2026-10-07 — 장면 경로·맵 바이너리 리소스와 C++ 로더 통합
+
+- 기존 MS5D v1으로 path72개, primary root/lookup2개, bank3 map77개를 추출했다. 총151파일/765048 payload bytes이며 C++ path decoder와 column-major cell 조회 API가 원본 바이너리를 직접 소비한다. PNG 변환물은 사용하지 않는다.
+- 메인 리뷰에서 빈 payload, 중복 root/파일/ID, raw selector/pointer와 reference metadata 검사를 보강했다. 보강 후 manifest SHA256 `8312156694a7cf20a6782ad6834285965734c579cb532e09d82f40839080411e`와151개 container는 동일하다.
+- Typed C++149파일(path72/map77)의218행과190707셀 전체를 재조합해 원본과 대조했다. Root/lookup2파일의77map 연결은 별도 검사했다. 오류39조건 통과. Report SHA256 `7d799705deddddfc37482d63fdc9aa8ee4b903594f8064bf89d048e3df3ed6ec`.
+- 전체 빌드 C++103/경고0, 최종 Python154 tests 통과. 메인 리뷰0160과 scene-map-resources.md에 계약·재생성·근거를 저장했다. Read-only 리소스 검사이며 handler 효과/VRAM 실행 검증은 아니다.
+- 다음은183c6의 맵 clipping/VRAM/cache 전송과 bank2 secondary 자료,19e64 handler 및 일반 scene 진입 연결이다. 직접 조작 가능한 스테이지 화면·자연시간축·전체 게임 복원은 미완료이며 전체 목표는 계속 active다.
