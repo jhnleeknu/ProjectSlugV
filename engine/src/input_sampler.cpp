@@ -65,6 +65,27 @@ bool replay(std::vector<std::uint8_t>& ram,const FixedDataResource& streams,std:
     ram[0x4cd4]=2;return true;
 }
 }
+bool initialize_input(std::vector<std::uint8_t>& ram, const FixedDataResource& streams,
+                      std::uint16_t selector, std::string& error) {
+    if(ram.size()!=65536U) {error="input initializer requires 64KiB RAM";return false;}
+    if(selector<2U && (streams.source_cpu_address!=0xf01feU ||
+        streams.source_rom_offset!=0xf01feU || streams.data.size()!=0x1810U)) {
+        error="input initializer requires complete native input window";return false;
+    }
+    // Validate before mutation. Copy native BE32 pointer bytes without host pointers.
+    for(std::size_t at=0x4ca8;at<0x4cb4;++at) ram[at]=0;
+    ram[0x4cd4]=selector<2U ? 1 : 0;
+    if(selector<2U) {
+        const std::size_t entry=static_cast<std::size_t>(selector)*4U;
+        for(std::size_t byte=0;byte<4;++byte) {
+            ram[0x4cc4+byte]=streams.data[0xc00U+entry+byte];
+            ram[0x4cc8+byte]=streams.data[0x1808U+entry+byte];
+        }
+        put_word(ram,0x4ccc,0);put_word(ram,0x4cce,0);
+        put_word(ram,0x4cc2,0);ram[0x4cd0]=0;
+    }
+    error.clear();return true;
+}
 bool sample_input(std::vector<std::uint8_t>& ram,const FixedDataResource& streams,
                   const InputPortSamples& ports,std::uint8_t& read_count,std::string& error) {
     if(ram.size()!=65536U) {error="input sampler requires 64KiB RAM";return false;}

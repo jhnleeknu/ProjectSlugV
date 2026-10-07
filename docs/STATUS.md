@@ -610,3 +610,10 @@
 - 원본과 전체 RAM4,301조건, 연속 재생 상태689,769회 및 최종 전체 RAM이 일치했다. 추출 창 밖의 실제 읽기 등9개 실패 조건은 출력을 보존했다. 원본 ROM 불변·MMIO 읽기 순서도 확인했다.
 - `make all test`: Python67개와 C++ 전체 통과. 리뷰: docs/reviews/0086-input-sampler.md. 보고서: artifacts/input_sampler/verification.json.
 - 다음은3162 초기화와b68의 상태 입력 후처리, 인터럽트 신호를 ec4 루프에 연결하는 것이다. b68의 lookup은 ADD.B 때문에 최대256바이트 창이 필요함을 명령으로 확인했다. CPU 레지스터 전파·실제 타이밍·전체 부팅은 미완료이며 전체 목표는 active다.
+
+## 2026-10-07 — 입력 초기화와 샘플러 연결
+
+- `initialize_input`으로 원본3162 초기화를 구현했다. 기존 MS5D 포인터 테이블에서 두 재생 선택값을 시작하며, 선택값2 이상에서 재생 상태를 남기는 원본 분기를 보존한다.
+- 원본 초기화121조건과 이어지는 입력 갱신120회에서 전체64KiB RAM이 일치했다. CLI 오류·파일 별칭17조건에서 입력과 기존 출력 보존을 확인했다.
+- `make all test`: Python67개 및 C++ 전체 통과. 리뷰: docs/reviews/0087-input-initializer.md. 보고서: artifacts/input_initializer/verification.json.
+- 다음은b68 상태 후처리와 인터럽트 신호 생산을ec4 루프에 연결하는 것이다. 전체CPU 레지스터·장치 시간축·전체 부팅은 미완료이며 전체 목표는 active다.

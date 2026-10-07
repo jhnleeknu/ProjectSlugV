@@ -32,7 +32,7 @@ CLI: `build/sample_input INPUT_RAM INPUT_MS5D OUTPUT_RAM SYSTEM P1_RAW P2_RAW P1
 
 The diagnostic `--playback` CLI carries input state through repeated calls and emits a47-byte per-frame trace (RAM4ca8..4cd5 plus read count) and final64KiB RAM. This trace is verification output, not a game resource format.
 
-Initializer3162, recorder349c, subsequentb68 bookkeeping, CPU register propagation, interrupts and bus timing remain outside this API. Direct input sampling is not proof of whole-game boot or synchronized gameplay.
+Recorder349c, subsequentb68 bookkeeping, CPU register propagation, interrupts and bus timing remain outside this API. Direct input sampling is not proof of whole-game boot or synchronized gameplay.
 
 Reproduce original-ROM comparison with `.venv/bin/python tools/verify_input_sampler.py`. The supported replay contract requires every actually accessed byte to lie in the retained MS5D window. A malformed previous index offfff is signed−1: it can read the preceding byte for the second buffer, but falls outside the retained window at the first buffer base. The latter is an explicit support error, not a substitute value or a native CPU fault.
 
@@ -45,3 +45,12 @@ The subsequentb68 copiesfdaf to0012, clearsf007, and visits bits3 through0 of f0
 ## Verification result
 
 Unmodified M68000 original31d6 matched4,301 full64KiB RAM cases, including40 carried mode0 calls. Both streams were then carried untilmode2:371,165 and318,604 calls,689,769 total. Every post-call46-byte input-state window and read count matched; finalwholeRAM matched and original writes outside the input-state window were absent. The final stored cursor differed between streams (0600 vs05ff), confirming terminal mutation order. Nine unsupported-input checks preserved output. Report SHA256: `470067a8e214c46e03e4206e0f4ad57dea156690786917e6e5e2633782d1774f`.
+
+
+## Implemented3162 initializer
+
+`initialize_input(ram, streams, selector, error)` accepts an unsigned16-bit selector and reproduces native3162 RAM writes. It consumes the existing MS5D pointer tables, copying BE32 values from offsets0xc00/0x1808 plusselector*4 into4cc4/4cc8. It does not invent host pointers, zero the raw input blocks or reset repeat delay settings. For selectors>=2 it only clears4ca8..4cb3 andmode4cd4; the resource is not used by the API on this branch. For0/1 the exact complete resource window is required before any mutation. The native selectorword180==0 contract still applies, so the record target is not filled or modified.
+
+CLI: `build/initialize_input INPUT_RAM INPUT_MS5D OUTPUT_RAM SELECTOR`. It validates the input MS5D even for selectors that do not consume it, preserves output on validation/API errors, and reports the resulting mode. The original also writes CPU A5 and other registers; this API promises RAM only. Initialized RAM can be passed directly to `sample_input`.
+
+Initializer verification: `.venv/bin/python tools/verify_input_initializer.py` compared121 initializations and120 carried31d6 calls (40 each forselectors0/1/2), all with complete64KiB RAM equality. Seventeen CLI invalid-input/alias checks preserve existing inputs/outputs. Original fixed ROM remains unchanged. Report SHA256: `015b82fd2b435602fa2a54af71125aed250ea496b5a91abed09c7fb263e0347e`.

@@ -129,5 +129,35 @@ int main() {
     stream_base(ram, 0xf1a0d); ram[0x4cd0] = 15;
     fail(ram, resource);
     ram.resize(65535); fail(ram, resource);
+    // Initializer selectors >=2 clear only gameplay blocks and mode. All other
+    // bytes, including stale replay state and raw input blocks, must survive.
+    ram.assign(65536, 0xa5);
+    std::vector<std::uint8_t> expected=ram;
+    for(std::size_t at=0x4ca8;at<0x4cb4;++at) expected[at]=0;
+    expected[0x4cd4]=0;
+    std::string error;
+    assert(ms5::initialize_input(ram,absent,0xffff,error));
+    assert(ram==expected && error.empty());
+    // Different synthetic entries prove both pointer tables are consumed.
+    resource=streams();
+    for(unsigned int i=0;i<8;++i) {
+        resource.data[0xc00+i]=static_cast<std::uint8_t>(0x20+i);
+        resource.data[0x1808+i]=static_cast<std::uint8_t>(0x80+i);
+    }
+    for(unsigned int selector=0;selector<2;++selector) {
+        ram.assign(65536,0xa5);expected=ram;
+        for(std::size_t at=0x4ca8;at<0x4cb4;++at) expected[at]=0;
+        expected[0x4cd4]=1;
+        for(unsigned int i=0;i<4;++i) {
+            expected[0x4cc4+i]=static_cast<std::uint8_t>(0x20+selector*4+i);
+            expected[0x4cc8+i]=static_cast<std::uint8_t>(0x80+selector*4+i);
+        }
+        put_word(expected,0x4cc2,0);put_word(expected,0x4ccc,0);
+        put_word(expected,0x4cce,0);expected[0x4cd0]=0;
+        assert(ms5::initialize_input(ram,resource,selector,error));
+        assert(ram==expected && error.empty());
+        assert(!ms5::initialize_input(ram,absent,selector,error));
+        assert(ram==expected && !error.empty());
+    }
     std::cout << "Input sampler independent reads, repeat, replay and rollback passed\n";
 }
