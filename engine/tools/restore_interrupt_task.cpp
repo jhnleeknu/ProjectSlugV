@@ -82,8 +82,10 @@ bool write_bytes(const std::string& path, const std::uint8_t* bytes,
 } // namespace
 
 int main(int argc, char** argv) {
+    const bool resume = argc > 1 && std::string(argv[1]) == "--resume";
+    if (resume) { --argc; ++argv; }
     if (argc != 6) {
-        std::cerr << "usage: restore_interrupt_task INPUT_RAM INPUT_REGS OUTPUT_RAM OUTPUT_REGS OUTPUT_PORTS\n";
+        std::cerr << "usage: restore_interrupt_task [--resume] INPUT_RAM INPUT_REGS OUTPUT_RAM OUTPUT_REGS OUTPUT_PORTS\n";
         return 2;
     }
     const std::string paths[5] = {argv[1], argv[2], argv[3], argv[4], argv[5]};
@@ -117,7 +119,9 @@ int main(int argc, char** argv) {
     ms5::InterruptTaskResult result;
     std::vector<ms5::VideoPortWrite> writes;
     std::string error;
-    if (!ms5::restore_interrupt_task(ram, registers, result, writes, error)) {
+    const bool success = resume ? ms5::resume_interrupt_tasks(ram, registers, result, writes, error) :
+        ms5::restore_interrupt_task(ram, registers, result, writes, error);
+    if (!success) {
         std::cerr << error << '\n';
         return 1;
     }

@@ -19,7 +19,7 @@ MOVEM후A6를프레임+64로만든뒤 **복원된A5-77e4** 위치에그값을쓴
 
 지원입력은64KiB RAM, 입력A5=108000, 작업이있을때100000..1007dc의word정렬프레임이다. 원본c64가생성하는32개정규프레임은10001c..1007dc의64바이트간격이다. 프레임이큐끝을넘거나RAM밖을읽는상태는지원하지않는다. 저장A5의포인터쓰기목적지는word정렬된100000..10fffc여야한다. 외부스택A7은word정렬된110008..fffffc를지원하여스택쓰기가작업RAM과겹치지않게한다. 빈큐는사용하지않는스택을검사하지않는다.
 
-오류는RAM/레지스터/결과/포트목록을보존한다. CCR/SR은아직표현하지않는다. 작업함수실행,작업이RTS로d2a에돌아온뒤의반복, c8c전체스케줄링은후속연결이다. c64등록은아래추가API로구현한다.
+오류는RAM/레지스터/결과/포트목록을보존한다. CCR/SR은아직표현하지않는다. 작업함수 실행과 c8c 전체 스케줄링은 후속 연결이다. d2a 반복 진입은 아래 추가 API로 구현한다. c64등록은아래추가API로구현한다.
 
 ```sh
 build/restore_interrupt_task INPUT_RAM INPUT_REGS OUTPUT_RAM OUTPUT_REGS OUTPUT_PORTS
@@ -51,3 +51,11 @@ build/queue_interrupt_task INPUT_RAM INPUT_REGS OUTPUT_RAM OUTPUT_REGS IMMEDIATE
 입력스택이RAM이나프레임과겹치는경우,정규영역밖프레임,SR/CCR와실제작업본문의동작은현재범위밖이다.
 
 등록 검증: `.venv/bin/python tools/verify_interrupt_task_queue.py`에서 176조건과 같은 RAM의 32회 역순 복구를 비교했다. 모든 RAM·16개 레지스터·실제 외부 스택 쓰기가 일치하며 19개 오류/별칭 검사가 통과했다. 보고서 SHA256: `3d8d0f8a716339ed91318ebecc751c574793c5a96ed45400b311b444d6f46320`. 원본 프로그램은 변경하지 않았다.
+
+## 작업 반환 뒤 반복 진입 d2a
+
+원본 CPU 주소/ROM 오프셋 `0x000d2a`는 `LEA $108000,A5`, `MOVEA.L -$77e4(A5),A6`, `BRA $ce6` 순서다. 작업이 바꾼 A5를 먼저 복구하고 현재 큐 포인터를 다시 읽는다. 기존 ce2 진입과 비교하면 A5 초기화만 추가되므로 `resume_interrupt_tasks`는 레지스터 후보의 A5를 설정한 뒤 기존 복구 함수를 재사용한다. 오류 시 호출자가 제공한 A5도 보존한다.
+
+입력 A7은 작업의 RTS가 반환 주소 d2a를 이미 소비한 시점이다. API가 추가로 스택을 pop하지 않는다. 다음 작업이 있으면 새 d2a/작업 PC를 push한 뒤 작업으로 진입한 A7을 반환하고, 없으면 d36 경계로 나간다. 이 API는 작업 본문을 실행하지 않는다. CLI는 기존 `restore_interrupt_task`에 `--resume`을 붙인다.
+
+검증: `.venv/bin/python tools/verify_interrupt_task_resume.py`, 원본 312조건 및 오류/별칭 24조건 통과. 전체 RAM·16개 레지스터·포트·외부 스택 쓰기를 비교했다. 32개 연속 작업 뒤 빈 큐까지 포함하며 callback 본문 대신 명시적 레지스터 변경과 A7 +4를 입력했다. 보고서 SHA256: `3d1ff4b22cee4b4def59839de82ef68153d99066ca45d0da305673036d51d5ba`.

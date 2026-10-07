@@ -37,5 +37,12 @@ bool queue_interrupt_task(std::vector<std::uint8_t>& ram,InterruptRegisters& reg
 bool restore_interrupt_task(std::vector<std::uint8_t>& ram,InterruptRegisters& registers,
                             InterruptTaskResult& result,std::vector<VideoPortWrite>& ports,
                             std::string& error);
+// Native d2a after the task's RTS: resets A5, then dispatches the next frame.
+// Entry A7 already reflects the task return; this function does not pop it.
+// Same output and rollback contract as restore_interrupt_task.
+bool resume_interrupt_tasks(std::vector<std::uint8_t>& ram,InterruptRegisters& registers,
+                            InterruptTaskResult& result,std::vector<VideoPortWrite>& ports,
+                            std::string& error);
+
 }
 #endif

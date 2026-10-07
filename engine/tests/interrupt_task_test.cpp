@@ -42,5 +42,12 @@ int main() {
     put(ram,0x81c,0x10001e);const std::uint32_t fail_sp=r.a[7];
     assert(!ms5::queue_interrupt_task(ram,r,0,0,queued,error));
     assert(r.a[7]==fail_sp && queued.next_pc==0x3330);
+    // Resume resets an arbitrary callback A5, even on the empty path.
+    put(ram,0x81c,0x10081c);r.a[5]=0xdeadbeef;r.a[7]=0;
+    assert(ms5::resume_interrupt_tasks(ram,r,result,ports,error));
+    assert(r.a[5]==0x108000 && r.a[7]==0 && !result.restored && result.next_pc==0xd36);
+    put(ram,0x81c,0x100001);r.a[5]=0xdeadbeef;
+    assert(!ms5::resume_interrupt_tasks(ram,r,result,ports,error));
+    assert(r.a[5]==0xdeadbeef && !result.restored && result.next_pc==0xd36);
     std::cout<<"Interrupt task unsigned empty check, restored A5 alias and rollback passed\n";
 }

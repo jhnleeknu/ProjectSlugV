@@ -78,4 +78,13 @@ bool restore_interrupt_task(std::vector<std::uint8_t>& ram,InterruptRegisters& r
     outcome.stack_address[1]=registers.a[7]-8U;outcome.stack_value[1]=outcome.next_pc;
     ram.swap(candidate);registers=next;result=outcome;ports.swap(hardware);error.clear();return true;
 }
+bool resume_interrupt_tasks(std::vector<std::uint8_t>& ram,InterruptRegisters& registers,
+                            InterruptTaskResult& result,std::vector<VideoPortWrite>& ports,
+                            std::string& error) {
+    InterruptRegisters next=registers;
+    next.a[5]=0x108000U;
+    if(!restore_interrupt_task(ram,next,result,ports,error)) return false;
+    registers=next;return true;
+}
+
 }

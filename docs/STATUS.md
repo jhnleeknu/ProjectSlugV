@@ -734,3 +734,11 @@
 - 원본 등록/건너뛰기 176조건과 동일 RAM의 32개 작업 역순 복구에서 전체 RAM·16개 레지스터·스택 쓰기가 일치했다. 오류/별칭 19조건도 통과했다.
 - Python 73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0102-interrupt-task-queue.md. 분석: docs/analysis/interrupt-task.md.
 - 다음은 작업 복귀 d2a 반복 및 c8c 호출자 연결이다. 작업 본문 실행·SR/CCR·장치 시간축/Z80/상위 맵 자료와 전체 부팅은 미완료이며 목표는 active다.
+
+
+## 2026-10-07 — 작업 반환 뒤 다음 작업으로 전환
+
+- `resume_interrupt_tasks`로 d2a에서 A5를 복구하고 현재 큐를 다시 읽는 반복 진입을 연결했다. 입력 스택은 callback RTS 이후이며 추가 pop하지 않는다.
+- 원본 312조건, 오류/별칭 24조건 통과. 32개 연속 작업과 마지막 빈 큐에서 전체 RAM·레지스터·포트·스택 쓰기가 일치했다. 작업 본문은 실행하지 않았으며 호스트 입력 변화를 명시했다.
+- Python 73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0103-interrupt-task-resume.md.
+- 다음은 c8c의 busy/credit/렌더링/작업/사운드 경계를 연결하는 것이다. 전체 IRQ·작업 본문·SR/CCR·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는 active다.
