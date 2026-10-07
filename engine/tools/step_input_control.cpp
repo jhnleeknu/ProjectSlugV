@@ -1,4 +1,5 @@
 #include "ms5/input_control.h"
+#include "ms5/main_frame.h"
 #include "ms5/stage_group_menu.h"
 
 #include <cstdlib>
@@ -104,8 +105,9 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
-    bool poll = false, callback_poll = false, registers_mode = false;
-    std::uint32_t video = 0U, d1 = 0U, d3 = 0U;
+    bool poll = false, callback_poll = false, registers_mode = false, main_mode = false;
+    std::uint32_t video = 0U, d1 = 0U, d3 = 0U, main_pc = 0U;
+    std::string debug_path;
     while (argc > 1) {
         const std::string option(argv[1]);
         if (option == "--registers") {
@@ -116,8 +118,22 @@ int main(int argc, char** argv) {
             }
             registers_mode = true;
             argc -= 3; argv += 3;
+        } else if (option == "--main") {
+            if (main_mode || poll || callback_poll || argc < 5 ||
+                !parse_integer(argv[2], 0xffffffffU, main_pc) ||
+                !parse_integer(argv[4], 0xffffU, video)) {
+                std::cerr << "--main requires unique uint32 PC, DEBUG_MS5D and uint16 VIDEO; poll modes are exclusive\n";
+                return 1;
+            }
+            if (main_pc != 0xec4U && main_pc != 0xef2U && main_pc != 0xf12U && main_pc != 0xf4cU) {
+                std::cerr << "main PC must be 0xec4, 0xef2, 0xf12 or 0xf4c\n";
+                return 1;
+            }
+            main_mode = true;
+            debug_path = argv[3];
+            argc -= 4; argv += 4;
         } else if (option == "--poll" || option == "--callback-poll") {
-            if (poll || callback_poll) {
+            if (poll || callback_poll || main_mode) {
                 std::cerr << "only one poll mode may be specified\n";
                 return 1;
             }
@@ -134,8 +150,12 @@ int main(int argc, char** argv) {
             }
         } else break;
     }
+    if (main_mode && !registers_mode) {
+        std::cerr << "--main requires --registers D1 D3\n";
+        return 1;
+    }
     if (argc != 18 && argc != 19 && argc != 20) {
-        std::cerr << "usage: step_input_control [--registers D1 D3] [--poll VIDEO | --callback-poll] INPUT_RAM STREAMS_MS5D STATUS_TABLE_MS5D MENU_MS5D PAUSE_MS5D PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS STYLE LINE ENTRY_STACK SYSTEM P1_RAW P2_RAW P1_GAME P2_GAME [FONT_MS5D [STAGES_DIRECTORY]]\n";
+        std::cerr << "usage: step_input_control [--registers D1 D3] [--poll VIDEO | --callback-poll | --main PC DEBUG_MS5D VIDEO] INPUT_RAM STREAMS_MS5D STATUS_TABLE_MS5D MENU_MS5D PAUSE_MS5D PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS STYLE LINE ENTRY_STACK SYSTEM P1_RAW P2_RAW P1_GAME P2_GAME [FONT_MS5D [STAGES_DIRECTORY]]\n";
         return 2;
     }
     std::uint32_t entry_stack = 0U;
@@ -168,6 +188,10 @@ int main(int argc, char** argv) {
     const std::string palette_path(argv[6]);
     const std::string output_ram_path(argv[7]);
     const std::string output_writes_path(argv[8]);
+    if (main_mode && (same_file(debug_path, output_ram_path) || same_file(debug_path, output_writes_path))) {
+        std::cerr << "debug resource and outputs must be distinct\n";
+        return 1;
+    }
     if (same_file(ram_path, output_ram_path) ||
         same_file(streams_path, output_ram_path) ||
         same_file(table_path, output_ram_path) ||
@@ -208,6 +232,7 @@ int main(int argc, char** argv) {
     ms5::FixedDataResource streams;
     ms5::FixedDataResource table;
     ms5::FixedDataResource pause;
+    ms5::FixedDataResource debug;
     std::vector<ms5::PaletteRecord> records;
     std::string error;
     if (!read_ram(ram_path, ram)) {
@@ -258,8 +283,23 @@ int main(int argc, char** argv) {
         std::cerr << error << '\n';
         return 1;
     }
+    if (main_mode && !ms5::load_fixed_data_resource(debug_path, debug, error)) {
+        std::cerr << error << '\n';
+        return 1;
+    }
     bool succeeded;
-    if (poll) {
+    if (main_mode) {
+        ms5::MainFrameState state;
+        state.next_pc = main_pc;
+        state.object_address = object_address;
+        state.d1 = d1;
+        state.d3 = d3;
+        succeeded = ms5::step_main_frame(ram, streams, table, resource, pause, debug, records, ports,
+                     static_cast<std::uint16_t>(video), entry_stack, state, result, writes, error,
+                     font_pointer, context_pointer);
+        d1 = state.d1;
+        d3 = state.d3;
+    } else if (poll) {
         succeeded = ms5::poll_input_control(ram, streams, table, resource, pause, records, ports,
                      static_cast<std::uint16_t>(video), object_address,
                      static_cast<std::uint16_t>(style), static_cast<std::uint16_t>(line),

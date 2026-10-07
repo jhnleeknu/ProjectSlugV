@@ -26,7 +26,7 @@ build/init_objects: engine/src/object_lists.cpp engine/src/object_state.cpp engi
 build/object_lists_test: engine/src/object_lists.cpp engine/src/object_state.cpp engine/tests/object_lists_test.cpp engine/include/ms5/object_lists.h engine/include/ms5/object_state.h | build
 	$(CXX) $(CXXFLAGS) engine/src/object_lists.cpp engine/src/object_state.cpp engine/tests/object_lists_test.cpp -o $@
 
-test: build/interrupt_task_test build/sprite_refresh_d0_test build/palette_transfer_trace_test build/column_control_test build/credit_request_test build/sound_service_test build/sound_word_test build/sound_byte_test build/sound_queue_test build/frame_gate_test build/input_control_test build/input_frame_test build/input_status_test build/input_sampler_test build/control_caller_step_test build/control_caller_test build/control_counter_test build/video_control_test build/control_test build/control_menu_frame_test build/control_finish_test build/control_wait_test build/control_menu_start_test build/control_activation_test build/menu_frame_test build/menu_redraw_test build/menu_header_test build/stage_area_menu_test build/stage_group_menu_test build/stage_catalog_test build/menu_debug_test build/menu_event_test build/menu_stack_test build/menu_navigation_test build/menu_input_test build/menu_text_test build/direct_text_test build/menu_motion_test build/menu_border_test build/menu_init_test build/text_measure_test build/menu_descriptor_test build/palette_fill_test build/palette_transfer_test build/palette_frame_test build/palette_prepare_test build/palette_allocator_test build/animation_data_test build/fixed_data_resource_test build/animation_resource_test build/animation_step_test build/animation_draw_test build/sprite_blocks_test build/sprite_pool_test build/sprite_producer_test build/sprite_prepare_queue_test build/sprite_radix_test build/sprite_refresh_queue_test build/sprite_queue_test build/sprite_scanline_test build/composition_resource_test build/tile_resource_test build/object_state_test build/object_lists_test build/palette_resource_test build/fixed_renderer_test build/text_resource_test build/formatted_text_test
+test: build/main_frame_test build/interrupt_task_test build/sprite_refresh_d0_test build/palette_transfer_trace_test build/column_control_test build/credit_request_test build/sound_service_test build/sound_word_test build/sound_byte_test build/sound_queue_test build/frame_gate_test build/input_control_test build/input_frame_test build/input_status_test build/input_sampler_test build/control_caller_step_test build/control_caller_test build/control_counter_test build/video_control_test build/control_test build/control_menu_frame_test build/control_finish_test build/control_wait_test build/control_menu_start_test build/control_activation_test build/menu_frame_test build/menu_redraw_test build/menu_header_test build/stage_area_menu_test build/stage_group_menu_test build/stage_catalog_test build/menu_debug_test build/menu_event_test build/menu_stack_test build/menu_navigation_test build/menu_input_test build/menu_text_test build/direct_text_test build/menu_motion_test build/menu_border_test build/menu_init_test build/text_measure_test build/menu_descriptor_test build/palette_fill_test build/palette_transfer_test build/palette_frame_test build/palette_prepare_test build/palette_allocator_test build/animation_data_test build/fixed_data_resource_test build/animation_resource_test build/animation_step_test build/animation_draw_test build/sprite_blocks_test build/sprite_pool_test build/sprite_producer_test build/sprite_prepare_queue_test build/sprite_radix_test build/sprite_refresh_queue_test build/sprite_queue_test build/sprite_scanline_test build/composition_resource_test build/tile_resource_test build/object_state_test build/object_lists_test build/palette_resource_test build/fixed_renderer_test build/text_resource_test build/formatted_text_test
 	./build/irq_envelope_test
 	./build/interrupt_service_test
 	./build/interrupt_task_test
@@ -39,6 +39,7 @@ test: build/interrupt_task_test build/sprite_refresh_d0_test build/palette_trans
 	./build/sound_byte_test
 	./build/sound_queue_test
 	./build/frame_gate_test
+	./build/main_frame_test
 	./build/input_control_test
 	./build/input_frame_test
 	./build/input_status_test
@@ -501,8 +502,12 @@ build/input_frame_test: $(INPUT_FRAME_SOURCES) $(INPUT_FRAME_HEADERS) engine/tes
 
 INPUT_CONTROL_SOURCES = engine/src/frame_gate.cpp engine/src/input_control.cpp $(INPUT_FRAME_SOURCES) $(CONTROL_CALLER_STEP_SOURCES)
 INPUT_CONTROL_HEADERS = engine/include/ms5/frame_gate.h engine/include/ms5/input_control.h $(INPUT_FRAME_HEADERS) $(CONTROL_CALLER_STEP_HEADERS)
-build/step_input_control: $(INPUT_CONTROL_SOURCES) $(INPUT_CONTROL_HEADERS) engine/tools/step_input_control.cpp | build
-	$(CXX) $(CXXFLAGS) $(INPUT_CONTROL_SOURCES) engine/tools/step_input_control.cpp -o $@
+MAIN_FRAME_SOURCES = $(sort engine/src/main_frame.cpp engine/src/formatted_text.cpp $(INPUT_CONTROL_SOURCES))
+MAIN_FRAME_HEADERS = engine/include/ms5/main_frame.h engine/include/ms5/formatted_text.h $(INPUT_CONTROL_HEADERS)
+build/step_input_control: $(MAIN_FRAME_SOURCES) $(MAIN_FRAME_HEADERS) engine/tools/step_input_control.cpp | build
+	$(CXX) $(CXXFLAGS) $(MAIN_FRAME_SOURCES) engine/tools/step_input_control.cpp -o $@
+build/main_frame_test: $(MAIN_FRAME_SOURCES) $(MAIN_FRAME_HEADERS) engine/tests/main_frame_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(MAIN_FRAME_SOURCES) engine/tests/main_frame_test.cpp -o $@
 build/input_control_test: $(INPUT_CONTROL_SOURCES) $(INPUT_CONTROL_HEADERS) engine/tests/input_control_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(INPUT_CONTROL_SOURCES) engine/tests/input_control_test.cpp -o $@
 

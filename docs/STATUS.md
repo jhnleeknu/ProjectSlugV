@@ -930,3 +930,12 @@
 - `verify_main_debug_registers.py`: 원본 debug806조건/포트62,382개/오류18조건 및 실제 debug→input/controller→ec4 승계8회 통과. SHA256 `c4ae8af3511d1392ea57bf397f7907fde2cc8e9787d3a1b6cc6082407ee16487`.
 - 전체 빌드·Python73개·C++ 검사 통과. 메인 리뷰 `docs/reviews/0126-input-main-debug-registers.md`.
 - 다음은 IRQ가 생성하는 프레임 신호와 callback/팔레트 경로를 포함한 메인 루프의 연속 실행 통합이다. 현재 호스트 신호 fixture와 선택한 경계만 검증했으며 다른 CPU 상태·물리 타이밍·전체 게임 복원은 진행 중이다.
+
+
+## 2026-10-07 — 재개 가능한 메인 프레임과 IRQ·콜백 연결
+- `MainFrameState`/`step_main_frame`을 추가했다. ec4 debug→ef2대기→입력·제어기 한 프레임을 실행하고 다음 PC와 전체 D1/D3를 반환한다. ef2 재개에서는 debug를 다시 실행하지 않으며 f4c 재개는 팔레트를 반복하지 않는다.
+- CLI `--main PC DEBUG_MS5D VIDEO`를 추가하고 팔레트 CLI에도 전체 레지스터 모드를 연결했다. 실제 MS5D/MS5P를 사용하며 오류 시 RAM/state/result/포트는 모두 보존한다.
+- `verify_main_frame_flow.py`: 원본54경계(main37/IRQ17), 포트746개, 오류14조건 통과. SHA256 `0a43c89908e4fcdb2b458fba4abadedc7173259c67f6933815ab59873fdfe3a1`.
+- `verify_callback_register_flow.py`: 원본38경계, 오류12조건 통과. 기본 callback3dcc→stack복귀→팔레트→대기→IRQ→입력의 세 주기를 실제 CLI 출력으로 승계했다. SHA256 `14e37384f2944dfbacc751546e571098431ffda56d81fa9ca28522329c290074`.
+- 전체 빌드·Python73개·C++ 전체 검사(새 main_frame_test 포함) 통과. 메인 리뷰 `docs/reviews/0127-main-frame-flow.md`.
+- 실제 c8c 서비스가 신호를 생성하지만 IRQ 전후 main context 복원은 호스트가 수행한다. BIOS/SR/RTE/물리 타이밍과 D1/D3 외 scratch register는 미완료다. 다음은 기본 RTS 이외의 메인 콜백과 IRQ 작업 본문 분석·실행 연결이다. 전체 목표는 진행 중이다.

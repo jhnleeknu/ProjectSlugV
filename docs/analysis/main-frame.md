@@ -1,0 +1,30 @@
+# 재개 가능한 메인 프레임
+
+프로그램 SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. 여기의 fixed CPU 주소는 복호화 프로그램 파일 오프셋과 같다. 실제 런타임 리소스는 기존 MS5D/MS5P를 사용한다.
+
+`MainFrameState`는 다음 실행 경계, 오브젝트 주소, 전체 D1/D3를 보관한다. `step_main_frame`은 한 번에 입력·제어기 한 프레임까지만 실행한다. ec4를 반환하면 다음 호출에서 다음 프레임을 시작한다.
+
+| 진입 PC | 처리 |
+| --- | --- |
+| ec4 | 조건부 main debug 출력 후 ef2 대기/입력 |
+| ef2 | 프레임 신호와 임계값 비교 후 준비된 경우에만 입력 |
+| f12 | 입력 접두부와 제어기/호출자 |
+| f4c | 콜백·팔레트 처리 뒤 신호 비영 대기 후 입력 |
+
+원본 ec4..ef2는 debug 출력, ef2..f12는 신호 비교와 video read, f12..f3c/f54는 입력과 콜백 선택이다. f54의 제어기 결과는 ec4 루프, fee TRAP 경계 또는 정상 반환으로 이어진다. f4c는 callback 경로의 별도 대기다. 대기 시 state.next_pc가 해당 대기 경계로 남으므로 재호출이 debug 출력이나 팔레트 처리를 반복하지 않는다.
+
+상태·RAM·포트·InputFrameResult는 모두 성공한 뒤 함께 반영한다. debug가 성공한 뒤 입력 리소스 오류가 나더라도 앞선 debug 변경과 포트도 보존된 원래 출력으로 되돌린다. 콜백 f3c, BIOS c00444, TRAP fee, 정상 반환0은 외부 경계이며 이 API에서 재개하지 않는다. f4c 진입은 호출자가 앞선 callback과 팔레트를 처리했음을 전제로 한다. 알 수 없는 콜백을 기본 RTS로 대체하지 않는다.
+
+진단 CLI `step_input_control --registers D1 D3 --main PC DEBUG_MS5D VIDEO` 뒤에 기존 positional 인자를 붙인다. STYLE/LINE은 진입 D1/D3 lowword와 같아야 하며 JSON d1/d3는 최종 전체 값이다. `result.style`은 입력 접두부의 값이며, 대기한 경우에는 대기 진입의 D1.word다. --main은 --poll/--callback-poll과 함께 사용할 수 없다. DEBUG_MS5D는 `extracted/runtime/main_debug.ms5d`다.
+
+`step_palette_frame --registers D1 D3`는 기존 팔레트 API의 전체 D3 전달을 CLI에도 노출한다. 기존 --d1과 기본 모드는 유지한다. 기본 callback3dcc의 실제 RTS와 f3c/f44 스택 처리는 기존 irq_envelope API로 검증한다.
+
+## 검증 범위
+
+프레임 신호를 생성하는 c8c 서비스와 main frame 사이에는 실제 CLI RAM 출력을 전달한다. D1/D3도 C++ 반환값을 승계한다. 그러나 c8c는 scratch register를 완전히 반환하는 API가 아니므로 인터럽트 전후 나머지 main CPU context는 진단 호스트가 보존·복원한다. BIOS와 SR/RTE, 실제 VBlank 시간축을 구현하거나 검증했다는 뜻은 아니다. 입력/팔레트 경로의 나머지 CPU register도 원본 context fixture로 남아 있다. default callback의 명시적 stack API 구간만 전체16레지스터와 stack을 반환한다.
+
+
+`tools/verify_callback_register_flow.py`: 원본38경계(main poll15/palette7/envelope9/IRQ7), 출력 보존12조건 통과. 네 가지 팔레트 처리 경로와 기본 callback3dcc의 세 연속 주기를 확인했다. 7개 poll은 새 main f4c 재개 API를 사용하고, 나머지8개는 기존 callback-poll을 사용한다. 포트27개와 입력읽기40회, 전체 RAM 및 전체 D1/D3가 일치한다. envelope 구간은 전체 stack/16개 레지스터도 비교한다. 보고서 SHA256 `14e37384f2944dfbacc751546e571098431ffda56d81fa9ca28522329c290074`.
+
+
+`tools/verify_main_frame_flow.py`: 원본54경계(main37/IRQ17), 포트746개, 출력 보존14조건 통과. main 진입은 ec4 8/ef2 19/f12 8/f4c 2회다. video8/input73/sound16회 읽기를 확인하고, reentrant service1회는 sound를 읽지 않는다. 6개 승계 시퀀스에 controller→ec4의 세 프레임 주기가 포함된다. 8번 ec4 진입과 실제 debug formatter2회를 구분하며 waiting에서 재출력이 없다. 초기 fixture 이후 신호16은 실제 c8c만 바꾼다. 단 한 번 호스트가 재진입 guard19를 해제하는 조건은 별도 표시했다. 보고서 SHA256 `0a43c89908e4fcdb2b458fba4abadedc7173259c67f6933815ab59873fdfe3a1`.

@@ -77,22 +77,30 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
-    const bool trace_d1 = argc > 1 && std::string(argv[1]) == "--d1";
+    bool trace_d1 = false;
+    bool registers_mode = false;
     std::uint32_t d1 = 0U;
-    if (trace_d1) {
-        if (argc != 6 && argc != 7) {
-            std::cerr << "usage: step_palette_frame [--d1 INPUT_D1] INPUT_RAM INPUT_MS5P OUTPUT_RAM [OUTPUT_PORTS]\n";
-            return 2;
-        }
-        if (!parse_integer(argv[2], 0xffffffffU, d1)) {
-            std::cerr << "INPUT_D1 must be decimal or 0x-prefixed uint32\n";
+    std::uint32_t d3 = 0U;
+    if (argc > 1 && (std::string(argv[1]) == "--d1" ||
+                     std::string(argv[1]) == "--registers")) {
+        registers_mode = std::string(argv[1]) == "--registers";
+        trace_d1 = !registers_mode;
+        const int values = registers_mode ? 2 : 1;
+        if (argc < values + 2 || !parse_integer(argv[2], 0xffffffffU, d1) ||
+            (registers_mode && !parse_integer(argv[3], 0xffffffffU, d3))) {
+            std::cerr << "register options require uint32 values\n";
             return 1;
         }
-        argc -= 2;
-        argv += 2;
+        argc -= values + 1;
+        argv += values + 1;
+        if (argc > 1 && (std::string(argv[1]) == "--d1" ||
+                         std::string(argv[1]) == "--registers")) {
+            std::cerr << "--d1 and --registers cannot be repeated or combined\n";
+            return 1;
+        }
     }
     if (argc != 4 && argc != 5) {
-        std::cerr << "usage: step_palette_frame [--d1 INPUT_D1] INPUT_RAM INPUT_MS5P OUTPUT_RAM [OUTPUT_PORTS]\n";
+        std::cerr << "usage: step_palette_frame [--d1 INPUT_D1 | --registers D1 D3] INPUT_RAM INPUT_MS5P OUTPUT_RAM [OUTPUT_PORTS]\n";
         return 2;
     }
     const std::string ram_path(argv[1]);
@@ -129,7 +137,8 @@ int main(int argc, char** argv) {
     std::string error;
     std::vector<ms5::VideoPortWrite> writes;
     if (!ms5::load_palette_resource(resource_path, records, error) ||
-        !ms5::step_palette_frame(ram, records, error, argc == 5 ? &writes : NULL, trace_d1 ? &d1 : NULL)) {
+        !ms5::step_palette_frame(ram, records, error, argc == 5 ? &writes : NULL, (trace_d1 || registers_mode) ? &d1 : NULL,
+                                    registers_mode ? &d3 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -172,8 +181,10 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
-    if (trace_d1) {
-        std::cout << "{\"d1\":" << d1 << "}\n";
+    if (trace_d1 || registers_mode) {
+        std::cout << "{\"d1\":" << d1;
+        if (registers_mode) std::cout << ",\"d3\":" << d3;
+        std::cout << "}\n";
     }
     return 0;
 }
