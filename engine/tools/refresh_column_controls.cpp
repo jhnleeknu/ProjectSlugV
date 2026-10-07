@@ -95,10 +95,21 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
+    bool prepare = false;
+    std::uint32_t d1 = 0U, d3 = 0U;
+    if (argc > 1 && std::string(argv[1]) == "--prepare") {
+        if (argc < 4 || !parse_integer(argv[2], 0xffffffffU, d1) ||
+            !parse_integer(argv[3], 0xffffffffU, d3)) {
+            std::cerr << "--prepare requires decimal or 0x-prefixed uint32 D1 and D3\n";
+            return 1;
+        }
+        prepare = true;
+        argc -= 3; argv += 3;
+    }
     const bool scene = argc > 1 && std::string(argv[1]) == "--scene";
     if (argc != 6) {
-        std::cerr << "usage: refresh_column_controls INPUT_RAM OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS D0\n"
-                  << "       refresh_column_controls --scene INPUT_RAM OUTPUT_RAM OUTPUT_PORTS D0\n";
+        std::cerr << "usage: refresh_column_controls [--prepare D1 D3] INPUT_RAM OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS D0\n"
+                  << "       refresh_column_controls [--prepare D1 D3] --scene INPUT_RAM OUTPUT_RAM OUTPUT_PORTS D0\n";
         return 2;
     }
     std::uint32_t object_address = 0U;
@@ -124,8 +135,12 @@ int main(int argc, char** argv) {
         return 1;
     }
     std::vector<ms5::VideoPortWrite> writes;
-    const bool succeeded = scene ? ms5::refresh_scene_columns(ram, d0, writes, error) :
-        ms5::refresh_column_controls(ram, object_address, d0, writes, error);
+    bool succeeded;
+    if (prepare) {
+        if (scene) succeeded = ms5::prepare_scene_columns(ram, d0, d1, d3, writes, error);
+        else succeeded = ms5::prepare_column_controls(ram, object_address, d0, d1, d3, error);
+    } else if (scene) succeeded = ms5::refresh_scene_columns(ram, d0, writes, error);
+    else succeeded = ms5::refresh_column_controls(ram, object_address, d0, writes, error);
     if (!succeeded) {
         std::cerr << error << '\n';
         return 1;
@@ -160,6 +175,8 @@ int main(int argc, char** argv) {
         std::cerr << "cannot write output files\n";
         return 1;
     }
-    std::cout << "{\"d0\":" << d0 << ",\"writes\":" << writes.size() << "}\n";
+    std::cout << "{\"d0\":" << d0 << ",\"writes\":" << writes.size();
+    if (prepare) std::cout << ",\"d1\":" << d1 << ",\"d3\":" << d3;
+    std::cout << "}\n";
     return 0;
 }

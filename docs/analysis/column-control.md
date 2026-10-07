@@ -34,3 +34,17 @@ build/refresh_column_controls --scene INPUT_RAM OUTPUT_RAM OUTPUT_PORTS D0
 원본1,441조건(독립1,409개, scene/승계32개)의 전체64KiB RAM, 전체D0와78,272개 순서 있는 포트 기록이 일치했다. 전체256개 flag와각 축512개 유효 좌표, 부호 있는slot, 주소/좌표 순환, A000 비교 경계와 네 구조체의16개 활성 조합을 확인했다.11개 주소/크기/별칭 오류에서 출력 보존을 확인했다. 원본 ROM은 수정하지 않았다.
 
 보고서: `artifacts/column_control/verification.json`, SHA256 `f7a40f0435d4b77bae44a31486bcd2da4c9a3bbed9c03cd58db54ff0c9e754fd`.
+
+
+## 메인 프레임의 좌표 준비1879c/1ae56
+
+메인 노드 e74의 e92 JSR1ae56은 네 구조체109156/10b1d6/10d256/10d2d6에1879c를 적용한다. 각 구조체의14.word를 X,18.word를 Y로 읽고25.byte의bit0/bit1을 각각 빼며16비트로 순환시킨다. 원본 LSR.B→SUBX.W 두 쌍은 각 bit를 X 플래그로 전달한다. 두 번째 LSR가 X를 새로 설정하므로 X와Y의 빌림은 독립적이다.
+
+7c/7e의 이전 cache와 달라진 좌표만 저장하고, 하나라도 바뀌면7a.byte의bit7을 세운다. 나머지 flag는 보존하며 active bit0이 없어도 준비는 수행한다. D0/D1의 상위16비트는 보존하고 하위word는 준비 좌표가 된다. MOVEQ0,D3는 cache가 같더라도 전체D3를0으로 만든다. D2/CCR은 새 API 계약 밖이다.
+
+`prepare_column_controls`는 정렬된128byte RAM 구조체 하나를 처리한다. `prepare_scene_columns`는 기존 scene refresh와 같은 순서로 bank1/0을 기록하고, 네 구조체를 처리한 뒤 RAM0010을0으로 남긴다. 순서 있는 MMIO는 (2ffff2,2000),(2ffff0,0),(2ffff2,1000),(2ffff0,0)의word 쓰기다. 최종D0/D1은 네 번째 구조체 결과다.
+
+CLI는 `build/refresh_column_controls --prepare D1 D3 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS D0` 또는 `--prepare D1 D3 --scene INPUT_RAM OUTPUT_RAM OUTPUT_PORTS D0`다. 기존 refresh 사용법은 유지한다. 이는 좌표 준비와 기존1adf8 화면 갱신 연결의 복원이며 e74 전체 sprite/sound 준비를 한 번에 수행하는 API는 후속 작업이다.
+
+
+`.venv/bin/python tools/verify_column_prepare.py`: 원본 준비1,482조건과 prepare→refresh4조건, 순서 있는 포트1,312개, 출력 보존29조건 통과. selector/flag byte256개, cache변경 조합4개, 좌표word 경계와 RAM구조체 경계를 포함한다. 4시퀀스는 실제 CLI RAM/D0/D1/D3를 승계하며 호스트가 좌표/selector만 변경한다. refresh 연결은 준비된 cache와dirty bit가 기존1adf8에서 VRAM쓰기로 소비됨을 확인한다. 기존 refresh API는 최종D1/D3를 반환하지 않으므로 이 연결은 RAM/D0/포트만 비교하고 종료한다. 보고서 SHA256 `1ee49b44a787cf2b279b99252ec8639b9183b2139b37450386bce9a8b38d6069`.

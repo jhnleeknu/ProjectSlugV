@@ -939,3 +939,11 @@
 - `verify_callback_register_flow.py`: 원본38경계, 오류12조건 통과. 기본 callback3dcc→stack복귀→팔레트→대기→IRQ→입력의 세 주기를 실제 CLI 출력으로 승계했다. SHA256 `14e37384f2944dfbacc751546e571098431ffda56d81fa9ca28522329c290074`.
 - 전체 빌드·Python73개·C++ 전체 검사(새 main_frame_test 포함) 통과. 메인 리뷰 `docs/reviews/0127-main-frame-flow.md`.
 - 실제 c8c 서비스가 신호를 생성하지만 IRQ 전후 main context 복원은 호스트가 수행한다. BIOS/SR/RTE/물리 타이밍과 D1/D3 외 scratch register는 미완료다. 다음은 기본 RTS 이외의 메인 콜백과 IRQ 작업 본문 분석·실행 연결이다. 전체 목표는 진행 중이다.
+
+
+## 2026-10-07 — 메인 callback 후보 조사와 배경 좌표 준비
+- fixed1MiB의 A6+76 참조1,101후보와 그 이후7MiB의 c64 등록 후보를 목록화했다. 후자는 절대 JSR/JMP0개, 원시값일치8개다. 데이터·다른 오브젝트 필드가 섞이므로 실제 callback/미사용기능으로 단정하지 않았다. 근거 `docs/analysis/main-callback-references.md`.
+- 메인 e74에서 직접 호출하는1ae56/1879c를 복원했다. 네 배경 구조체의 좌표word/flag subtraction, cache변경과 dirtybit7, bank전환을 구현했다.
+- `verify_column_prepare.py`: 준비1,482조건, 준비→기존화면갱신4조건, 포트1,312개와 오류29조건 통과. 실제 CLI RAM/full D0/D1/D3 승계도 검증했다. 보고서 SHA256 `1ee49b44a787cf2b279b99252ec8639b9183b2139b37450386bce9a8b38d6069`.
+- 전체 빌드·Python73개·C++전체 통과. 메인 리뷰 `docs/reviews/0128-column-prepare-callback-inventory.md`.
+- 다음은 메인 e74의 사운드 큐 비우기3c08, 일반 sprite 준비16bba, 배경 좌표 준비1ae56, 팔레트5728을 원본 순서로 잇는 작업이다. callback/IRQ 작업의 자연 실행 대상과 전체 게임 복원은 미완료다.
