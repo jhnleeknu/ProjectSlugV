@@ -9,7 +9,8 @@ namespace {
 bool next_text_glyph(const std::vector<std::uint8_t>& script,
                      std::size_t& position, std::uint16_t& style,
                      std::uint16_t& line, std::uint16_t& cursor,
-                     std::uint8_t& glyph, std::string& error) {
+                     std::uint8_t& glyph, std::string& error,
+                     bool* line_reset = NULL) {
     while (position < script.size()) {
         glyph = script[position++];
         if (glyph == 0x5cU) {
@@ -48,6 +49,9 @@ bool next_text_glyph(const std::vector<std::uint8_t>& script,
                     return false;
                 }
                 cursor = line;
+                if (line_reset != NULL) {
+                    *line_reset = true;
+                }
                 continue;
             }
             if (glyph == 'n') {
@@ -375,7 +379,8 @@ bool trace_table_fixed_text(const std::vector<std::uint8_t>& script,
                             const FixedDataResource& font,
                             std::vector<VideoPortWrite>& writes,
                             std::string& error,
-                            std::uint16_t* final_line) {
+                            std::uint16_t* final_line, std::uint16_t* final_style,
+                            std::uint32_t* d3) {
     if (font.source_cpu_address >= 0x100000U ||
         font.source_cpu_address != font.source_rom_offset || font.data.empty() ||
         font.data.size() > 0x100000U - font.source_cpu_address) {
@@ -387,15 +392,22 @@ bool trace_table_fixed_text(const std::vector<std::uint8_t>& script,
     std::uint16_t line = initial_address;
     std::uint16_t style = initial_style;
     std::size_t position = 0;
+    bool line_reset = false;
     for (;;) {
         std::uint8_t glyph = 0;
-        if (!parse_fixed_text_glyph(script, position, style, line, cursor, glyph, error)) {
+        if (!next_text_glyph(script, position, style, line, cursor, glyph, error, &line_reset)) {
             return false;
         }
         if (glyph == 0) {
             writes.swap(pending);
             if (final_line != NULL) {
                 *final_line = line;
+            }
+            if (final_style != NULL) {
+                *final_style = style;
+            }
+            if (d3 != NULL) {
+                *d3 = (line_reset ? 0U : (*d3 & 0xffff0000U)) | line;
             }
             error.clear();
             return true;

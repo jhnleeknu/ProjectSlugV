@@ -7,11 +7,14 @@ namespace ms5 {
 // A nonzero exit callback is currently unsupported when D0's low byte is
 // nonzero. Do not call this after a frame's external BIOS jump.
 // status preserves signed full D0; the controller caller tests its low byte.
-// Success replaces outputs. Failure preserves RAM/result/writes.
+// Optional D1/D3 expose full returned registers; their incoming low words
+// must match frame_style/frame_line. Success replaces outputs. Failure
+// preserves RAM/result/writes and both optional registers.
 bool finish_control_menu(std::vector<std::uint8_t>& ram,
                          const FixedDataResource& pause,
                          std::uint32_t frame_d0, std::uint16_t frame_style,
                          std::uint16_t frame_line, MenuFrameResult& result,
-                         std::vector<VideoPortWrite>& writes, std::string& error);
+                         std::vector<VideoPortWrite>& writes, std::string& error,
+                         std::uint32_t* d1 = NULL, std::uint32_t* d3 = NULL);
 }
 #endif

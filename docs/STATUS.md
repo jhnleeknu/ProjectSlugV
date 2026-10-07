@@ -840,3 +840,11 @@
 - 원본3,141조건, 오류25조건, 활성화→f5a 연속5조건/포트1,305개 통과. Python73개 및 C++전체 검사 통과.
 - 리뷰: docs/reviews/0115-control-activation-registers.md. 분석: docs/analysis/control-request.md.
 - 다음은 활성대기91c2와 메뉴92fc의 반환D1/D3를 복원하고 step_control 및 호출자에 연결하는 것이다. 이번 변경은 비활성경로만 포함한다. 실제게임콜백본문, SR/RTE/BIOS·장치시간축/Z80 및 전체부팅은 미완료이며 목표는active다.
+
+
+## 2026-10-07 — 메뉴 반환 꼬리의 전체 D1/D3
+
+- finish_control_menu에 전체D1/D3반환을추가했다.9079의위치제어가D3상위word까지지우는동작과종료style을공유텍스트파서에서반영했다.
+- 원본880조건/포트1,180개/오류63조건통과.3개40회연속꼬리호출은이전C++출력D1/D3를다음입력으로사용한다.Python73개및C++전체검사통과.
+- 리뷰: docs/reviews/0116-control-finish-registers.md. 분석: docs/analysis/control-request.md.
+- 다음은활성대기91c2·메뉴시작92ce·a370본체의전체레지스터반환이다.위치제어가D3상위를지우므로단순히기존line출력을상위word와합치면안된다.실제게임콜백본문,SR/RTE/BIOS·장치시간축/Z80및전체부팅은미완료이며목표는active다.

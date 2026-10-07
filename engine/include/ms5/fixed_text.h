@@ -102,14 +102,19 @@ bool render_table_text_glyph(std::uint8_t glyph,
 // Each table glyph emits one long address/data write to CPU port 0x3c0000 and
 // advances the VRAM word cursor by 0x20. Success replaces writes and clears
 // error; failure preserves writes. An optional final_line receives the parser's
-// final VRAM line on success only. The trace is bounded to 100000 events.
+// final VRAM line on success only. final_style receives terminal D1.word.
+// Optional D3 keeps its incoming high word unless a location control clears
+// the full register; the initial low word comes from initial_address (3918).
+// All optional outputs are preserved on failure. The trace is bounded to 100000 events.
 bool trace_table_fixed_text(const std::vector<std::uint8_t>& script,
                             std::uint16_t initial_address,
                             std::uint16_t initial_style,
                             const FixedDataResource& font,
                             std::vector<VideoPortWrite>& writes,
                             std::string& error,
-                            std::uint16_t* final_line = NULL);
+                            std::uint16_t* final_line = NULL,
+                            std::uint16_t* final_style = NULL,
+                            std::uint32_t* d3 = NULL);
 
 } // namespace ms5
 

@@ -6,10 +6,17 @@ bool finish_control_menu(std::vector<std::uint8_t>& ram,
                          const FixedDataResource& pause,
                          std::uint32_t frame_d0, std::uint16_t frame_style,
                          std::uint16_t frame_line, MenuFrameResult& result,
-                         std::vector<VideoPortWrite>& writes, std::string& error) {
+                         std::vector<VideoPortWrite>& writes, std::string& error,
+                         std::uint32_t* d1, std::uint32_t* d3) {
     if(ram.size()!=65536U) {
         error="control menu finish requires exactly 65536 RAM bytes";return false;
     }
+    if ((d1 != NULL && (*d1 & 0xffffU) != frame_style) ||
+        (d3 != NULL && (*d3 & 0xffffU) != frame_line)) {
+        error = "control finish register low words must match style and line";return false;
+    }
+    std::uint32_t pending_d1 = d1 == NULL ? frame_style : *d1;
+    std::uint32_t pending_d3 = d3 == NULL ? frame_line : *d3;
     try {
         std::vector<std::uint8_t> candidate(ram);
         std::vector<VideoPortWrite> pending;
@@ -34,8 +41,10 @@ bool finish_control_menu(std::vector<std::uint8_t>& ram,
                 const std::vector<std::uint8_t> script(pause.data.begin()+offset,pause.data.end());
                 // 928e selects e84c8, not the menu's 9332 font remapper.
                 // Native9079 selects direct font3, so no font table is read.
+                std::uint16_t final_style = frame_style;
                 if(!trace_table_fixed_text(script,static_cast<std::uint16_t>(d0),frame_style,
-                                           pause,pending,error,&outcome.line))return false;
+                                           pause,pending,error,&outcome.line,&final_style,&pending_d3))return false;
+                pending_d1 = (pending_d1 & 0xffff0000U) | final_style;
                 candidate[0x7dee]=0;candidate[0x7df0]=0;d0=1;
             }
         }
@@ -48,6 +57,8 @@ bool finish_control_menu(std::vector<std::uint8_t>& ram,
     } catch(const std::bad_alloc&) {
         error="cannot allocate control menu finish state";return false;
     }
+    if (d1 != NULL) { *d1 = pending_d1; }
+    if (d3 != NULL) { *d3 = pending_d3; }
     error.clear();return true;
 }
 }
