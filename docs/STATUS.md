@@ -575,3 +575,11 @@
 - 전체 `make all test`(Python61개/C++ 전체),CLI 숫자·별칭·배치 framing 오류 검사 통과. 리뷰: docs/reviews/0082-video-control.md.
 - ec4의100016/100017 대기 및3c0006 **읽기** 경로도 명령 근거로 문서화했다. 쓰기shadow가 읽기결과를 대신한다고 가정하지 않는다.
 - 다음은43dbc의 단계byte와 호출자 카운터,기존 팔레트 효과 API를 f54/f5a 순서로 연결하는 것이다. 인터럽트·실제 입력·타이밍·전체 부팅은 미완료이며 전체 목표는 active다.
+
+
+## 2026-10-07 — 진행 카운터 검사와 좌표 단계 전환
+
+- `advance_control_counter`로fe2..1000의word비교·16비트wrap·43dbc 단계byte갱신을구현했다. 불일치는RAM을보존하고trap명령직전경계로반환한다.
+- 원본과1,734조건전체RAM/경계일치. 실제trap경계863회,phasehelper871회,모든256phase와메모리중첩순서를확인했다. CLI오류/별칭25조건도출력을보존했다.
+- `make all test`(Python61개/C++전체)통과. 리뷰: docs/reviews/0083-control-counter.md. 보고서: artifacts/control_counter/verification.json.
+- 비디오제어와진행카운터의연결준비가끝났다. 다음은기존팔레트효과API까지포함하여f5a호출자순서를통합하고,효과갱신의watchdog·뱅크쓰기출력범위를확인하는것이다. 전체목표는active다.

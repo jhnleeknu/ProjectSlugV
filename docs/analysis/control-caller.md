@@ -60,3 +60,19 @@ f12는100016을10001a에 복사하고100016과104ca2 word를0으로 만든 뒤31
 비디오 제어 검증은 모든16비트 설정 입력65,536개와, 모든shadow65,536개에 경계 설정값을 순환 적용한 배치131,072건이 통과했다. 이는 모든 입력×shadow의 Cartesian 조합을 검사했다는 뜻은 아니다. 별도 원본 조회 sweep65,536건에서 D0 전체 결과와 RAM/포트 불변을 확인했다. C++ 배치는 조회전/조회후 값, 최종shadow와 단일 포트를 비교하고, 별도 CLI194조건은 서로 다른 초기64KiB RAM 전체와 포트를 비교했다. 원본setter 입력D0의 상위word도 비영으로 두었다. setter가 반환하는 기타 레지스터/flags는 API 범위 밖이다.
 
 원본mapped1MiB 불변과 전체 `make all test`(Python61개/C++ 전체)가 통과했다. 단위 검사는 조회256,설정257/ffff의 하위byte wrap,다른RAM 보존과잘못된 크기에서 출력 보존을 포함한다. 보고서 `artifacts/video_control/verification.json` SHA256: `10f00ea2352dd0b6354521e436b79b386c58b279e14415dfdd3ec99b5989654c`.
+
+
+## C++ 진행 카운터와 단계 전환
+
+```
+build/advance_control_counter INPUT_RAM OUTPUT_RAM OBJECT_ADDRESS
+.venv/bin/python tools/verify_control_counter.py
+```
+
+`advance_control_counter`는fe2에서1000까지의 RAM 효과와trap 경계를 구현한다. object+7e word와RAM000e가 다르면 `trap15=true`로 성공 반환하며 RAM을 바꾸지 않는다. 이 결과는 지원하지 않는 입력 오류와 구분하며, 원본fee의trap 명령을 실행한 것으로 간주하지 않는다. 값이 같으면 global word, object word 순서로16비트 증가값을 쓰고,43dbc의RAMd494 갱신을 마지막에 수행한다.
+
+OBJECT_ADDRESS는100000..10ff80 사이의짝수CPU주소이며끝의0x80바이트span이RAM에포함되어야한다. 검증에서 사용한 임의 주소가 실제 게임에서 객체로 도달한다는 주장은 하지 않는다. 특히10d416이면object+7e가d494를가리킨다.00ff를증가시켜0100을쓴후phase연산으로상위byte가02가되어object counter는0200,global counter는0100이된다. 이를정규화하지않으며다음호출의trap도원본대로관찰했다.
+
+1,734조건(독립1,716 및RAM승계18회)에서전체64KiB RAM과종료경계가일치했다. 실제fee 경계863회와43dbc 호출871회를hook으로확인했다. 모든256개초기phase,word0/1/7fff/8000/ffff,최저·최고object주소와phase중첩을포함한다. 오류주소·RAM크기·입출력직접/하드링크/심볼릭링크별칭25조건은출력을보존했다. 영상/watchdog포트출력이없고원본mapped1MiB가불변임을확인했다.
+
+전체 `make all test`(Python61개/C++전체)통과. 보고서 `artifacts/control_counter/verification.json` SHA256: `7deacddda16f7717b17b375b421d65bd346239381bdd4b768d5f0d5f3e92dbf5`. 다른CPU레지스터/flags,trap handler와실제게임동기화는API범위밖이다. 다음연결작업은f5a의상태소비와팔레트효과·비디오제어·이카운터API를원본순서로호출하는것이다.
