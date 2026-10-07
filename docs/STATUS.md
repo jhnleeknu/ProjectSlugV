@@ -694,3 +694,11 @@
 - 원본1,441조건의 전체RAM/D0와78,272개 포트 기록이 일치했다.전체256flags·각축512유효좌표·16활성 조합과11개 오류/별칭 보존 검사를 통과했다.
 - Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0097-column-control.md. 분석: docs/analysis/column-control.md.
 - 다음은c8c에 기존팔레트·열제어·일반스프라이트·사운드를 연결하기 위한 레지스터 전달과 작업 복구를 복원하는 것이다. 전체IRQ·상위맵자료·장치시간축·Z80와 전체 부팅은 미완료이며 목표는 active다.
+
+
+## 2026-10-07 — 팔레트 전송의 D0와 포트 순서 보완
+
+- `transfer_palette_banks_traced`로 기존두bank전송에 원본D0와bank/palette/watchdog포트기록을 추가했다. 일반전송과역순전체채우기의차이를보존한다.
+- 원본680조건의전체RAM/두bank/표시bank/D0와190,792포트가일치했다.36개전체채우기와이어지는전송,14개오류/별칭보존을확인했다.
+- Python73개및C++전체검사통과. 리뷰: docs/reviews/0098-palette-transfer-trace.md. 분석: docs/analysis/palette-transfer-trace.md.
+- 다음은일반스프라이트의반환레지스터의존성과작업복구를확인하고c8c호출자에기존함수들을연결하는것이다. 전체IRQ/장치시간축/Z80/상위맵자료와전체부팅은미완료이며목표는active다.

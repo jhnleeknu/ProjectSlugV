@@ -1,6 +1,7 @@
 #ifndef MS5_PALETTE_TRANSFER_H
 #define MS5_PALETTE_TRANSFER_H
 
+#include "ms5/video_port.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -33,6 +34,14 @@ bool transfer_palette_banks(std::vector<std::uint8_t>& ram,
                             std::vector<std::uint8_t>& palette1,
                             std::uint8_t& display_bank,
                             std::string& error);
+
+// Same supported transfer paths, with native ordered bank/palette/watchdog
+// writes and full D0 propagation for the interrupt caller. Errors preserve all outputs.
+bool transfer_palette_banks_traced(std::vector<std::uint8_t>& ram,
+                                  std::vector<std::uint8_t>& palette0,
+                                  std::vector<std::uint8_t>& palette1,
+                                  std::uint8_t& display_bank,std::uint32_t& d0,
+                                  std::vector<VideoPortWrite>& writes,std::string& error);
 
 } // namespace ms5
 
