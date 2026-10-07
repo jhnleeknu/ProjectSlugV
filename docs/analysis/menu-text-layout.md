@@ -47,3 +47,13 @@ build/draw_menu_text INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES CLIP LINE
 CLIP은0/1,LINE은제목길이측정시원본D3의word초기값이다. 출력포트파일은기존9byte진단레코드(size/address/value)다. 실제게임용입력은원본MS5D이며출력기록재생으로배치로직을대체하지않는다.
 
 원본288조건과C++의전체RAM및쓰기폭/주소/값/순서가일치했다. 지원밖callback/flags에서상태보존,높이0의리소스생략과glyph가림시cursor보존unit검사도통과했다. a370의상태전환과선택입력,다른event callback,메뉴픽셀/팔레트연결은계속남아있다.
+
+## 전체 레지스터 전달
+
+행 출력 9d3a는 보이지 않는 행에서도 D1 하위 byte를 `(index+1)&255`로 바꾼다. 보이는 행은 9d70에서 D1 전체를 지우고, 9b3e는 콜백이 없어도 항목 argument를 D1 하위 word에 넣는다. 구분선은 D3를 유지한다. 제목/일반 문자열은 스타일 변경, 9332의 보이는 glyph 변환, 위치 제어의 D3 전체 초기화를 반영한다. 가려진 glyph는 렌더러의 style 변경을 실행하지 않는다.
+
+`draw_menu_item`/`draw_menu_text`의 선택적 마지막 D1/D3는 실제 반환 레지스터를 전달한다. 높이0 전체 메뉴는 두 레지스터를 유지한다. 전체 메뉴 제목 측정은 입력 D1/D3를 사용한다. 기존 line 인자와 D3 하위 word가 모순되면 오류이며 전체 출력은 보존된다.
+
+CLI `draw_menu_text --registers D1 D3`는 line/D1/D3 JSON을 출력한다. 함께 사용할 수 있는 `--item`은 9d3a 단일 행만 실행한다. 기존 위치 인자와 기본 전체 메뉴 모드는 유지한다.
+
+- `.venv/bin/python tools/verify_menu_text_registers.py`: 원본 1,946조건, 순서 있는 포트 18,922개 및 출력 보존 오류 검사 12조건 통과. 보고서 SHA256 `226ce366dd34fa448a6ef0ee0d1eae11a53bb38dee8d9c5d63bdacfb8cebf294`.

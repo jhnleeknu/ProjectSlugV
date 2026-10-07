@@ -17,9 +17,11 @@ void fail(std::vector<std::uint8_t>& ram,const ms5::FixedDataResource& menu,
           std::uint16_t event) {
     const std::vector<std::uint8_t> before=ram;
     std::uint16_t line=123;std::uint32_t a2=456;
+    std::uint32_t d1=0x1234abcdU,d3=0x5678007bU;
     std::vector<ms5::VideoPortWrite> writes(1);writes[0].value=789;
     std::string error;
-    assert(!ms5::dispatch_stage_area_menu(ram,menu,font,context,event,line,a2,writes,error));
+    assert(!ms5::dispatch_stage_area_menu(ram,menu,font,context,event,line,a2,writes,error,&d1,&d3));
+    assert(d1==0x1234abcdU && d3==0x5678007bU);
     assert(ram==before && line==123 && a2==456 && writes.size()==1 && writes[0].value==789);
 }
 }
@@ -68,12 +70,27 @@ int main() {
     fail(ram,menu,NULL,&context,1);fail(ram,menu,&font,NULL,2);
     font.data.resize(512);fail(ram,menu,&font,&context,1);font.data.resize(1024);
     context.callback_stack=0x10f300;fail(ram,menu,&font,&context,5);context.callback_stack=0x1feffc;
+    // Event 3 changes the selection state without altering full D1/D3.
+    std::uint32_t d1=0x1234abcdU,d3=0x56787088U;
+    line=0x7088U;
     ram[0x7e01]=2;
-    assert(ms5::dispatch_stage_area_menu(ram,menu,NULL,NULL,3,line,a2,writes,error));
+    assert(ms5::dispatch_stage_area_menu(ram,menu,NULL,NULL,3,line,a2,writes,error,&d1,&d3));
+    assert(d1==0x1234abcdU && d3==0x56787088U && line==0x7088U);
     assert(ram[0xd680]==2 && ram[0xd681]==2 && ram[0x7dfb]==1 && ram[0x7f1b]==2);
     ram[0x7dfa]=0xab;ram[0x7dfb]=0xcd;
     assert(ms5::dispatch_stage_area_menu(ram,menu,NULL,NULL,4,line,a2,writes,error));
     assert(ram[0x7dfa]==0xab && ram[0x7dfb]==0xcd);
+    // Drawing installs the final script style and preserves the D3 high word.
+    assert(ms5::dispatch_stage_area_menu(ram,menu,&font,&context,5,line,a2,writes,error,&d1,&d3));
+    assert(d1==0x68U && (d3&0xffff0000U)==0x56780000U &&
+           static_cast<std::uint16_t>(d3)==line);
+    const std::vector<std::uint8_t> before_mismatch=ram;
+    const std::uint32_t before_d1=d1,before_d3=d3;
+    line^=1U;
+    const std::uint16_t mismatch_line=line;
+    assert(!ms5::dispatch_stage_area_menu(ram,menu,&font,&context,5,line,a2,writes,error,&d1,&d3));
+    assert(ram==before_mismatch && d1==before_d1 && d3==before_d3 && line==mismatch_line);
+    line=static_cast<std::uint16_t>(d3);
     ram[0x7dfe]=6;ram[0x7f05]=0;ram[0x7f06]=4;
     assert(ms5::dispatch_stage_area_menu(ram,menu,&font,&context,6,line,a2,writes,error));
     assert(ram[0x7f05]==8 && ram[0x7f06]==8 && ram[0x7f0c]==0 && ram[0x7e07]==7);

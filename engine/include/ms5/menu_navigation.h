@@ -15,13 +15,16 @@ struct StageGroupMenuContext;
 // draw_menu_item profile. Invalid slots and nonterminating searches fail.
 // Failure preserves RAM, writes and final_line; success replaces outputs and
 // clears error. Optional final_line tracks D3 across both row redraws.
+// Full D1/D3 are carried across redraws; final_line must match D3.low16
+// when both are supplied. All register outputs are preserved on error.
 bool navigate_menu(std::vector<std::uint8_t>& ram,
                    const FixedDataResource& resource, bool explicit_selection,
                    std::uint8_t requested,
                    std::vector<VideoPortWrite>& writes, std::string& error,
                    const FixedDataResource* font = NULL,
                    const StageGroupMenuContext* stage_context = NULL,
-                   std::uint16_t* final_line = NULL);
+                   std::uint16_t* final_line = NULL,
+                   std::uint32_t* d1 = NULL, std::uint32_t* d3 = NULL);
 
 } // namespace ms5
 #endif

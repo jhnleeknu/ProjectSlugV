@@ -11,7 +11,10 @@ static void unchanged_failure(std::vector<std::uint8_t>& ram, const ms5::FixedDa
     std::vector<ms5::VideoPortWrite> writes(1);
     writes[0].value = 0xabcdefU;
     std::string error;
-    assert(!ms5::navigate_menu(ram, data, false, 0, writes, error));
+    std::uint16_t line = 0x7088U;
+    std::uint32_t d1 = 0xabcdef68U, d3 = 0x12347088U;
+    assert(!ms5::navigate_menu(ram, data, false, 0, writes, error, NULL, NULL, &line, &d1, &d3));
+    assert(line == 0x7088U && d1 == 0xabcdef68U && d3 == 0x12347088U);
     assert(!error.empty() && ram == before && writes.size() == 1 && writes[0].value == 0xabcdefU);
 }
 int main() {
@@ -33,6 +36,27 @@ int main() {
     std::string error;
     assert(ms5::navigate_menu(ram, data, false, 0, writes, error));
     assert(ram[0x7f05] == 1 && ram[0x7f06] == 1 && ram[0x7f0c] == 0 && writes.size() == 4);
+    // Both invisible redraws carry the D1 byte update across navigation.
+    std::uint16_t line = 0x7088U;
+    std::uint32_t d1 = 0x1234ab68U, d3 = 0x56787088U;
+    ram[0x7f02] = 0;
+    assert(ms5::navigate_menu(ram, data, false, 0, writes, error, NULL, NULL,
+                              &line, &d1, &d3));
+    assert(ram[0x7f05] == 0 && writes.empty());
+    assert(d1 == 0x1234ab01U && d3 == 0x56787088U && line == 0x7088U);
+    ram[0x7f02] = 8;
+    assert(ms5::navigate_menu(ram, data, false, 0, writes, error, NULL, NULL,
+                              &line, &d1, &d3));
+    assert(d1 == 0 && (d3 & 0xffff0000U) == 0x56780000U);
+    assert(line == static_cast<std::uint16_t>(d3));
+    const std::vector<std::uint8_t> before_mismatch = ram;
+    line ^= 1U;
+    const std::uint16_t mismatched_line = line;
+    const std::uint32_t before_d1 = d1, before_d3 = d3;
+    assert(!ms5::navigate_menu(ram, data, false, 0, writes, error, NULL, NULL,
+                               &line, &d1, &d3));
+    assert(ram == before_mismatch && line == mismatched_line &&
+           d1 == before_d1 && d3 == before_d3);
     // A late new-row failure must also roll back the already-drawn old row.
     put(data.data, 16, 0x300);
     unchanged_failure(ram, data);
@@ -58,5 +82,10 @@ int main() {
     ram[0x7f06] = 0;
     assert(ms5::draw_menu_item(ram, ms5::FixedDataResource(), true, writes, error));
     assert(writes.empty());
+    line = 0x7088U; d1 = 0x1234ab68U; d3 = 0x56787088U;
+    ram[0x7f06] = 0x7aU;
+    assert(ms5::draw_menu_item(ram, ms5::FixedDataResource(), true, writes, error,
+                               NULL, NULL, &line, &d1, &d3));
+    assert(d1 == 0x1234ab7bU && d3 == 0x56787088U && line == 0x7088U);
     std::cout << "Menu navigation errors preserve RAM and staged writes\n";
 }

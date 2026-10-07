@@ -133,5 +133,43 @@ int main() {
     ram[0x7efd] = 0;
     assert(ms5::draw_menu_item(ram, data, false, writes, error, NULL, NULL, &final_line));
     assert(writes.empty() && final_line == 0x1234);
+    // Hidden rows alter only D1.byte, before descriptor/renderer checks.
+    put(ram,0x7f0e,0x107efe); put(ram,0x7f16,0x1234);
+    ram[0x7f02]=1; ram[0x7f06]=0;
+    std::uint32_t d1=0x89abcdefU; std::uint32_t d3=0x76541234U;
+    final_line=0x1234;
+    assert(ms5::draw_menu_item(ram,ms5::FixedDataResource(),true,writes,error,
+                               NULL,NULL,&final_line,&d1,&d3));
+    assert(d1==0x89abcd01U && d3==0x76541234U && final_line==0x1234 && writes.empty());
+
+    // Visible separator/no-op retains D3 and transports the callback argument.
+    put(ram,0x7f16,0x3650); ram[0x7f02]=3; ram[0x7f09]=3;
+    data.data[24]=0xbe; data.data[25]=0xef;
+    d1=0x11223344U;
+    assert(ms5::draw_menu_item(ram,data,false,writes,error,NULL,NULL,&final_line,&d1,&d3));
+    assert(d1==0x0000beefU && d3==0x76541234U && final_line==0x1234 && writes.size()==1);
+
+    // Height zero preserves both full registers even with an absent resource.
+    ram[0x7f02]=0; d1=0xa5c39876U; d3=0x12347000U;
+    assert(ms5::draw_menu_text(ram,ms5::FixedDataResource(),true,0x7000,writes,error,
+                               &final_line,NULL,NULL,0x3650,&d1,&d3));
+    assert(d1==0xa5c39876U && d3==0x12347000U && final_line==0x7000 && writes.empty());
+    const std::vector<std::uint8_t> register_before=ram;
+    ms5::VideoPortWrite sentinel;
+    sentinel.size=2; sentinel.address=0x3c0000U; sentinel.value=0x8200U;
+    writes.assign(1,sentinel); final_line=0x1111;
+    assert(!ms5::draw_menu_text(ram,data,true,0x7001,writes,error,
+                                &final_line,NULL,NULL,0x3650,&d1,&d3));
+    assert(ram==register_before && d1==0xa5c39876U && d3==0x12347000U && final_line==0x1111);
+    assert(writes.size()==1 && writes[0].size==2 && writes[0].address==0x3c0000U && writes[0].value==0x8200U);
+    assert(!ms5::draw_menu_item(ram,data,false,writes,error,NULL,NULL,&final_line,&d1,&d3));
+    assert(ram==register_before && d1==0xa5c39876U && d3==0x12347000U && final_line==0x1111);
+    assert(writes.size()==1 && writes[0].size==2 && writes[0].address==0x3c0000U && writes[0].value==0x8200U);
+
+    // The existing clipped location stream clears the incoming full D3 high word.
+    d1=0xface1234U; d3=0xbeef4321U; clipped_line=0x4321;
+    assert(ms5::draw_menu_item(clipped_ram,clipped_data,true,clipped_writes,error,
+                               &font,NULL,&clipped_line,&d1,&d3));
+    assert(d3==0x00007002U && clipped_line==0x7002 && clipped_writes.size()==3);
     std::cout << "Menu text unsupported paths and rollback passed\n";
 }

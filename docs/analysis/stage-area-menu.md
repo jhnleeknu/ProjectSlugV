@@ -53,3 +53,13 @@ C++단위검사는구역순환,확인/취소,중첩formatter의S-20 인자pointe
 ## 남은 연결
 
 구분선1번의그리기는아직미지원이다. event6의이전선택이구분선인경우와958a전체그리기는명시적오류로남는다. 기본이전선택0 또는실제선택행2..9의이동은검증범위다. 부모다시그리기/스택추가에context와호출깊이를전달하는작업,헤더9430/전체a370,실제스테이지실행도남았다. workRAM내CPU스택흔적,전체CPU레지스터/flags,픽셀및타이밍은동등성주장에포함하지않는다.
+
+## 전체 D1/D3 전달
+
+직접 9602 콜백은 선택적 전체 D1/D3를 입출력한다. 입력 D3 하위 word는 기존 line과 같아야 한다. event3의 4823a/48250 및 event4/7은 D1/D3를 유지한다. event0/1/2/5는 앞부분의 9f36/96de와 뒷부분의 9f12에서 D1 전체를 지우므로 최종 D1은 마지막 이름 스크립트의 style word다. 9738은 포맷터가 실제로 반환한 style을 저장하고 974c에서 복구한다.
+
+D3는 첫 지우기 스크립트, 포맷터, 마지막 지우기와 이름 출력의 순서로 전달한다. 각 3918은 하위 word를 시작 좌표로 교체하고, 실행한 위치 제어는 상위 word도 지운다. event6은 a280 이동으로 진입하므로 두 행 다시그리기의 전체 D1/D3를 이어 준다. 내부 콜백 stack은 기존 진입값-20이다. 전체 상태와 레지스터는 성공 시에만 반영한다.
+
+새 진단 CLI: `build/dispatch_stage_area_menu INPUT_RAM MENU_MS5D FONT_MS5D STAGES_DIRECTORY OUTPUT_RAM OUTPUT_PORTS EVENT D1 D3 CALLBACK_STACK`. 실제 MS5D 런타임 리소스를 읽고 A2/line/D1/D3 JSON을 출력한다.
+
+- `.venv/bin/python tools/verify_stage_area_registers.py`: 원본 3,936조건, 순서 있는 포트 504,536개 및 출력 보존 오류 검사 31조건 통과. 보고서 SHA256 `a4e1cadf1bedbf87c1ec457bc5de298332a036f8231f85fb9dc3b89c9866fc52`.

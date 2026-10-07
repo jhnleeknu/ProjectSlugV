@@ -881,3 +881,11 @@
 - 전체 빌드/테스트 통과: Python 73개와 C++ 전체 검사. 메인 리뷰 `docs/reviews/0120-formatted-stage-group-registers.md`.
 - 원본 문자열 줄바꿈 TRAP #15 경계는 정상 반환 검증에서 제외하고 C++ 오류 보존을 확인했다. 실제 예외 핸들러와 임의의 문자열 후속 메모리 실행은 미검증이다.
 - 다음: 9602 구역 메뉴와 메뉴 텍스트의 전체 레지스터를 연결한 뒤 a370/제어기/메인 프레임으로 통합한다. 전체 목표는 미완료다.
+
+## 2026-10-07 — 구역 메뉴·텍스트·이동 전체 레지스터
+- 직접 9602 구역 콜백과 9d3a/9e1a 텍스트, a216/a280 이동의 전체 D1/D3 전달을 구현했다. 숨은 행의 D1 byte 변화, 보이는 행의 초기화/argument, 문자열 위치 제어 및 두 행의 순차 전달을 반영한다.
+- 구역 초기 선택 event6의 재귀 이동·행 출력도 같은 경로로 연결했다. 실제 MS5D 런타임 리소스를 읽는 새 CLI와 기존 CLI의 선택적 레지스터 모드를 제공한다.
+- `.venv/bin/python tools/verify_menu_text_registers.py`: 원본 1,946조건, 순서 있는 포트 18,922개 및 출력 보존 오류 검사 12조건 통과. 보고서 SHA256 `226ce366dd34fa448a6ef0ee0d1eae11a53bb38dee8d9c5d63bdacfb8cebf294`.
+- `.venv/bin/python tools/verify_stage_area_registers.py`: 원본 3,936조건, 순서 있는 포트 504,536개 및 출력 보존 오류 검사 31조건 통과. 보고서 SHA256 `a4e1cadf1bedbf87c1ec457bc5de298332a036f8231f85fb9dc3b89c9866fc52`.
+- Python 73개와 C++ 전체 검사 통과, 경고 없음. 메인 코드/원본/검증 리뷰 완료: `docs/reviews/0121-stage-area-menu-text-registers.md`.
+- 다음: 상위 이벤트 디스패처와 스택 다시그리기/메뉴 열기에 레지스터를 전달한 뒤 a370과 제어기/메인 루프를 통합한다. 다른 CPU 상태·예외 핸들러·실제 타이밍과 전체 게임 복원은 계속 진행 중이다.

@@ -27,7 +27,10 @@ bool navigate_menu(std::vector<std::uint8_t>& ram,
                    std::vector<VideoPortWrite>& writes, std::string& error,
                    const FixedDataResource* font,
                    const StageGroupMenuContext* stage_context,
-                   std::uint16_t* final_line) {
+                   std::uint16_t* final_line,std::uint32_t* d1,std::uint32_t* d3) {
+    if(final_line!=NULL && d3!=NULL && *final_line!=static_cast<std::uint16_t>(*d3)) {
+        error="menu navigation D3 low word must match final_line";return false;
+    }
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
@@ -59,22 +62,27 @@ bool navigate_menu(std::vector<std::uint8_t>& ram,
     }
     try {
         std::vector<std::uint8_t> candidate(ram);
-        std::uint16_t candidate_line = final_line != NULL ? *final_line : 0U;
+        std::uint16_t candidate_line = final_line != NULL ? *final_line :
+            (d3 != NULL ? static_cast<std::uint16_t>(*d3) : 0U);
+        std::uint32_t candidate_d1=d1!=NULL?*d1:0U;
+        std::uint32_t candidate_d3=d3!=NULL?*d3:candidate_line;
         std::vector<VideoPortWrite> pending;
         std::vector<VideoPortWrite> row;
         candidate[slot + 7U] = index;
         candidate[slot + 8U] = old_index;
         if (!draw_menu_item(candidate, resource, true, pending, error, font,
-                            stage_context, &candidate_line)) {
+                            stage_context, &candidate_line, &candidate_d1, &candidate_d3)) {
             return false;
         }
         candidate[slot + 8U] = index;
         if (!draw_menu_item(candidate, resource, true, row, error, font,
-                            stage_context, &candidate_line)) {
+                            stage_context, &candidate_line, &candidate_d1, &candidate_d3)) {
             return false;
         }
         pending.insert(pending.end(), row.begin(), row.end());
         candidate[slot + 14U] = 0U;
+        if(d1!=NULL)*d1=candidate_d1;
+        if(d3!=NULL)*d3=candidate_d3;
         ram.swap(candidate);
         writes.swap(pending);
         if (final_line != NULL) {

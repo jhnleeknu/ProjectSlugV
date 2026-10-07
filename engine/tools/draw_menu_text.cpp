@@ -104,8 +104,41 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
+    bool registers = false;
+    bool item = false;
+    std::uint32_t d1 = 0U;
+    std::uint32_t d3 = 0U;
+    while (argc > 1 && (std::string(argv[1]) == "--registers" ||
+                        std::string(argv[1]) == "--item")) {
+        if (std::string(argv[1]) == "--item") {
+            if (item) {
+                std::cerr << "--item cannot be repeated\n";
+                return 1;
+            }
+            item = true;
+            --argc;
+            ++argv;
+            continue;
+        }
+        if (registers) {
+            std::cerr << "--registers cannot be repeated\n";
+            return 1;
+        }
+        if (argc < 4 || !parse_integer(argv[2], 0xffffffffU, d1) ||
+            !parse_integer(argv[3], 0xffffffffU, d3)) {
+            std::cerr << "--registers requires uint32 D1 and D3 values\n";
+            return 1;
+        }
+        registers = true;
+        argc -= 3;
+        argv += 3;
+        if (argc > 1 && std::string(argv[1]) == "--registers") {
+            std::cerr << "--registers cannot be repeated\n";
+            return 1;
+        }
+    }
     if (argc != 7 && argc != 8 && argc != 10) {
-        std::cerr << "usage: draw_menu_text INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES CLIP LINE [FONT_MS5D [STAGES_DIRECTORY CALLBACK_STACK]]\n";
+        std::cerr << "usage: draw_menu_text [--registers D1 D3] [--item] INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES CLIP LINE [FONT_MS5D [STAGES_DIRECTORY CALLBACK_STACK]]\n";
         return 2;
     }
     const std::string clip_text(argv[5]);
@@ -114,6 +147,10 @@ int main(int argc, char** argv) {
     if ((clip_text != "0" && clip_text != "1") ||
         !parse_integer(argv[6], 0xffffU, line)) {
         std::cerr << "CLIP must be 0 or 1; LINE must be decimal or 0x-prefixed uint16\n";
+        return 1;
+    }
+    if (registers && (d3 & 0xffffU) != line) {
+        std::cerr << "LINE must match D3 low16 bits in registers mode\n";
         return 1;
     }
     if (argc == 10 && !parse_integer(argv[9], 0xffffffU, callback_stack)) {
@@ -188,10 +225,19 @@ int main(int argc, char** argv) {
     }
     std::vector<ms5::VideoPortWrite> writes;
     std::uint16_t final_line = static_cast<std::uint16_t>(line);
-    if (!ms5::load_fixed_data_resource(resource_path, resource, error) ||
-        !ms5::draw_menu_text(ram, resource, clip_text == "1",
+    if (!ms5::load_fixed_data_resource(resource_path, resource, error)) {
+        std::cerr << error << '\n';
+        return 1;
+    }
+    const bool drawn = item ?
+        ms5::draw_menu_item(ram, resource, clip_text == "1", writes, error,
+                           font_pointer, context_pointer, &final_line,
+                           registers ? &d1 : NULL, registers ? &d3 : NULL) :
+        ms5::draw_menu_text(ram, resource, clip_text == "1",
                              static_cast<std::uint16_t>(line), writes, error, &final_line,
-                             font_pointer, context_pointer)) {
+                             font_pointer, context_pointer, 0x3650U,
+                             registers ? &d1 : NULL, registers ? &d3 : NULL);
+    if (!drawn) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -225,7 +271,10 @@ int main(int argc, char** argv) {
         std::cerr << "cannot write output files\n";
         return 1;
     }
-    if (argc == 10) {
+    if (registers) {
+        std::cout << "{\"line\":" << final_line << ",\"d1\":" << d1
+                  << ",\"d3\":" << d3 << "}\n";
+    } else if (argc == 10) {
         std::cout << "{\"line\":" << final_line << "}\n";
     }
     return 0;

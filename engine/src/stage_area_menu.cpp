@@ -20,16 +20,17 @@ std::uint16_t screen_address(unsigned int x,unsigned int y) {
 }
 bool append_script(const FixedDataResource& resource,std::uint32_t address,
                    const FixedDataResource& font,std::uint16_t& cursor,std::uint16_t& style,
-                   std::uint16_t& line,std::vector<VideoPortWrite>& writes,std::string& error) {
+                   std::uint16_t& line,std::vector<VideoPortWrite>& writes,std::string& error,
+                   std::uint32_t& d3) {
     if(address<resource.source_cpu_address || address-resource.source_cpu_address>=resource.data.size()) {
         error="stage area text lies outside supplied ROM resource";return false;
     }
     const std::vector<std::uint8_t> script(resource.data.begin()+(address-resource.source_cpu_address),resource.data.end());
-    std::size_t position=0;line=cursor;
+    std::size_t position=0;line=cursor;bool line_reset=false;
     for(;;) {
         std::uint8_t glyph=0;
-        if(!parse_fixed_text_glyph(script,position,style,line,cursor,glyph,error))return false;
-        if(glyph==0)return true;
+        if(!parse_fixed_text_glyph(script,position,style,line,cursor,glyph,error,&line_reset))return false;
+        if(glyph==0) {d3=(line_reset?0U:(d3&0xffff0000U))|line;return true;}
         std::vector<VideoPortWrite> item;
         if(!render_table_text_glyph(glyph,script,position,cursor,style,font,item,error))return false;
         if(writes.size()+item.size()>100000U) {error="stage area output exceeds100000 events";return false;}
@@ -41,7 +42,11 @@ bool dispatch_stage_area_menu(std::vector<std::uint8_t>& ram,
                               const FixedDataResource& menu,const FixedDataResource* font,
                               const StageGroupMenuContext* context,
                               std::uint16_t event,std::uint16_t& line,
-                              std::uint32_t& a2,std::vector<VideoPortWrite>& writes,std::string& error) {
+                              std::uint32_t& a2,std::vector<VideoPortWrite>& writes,std::string& error,
+                              std::uint32_t* d1,std::uint32_t* d3) {
+    if(d3!=NULL && static_cast<std::uint16_t>(*d3)!=line) {
+        error="stage area D3 low word must match line";return false;
+    }
     bool covered=false;
     if(!menu_position_occluded(ram,0x7000,covered,error))return false;
     const std::uint32_t current=read_long(ram,0x7f12),head=read_long(ram,0x7f0e);
@@ -58,6 +63,8 @@ bool dispatch_stage_area_menu(std::vector<std::uint8_t>& ram,
         std::vector<VideoPortWrite> pending;
         std::uint32_t result_a2=current;
         std::uint16_t result_line=line;
+        std::uint32_t pending_d1=d1==NULL?0U:*d1;
+        std::uint32_t pending_d3=d3==NULL?line:*d3;
         if(event==3U) {
             candidate[0x7dfa]=0;candidate[0x7dfb]=1;
             const std::uint8_t group=candidate[0x7dfe];
@@ -77,7 +84,7 @@ bool dispatch_stage_area_menu(std::vector<std::uint8_t>& ram,
                 nested=*context;nested.callback_stack-=20U;nested_pointer=&nested;
             }
             const std::uint8_t requested=static_cast<std::uint8_t>(candidate[0x7dfe]+2U);
-            if(!navigate_menu(candidate,menu,true,requested,pending,error,font,nested_pointer,&result_line))return false;
+            if(!navigate_menu(candidate,menu,true,requested,pending,error,font,nested_pointer,&result_line,&pending_d1,&pending_d3))return false;
         } else if(event==0U || event==1U || event==2U || event==5U) {
             if(font==NULL || context==NULL || context->catalog==NULL ||
                context->callback_stack<0x110020U || context->callback_stack>0xfffffcU ||
@@ -122,24 +129,26 @@ bool dispatch_stage_area_menu(std::vector<std::uint8_t>& ram,
             std::uint16_t cursor=screen_address(x,y),style=3;
             if(current!=head && candidate[slot+7]!=row)style=0x603;
             else if((descriptor.flags&14U)==2U && candidate[slot+7]!=row)style=0xb03;
-            if(!append_script(menu,0x956c,*font,cursor,style,result_line,pending,error))return false;
+            if(!append_script(menu,0x956c,*font,cursor,style,result_line,pending,error,pending_d3))return false;
             std::vector<FixedDataResource> resources;
             resources.push_back(menu);resources.push_back(name_resource);
             std::vector<std::uint8_t> arguments(12,0);
             put_long(arguments,0,0x107e07);put_long(arguments,4,0x107e08);put_long(arguments,8,name);
             std::vector<VideoPortWrite> formatted;
             if(!format_fixed_text(candidate,resources,*font,0x955e,context->callback_stack-12U,
-                                  arguments,cursor,style,formatted,error))return false;
+                                  arguments,cursor,style,formatted,error,0xe84c8U,&style,NULL,&pending_d3))return false;
             pending.insert(pending.end(),formatted.begin(),formatted.end());
-            // Native format ends in%s; its final style is the saved formatter style.
-            style=static_cast<std::uint16_t>((candidate[0x4cda]<<8)|candidate[0x4cdb]);
+            // 9f12 clears full D1, then 974c restores only its saved style word.
             // 9f12 gives byte coordinates, but +3/+1 here are WORD additions.
             cursor=screen_address(static_cast<unsigned int>(candidate[slot+9])+3U,
                                   static_cast<unsigned int>(candidate[slot+10])+1U);
-            if(!append_script(menu,0x956c,*font,cursor,style,result_line,pending,error) ||
-               !append_script(name_resource,name,*font,cursor,style,result_line,pending,error))return false;
+            if(!append_script(menu,0x956c,*font,cursor,style,result_line,pending,error,pending_d3) ||
+               !append_script(name_resource,name,*font,cursor,style,result_line,pending,error,pending_d3))return false;
+            pending_d1=style;
         }
         ram.swap(candidate);writes.swap(pending);line=result_line;a2=result_a2;
+        if(d1!=NULL)*d1=pending_d1;
+        if(d3!=NULL)*d3=pending_d3;
     } catch(const std::bad_alloc&) {
         error="cannot allocate stage area callback state";return false;
     }

@@ -60,8 +60,9 @@ bool append_text(const std::vector<std::uint8_t>& script,
                  std::vector<std::uint8_t>& ram,
                  std::vector<VideoPortWrite>& writes, std::string& error,
                  std::uint16_t* final_line, const FixedDataResource* font,
-                 std::uint32_t renderer) {
+                 std::uint32_t renderer, std::uint32_t& d1, std::uint32_t& d3) {
     std::vector<VideoPortWrite> text_writes;
+    std::uint32_t text_d3 = (d3 & 0xffff0000U) | address;
     if (renderer == 0x9332U) {
         if (font == NULL) {
             error = "menu renderer CPU0x009332 requires the font resource";
@@ -76,12 +77,14 @@ bool append_text(const std::vector<std::uint8_t>& script,
         std::size_t position = 0;
         std::uint16_t line = address;
         std::uint16_t cursor = address;
+        bool line_reset = false;
         for (;;) {
             std::uint8_t glyph = 0;
             if (!parse_fixed_text_glyph(script, position, style, line, cursor,
-                                         glyph, error)) {
+                                         glyph, error, &line_reset)) {
                 return false;
             }
+            text_d3 = (line_reset ? 0U : (text_d3 & 0xffff0000U)) | line;
             if (glyph == 0U) {
                 if (final_line != NULL) *final_line = line;
                 break;
@@ -110,17 +113,13 @@ bool append_text(const std::vector<std::uint8_t>& script,
         }
     } else {
         if (!trace_direct_fixed_text_visible(script, address, style,
-                clip ? glyph_visible : NULL, &ram, text_writes, error)) {
+                clip ? glyph_visible : NULL, &ram, text_writes, error, &style, &text_d3)) {
             return false;
         }
-        if (final_line != NULL) {
-            FixedTextMeasure measurement;
-            if (!measure_fixed_text(script, style, address, measurement, error)) {
-                return false;
-            }
-            *final_line = measurement.line;
-        }
+        if (final_line != NULL) *final_line = static_cast<std::uint16_t>(text_d3);
     }
+    d1 = (d1 & 0xffff0000U) | style;
+    d3 = text_d3;
     writes.insert(writes.end(), text_writes.begin(), text_writes.end());
     return true;
 }
@@ -132,18 +131,20 @@ bool append_item(const MenuItem& item, std::size_t index,
                  std::vector<VideoPortWrite>& writes, std::string& error,
                  std::uint16_t* final_line, const FixedDataResource* font,
                  const StageGroupMenuContext* stage_context,
-                 std::uint32_t renderer) {
+                 std::uint32_t renderer, std::uint32_t& d1, std::uint32_t& d3) {
     const std::uint8_t row = static_cast<std::uint8_t>(index + 1U);
+    d1 = (d1 & 0xffffff00U) | row;
     if (row >= ram[slot + 4U]) {
         return true;
     }
+    d1 = 0U;
     const std::uint8_t selected = ram[slot + 7U];
     std::uint16_t address = static_cast<std::uint16_t>(
         static_cast<unsigned int>(base_address(ram[slot + 9U],
                                                 ram[slot + 10U])) + 0x20U);
     address = static_cast<std::uint16_t>((address & 0xff00U) |
         ((static_cast<unsigned int>(address) + row) & 0xffU));
-    std::uint16_t line = final_line != NULL ? *final_line : 0U;
+    std::uint16_t line = static_cast<std::uint16_t>(d3);
     if (item.title_address == 0xfffffffeU) {
         // 9d86 subtracts width as a word; 9cd4 then decrements its low byte.
         // Width2 therefore emits256 cells, rather than an empty separator.
@@ -193,36 +194,34 @@ bool append_item(const MenuItem& item, std::size_t index,
             }
             const std::uint16_t style = current != head && index != selected ?
                                        0x0603U : 0x0003U;
+            d1 = (d1 & 0xffff0000U) | style;
             if (!append_text(script, address, style, clip, ram, writes, error,
-                             &line, font, renderer)) {
+                             &line, font, renderer, d1, d3)) {
                 return false;
             }
         }
     }
+    d1 = (d1 & 0xffff0000U) | item.argument;
     if (item.callback == 0x9aa8U || item.callback == 0x9602U ||
         item.callback == 0x9802U) {
         std::uint32_t a2 = current;
         std::vector<VideoPortWrite> ports;
         if (item.callback == 0x9aa8U) {
             if (!dispatch_debug_menu(ram, resource, font, 5U, line, a2,
-                                     ports, error)) {
+                                     ports, error, &d1, &d3)) {
                 return false;
             }
         } else if (item.callback == 0x9602U) {
             if (!dispatch_stage_area_menu(ram, resource, font, stage_context,
-                                          5U, line, a2, ports, error)) {
+                                          5U, line, a2, ports, error, &d1, &d3)) {
                 return false;
             }
         } else {
             if (!dispatch_stage_group_menu(ram, resource, font, stage_context,
-                                           5U, a2, ports, error)) {
+                                           5U, a2, ports, error, &d1, &d3)) {
                 return false;
             }
-            // The native 0x9781 format ends in a literal space and zero,
-            // leaving D3 equal to the formatter's stored line word.
-            line = static_cast<std::uint16_t>(
-                (static_cast<unsigned int>(ram[0x4cd8U]) << 8) |
-                ram[0x4cd9U]);
+            line = static_cast<std::uint16_t>(d3);
         }
         writes.insert(writes.end(), ports.begin(), ports.end());
     }
@@ -240,7 +239,12 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
                     std::vector<VideoPortWrite>& writes, std::string& error,
                     const FixedDataResource* font,
                     const StageGroupMenuContext* stage_context,
-                    std::uint16_t* final_line) {
+                    std::uint16_t* final_line,
+                    std::uint32_t* d1, std::uint32_t* d3) {
+    if (d3 != NULL && final_line != NULL && static_cast<std::uint16_t>(*d3) != *final_line) {
+        error = "menu item final_line must match incoming D3 low word";
+        return false;
+    }
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
@@ -253,6 +257,7 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
         static_cast<unsigned int>(index) + 1U);
     std::vector<VideoPortWrite> pending;
     if (row >= ram[slot + 4U]) {
+        if (d1 != NULL) *d1 = (*d1 & 0xffffff00U) | row;
         writes.swap(pending);
         error.clear();
         return true;
@@ -280,7 +285,10 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
             error = "menu item index lies outside the descriptor";
             return false;
         }
-        std::uint16_t candidate_line = final_line != NULL ? *final_line : 0U;
+        std::uint32_t candidate_d1 = d1 != NULL ? *d1 : 0U;
+        std::uint32_t candidate_d3 = d3 != NULL ? *d3 :
+            (final_line != NULL ? *final_line : 0U);
+        std::uint16_t candidate_line = static_cast<std::uint16_t>(candidate_d3);
         const MenuItem& item = descriptor.items[index];
         if (!supported_callback(item.callback)) {
             error = "menu item event-5 callback is unsupported";
@@ -288,11 +296,13 @@ bool draw_menu_item(std::vector<std::uint8_t>& ram,
         }
         if (!append_item(item, index, slot, head, current, resource, clip,
                          candidate, pending, error, &candidate_line, font,
-                         stage_context, effective_renderer)) {
+                         stage_context, effective_renderer, candidate_d1, candidate_d3)) {
             return false;
         }
         ram.swap(candidate);
         writes.swap(pending);
+        if (d1 != NULL) *d1 = candidate_d1;
+        if (d3 != NULL) *d3 = candidate_d3;
         if (final_line != NULL) {
             *final_line = candidate_line;
         }
@@ -311,7 +321,11 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
                     std::uint16_t* final_line,
                     const FixedDataResource* font,
                     const StageGroupMenuContext* stage_context,
-                    std::uint32_t renderer) {
+                    std::uint32_t renderer, std::uint32_t* d1, std::uint32_t* d3) {
+    if (d3 != NULL && static_cast<std::uint16_t>(*d3) != initial_line) {
+        error = "menu text initial_line must match incoming D3 low word";
+        return false;
+    }
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
@@ -367,6 +381,8 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
     }
     try {
         std::vector<std::uint8_t> candidate(ram);
+        std::uint32_t pending_d1 = d1 != NULL ? *d1 : 0U;
+        std::uint32_t pending_d3 = d3 != NULL ? *d3 : initial_line;
         std::uint16_t pending_line = initial_line;
         std::uint16_t* line_output = &pending_line;
         std::vector<std::uint8_t> script;
@@ -374,9 +390,10 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
             return false;
         }
         FixedTextMeasure measurement;
-        if (!measure_fixed_text(script, 0U, initial_line, measurement, error)) {
+        if (!measure_fixed_text(script, static_cast<std::uint16_t>(pending_d1), initial_line, measurement, error)) {
             return false;
         }
+        pending_d3 = (measurement.line_reset ? 0U : (pending_d3 & 0xffff0000U)) | measurement.line;
         const std::uint8_t center_byte = static_cast<std::uint8_t>(
             static_cast<unsigned int>(ram[slot + 11U]) - measurement.glyph_count);
         const int center = center_byte < 128U ? static_cast<int>(center_byte) :
@@ -386,20 +403,23 @@ bool draw_menu_text(std::vector<std::uint8_t>& ram,
             static_cast<int>(ram[slot + 9U]) + half);
         const std::uint16_t title_address = base_address(column, ram[slot + 10U]);
         const std::uint16_t title_style = head == current ? 0x0103U : 0x0603U;
+        pending_d1 = (pending_d1 & 0xffff0000U) | title_style;
         if (!append_text(script, title_address, title_style, clip, candidate,
-                         pending, error, line_output, font, effective_renderer)) {
+                         pending, error, line_output, font, effective_renderer, pending_d1, pending_d3)) {
             return false;
         }
         for (std::size_t index = 0; index < descriptor.items.size(); ++index) {
             candidate[slot + 8U] = static_cast<std::uint8_t>(index);
             if (!append_item(descriptor.items[index], index, slot, head, current,
                              resource, clip, candidate, pending, error,
-                             line_output, font, stage_context, effective_renderer)) {
+                             line_output, font, stage_context, effective_renderer, pending_d1, pending_d3)) {
                 return false;
             }
         }
         ram.swap(candidate);
         writes.swap(pending);
+        if (d1 != NULL) *d1 = pending_d1;
+        if (d3 != NULL) *d3 = pending_d3;
         if (final_line != NULL) {
             *final_line = pending_line;
         }

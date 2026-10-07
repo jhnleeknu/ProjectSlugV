@@ -95,8 +95,25 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
+    bool registers = false;
+    std::uint32_t d1 = 0U;
+    std::uint32_t d3 = 0U;
+    if (argc > 1 && std::string(argv[1]) == "--registers") {
+        if (argc < 4 || !parse_integer(argv[2], 0xffffffffU, d1) ||
+            !parse_integer(argv[3], 0xffffffffU, d3)) {
+            std::cerr << "--registers requires uint32 D1 and D3 values\n";
+            return 1;
+        }
+        registers = true;
+        argc -= 3;
+        argv += 3;
+        if (argc > 1 && std::string(argv[1]) == "--registers") {
+            std::cerr << "--registers cannot be repeated\n";
+            return 1;
+        }
+    }
     if (argc != 7 && argc != 8) {
-        std::cerr << "usage: navigate_menu INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES MODE INDEX [FONT_MS5D]\n";
+        std::cerr << "usage: navigate_menu [--registers D1 D3] INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES MODE INDEX [FONT_MS5D]\n";
         return 2;
     }
     const std::string mode_text(argv[5]);
@@ -137,9 +154,12 @@ int main(int argc, char** argv) {
         font_pointer = &font;
     }
     std::vector<ms5::VideoPortWrite> writes;
+    std::uint16_t final_line = static_cast<std::uint16_t>(d3);
     if (!ms5::load_fixed_data_resource(resource_path, resource, error) ||
         !ms5::navigate_menu(ram, resource, mode_text == "select",
-                             static_cast<std::uint8_t>(index), writes, error, font_pointer)) {
+                             static_cast<std::uint8_t>(index), writes, error, font_pointer,
+                             NULL, registers ? &final_line : NULL,
+                             registers ? &d1 : NULL, registers ? &d3 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -172,6 +192,10 @@ int main(int argc, char** argv) {
     if (!output_ram || !output_writes) {
         std::cerr << "cannot write output files\n";
         return 1;
+    }
+    if (registers) {
+        std::cout << "{\"line\":" << final_line << ",\"d1\":" << d1
+                  << ",\"d3\":" << d3 << "}\n";
     }
     return 0;
 }
