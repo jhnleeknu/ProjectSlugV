@@ -96,3 +96,27 @@ build/consume_control INPUT_RAM PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADD
 잘못된palette ID로인한늦은실패2조건은출력파일을보존했다. 단위검사는video조회후효과저장·첫tick·포트순서,복구후진행,trap시앞선변경확정,지원오류시모든출력rollback을검사한다. 원본고정ROM과PVC영역을제외한팔레트ROM뱅크불변을확인했다. 보고서 `artifacts/control_caller/verification.json` SHA256: `7e2cc2b35b657d8baf55358b3f3b0ff837742364e06d022584ef8bdd560e427a`.
 
 남은연결은f54의실제9136호출과이소비API를단일실행으로묶는것이다. 이때9136진입스택은f54진입보다4작다. ec4의입력·인터럽트대기,trap handler,전체CPU레지스터/flags,픽셀·사운드·게임부팅은여전히미완료다.
+
+
+## f54 단일 진입 통합
+
+```
+build/step_control_caller INPUT_RAM MENU_MS5D PAUSE_MS5D PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS STYLE LINE ENTRY_STACK [FONT [STAGES_DIR]]
+.venv/bin/python tools/verify_control_caller_step.py
+```
+
+`step_control_caller`는 원본f54부터 실행하는 C++ API다.9136에는 진입 스택보다4 작은 주소를 전달하고, 반환 후의 RAM과D0를 f5a 소비 함수에 연결한다. 메뉴와 팔레트는 기존MS5D/MS5P를 직접 읽는다. BIOS 외부 전환이면 소비 함수를 실행하지 않는다. `next_pc`는 정상반환0,ec4 루프,fee trap직전,c00444 BIOS 경계 중 하나다. 모든 지원 오류는9136이 수행한 변경까지 취소한다.
+
+OBJECT_ADDRESS는 기존 소비 API 범위이며, ENTRY_STACK은짝수110108..fffffc다. STYLE/LINE은f54진입D1/D3 word이며, 이미 열린 메뉴에 들어갈 때A1은전역renderer와같다는기존계약을유지한다. 이 API는 모든 CPU레지스터의 반환상태를 제공하지 않는다.
+
+원본f54와410조건(독립281 + 출력RAM승계129)에서전체64KiB RAM,모든순서있는하드웨어쓰기104,487회와경계가일치했다. 두연속시퀀스는활성화·누름반복·메뉴/area/group조작·전체종료·진행·재활성화·두번째종료까지수행한다. 호스트가입력byte를공급하며ec4의실제입력수집루프는실행하지않는다.
+
+실제f5a도달409회에서A6가진입호출자객체주소이고A7이진입스택으로복구됨을확인했다. rootrow4의950c 정적재시작도포함한다. row5의9532 BIOS전환은f5a를건너뛴다. stage callback의실제스택깊이12/16/32byte는f54의바깥JSR4byte를포함한다. 늦은팔레트실패2조건은이미메뉴가초기화된뒤발생하며모든출력파일을보존한다.
+
+전체 `make all test`(Python61개/C++전체),CLI숫자·별칭검사가통과했다. 보고서 `artifacts/control_caller_step/verification.json` SHA256: `dde81aaccb38533008098a252dcc09c0a9ba1db25306169004b6df691c509c24`. 전체게임부팅·입력/인터럽트시간축·예외handler·외부스택메모리와모든CPU레지스터/flags는미완료다.
+
+## 입력 수집과 대기 신호의 다음 연결 근거
+
+31d6은380000을byte읽고반전한하위4bit를RAM4cb4에저장한다. 기존값과의XOR/AND로새로눌린bit를4cb5에쓴다.31f2는300000,3242는340000,32a4는300000을읽는다. 입력처리는349a까지의분기와349c/352a helper를포함하므로처음의포트읽기만으로완료라하지않는다. b68은10fdaf를100012에복사하고fdb6부터의값과b58테이블을이용해f006/f007을갱신한다.
+
+ROMvector64의값은20c이며,그진입의조건부경로에서23c가c8c를호출한다. c8c는100019 bit7로재진입을검사하고100016을byte증가한다. overflow는ff로되돌려포화시키며,overflow가없을때300001 watchdog쓰기가있다. d4e는100019를0으로만든다. 메인이vector/call바이트와c8c의완전명령을재확인했다. 이연결은인터럽트호출경로근거이며실제발생주기·게임의자연도달성은아직미검증이다.

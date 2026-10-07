@@ -593,3 +593,12 @@
 - 실제MS5P파일을원본에서재추출한전체내용과비교했다. 고정ROM/팔레트뱅크의불변부분도확인했다.
 - `make all test`(Python61개/C++전체),CLI범위·별칭검사통과. 리뷰: docs/reviews/0084-control-caller.md. 보고서: artifacts/control_caller/verification.json.
 - 다음은f54의9136호출부터이후소비까지단일진입으로연결하고,ec4의입력·인터럽트대기를추적하는것이다. 전체CPU상태·장치타이밍·게임부팅은미완료이며전체목표는active다.
+
+
+## 2026-10-07 — f54 컨트롤러 호출과 반환 소비 통합
+
+- `step_control_caller`로9136호출부터비디오/팔레트/카운터처리까지한API로연결했다. 원본JSR의4byte스택깊이와BIOS우회를보존한다.
+- 원본f54의410조건/104,487포트/전체RAM/경계가일치했다.2개연속시퀀스129프레임은전체종료·재활성화까지이어갔다.
+- 실제f5a409회에서A6와호출자A7보존확인. 정적재시작과BIOS전환,stage callback깊이12/16/32byte,늦은palette오류rollback을검증했다.
+- `make all test`(Python61개/C++전체)와CLI숫자·별칭검사통과. 리뷰: docs/reviews/0085-control-caller-step.md.
+- 다음은31d6의실제포트입력/반복byte와b68을구현하고,vector64→20c→c8c의대기신호생산경로를ec4루프에연결하는것이다. 시간축·전체CPU상태·게임부팅은미완료이며전체목표는active다.
