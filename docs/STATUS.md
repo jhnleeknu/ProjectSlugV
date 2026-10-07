@@ -653,3 +653,11 @@
 - `service_sound_queue`로3cb2의 status 읽기, 우선 명령과128바이트 큐의 연속 중복 합치기를 복원했다. 원본2,575조건의 전체RAM과 사운드 포트2,394건이 일치했다.14개 실패 조건은 출력 보존을 확인했다.
 - Python73개와 C++ 전체 검사 통과. 리뷰: docs/reviews/0092-sound-queue-interrupt-flow.md. 분석: docs/analysis/interrupt-flow.md 및 sound-queue.md.
 - 다음은48156/3af8의 사운드 생산과3ac8 byte 큐의 대기 관계를 복원하여3cac 호출을 완성하는 것이다. 전체 interrupt·BIOS·작업 복구·사운드CPU·오디오 시간축은 아직 미완료이며 목표는 active다.
+
+
+## 2026-10-07 — 사운드 byte 생산과 캡처 상태 재개
+
+- `enqueue_sound_byte`와 `resume_sound_byte`로3ac8/3aea를 복원했다. 가득 찬 큐는 pending 상태를 반환하고 원본이 캡처한 쓰기 위치로 재개한다.
+- 원본523조건의 전체RAM/pending이 일치했다. 모든 command/tail,260회 대기와 실제 소비자를 끼운 두 문맥 보존 시퀀스,16개 오류/별칭 검사를 통과했다.
+- Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0093-sound-byte.md. 분석: docs/analysis/sound-byte.md.
+- 다음은48156/3af8의 word 명령 생산과3c08 배출을 연결하는 것이다. 자연적인 대기 재개 스케줄링, 전체 interrupt·Z80·오디오 시간축과 게임 부팅은 미완료이며 전체 목표는 active다.
