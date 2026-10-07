@@ -120,3 +120,25 @@ OBJECT_ADDRESS는 기존 소비 API 범위이며, ENTRY_STACK은짝수110108..ff
 31d6은380000을byte읽고반전한하위4bit를RAM4cb4에저장한다. 기존값과의XOR/AND로새로눌린bit를4cb5에쓴다.31f2는300000,3242는340000,32a4는300000을읽는다. 입력처리는349a까지의분기와349c/352a helper를포함하므로처음의포트읽기만으로완료라하지않는다. b68은10fdaf를100012에복사하고fdb6부터의값과b58테이블을이용해f006/f007을갱신한다.
 
 ROMvector64의값은20c이며,그진입의조건부경로에서23c가c8c를호출한다. c8c는100019 bit7로재진입을검사하고100016을byte증가한다. overflow는ff로되돌려포화시키며,overflow가없을때300001 watchdog쓰기가있다. d4e는100019를0으로만든다. 메인이vector/call바이트와c8c의완전명령을재확인했다. 이연결은인터럽트호출경로근거이며실제발생주기·게임의자연도달성은아직미검증이다.
+
+## f5a 종료의 D1/D3 문맥
+
+`consume_control_result`에선택적32비트D1/D3입출력을추가했다. 입력은9136에서돌아온직후의레지스터이며이전프레임의입력style/line과동일하다고가정하지않는다. 성공시에만갱신하고실패시RAM/포트/경계와함께보존한다.
+
+f5a는이전object+84.byte를D1.lowbyte에읽는다. status0이면서이전상태1이면MOVEQ로D1=-4,D3=4를설정하고8c16을실행한다. 세current색word와fc00target의차이를word로계산하며,모두0이면D1=ffff0000,D3=0이다. 하나라도다르면signed middle delta를4로나누어D1.highword에signed나머지,D1.lowword에몫을남기고D3=4가된다. C++의signed division/remainder와명시적16비트변환으로이형식을재현한다.
+
+그뒤5728은타이머와팔레트변환에따라D1/D3를추가로바꾼다. 기존D1반환에D3반환을더했다. 직접복사와효과만적용하는helper는D3를유지한다. 혼합4c40/504c는마지막색15의최종low채널0..31을D3.lowword에남기며상위word는유지한다. 효과와혼합이모두있으면효과적용후채널이다.
+
+status!=0/이전상태0에서효과복구8be0을실행하면복구전RAM107dc4.byte를D1.lowbyte에읽는다. 타이머복구가0이든아니든이레지스터읽기는발생한다. 나머지비디오조회/설정·counter경로는D1/D3를더바꾸지않는다.
+
+```sh
+build/consume_control --registers D1 D3 INPUT_RAM PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS CONTROL_D0
+```
+
+옵션이있으면JSON에d1/d3를추가하고기존호출의JSON은유지한다. 이계약은f5a이후tail이며9136자체의최종레지스터복원은후속작업이다.
+
+`.venv/bin/python tools/verify_control_caller_registers.py`는원본322조건,시간순포트27,858개,출력보존오류14조건을통과했다.
+전체RAM/32비트D1/D3를비교했고네가지팔레트helper진입을관찰했다. DIVS의음수나머지및all-fc00변화없음사례,실제MS5P,원본코드불변과주소alias순서를포함한다. 연속사례는RAM을이어받지만D1/D3입력은독립fixture임을명시했다.
+
+보고서: `artifacts/control_caller_registers/verification.json`.
+SHA256: `8b636bf7b93621d7b7787618b630ad6c4fd8b189961da7ed9d26a31209511960`.

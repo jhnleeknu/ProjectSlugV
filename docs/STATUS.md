@@ -824,3 +824,11 @@
 - 실제진단5·IRQ10·poll14총29경계/469포트와오류6조건통과. Python73개및C++전체검사통과.
 - 리뷰: docs/reviews/0113-debug-input-flow.md. 두번째프레임의컨트롤러최종D1/D3는원본에서얻은외부입력조건임을명시했다.
 - 다음은컨트롤러종료의D1/D3문맥을복원하여연속메인루프의원본레지스터주입을줄이는것이다. 실제게임콜백본문,SR/RTE/BIOS·장치시간축/Z80및전체부팅은미완료이며목표는active다.
+
+
+## 2026-10-07 — 컨트롤러 반환 뒤 D1/D3 복원
+
+- consume_control_result에f5a이후32비트D1/D3입출력을추가했다. 상태byte·효과시작DIVS·복구전색읽기·팔레트혼합최종D3를반영했다.
+- 원본322조건/27,858포트/오류14조건통과. Python73개/C++전체검사및추가롤백단위검사통과.
+- 리뷰: docs/reviews/0114-control-caller-registers.md. 분석: docs/analysis/control-caller.md.
+- 다음은9136컨트롤러본체의반환D1/D3를복원하여이번tail과연결하는것이다. 실제게임콜백본문,SR/RTE/BIOS·장치시간축/Z80및전체부팅은미완료이며목표는active다.

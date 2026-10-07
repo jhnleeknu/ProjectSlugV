@@ -38,3 +38,5 @@ stdout JSON의 `d1`은 성공한 최종 unsigned32 값이다. 기존 옵션 없�
 
 보고서: `artifacts/palette_d1/verification.json`.
 SHA256: `010f6796927413e435e052d512a9c69bce3ff10f644bcee4ade45162a01222c6`.
+
+팔레트API는선택적D3입출력도지원한다. 4c40/504c의마지막색은D3.word에최종low채널을남기고D3상위word를보존한다. 4718/479e및timer/pending경로는D3를바꾸지않는다. 컨트롤러f5a tail의원본비교에서이반환값을검증한다.

@@ -83,7 +83,7 @@ namespace ms5 {
 
 bool prepare_palettes(std::vector<std::uint8_t>& ram,
                       const std::vector<PaletteRecord>& records,
-                      std::string& error, std::uint32_t* d1) {
+                      std::string& error, std::uint32_t* d1, std::uint32_t* d3) {
     if (ram.size() != 65536) {
         error = "RAM must contain exactly 65536 bytes at CPU 0x100000";
         return false;
@@ -103,6 +103,7 @@ bool prepare_palettes(std::vector<std::uint8_t>& ram,
         return false;
     }
     std::uint32_t next_d1 = d1 != NULL ? *d1 : 0;
+    std::uint32_t next_d3 = d3 != NULL ? *d3 : 0;
     candidate[0x7dd5] = 0;
     write_be16(candidate, 0x10, 0);
     const std::uint8_t effects = static_cast<std::uint8_t>(
@@ -154,6 +155,7 @@ bool prepare_palettes(std::vector<std::uint8_t>& ram,
                     static_cast<std::uint16_t>(source << 1) :
                     static_cast<std::uint16_t>((source >> 5) & 31U);
                 next_d1 = (next_d1 & 0xffff0000U) | scratch;
+                if(blend) next_d3 = (next_d3 & 0xffff0000U) | (source & 31U);
             }
             write_be16(candidate, staging + word * 2, hardware);
         }
@@ -164,6 +166,7 @@ bool prepare_palettes(std::vector<std::uint8_t>& ram,
     write_be16(candidate, 0x10, 0);
     ram.swap(candidate);
     if (d1 != NULL) *d1 = next_d1;
+    if (d3 != NULL) *d3 = next_d3;
     error.clear();
     return true;
 }

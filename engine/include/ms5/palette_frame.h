@@ -24,7 +24,7 @@ bool step_palette_frame(std::vector<std::uint8_t>& ram,
                         const std::vector<PaletteRecord>& records,
                         std::string& error,
                         std::vector<VideoPortWrite>* writes = NULL,
-                        std::uint32_t* d1 = NULL);
+                        std::uint32_t* d1 = NULL, std::uint32_t* d3 = NULL);
 
 } // namespace ms5
 

@@ -95,8 +95,24 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
+    const bool registers = argc > 1 && std::string(argv[1]) == "--registers";
+    std::uint32_t d1 = 0U;
+    std::uint32_t d3 = 0U;
+    if (registers) {
+        if (argc != 10) {
+            std::cerr << "usage: consume_control [--registers D1 D3] INPUT_RAM PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS CONTROL_D0\n";
+            return 2;
+        }
+        if (!parse_integer(argv[2], 0xffffffffU, d1) ||
+            !parse_integer(argv[3], 0xffffffffU, d3)) {
+            std::cerr << "D1 and D3 must be decimal or 0x-prefixed uint32\n";
+            return 1;
+        }
+        argc -= 3;
+        argv += 3;
+    }
     if (argc != 7) {
-        std::cerr << "usage: consume_control INPUT_RAM PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS CONTROL_D0\n";
+        std::cerr << "usage: consume_control [--registers D1 D3] INPUT_RAM PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS CONTROL_D0\n";
         return 2;
     }
     std::uint32_t object_address = 0U;
@@ -128,7 +144,7 @@ int main(int argc, char** argv) {
     std::uint32_t next_pc = 0U;
     if (!ms5::load_palette_resource(resource_path, records, error) ||
         !ms5::consume_control_result(ram, records, object_address, control_d0,
-                                    next_pc, writes, error)) {
+                                    next_pc, writes, error, registers ? &d1 : NULL, registers ? &d3 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -162,6 +178,10 @@ int main(int argc, char** argv) {
         std::cerr << "cannot write output files\n";
         return 1;
     }
-    std::cout << "{\"next_pc\":" << next_pc << "}\n";
+    std::cout << "{\"next_pc\":" << next_pc;
+    if (registers) {
+        std::cout << ",\"d1\":" << d1 << ",\"d3\":" << d3;
+    }
+    std::cout << "}\n";
     return 0;
 }

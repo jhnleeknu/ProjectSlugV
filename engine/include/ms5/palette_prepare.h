@@ -23,7 +23,7 @@ namespace ms5 {
 // Failure preserves d1 and all RAM bytes and sets error; success clears error.
 bool prepare_palettes(std::vector<std::uint8_t>& ram,
                       const std::vector<PaletteRecord>& records,
-                      std::string& error, std::uint32_t* d1 = NULL);
+                      std::string& error, std::uint32_t* d1 = NULL, std::uint32_t* d3 = NULL);
 
 } // namespace ms5
 
