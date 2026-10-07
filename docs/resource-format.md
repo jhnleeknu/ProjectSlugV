@@ -147,3 +147,9 @@ descriptor는BE필드의16byte헤더(title:u32,min_width:u8,min_height:u8,callba
 ### MS5D 입력 상태 조회 창
 
 `input_status.ms5d`는 고정 ROM b58..c58의256바이트를 보존한다. 안정 ID는 `input-status:00000b58`다. 원본b68이 `(4 + slot_byte) & 255`로 조회하므로 명령 바이트와 겹치는 부분도 같은 창에 유지한다. 범위 전체가 자연스럽게 쓰이는256개 의미 항목이라는 주장은 하지 않는다. 해석과 사용 API는 `docs/analysis/input-status.md`에 기록한다.
+
+### MS5D 메인 초기화 팔레트 등록 표
+
+`main_startup.ms5d`는 기존 MS5D v1 kind1으로 고정 ROM `e7b58..e7bc0`의104바이트를 그대로 보존한다. 안정 ID는 `main-startup:000e7b58`이다. payload는17개의6바이트 레코드와 마지막 BE16 `ffff` 종결자로 구성된다. 레코드는 `destination_slot:BE16`, `source_id:BE16`, `flags:u8`, `sixth_byte:u8`이며 여섯 번째 바이트도 원본 그대로 유지한다. 주소·해시·레코드별 메타데이터는 manifest에 기록한다.
+
+목적 슬롯 `ffff`는 종결자다. source ID `ffff`는 해당 슬롯을 비활성화하는 값이며 실제 팔레트 데이터 ID로 추출하지 않는다. `pack_palettes.py`는 이 등록 근거를 기존 희소 MS5P 카탈로그에 추가하고, 비활성 레코드도 bindings 메타데이터에 `disabled:true`와 함께 보존한다. 이 표의 유효 고유 source ID는11종이다. 표와 카탈로그 추출은 전체 메인 초기화 실행이나 자연 도달성 검증을 뜻하지 않는다.

@@ -978,3 +978,11 @@
 - `verify_main_prelude_irq.py`: 82시퀀스, main292경계 및 완료 IRQ187회, 순서 있는 포트124,884개 통과. 영상 읽기82회/sound status 읽기187회도 일치한다. IRQ timer16이 word명령19c0을 실제 추가하고 main이 소비하는2시퀀스를 포함한다.
 - 보고서 SHA256 `6d930aea7824a4dc5ba7bebc5b1a451c903da8aadaaf9fe3584c5b83ca054ad4`. 전체 빌드·Python73개·C++전체 검사 통과. 메인 리뷰 `docs/reviews/0132-main-prelude-irq.md`.
 - 다음 e4a 초기화의 고정 팔레트 등록17레코드와 직접 호출을 `docs/analysis/main-startup.md`에 분석했다. 구현은 아직 남아 있다. IRQ context 복원은 호스트가 수행하며 자연 task/callback·BIOS/SR/RTE·물리 시간과 전체 게임 복원 목표는 진행 중이다.
+
+
+## 2026-10-07 — 메인 초기화와 난수 상태 복원
+- e4a→e74 초기화를 C++로 연결했다. 고정 팔레트 해제·head 등록·slot6 blend·오브젝트/제어 상태 초기화를 수행하고 기존 준비 코드로 상태를 넘긴다. MS5D로17레코드를 보존하고 disabledffff는 제외하여 MS5P가29 ID로 확장됐다.
+- `verify_main_startup.py`: 원본209조건/포트418개/오류32조건 통과. 다섯3호출 상태 승계 및 준비 연결2조건(추가24포트/영상2읽기)도 일치했다. SHA256 `2bf5387682dae840040749fb882917080a43ecedb22a1dd13766ca123cccea7a`.
+- 난수 seed49a1a/next49a58/scale49a84를 복원했다. `verify_random_state.py`: 전체RAM/fullD0D1 1,690조건과 오류26조건 통과. 480호출 상태 승계와 고정limit의220호출/네wrap 포함. SHA256 `886e457b96b4ea5c9655c432d208eeca198e840a42c29a6a119d92d6c57308ff`.
+- 전체 빌드·Python81개·C++전체 검사 통과. 메인 리뷰 `docs/reviews/0133-main-startup-random.md`. sol에 구현·검증·추출을 큰 단위로 분담하고 메인이 의미 해석·리뷰·통합을 수행했다.
+- 다음은 초기 노드c52a/c560의 fill 대기를 IRQ와 연결하고c56e 이후 초기화 경로를 복원하는 작업이다. 자연 부팅·게임플레이 전체 연결은 미완료이며 목표는 진행 중이다.

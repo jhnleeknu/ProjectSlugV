@@ -9,9 +9,12 @@ import json
 from pathlib import Path
 import struct
 import zlib
-from disassemble_program import load_verified_program
+try:
+    from .disassemble_program import load_verified_program
+except ImportError:
+    from disassemble_program import load_verified_program
 
-BINDING_TABLES = (0xcb78, 0x4e47a, 0xddf08)
+BINDING_TABLES = (0xcb78, 0x4e47a, 0xddf08, 0xe7b58)
 DYNAMIC_REQUESTS = ((0x2b6fc, 0x3d3), (0x2b70a, 0x39d), (0x2b718, 0x203),
                     (0x2b7e4, 0x87d), (0x2b7f2, 0x39d), (0x2b800, 0x87a))
 
@@ -52,27 +55,45 @@ def extract_record(program, source_base, lookup_base, palette_id):
     return raw, bytes(converted), address, lookup_offsets
 
 
+def extract_bindings(program, table):
+    bindings = []
+    offset = table
+    for _ in range(256):
+        if offset + 2 > len(program):
+            raise ValueError('Truncated binding table terminator')
+        slot = int.from_bytes(program[offset:offset+2], 'big')
+        if slot == 0xffff:
+            return bindings
+        if offset + 6 > len(program):
+            raise ValueError('Truncated binding record')
+        if slot > 255:
+            raise ValueError('Invalid fixed destination slot')
+        palette_id = int.from_bytes(program[offset+2:offset+4], 'big')
+        bindings.append({'table_rom_offset': table, 'record_rom_offset': offset,
+            'slot': slot, 'source_id': palette_id, 'flags': program[offset+4],
+            'sixth_byte': program[offset+5], 'disabled': palette_id == 0xffff})
+        offset += 6
+    raise ValueError('Binding table missing terminator')
+
+
 def extract(program):
     source_base = int.from_bytes(program[0x200004:0x200008], 'big')
     lookup_base = int.from_bytes(program[0x200008:0x20000c], 'big')
     records = {}
     bindings = []
+    if 0xe7b58 in BINDING_TABLES:
+        try:
+            from .pack_main_startup import extract as extract_startup
+        except ImportError:
+            from pack_main_startup import extract as extract_startup
+        extract_startup(program)
     for table in BINDING_TABLES:
-        offset = table
-        for _ in range(256):
-            slot = int.from_bytes(program[offset:offset+2], 'big')
-            if slot == 0xffff:
-                break
-            if slot > 255:
-                raise ValueError('Invalid fixed destination slot')
-            palette_id = int.from_bytes(program[offset+2:offset+4], 'big')
-            flags = program[offset+4]
-            bindings.append({'table_rom_offset': table, 'record_rom_offset': offset,
-                             'slot': slot, 'source_id': palette_id, 'flags': flags})
-            records[palette_id] = extract_record(program, source_base, lookup_base, palette_id)
-            offset += 6
-        else:
-            raise ValueError('Binding table missing terminator')
+        table_bindings = extract_bindings(program, table)
+        bindings.extend(table_bindings)
+        for binding in table_bindings:
+            palette_id = binding['source_id']
+            if not binding['disabled']:
+                records[palette_id] = extract_record(program, source_base, lookup_base, palette_id)
     for request in extract_dynamic_requests(program):
         palette_id = request['source_id']
         records[palette_id] = extract_record(program, source_base, lookup_base, palette_id)
@@ -86,7 +107,7 @@ def main():
         raise ValueError('Unsupported program revision')
     records, bindings = extract(program)
     dynamic_requests = extract_dynamic_requests(program)
-    fixed_ids = {binding['source_id'] for binding in bindings}
+    fixed_ids = {binding['source_id'] for binding in bindings if not binding['disabled']}
     dynamic_ids = {request['source_id'] for request in dynamic_requests}
     usages = {}
     for palette_id in records:
