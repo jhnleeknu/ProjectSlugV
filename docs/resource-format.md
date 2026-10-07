@@ -137,3 +137,9 @@ ASCII MS5D + LE32 7개(version1,kind1,CPUbase,ROMoffset,payloadsize,CRC32,reserv
 기존 MS5D v1 데이터 창을 그대로 사용한다. 현재 `control_menu.ms5d`는 fixed ROM937e..942f의문자열과93e0 descriptor를보존한다. `menu:000093e0` ID와원본주소/해석필드는manifest에기록한다.
 
 descriptor는BE필드의16byte헤더(title:u32,min_width:u8,min_height:u8,callback6:u32,callback10:u32,flags:u16)와10byte항목(title:u32,callback:u32,argument:u16)이다. title=ffffffff인4byte가종료하며0/fffffffe는항목으로보존한다. C++해석기는현재255개이내를지원한다. callback주소는논리코드참조이며호스트함수포인터가아니다. 문자데이터는원본386e스트림으로보존하고Unicode/PNG로대체하지않는다.
+
+### MS5D 입력 재생 스트림
+
+`input_streams.ms5d`는 fixed ROMf01fe..f1a0e의6160바이트를 보존한다. 안정 ID는 `input-streams:000f01fe`다. f0dfe의 BE32 두 포인터는 f01fe/f07fe, f1a06의 두 포인터는 f0e06/f1406을 가리킨다. 네 버퍼는 각각600바이트이며 테이블과 인접 바이트까지 같은 창에 유지한다. 마지막 이벤트의 다음 바이트 조회 때문에 버퍼 경계를 임의로 분리하거나 padding하지 않는다.
+
+원본 selector180==0000을 추출 시 검증한다. 실제 `sample_input`은 이 이미지의352a 재생 분기를 사용하며 기록용 버퍼도 보존한다. 기간·버튼 토글 해석과 미지원 범위는 `docs/analysis/input-sampler.md`에 기록한다. PNG/재생 오디오가 아닌 C++ 직접 사용 MS5D 리소스다.
