@@ -18,10 +18,12 @@ namespace ms5 {
 // Source words with bit 15 set reject interior blending.
 // Records must have strictly ascending 16-bit IDs. Empty catalogs are valid
 // when no node needs preparation. Hardware MMIO writes are not modeled.
-// Failure preserves all RAM bytes and sets error; success clears error.
+// Optional d1 supplies/receives the native D1 value; upper 16 bits persist.
+// Direct copy preserves D1; transforms leave their final color scratch value.
+// Failure preserves d1 and all RAM bytes and sets error; success clears error.
 bool prepare_palettes(std::vector<std::uint8_t>& ram,
                       const std::vector<PaletteRecord>& records,
-                      std::string& error);
+                      std::string& error, std::uint32_t* d1 = NULL);
 
 } // namespace ms5
 

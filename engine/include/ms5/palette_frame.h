@@ -17,11 +17,14 @@ namespace ms5 {
 // byte 0x7ded has bit 7 set, preparation is deferred and frame updates
 // still commit. Otherwise prepare_palettes supplies normal preparation.
 // Optional writes receive ordered watchdog and PVC bank word writes. Device
-// timing and alternate entries are excluded. Failure preserves RAM/writes.
+// timing and alternate entries are excluded. Optional d1 supplies/receives
+// native D1 through timer arithmetic and preparation. Failure preserves
+// RAM/writes/d1. Other scratch registers and CPU flags are not returned.
 bool step_palette_frame(std::vector<std::uint8_t>& ram,
                         const std::vector<PaletteRecord>& records,
                         std::string& error,
-                        std::vector<VideoPortWrite>* writes = NULL);
+                        std::vector<VideoPortWrite>* writes = NULL,
+                        std::uint32_t* d1 = NULL);
 
 } // namespace ms5
 

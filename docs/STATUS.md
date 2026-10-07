@@ -784,3 +784,11 @@
 - 원본352조건, 실패/별칭21조건 및 실제 기본RTS16회 연결 검증 통과. 전체 RAM·스택·16레지스터·스택 쓰기가 일치했다. Python73개/C++ 전체 검사와 추가 API 단위 검사 통과.
 - 리뷰: docs/reviews/0108-main-callback-stack.md. 분석: docs/analysis/main-callback-stack.md.
 - 다음은5728 팔레트 처리의 최종D1을 복원하고 f4c 대기를 연결하는 것이다. f4c는 RAM16!=0만 검사하므로 ef2 임계값·비디오 읽기를 재사용하면 안 된다. ec4 앞부분, 실제 콜백 본문, SR/RTE/BIOS·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는active다.
+
+
+## 2026-10-07 — 팔레트 처리의 최종 D1 복원
+
+- `step_palette_frame`/`prepare_palettes`에 선택적 D1 입출력을 추가했다. 타이머 byte 계산, 마지막 색 보정·혼합 결과와 단순복사 시 이전 D1 보존을 반영했다. 실제 MS5P 바이너리 리소스를 사용한다.
+- 원본566조건과 MMIO43,684개, 오류14조건 통과. 전체RAM/32비트D1/시간순 포트를 비교했다. Python73개 및 C++ 전체 검사 통과.
+- 리뷰: docs/reviews/0109-palette-d1.md. 분석: docs/analysis/palette-d1.md.
+- 다음은 복구된D1을 f46 팔레트 호출→f4c 대기→f12 입력에 연결하는 것이다. ec4 앞부분, 실제 콜백 본문, SR/RTE/BIOS·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는active다.

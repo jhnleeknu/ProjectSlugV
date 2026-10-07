@@ -83,7 +83,7 @@ namespace ms5 {
 
 bool prepare_palettes(std::vector<std::uint8_t>& ram,
                       const std::vector<PaletteRecord>& records,
-                      std::string& error) {
+                      std::string& error, std::uint32_t* d1) {
     if (ram.size() != 65536) {
         error = "RAM must contain exactly 65536 bytes at CPU 0x100000";
         return false;
@@ -102,6 +102,7 @@ bool prepare_palettes(std::vector<std::uint8_t>& ram,
         error = "cannot allocate palette preparation RAM";
         return false;
     }
+    std::uint32_t next_d1 = d1 != NULL ? *d1 : 0;
     candidate[0x7dd5] = 0;
     write_be16(candidate, 0x10, 0);
     const std::uint8_t effects = static_cast<std::uint8_t>(
@@ -146,6 +147,14 @@ bool prepare_palettes(std::vector<std::uint8_t>& ram,
             if (blend || apply_effects) {
                 hardware = hardware_word(source);
             }
+            if (word == 15 && (blend || apply_effects)) {
+                // 4c40/504c leave the doubled RGB555 table index in D1.w.
+                // 479e leaves only the adjusted middle channel in D1.w.
+                const std::uint16_t scratch = blend ?
+                    static_cast<std::uint16_t>(source << 1) :
+                    static_cast<std::uint16_t>((source >> 5) & 31U);
+                next_d1 = (next_d1 & 0xffff0000U) | scratch;
+            }
             write_be16(candidate, staging + word * 2, hardware);
         }
         write_be16(candidate, staging, 0x8000);
@@ -154,6 +163,7 @@ bool prepare_palettes(std::vector<std::uint8_t>& ram,
     candidate[0x7ded] = candidate[0x7dd5];
     write_be16(candidate, 0x10, 0);
     ram.swap(candidate);
+    if (d1 != NULL) *d1 = next_d1;
     error.clear();
     return true;
 }
