@@ -678,3 +678,11 @@
 - 원본718조건의 전체RAM/포트/pending/read_count가 일치했다.40회 연속 tick, 실제 원본 문맥의 high/low 대기 재개, 모든status byte와 timer wrap 필터를 확인했다.16개 실패/별칭 조건은 출력 보존을 확인했다.
 - Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0095-sound-service.md. 분석: docs/analysis/sound-service.md.
 - 다음은c8c의 credit/busy 분기, 렌더링·작업 복구 의존성과 사운드 서비스를 연결하는 것이다. 전체 인터럽트·BIOS·자연 스케줄링·Z80·오디오 시간축과 전체 부팅은 미완료이며 목표는 active다.
+
+
+## 2026-10-07 — 인터럽트 선행 크레딧 요청 처리
+
+- `process_credit_request`로bbe→a74/a2c/a4e를 복원했다. 두 크레딧의 BCD 차감, 요청/상태 마스크와 전체D0의 byte/word 이동을 보존한다. 이 경로에 BIOS 호출은 없다.
+- 원본1,326조건의 전체RAM/전체D0가 일치했다. 모든256개 크레딧/요청 byte와32회 승계를 포함하며7개 크기/별칭 오류에서 출력 보존을 확인했다.
+- Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0096-credit-request.md. 분석: docs/analysis/credit-request.md.
+- 다음은c8c 호출자와 요청 처리·사운드 서비스를 연결하고 렌더링/작업 복구 의존성을 복원하는 것이다. 전체IRQ 레지스터/CCR·BIOS·자연 시간축·Z80와 전체 부팅은 미완료이며 목표는 active다.
