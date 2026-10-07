@@ -104,8 +104,21 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
+    bool registers_mode = false;
+    std::uint32_t d1 = 0U;
+    std::uint32_t d3 = 0U;
+    if (argc > 1 && std::string(argv[1]) == "--registers") {
+        if (argc < 4 || !parse_integer(argv[2], 0xffffffffU, d1) ||
+            !parse_integer(argv[3], 0xffffffffU, d3)) {
+            std::cerr << "--registers requires decimal or 0x-prefixed uint32 D1 and D3\n";
+            return 1;
+        }
+        registers_mode = true;
+        argc -= 3;
+        argv += 3;
+    }
     if (argc != 7 && argc != 8 && argc != 10) {
-        std::cerr << "usage: redraw_menu_stack INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LAST_SLOT LINE [FONT_MS5D [STAGES_DIRECTORY CALLBACK_STACK]]\n";
+        std::cerr << "usage: redraw_menu_stack [--registers D1 D3] INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LAST_SLOT LINE [FONT_MS5D [STAGES_DIRECTORY CALLBACK_STACK]]\n";
         return 2;
     }
     std::uint32_t last_slot = 0U;
@@ -114,6 +127,10 @@ int main(int argc, char** argv) {
     if (!parse_integer(argv[5], 0xffffffU, last_slot) ||
         !parse_integer(argv[6], 0xffffU, line)) {
         std::cerr << "LAST_SLOT must be decimal or 0x-prefixed uint24; LINE must be decimal or 0x-prefixed uint16\n";
+        return 1;
+    }
+    if (registers_mode && (line != (d3 & 0xffffU))) {
+        std::cerr << "LINE must match D3.low16\n";
         return 1;
     }
     if (argc == 10 && !parse_integer(argv[9], 0xffffffU, callback_stack)) {
@@ -191,7 +208,8 @@ int main(int argc, char** argv) {
     if (!ms5::load_fixed_data_resource(resource_path, resource, error) ||
         !ms5::redraw_menu_stack(ram, resource, last_slot,
                                 static_cast<std::uint16_t>(line), writes, error,
-                                font_pointer, context_pointer, &final_line)) {
+                                font_pointer, context_pointer, &final_line,
+                                registers_mode ? &d1 : NULL, registers_mode ? &d3 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -225,6 +243,8 @@ int main(int argc, char** argv) {
         std::cerr << "cannot write output files\n";
         return 1;
     }
-    std::cout << "{\"line\":" << final_line << "}\n";
+    std::cout << "{\"line\":" << final_line;
+    if (registers_mode) std::cout << ",\"d1\":" << d1 << ",\"d3\":" << d3;
+    std::cout << "}\n";
     return 0;
 }

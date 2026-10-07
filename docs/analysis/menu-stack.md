@@ -70,3 +70,17 @@ build/push_menu INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_WRITES ADDRESS X Y LINE FO
 확장 검증 `verify_stage_menu_push.py`는 원본 a0a0의 코드를 수정하지 않고 6,192조건을 비교했다. native 조합 4,480, 좌표/줄/스택/current 432, 구역 마지막 유효값/255 경계 1,280이다. 전체 65,536바이트 RAM과 포트 순서·폭·값, 새 자식 슬롯, 소수 높이 및 current 복원이 일치했다. 실제 콜백이 실행된 4,032조건의 21,888회 진입은 모두 S−40이다. 보이는 폭2 구분선은 256회 쓰기를 확인했다. 전체 CPU 레지스터·외부 스택 메모리·자연 도달성·픽셀·하드웨어 타이밍은 이 비교 범위 밖이다.
 
 기존 메뉴 추가 377조건/오류14, 이벤트 975조건/오류6 및 `make all test`가 통과했다. 단위검사는 stage 부모의 출력 후 자식 descriptor가 실패하는 경우와 context 누락의 RAM/출력 보존을 검사한다. CLI 입력 보호는 index/null-name × 두 출력 × 직접/하드링크/심볼릭링크 12조건과 숫자 오류 5조건을 별도 확인했다.
+
+## 전체 D1/D3와 부모 출력
+
+`push_menu`는 선택적 전체 D1/D3를 입출력한다. a0c8은 D0/D1/A0를 저장하고 부모의 9b58/9e1a를 실행한다. a104는 D1 전체를 원래 값으로 복구한 뒤 a110의 새 슬롯 구성으로 이어진다. 따라서 자식 측정은 원래 Y인 D1 하위 word로 시작하며 최종 D1 상위 word도 진입값이다. D3는 저장 대상이 아니므로 부모 테두리·텍스트의 반환값을 자식 제목 측정으로 이어 준다.
+
+별도로 계산하던 테두리 종료 line을 제거하고 실제 `trace_menu_border`의 D3 출력을 사용한다. 부모 그리기와 자식 구성은 하나의 트랜잭션이며 실패 시 레지스터까지 보존한다. 옵션을 제공하면 Y=D1.low16, LINE=D3.low16을 요구한다.
+
+```sh
+build/push_menu --registers D1 D3 INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS ADDRESS X Y LINE FONT_MS5D STAGES_DIRECTORY CALLBACK_STACK
+```
+
+새 모드에서만 line/D1/D3 JSON을 출력한다. 원본 a0a0 진입과 정상 반환 경계를 비교하며 가득 찬 스택의 잘못된 복귀, 다른 레지스터·외부 스택 잔여 메모리·SR·물리적 타이밍은 포함하지 않는다.
+
+- `.venv/bin/python tools/verify_menu_stack_registers.py`: 원본 544조건, 포트 135,264개, 출력 보존 오류 검사 27조건 통과. 보고서 SHA256 `cf1f98e6c894477560cb2936cef2a557d50252e07f96670e60238d5bd6690705`.

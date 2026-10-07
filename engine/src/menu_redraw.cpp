@@ -25,7 +25,10 @@ bool redraw_menu_stack(std::vector<std::uint8_t>& ram,
                        std::vector<VideoPortWrite>& writes, std::string& error,
                        const FixedDataResource* font,
                        const StageGroupMenuContext* stage_context,
-                       std::uint16_t* final_line) {
+                       std::uint16_t* final_line,std::uint32_t* d1,std::uint32_t* d3) {
+    if(d3!=NULL && static_cast<std::uint16_t>(*d3)!=initial_line) {
+        error="menu redraw line must match D3 low word";return false;
+    }
     if (ram.size()!=65536U) {
         error="menu redraw requires exactly 65536 RAM bytes";
         return false;
@@ -39,32 +42,29 @@ bool redraw_menu_stack(std::vector<std::uint8_t>& ram,
         std::vector<std::uint8_t> candidate(ram);
         std::vector<VideoPortWrite> pending;
         std::uint16_t line=initial_line;
+        std::uint32_t pending_d1=d1!=NULL?*d1:0U;
+        std::uint32_t pending_d3=d3!=NULL?*d3:initial_line;
         for (std::uint32_t current=0x107efeU; current>=last_slot; current-=16U) {
             put_u32(candidate,0x7f12U,current);
             std::vector<FixedWrite> border;
-            if (!trace_menu_border(candidate,resource,border,error)) return false;
+            if (!trace_menu_border(candidate,resource,border,error,&pending_d3)) return false;
             for (std::size_t i=0; i<border.size(); ++i) {
                 VideoPortWrite write;
                 write.address=0x3c0000U;write.size=4U;
                 write.value=(static_cast<std::uint32_t>(border[i].address)<<16)|border[i].value;
                 pending.push_back(write);
             }
-            const std::size_t slot=current-0x100000U;
-            const unsigned int height=candidate[slot+4U];
-            if (height!=0U) {
-                const unsigned int shifted=static_cast<unsigned int>(candidate[slot+9U])<<5;
-                const std::uint16_t base=static_cast<std::uint16_t>(0x7000U+
-                    (shifted&0xff00U)+((shifted+candidate[slot+10U])&0xffU));
-                line=static_cast<std::uint16_t>(base+(height<2U?2U:height));
-            }
+            line=static_cast<std::uint16_t>(pending_d3);
             std::vector<VideoPortWrite> text;
-            if (!draw_menu_text(candidate,resource,true,line,text,error,&line,font,stage_context)) {
+            if (!draw_menu_text(candidate,resource,true,line,text,error,&line,font,stage_context,0x3650U,&pending_d1,&pending_d3)) {
                 return false;
             }
             pending.insert(pending.end(),text.begin(),text.end());
         }
         ram.swap(candidate);writes.swap(pending);
         if (final_line!=NULL) *final_line=line;
+        if(d1!=NULL)*d1=pending_d1;
+        if(d3!=NULL)*d3=pending_d3;
     } catch (const std::bad_alloc&) {
         error="cannot allocate menu redraw output";
         return false;

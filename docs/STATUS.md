@@ -889,3 +889,11 @@
 - `.venv/bin/python tools/verify_stage_area_registers.py`: 원본 3,936조건, 순서 있는 포트 504,536개 및 출력 보존 오류 검사 31조건 통과. 보고서 SHA256 `a4e1cadf1bedbf87c1ec457bc5de298332a036f8231f85fb9dc3b89c9866fc52`.
 - Python 73개와 C++ 전체 검사 통과, 경고 없음. 메인 코드/원본/검증 리뷰 완료: `docs/reviews/0121-stage-area-menu-text-registers.md`.
 - 다음: 상위 이벤트 디스패처와 스택 다시그리기/메뉴 열기에 레지스터를 전달한 뒤 a370과 제어기/메인 루프를 통합한다. 다른 CPU 상태·예외 핸들러·실제 타이밍과 전체 게임 복원은 계속 진행 중이다.
+
+## 2026-10-07 — 메뉴 추가·스택 다시그리기 레지스터
+- a0a0의 부모 출력 전후 D1 전체 복구와 D3 연속 전달, a6da의 슬롯별 테두리/텍스트 전달을 구현했다. 테두리 line 중복 계산을 제거했다.
+- CLI에 선택적 레지스터 모드를 추가하고 입력 lowword 일치 및 오류 출력 보존을 검증했다. 실제 MS5D 런타임 리소스를 사용한다.
+- `.venv/bin/python tools/verify_menu_stack_registers.py`: 원본 544조건, 포트 135,264개, 출력 보존 오류 검사 27조건 통과. 보고서 SHA256 `cf1f98e6c894477560cb2936cef2a557d50252e07f96670e60238d5bd6690705`.
+- `.venv/bin/python tools/verify_menu_redraw_registers.py`: 원본 698조건, 포트 428,143개, 출력 보존 오류 검사 7조건 통과. 보고서 SHA256 `68711c1438609585d43f68612cb6300b3cba8c042a0e817d9ad1c05262de1159`.
+- 전체 빌드·Python 73개·C++ 전체 검사 통과. 메인 리뷰: `docs/reviews/0122-menu-stack-redraw-registers.md`.
+- 다음은 9b3e 상위 이벤트 디스패처에서 항목 argument와 콜백별 레지스터를 연결하고, a370/제어기/메인 루프로 이어 가는 작업이다. 전체 목표는 진행 중이다.

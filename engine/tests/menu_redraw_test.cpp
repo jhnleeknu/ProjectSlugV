@@ -35,6 +35,29 @@ int main() {
     const std::vector<std::uint8_t> before=ram;
     assert(ms5::redraw_menu_stack(ram,menu,0x107f0e,456,writes,error,NULL,NULL,&line));
     assert(ram==before && writes.empty() && line==456);
+    {
+        std::uint32_t d1=0xabcd1234U, d3=0x987601c8U;
+        assert(ms5::redraw_menu_stack(ram,menu,0x107f0e,456,writes,error,
+                                     NULL,NULL,&line,&d1,&d3));
+        assert(ram==before && writes.empty() && line==456);
+        assert(d1==0xabcd1234U && d3==0x987601c8U);
+        writes.resize(1);writes[0].value=987;line=123;
+        assert(!ms5::redraw_menu_stack(ram,menu,0x107f0e,457,writes,error,
+                                      NULL,NULL,&line,&d1,&d3));
+        assert(ram==before && writes.size()==1 && writes[0].value==987 && line==123);
+        assert(d1==0xabcd1234U && d3==0x987601c8U);
+        put(ram,0x7eee,0x400);
+        const std::vector<std::uint8_t> late_before=ram;
+        d3=0x98767000U;
+        assert(!ms5::redraw_menu_stack(ram,menu,0x107eee,0x7000,writes,error,
+                                      NULL,NULL,&line,&d1,&d3));
+        assert(ram==late_before && writes.size()==1 && writes[0].value==987 && line==123);
+        assert(d1==0xabcd1234U && d3==0x98767000U);
+        put(ram,0x7eee,0x200);
+        assert(ms5::redraw_menu_stack(ram,menu,0x107eee,0x7000,writes,error,
+                                     NULL,NULL,&line,&d1,&d3));
+        assert(!writes.empty() && static_cast<std::uint16_t>(d3)==line);
+    }
     assert(ms5::redraw_menu_stack(ram,menu,0x107eee,0x7000,writes,error,NULL,NULL,&line));
     assert(!writes.empty() && ram[0x7f14]==0x7e && ram[0x7f15]==0xee);
     ram.resize(5);fails(ram,menu,0x107eee);

@@ -15,10 +15,7 @@ void put_u32(std::vector<std::uint8_t>& ram, std::size_t at, std::uint32_t value
         ram[at+i] = static_cast<std::uint8_t>(value >> (24U-i*8U));
     }
 }
-std::uint16_t base_address(std::uint8_t x, std::uint8_t y) {
-    const unsigned int shifted = static_cast<unsigned int>(x) << 5;
-    return static_cast<std::uint16_t>(0x7000U + (shifted & 0xff00U) + ((shifted+y)&0xffU));
-}
+
 }
 bool push_menu(std::vector<std::uint8_t>& ram,
                const FixedDataResource& resource, std::uint32_t descriptor_address,
@@ -26,7 +23,11 @@ bool push_menu(std::vector<std::uint8_t>& ram,
                std::vector<VideoPortWrite>& writes, std::string& error,
                const FixedDataResource* font,
                const StageGroupMenuContext* stage_context,
-               std::uint16_t* final_line) {
+               std::uint16_t* final_line,std::uint32_t* d1,std::uint32_t* d3) {
+    if((d1!=NULL && static_cast<std::uint16_t>(*d1)!=y) ||
+       (d3!=NULL && static_cast<std::uint16_t>(*d3)!=initial_line)) {
+        error="menu push Y/line must match D1/D3 low words";return false;
+    }
     if (ram.size() != 65536U) {
         error = "menu stack requires exactly 65536 RAM bytes";
         return false;
@@ -48,9 +49,12 @@ bool push_menu(std::vector<std::uint8_t>& ram,
         candidate[slot+9U] = candidate[slot+10U] = 255U;
         candidate[slot+11U] = candidate[slot+12U] = 0U;
         std::uint16_t line = initial_line;
+        const std::uint32_t incoming_d1=d1!=NULL?*d1:y;
+        std::uint32_t pending_d1=incoming_d1;
+        std::uint32_t pending_d3=d3!=NULL?*d3:initial_line;
         if (head < 0x107f0eU) {
             std::vector<FixedWrite> border;
-            if (!trace_menu_border(candidate, resource, border, error)) {
+            if (!trace_menu_border(candidate, resource, border, error, &pending_d3)) {
                 return false;
             }
             for (std::size_t i = 0; i < border.size(); ++i) {
@@ -60,31 +64,29 @@ bool push_menu(std::vector<std::uint8_t>& ram,
                 write.value = (static_cast<std::uint32_t>(border[i].address)<<16) | border[i].value;
                 pending.push_back(write);
             }
-            const std::size_t parent = head-0x100000U;
-            const unsigned int height = candidate[parent+4U];
-            if (height != 0U) {
-                // Supported visible text requires flags0: border9b58 leaves
-                // D3 at base + max(height,2), including its final increment.
-                line = static_cast<std::uint16_t>(base_address(candidate[parent+9U],
-                    candidate[parent+10U]) + (height < 2U ? 2U : height));
-            }
+            line=static_cast<std::uint16_t>(pending_d3);
             std::vector<VideoPortWrite> text;
             if (!draw_menu_text(candidate, resource, true, line, text, error,
-                                &line, font, stage_context)) {
+                                &line, font, stage_context, 0x3650U, &pending_d1, &pending_d3)) {
                 return false;
             }
             pending.insert(pending.end(), text.begin(), text.end());
         }
         put_u32(candidate, 0x7f12U, new_head);
+        std::uint16_t final_style=y;
         if (!configure_menu_slot(candidate, resource, new_head, descriptor_address,
-                                  x, y, line, error, &line)) {
+                                  x, y, line, error, &line, &final_style, &pending_d3)) {
             return false;
         }
+        // a104 restores the entry D1 before child title measurement.
+        pending_d1=(incoming_d1&0xffff0000U)|final_style;
         candidate[0x7f1bU] = 1U;
         put_u32(candidate, 0x7f12U, saved_current);
         ram.swap(candidate);
         writes.swap(pending);
         if (final_line != NULL) *final_line = line;
+        if(d1!=NULL)*d1=pending_d1;
+        if(d3!=NULL)*d3=pending_d3;
     } catch (const std::bad_alloc&) {
         error = "cannot allocate menu stack output";
         return false;

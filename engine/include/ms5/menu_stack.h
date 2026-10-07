@@ -8,6 +8,9 @@ struct StageGroupMenuContext;
 // slot. Uses a single MS5D window containing both menus and their text.
 // Preserves current-menu pointer, renderer, input source and slot+5.
 // Success optionally returns D3 in final_line; failure preserves it.
+// Full D1/D3 are transactional. Y must equal D1.low16 and initial_line
+// must equal D3.low16 when supplied. Entry D1 is restored after parent
+// redraw, then child measurement replaces its low word; D3 is carried.
 // Full/invalid stacks and unsupported parent rendering fail transactionally.
 // Stage context uses the parent's actual event5 callback entry A7, like
 // draw_menu_text. For original a0a0 entry stack S, supply S-40; this function
@@ -18,6 +21,7 @@ bool push_menu(std::vector<std::uint8_t>& ram,
                std::vector<VideoPortWrite>& writes, std::string& error,
                const FixedDataResource* font = NULL,
                const StageGroupMenuContext* stage_context = NULL,
-               std::uint16_t* final_line = NULL);
+               std::uint16_t* final_line = NULL,
+               std::uint32_t* d1 = NULL, std::uint32_t* d3 = NULL);
 }
 #endif

@@ -37,6 +37,35 @@ int main() {
     }
     ram[0x7f02]=3;
     put(ram,0x7f16,0x3650);
+    // Parent rendering clears D1, but a0c8 restores it before measuring the child.
+    {
+        std::vector<std::uint8_t> candidate=ram;
+        std::uint32_t d1=0xabcd0008U, d3=0x98767000U;
+        std::uint16_t line=123;
+        std::vector<ms5::VideoPortWrite> ports;
+        assert(ms5::push_menu(candidate,data,0x200,4,8,0x7000,ports,error,
+                              NULL,NULL,&line,&d1,&d3));
+        assert(!ports.empty() && d1==0xabcd0008U);
+        assert(static_cast<std::uint16_t>(d3)==line);
+    }
+    {
+        const std::vector<std::uint8_t> before_registers=ram;
+        std::uint32_t d1=0xabcd0008U, d3=0x98767000U;
+        std::uint16_t line=123;
+        std::vector<ms5::VideoPortWrite> ports(1);ports[0].value=0xabcdefU;
+        // Late descriptor failure rolls back parent drawing and both registers.
+        assert(!ms5::push_menu(ram,data,0x400,4,8,0x7000,ports,error,
+                               NULL,NULL,&line,&d1,&d3));
+        assert(ram==before_registers && ports.size()==1 && ports[0].value==0xabcdefU);
+        assert(d1==0xabcd0008U && d3==0x98767000U && line==123);
+        assert(!ms5::push_menu(ram,data,0x200,4,9,0x7000,ports,error,
+                               NULL,NULL,&line,&d1,&d3));
+        assert(ram==before_registers && d1==0xabcd0008U && d3==0x98767000U && line==123);
+        assert(!ms5::push_menu(ram,data,0x200,4,8,0x7001,ports,error,
+                               NULL,NULL,&line,&d1,&d3));
+        assert(ram==before_registers && ports.size()==1 && ports[0].value==0xabcdefU);
+        assert(d1==0xabcd0008U && d3==0x98767000U && line==123);
+    }
     failure(ram,data,0x400); // Old parent is drawn before new descriptor fails.
     put(data.data,20,0x1234);
     failure(ram,data,0x200); // Unsupported parent callback.

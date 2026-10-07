@@ -104,8 +104,21 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
+    bool registers_mode = false;
+    std::uint32_t d1 = 0U;
+    std::uint32_t d3 = 0U;
+    if (argc > 1 && std::string(argv[1]) == "--registers") {
+        if (argc < 4 || !parse_integer(argv[2], 0xffffffffU, d1) ||
+            !parse_integer(argv[3], 0xffffffffU, d3)) {
+            std::cerr << "--registers requires decimal or 0x-prefixed uint32 D1 and D3\n";
+            return 1;
+        }
+        registers_mode = true;
+        argc -= 3;
+        argv += 3;
+    }
     if (argc != 9 && argc != 10 && argc != 12) {
-        std::cerr << "usage: push_menu INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES ADDRESS X Y LINE [FONT_MS5D [STAGES_DIRECTORY CALLBACK_STACK]]\n";
+        std::cerr << "usage: push_menu [--registers D1 D3] INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES ADDRESS X Y LINE [FONT_MS5D [STAGES_DIRECTORY CALLBACK_STACK]]\n";
         return 2;
     }
     std::uint32_t address, x, y, line;
@@ -115,6 +128,10 @@ int main(int argc, char** argv) {
         !parse_integer(argv[7], 0xffffU, y) ||
         !parse_integer(argv[8], 0xffffU, line)) {
         std::cerr << "ADDRESS/X/Y/LINE must be integers within their 32/16/16/16-bit ranges\n";
+        return 1;
+    }
+    if (registers_mode && (line != (d3 & 0xffffU) || y != (d1 & 0xffffU))) {
+        std::cerr << "LINE must match D3.low16 and Y must match D1.low16\n";
         return 1;
     }
     if (argc == 12 && !parse_integer(argv[11], 0xffffffU, callback_stack)) {
@@ -188,10 +205,12 @@ int main(int argc, char** argv) {
         context_pointer = &context;
     }
     std::vector<ms5::VideoPortWrite> writes;
+    std::uint16_t final_line = static_cast<std::uint16_t>(line);
     if (!ms5::load_fixed_data_resource(resource_path, resource, error) ||
         !ms5::push_menu(ram, resource, address, static_cast<std::uint16_t>(x),
                         static_cast<std::uint16_t>(y), static_cast<std::uint16_t>(line),
-                        writes, error, font_pointer, context_pointer)) {
+                        writes, error, font_pointer, context_pointer, &final_line,
+                        registers_mode ? &d1 : NULL, registers_mode ? &d3 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -224,6 +243,10 @@ int main(int argc, char** argv) {
     if (!output_ram || !output_writes) {
         std::cerr << "cannot write output files\n";
         return 1;
+    }
+    if (registers_mode) {
+        std::cout << "{\"line\":" << final_line << ",\"d1\":" << d1
+                  << ",\"d3\":" << d3 << "}\n";
     }
     return 0;
 }
