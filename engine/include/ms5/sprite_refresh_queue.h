@@ -14,11 +14,13 @@ namespace ms5 {
 // Record X must be producer-aligned: its fixed-point word has low six bits zero.
 // Success replaces writes, sets processed to the original ready bit and clears
 // error. Failure preserves RAM, writes and processed. A non-ready queue skips
-// all validation except RAM size. CPU registers, flags and timing are omitted.
+// all validation except RAM size. Optional D0 preserves input on a non-ready
+// return and reports native cleanup output on ready success. Other registers,
+// flags and timing are omitted. Errors preserve D0 as well.
 bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
                           const std::vector<CompositionResource>& resources,
                           std::vector<SpriteWrite>& writes,
-                          bool& processed, std::string& error);
+                          bool& processed, std::string& error, std::uint32_t* d0 = 0);
 
 } // namespace ms5
 

@@ -20,7 +20,7 @@ namespace ms5 {
 bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
                           const std::vector<CompositionResource>& resources,
                           std::vector<SpriteWrite>& writes,
-                          bool& processed, std::string& error) {
+                          bool& processed, std::string& error, std::uint32_t* d0) {
     if (ram.size() != 65536U) {
         error = "refresh queue requires exactly 65536 RAM bytes";
         return false;
@@ -154,9 +154,14 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
     put(updated, 0x8d34, end);
     updated[0x8d3c] ^= 0x80U;
     updated[0x8d3d] &= 0x7fU;
+    // Both cleanup calls overwrite D0 with address:8000 even for zero writes.
+    // The second pool determines the final address; incoming upper bits vanish.
+    const std::uint32_t final_address=(static_cast<std::uint32_t>(
+        word(updated, pools[1]+(forward ? 2U : 0U)))+(forward ? 0x8201U : 0x8200U))&65535U;
     ram.swap(updated);
     writes.swap(output);
     processed = true;
+    if(d0!=0) *d0=(final_address<<16)|0x8000U;
     error.clear();
     return true;
 }

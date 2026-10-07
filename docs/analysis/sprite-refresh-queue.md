@@ -25,3 +25,18 @@ analyze_sprite_refresh_queue.py는 먼저 Python 제어 모델과 검증된 C++ 
 원본은 bank register0x2ffff2/0x2ffff0도 쓴다. 현재 C++ 런타임은 로드된 리소스를 사용하므로 bank device write를 출력하지 않으며 최종 RAM shadow만 보존한다. 비교의 비디오 이벤트 범위는0x3c0000 포트다. CPU 레지스터·CCR·대기·IRQ 타이밍은 이 API의 계약 밖이다. 두 리소스가 같은 bank에 있는 통제된 실험이며 이 검증만으로 실제 은행 장치 충실도를 주장하지 않는다.
 
 일반 첫 번째 분기만 지원한다. flip·다중블록, 준비 루틴0x16bba와0x166bc의 사전 정렬, producer/consumer 동시 진행, 실제 게임의 프레임 호출·pixel rasterizer는 미완료다.
+
+
+## 인터럽트 호출자를 위한 D0 전달
+
+`refresh_sprite_queue`의 마지막 선택 인자 `std::uint32_t* d0`는 원본16cfa의 D0 반환을 전달한다. 준비bit가0이면 원본이D0를 읽거나 쓰지 않으므로 입력값을 보존한다. 오류에서도 보존한다.
+
+준비된 큐는 레코드가0개여도 두 pool의 후행 정리 함수를 호출한다. 앞방향16092는D0.word에8201을 더해SWAP한 뒤하위word를8000으로 만들고, 정리할열마다10000을long으로더한다. 역방향166a0은8200을더해SWAP/8000 설정 후열마다10000을뺀다. 따라서 두 번째 pool의 최종한계가 반환D0를 결정한다.
+
+앞방향은 `(((pool2.upper+8201)&ffff)<<16)|8000`, 역방향은 `(((pool2.lower+8200)&ffff)<<16)|8000`이다. pool2가 네ffff word로 비활성화되어도 정리 함수가 호출되므로 각각82008000/81ff8000을 반환한다. incomingD0 상위bit나 마지막composition의임시값을유지하지않는다.
+
+CLI의선택적인 `--d0 UINT32`는기존 인자앞에붙이며 기존RAM/그리기기록형식은그대로다. 추가stdout JSON은d0와processed를낸다. 다른CPU레지스터/CCR와전체MMIO기록은이추가범위에포함하지않는다.
+
+추가 검증 `tools/verify_sprite_refresh_d0.py`는 원본584조건의 전체RAM/전체D0와370,740개 비디오long 쓰기를 비교했다. 준비된296조건에서 정리 함수가 정확히두번 호출됨을 확인했고 그중116조건은비디오출력이0개였다. 실제 MS5C 두 리소스와 양방향/링순환/비활성pool/승계8회, 오류8조건을 포함한다. 원본고정ROM과매핑된resource bank는변경하지않았다.
+
+보고서: `artifacts/sprite_refresh_d0/verification.json`, SHA256 `f9c3f2ab5ba5b8db4175227453060310d7ef68e28f0e5564875943f45676296f`. 네이티브PVC 쓰기4,208건은다음통합을위한별도관찰이며현재C++비디오출력과동등성검증한것이아니다.

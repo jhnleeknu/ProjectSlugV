@@ -59,11 +59,59 @@ bool save_bytes(const std::string& path, const std::vector<std::uint8_t>& bytes)
     return static_cast<bool>(output);
 }
 
+bool parse_integer(const std::string& text, std::uint32_t maximum,
+                   std::uint32_t& result) {
+    unsigned int base = 10;
+    std::size_t start = 0;
+    if (text.size() >= 2 && text[0] == '0' &&
+        (text[1] == 'x' || text[1] == 'X')) {
+        base = 16;
+        start = 2;
+    }
+    if (start == text.size()) {
+        return false;
+    }
+    std::uint32_t value = 0;
+    for (std::size_t index = start; index < text.size(); ++index) {
+        const char c = text[index];
+        unsigned int digit;
+        if (c >= '0' && c <= '9') {
+            digit = static_cast<unsigned int>(c - '0');
+        } else if (base == 16 && c >= 'a' && c <= 'f') {
+            digit = static_cast<unsigned int>(c - 'a') + 10U;
+        } else if (base == 16 && c >= 'A' && c <= 'F') {
+            digit = static_cast<unsigned int>(c - 'A') + 10U;
+        } else {
+            return false;
+        }
+        if (digit >= base || digit > maximum || value > (maximum - digit) / base) {
+            return false;
+        }
+        value = value * base + digit;
+    }
+    result = value;
+    return true;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
+    const bool trace_d0 = argc > 1 && std::string(argv[1]) == "--d0";
+    std::uint32_t d0 = 0U;
+    if (trace_d0) {
+        if (argc < 7) {
+            std::cerr << "usage: refresh_sprite_queue --d0 UINT32 INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]\n";
+            return 2;
+        }
+        if (!parse_integer(argv[2], 0xffffffffU, d0)) {
+            std::cerr << "D0 must be decimal or 0x-prefixed uint32\n";
+            return 1;
+        }
+        argc -= 2;
+        argv += 2;
+    }
     if (argc < 5) {
-        std::cerr << "usage: refresh_sprite_queue INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]\n"
+        std::cerr << "usage: refresh_sprite_queue [--d0 UINT32] INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]\n"
                   << "output writes: BE32 processed (0 or 1), then BE16 address/value pairs\n";
         return 2;
     }
@@ -113,7 +161,7 @@ int main(int argc, char** argv) {
     }
     std::vector<ms5::SpriteWrite> writes;
     bool processed = false;
-    if (!ms5::refresh_sprite_queue(ram, resources, writes, processed, error)) {
+    if (!ms5::refresh_sprite_queue(ram, resources, writes, processed, error, trace_d0 ? &d0 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -128,6 +176,10 @@ int main(int argc, char** argv) {
     if (!save_bytes(paths[1], ram) || !save_bytes(paths[2], output_bytes)) {
         std::cerr << "cannot write output files\n";
         return 1;
+    }
+    if (trace_d0) {
+        std::cout << "{\"d0\":" << d0 << ",\"processed\":"
+                  << (processed ? "true" : "false") << "}\n";
     }
     return 0;
 }
