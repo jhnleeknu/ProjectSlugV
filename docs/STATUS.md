@@ -1261,3 +1261,12 @@
 - 18container의C++JSON을재조립한422bytes가원본과전수일치했다. CLI오류26/합성raw양성1/Python합성5 포함전체Python175/C++108/경고0. Report SHA256 `5e4c65d7bbdd46daa77a773f0ee0ba0328603174cdf56db92cb64529b9cb0e92`,manifest SHA256 `d958cd6ad42dfa84c6675f20c1e1a3251dab95ea71c184d70c4e2efe4fea3306`.
 - 메인이packer root범위검사와Makefile선행inventory생성을보완하고리뷰0166·scene-placements.md·공통resource-format.md를확정했다. 관련세재생성명령의hash동일성을확인했다. 이번검증은구문/데이터읽기이며placement 실행검증이아니다.
 - 다음은19802 inverse motion의구간선택과1a470 bounds/object allocation/position/inlinecopy,1a414 phase gate를연결하고일반1a5a4로통합하는작업이다. 자연frame·직접플레이스테이지화면·전체게임복원은계속미완료이며goal은active다.
+
+
+## 2026-10-08 — 좌표에서 경로 시간 조회 통합
+
+- 원본19802/18efa의네축·방향투영과1972a 구간선택을C++ API/CLI로연결했다. 기존37개MS5D motion리소스를직접사용한다. Fraction borrow, D0/D1 LONG보존, backward의조기cursor게시와forward뒤재투영차이를보존했다.
+- 신규원본2,664조건/오류69조건에서전체64KiB RAM·12register가일치했다. Canonical/null1,584와주소정규화합성1,080을구분한다. 74sequence/290호출중216호출이직전CLI출력을승계하며XY변경은명시host입력이다. 자연프레임진행검증은아니다.
+- 신규report SHA256 `1759ae535202062c79b78cfa9e760d09449dfd14ed3505fdc8e07a679eceebb6`. 메인은원본비대칭·공유selector·CLI/unit·독립observer/verifier를리뷰했고resource37개/manifest/native/binary의현재hash를확인했다. 입력RAM불변과resource전후hash검사를보강한뒤C++전체를재비교했다.
+- 전체make Python175/C++109/경고0. 기존19938 회귀12,170조건/오류69조건/MMIO0/미복귀0도통과했다. Report SHA256 `ab2460c368136e41266e0cf982f99628c3a5d64b46a83818c22588b22942a2f9`,binary SHA256 `8e2a9567a004d4c48f0e2aff092478e8af40dfc1d542a3de5cc325bb93694c35`. 리뷰0167과scene-motion-time.md에계약·재생성·임시반복한계를기록했다.
+- 다음은1a470의bounds/object할당/43e08position/inlinecopy와1a414 gate를연결하고일반1a5a4로통합하는작업이다. 직접조작가능한스테이지화면과전체게임복원은미완료이며goal은active다.

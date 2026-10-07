@@ -56,3 +56,8 @@ CLI는12register JSON과64KiB RAM출력을저장한다. 실제경로리소스는
 최종 `artifacts/scene_motion/verification.json` SHA256 `a9926535334bf76d820277ac25b3da2448e8346599d11f372c4f7fa8755522a9`. Binary SHA256 `13843937cdd4fd721d463d904de0f5ab3ccf552dab77628af423e23a8cffe32a`. 전체make exit0 Python139/C++101/경고0,로그 `artifacts/scene_motion_build_test.log`. C++unit은null,분수/ASR/offset,terminalclip,N-onlyclip,앞뒤승계와candidate변경후span실패rollback을검사한다.
 
 원시목록 `inventory.json` SHA256 `b899218545a490e533ce5bfebe58a61771830b6f5a004372e19643c58219eac4`,명시창 `disassembly.json` SHA256 `55e66de8a6dc4d2889c6a38dafe0e1dab95887fe7e8d4b82aafa8a11597ea7ef`,36entry×3분기표 `dispatch.json` SHA256 `3014408a53b88bcd8b20d0b813667174c43ff9cb71c9bd1c8a081a13331fd406`. 자동decode만으로의미확정을주장하지않으며메인이원본제어흐름·산술과C++코드를대조했다.
+
+
+## 2026-10-08 공유 선택 루틴 회귀
+
+19802 시간조회와선택helper를공유하도록정리한뒤원본전체비교를다시실행했다. 기존19938 회귀12,170조건/오류69조건/MMIO0/미복귀0도통과했다. Report SHA256 `ab2460c368136e41266e0cf982f99628c3a5d64b46a83818c22588b22942a2f9`,binary SHA256 `8e2a9567a004d4c48f0e2aff092478e8af40dfc1d542a3de5cc325bb93694c35`. 기존5,466실주소/6,704합성조건구분과전체RAM·12register계약을유지한다.
