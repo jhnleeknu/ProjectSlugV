@@ -16,6 +16,8 @@ SOURCE_SHA256 = '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860
 OPERANDS = (8, 2, 4, 4, 4, 6, 6, 4, 2, 6, 2, 6, 8, 2, 8, 2, 2, 4, 2, 4)
 NODE_POINTERS = 0x1a08e
 PATH_NODES = 0x1a0a6
+PALETTE_ROOT = 0x20000c
+PALETTE_BANK_START, PALETTE_BANK_END = 0x200000, 0x2ffff0
 
 
 def command_span(program, address):
@@ -51,8 +53,8 @@ def command_span(program, address):
     raise ValueError('Scene script lacks bounded terminator')
 
 
-def wrap(payload, address):
-    return struct.pack('<4s7I', b'MS5D', 1, 1, address, address, len(payload),
+def wrap(payload, address, kind=1):
+    return struct.pack('<4s7I', b'MS5D', 1, kind, address, address, len(payload),
                        zlib.crc32(payload), 0) + payload
 
 
@@ -82,10 +84,41 @@ def motion_span(program, address):
     raise ValueError('Motion path lacks bounded terminal prefix')
 
 
-def dependency(program, address, end, name, stable_id, references, **extra):
+
+def palette_lookup_address(root, selector):
+    shifted = (selector << 2) & 0xffff
+    signed_offset = shifted - 65536 if shifted & 0x8000 else shifted
+    address = root + signed_offset
+    if address & 1 or not PALETTE_BANK_START <= address <= PALETTE_BANK_END - 4:
+        raise ValueError('Palette lookup outside bank2MiB data window')
+    return address, shifted, signed_offset
+
+
+def palette_binding_span(program, address):
+    if address & 1 or not PALETTE_BANK_START <= address < min(len(program), PALETTE_BANK_END):
+        raise ValueError('Palette binding requires aligned bank2MiB address')
+    cursor = address
+    limit = min(len(program), PALETTE_BANK_END, address + 65536)
+    records = []
+    while cursor + 2 <= limit:
+        slot = struct.unpack_from('>H', program, cursor)[0]
+        if slot == 0xffff:
+            return cursor + 2, records, cursor
+        if slot > 255:
+            raise ValueError('Palette binding slot exceeds byte range')
+        if cursor + 6 > limit:
+            raise ValueError('Truncated palette binding record')
+        records.append(dict(cpu_address=cursor, rom_offset=cursor, slot_word=slot,
+            source_word=struct.unpack_from('>H', program, cursor + 2)[0],
+            flags_byte=program[cursor + 4], sixth_byte=program[cursor + 5],
+            raw_hex=program[cursor:cursor + 6].hex()))
+        cursor += 6
+    raise ValueError('Palette binding lacks bounded ffff terminal')
+
+def dependency(program, address, end, name, stable_id, references, kind=1, **extra):
     payload = bytes(program[address:end])
-    data = wrap(payload, address)
-    metadata = dict(id=stable_id, file=name, source_cpu_address=address,
+    data = wrap(payload, address, kind)
+    metadata = dict(format='MS5D', version=1, kind=kind, id=stable_id, file=name, source_cpu_address=address,
         source_rom_offset=address, end_exclusive=end, size=len(data), payload_size=len(payload),
         sha256=hashlib.sha256(data).hexdigest(), payload_sha256=hashlib.sha256(payload).hexdigest(),
         references=references)
@@ -108,10 +141,15 @@ def pack(program, source, folder):
     prepared = []
     motion_references = {}
     indirect_references = {}
+    palette_references = {}
     for address in sorted({r['script_cpu_address'] for r in references} - {0}):
         end, commands, terminator = command_span(program, address)
         for command in commands:
             operands = bytes.fromhex(command['operand_hex'])
+            if command['opcode'] == 4:
+                selector = struct.unpack_from('>H', operands, 0)[0]
+                palette_references.setdefault(selector, []).append(dict(script_cpu_address=address,
+                    command_cpu_address=command['source_cpu_address'], opcode=4, selector_word=selector))
             if command['opcode'] not in (0, 0x10):
                 continue
             pointer = struct.unpack_from('>I', operands, 4 if command['opcode'] == 0 else 0)[0]
@@ -143,6 +181,33 @@ def pack(program, source, folder):
         dependencies.append(dependency(program, address, address + 4, 'indirect_%06x.ms5d' % address,
             'scene-indirect:%08x' % address, refs, raw_be32=struct.unpack_from('>I',program,address)[0],
             scope='Single raw indirect BE32 read; pointed target not extracted or interpreted.'))
+    root_address = struct.unpack_from('>I', program, PALETTE_ROOT)[0]
+    root_refs = [ref for refs in palette_references.values() for ref in refs]
+    dependencies.append(dependency(program, PALETTE_ROOT, PALETTE_ROOT + 4, 'palette_root.ms5d',
+        'scene-palette-root:%08x' % PALETTE_ROOT, root_refs, kind=2, bank_source_rom_offset=PALETTE_BANK_START,
+        bank_cpu_start=PALETTE_BANK_START, raw_be32=root_address,
+        scope='Raw root pointer after bank2MiB mapping; no palette color transfer.'))
+    binding_references = {}
+    lookup_references = {}
+    for selector, refs in sorted(palette_references.items()):
+        address, shifted, signed_offset = palette_lookup_address(root_address, selector)
+        binding = struct.unpack_from('>I', program, address)[0]
+        expanded = [dict(ref, shifted_word=shifted, signed_offset=signed_offset,
+                         lookup_cpu_address=address, binding_cpu_address=binding) for ref in refs]
+        lookup_references.setdefault(address, []).extend(expanded)
+        binding_references.setdefault(binding, []).extend(expanded)
+    for address, refs in sorted(lookup_references.items()):
+        dependencies.append(dependency(program, address, address + 4, 'palette_lookup_%06x.ms5d' % address,
+            'scene-palette-lookup:%08x' % address, refs, kind=2, bank_source_rom_offset=PALETTE_BANK_START,
+            bank_cpu_start=PALETTE_BANK_START, raw_be32=struct.unpack_from('>I',program,address)[0],
+            scope='Root plus signed((selector<<2)&ffff) raw four-byte lookup.'))
+    for address, refs in sorted(binding_references.items()):
+        end, records, terminator = palette_binding_span(program, address)
+        dependencies.append(dependency(program, address, end, 'palette_bindings_%06x.ms5d' % address,
+            'scene-palette-bindings:%08x' % address, refs, kind=2, bank_source_rom_offset=PALETTE_BANK_START,
+            bank_cpu_start=PALETTE_BANK_START, binding_record_count=len(records), records=records,
+            terminator_cpu_address=terminator,
+            scope='Raw six-byte binding records plus two-byte ffff firstword terminal; color transfer not executed.'))
     # Validate all source spans before publishing any resource.
     folder.mkdir(parents=True, exist_ok=True)
     for name, data, metadata in prepared:
@@ -174,7 +239,9 @@ def main():
                           payload_bytes=sum(s['payload_size'] for s in result['scripts']),
                           dependency_files=len(result['dependencies']),
                           dependency_payload_bytes=sum(s['payload_size'] for s in result['dependencies']),
-                          motion_files=sum(s['file'].startswith('motion_') for s in result['dependencies']))))
+                          motion_files=sum(s['file'].startswith('motion_') for s in result['dependencies']),
+                          palette_lookup_files=sum(s['file'].startswith('palette_lookup_') for s in result['dependencies']),
+                          palette_binding_files=sum(s['file'].startswith('palette_bindings_') for s in result['dependencies']))))
 
 
 if __name__ == '__main__':

@@ -4,6 +4,15 @@
 #include "ms5/video_port.h"
 #include <cstddef>
 namespace ms5 {
+struct PaletteBindingState {
+    std::uint32_t d0, d1, d2, d3, d4, a0, a1, a2, a4;
+    PaletteBindingState() : d0(0), d1(0), d2(0), d3(0), d4(0), a0(0), a1(0), a2(0), a4(0) {}
+};
+// Generic native8da2 registration of an exact terminated fixed or banked ROM window.
+// Failure preserves full RAM/state/ports; success replaces ordered writes.
+bool bind_palette_resource(std::vector<std::uint8_t>& ram, const FixedDataResource& bindings,
+    PaletteBindingState& state, std::vector<VideoPortWrite>& ports, std::string& error);
+
 // Shared verified e7bf4 palette helper. Final full D0=0x60, D1.low=1
 // with high word preserved; D3.low holds last relink with high preserved.
 // A5=108000 is implicit; failure preserves RAM, registers and ports.

@@ -22,6 +22,10 @@ struct FixedDataResource {
 bool load_fixed_data_resource(const std::string& path,
                               FixedDataResource& resource, std::string& error);
 
+// MS5D v1 kind2 preserves a banked CPU window below the PVC overlay.
+// ROM offset selects an aligned 1MiB bank; failure preserves resource.
+bool load_banked_data_resource(const std::string& path,
+                               FixedDataResource& resource, std::string& error);
 } // namespace ms5
 
 #endif

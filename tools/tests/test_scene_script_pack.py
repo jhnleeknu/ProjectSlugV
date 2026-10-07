@@ -6,7 +6,7 @@ import unittest
 import zlib
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from pack_scene_scripts import command_span, motion_span, wrap, OPERANDS
+from pack_scene_scripts import command_span, motion_span, palette_lookup_address, palette_binding_span, PALETTE_BANK_START, wrap, OPERANDS
 
 
 class SceneScriptPackTests(unittest.TestCase):
@@ -84,6 +84,49 @@ class MotionSpanTests(unittest.TestCase):
                     struct.pack('>5H', 1, 0x14, 2, 3, 4), b'\x00'):
             with self.assertRaises(ValueError):
                 self.scan(raw)
+
+
+class PaletteDependencyTests(unittest.TestCase):
+    def program(self, payload):
+        return bytes(PALETTE_BANK_START) + payload
+
+    def test_lookup_shift_wrap_and_signed_offset(self):
+        self.assertEqual(palette_lookup_address(0x2003d0, 1), (0x2003d4, 4, 4))
+        self.assertEqual(palette_lookup_address(0x2003d0, 0xffff), (0x2003cc, 0xfffc, -4))
+        self.assertEqual(palette_lookup_address(0x2003d0, 0x4000), (0x2003d0, 0, 0))
+        self.assertEqual(palette_lookup_address(0x208000, 0x2000), (0x200000, 0x8000, -32768))
+        for root, selector in ((0x200000, 0xffff), (0x2fffec, 1), (0x200001, 0)):
+            with self.assertRaises(ValueError):
+                palette_lookup_address(root, selector)
+
+    def test_slot_first_word_and_sixth_byte_preserved(self):
+        raw = bytes.fromhex('0001ffffa55a00ff0065037effff1234')
+        end, records, terminal = palette_binding_span(self.program(raw), PALETTE_BANK_START)
+        self.assertEqual((end, terminal), (PALETTE_BANK_START + 14, PALETTE_BANK_START + 12))
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0]['slot_word'], 1)
+        self.assertEqual(records[0]['source_word'], 0xffff)
+        self.assertEqual(records[0]['sixth_byte'], 0x5a)
+        self.assertEqual(records[1]['slot_word'], 255)
+        self.assertEqual(records[1]['raw_hex'], '00ff0065037e')
+        packed = wrap(self.program(raw)[PALETTE_BANK_START:end], PALETTE_BANK_START, kind=2)
+        self.assertEqual(packed[32:], raw[:14])
+        self.assertEqual(struct.unpack('<4s7I', packed[:32])[:5], (b'MS5D', 1, 2, PALETTE_BANK_START, PALETTE_BANK_START))
+        self.assertEqual(struct.unpack('<4s7I', packed[:32])[6], zlib.crc32(raw[:14]))
+        self.assertEqual(palette_binding_span(self.program(b'\xff\xff'), PALETTE_BANK_START)[1], [])
+
+    def test_binding_bad_slot_truncation_and_bank_bound(self):
+        for payload in (bytes.fromhex('010000000000ffff'), bytes.fromhex('00010000'), bytes.fromhex('000100000000')):
+            with self.assertRaises(ValueError):
+                palette_binding_span(self.program(payload), PALETTE_BANK_START)
+        with self.assertRaises(ValueError):
+            palette_binding_span(self.program(bytes(12)), PALETTE_BANK_START + 1)
+        with self.assertRaises(ValueError):
+            palette_binding_span(bytes(0x300000), 0x2ffff0)
+        near_end = bytearray(0x2ffff0)
+        near_end[0x2fffec:0x2ffff0] = bytes.fromhex('00010000')
+        with self.assertRaises(ValueError):
+            palette_binding_span(near_end, 0x2fffec)
 
 
 if __name__ == '__main__':

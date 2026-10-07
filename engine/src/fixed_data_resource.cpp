@@ -29,10 +29,8 @@ bool fail(std::string& error, const char* message) {
     return false;
 }
 
-} // namespace
-
-bool load_fixed_data_resource(const std::string& path,
-                              FixedDataResource& resource, std::string& error) {
+bool load_data_resource(const std::string& path,
+                              FixedDataResource& resource, std::string& error, std::uint32_t kind) {
     std::ifstream input(path.c_str(), std::ios::binary | std::ios::ate);
     if (!input) {
         return fail(error, "cannot open fixed data resource");
@@ -52,17 +50,20 @@ bool load_fixed_data_resource(const std::string& path,
     if (header[0] != 'M' || header[1] != 'S' || header[2] != '5' || header[3] != 'D') {
         return fail(error, "invalid fixed data resource magic");
     }
-    if (read_u32(header + 4) != 1 || read_u32(header + 8) != 1) {
+    if (read_u32(header + 4) != 1 || read_u32(header + 8) != kind) {
         return fail(error, "unsupported fixed data resource version or kind");
     }
     const std::uint32_t cpu_address = read_u32(header + 12);
     const std::uint32_t rom_offset = read_u32(header + 16);
     const std::uint32_t payload_size = read_u32(header + 20);
-    if (cpu_address >= 0x100000U || cpu_address != rom_offset) {
-        return fail(error, "fixed data source must map the fixed program ROM");
-    }
-    if (payload_size == 0 || payload_size > 0x100000U - cpu_address) {
-        return fail(error, "invalid fixed data window size");
+    if (kind == 1) {
+        if (cpu_address >= 0x100000U || cpu_address != rom_offset) return fail(error, "fixed data source must map the fixed program ROM");
+        if (payload_size == 0 || payload_size > 0x100000U - cpu_address) return fail(error, "invalid fixed data window size");
+    } else {
+        if (cpu_address < 0x200000U || cpu_address >= 0x2ffff0U || payload_size == 0 || payload_size > 0x2ffff0U - cpu_address ||
+            rom_offset >= 0x800000U || payload_size > 0x800000U - rom_offset || rom_offset < cpu_address - 0x200000U) return fail(error, "invalid banked data window");
+        const std::uint32_t bank = rom_offset - (cpu_address - 0x200000U);
+        if (bank < 0x100000U || bank % 0x100000U != 0) return fail(error, "invalid banked data ROM mapping");
     }
     if (read_u32(header + 28) != 0) {
         return fail(error, "fixed data reserved field must be zero");
@@ -93,4 +94,11 @@ bool load_fixed_data_resource(const std::string& path,
     return true;
 }
 
+} // namespace
+bool load_fixed_data_resource(const std::string& path, FixedDataResource& resource, std::string& error) {
+    return load_data_resource(path,resource,error,1);
+}
+bool load_banked_data_resource(const std::string& path, FixedDataResource& resource, std::string& error) {
+    return load_data_resource(path,resource,error,2);
+}
 } // namespace ms5

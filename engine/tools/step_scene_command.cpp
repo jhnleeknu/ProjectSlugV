@@ -80,18 +80,37 @@ bool parse_integer(const std::string& text, std::uint32_t maximum, std::uint32_t
     return true;
 }
 
+std::string resource_name(const std::string& prefix, std::uint32_t address) {
+    std::ostringstream name; name << prefix << std::hex << std::setfill('0') << std::setw(6) << address << ".ms5d"; return name.str();
+}
+bool load_dependency(const std::string& directory, const std::string& name,
+    std::vector<std::string>& paths, std::vector<std::string>& canonical,
+    std::vector<ms5::FixedDataResource>& resources, std::string& error) {
+    const std::string path = directory + "/" + name; std::string resolved;
+    if (!canonical_path(path,resolved)) { error = "cannot resolve dependency"; return false; }
+    for (std::size_t i = 0; i < paths.size(); ++i) {
+        if (canonical[i] == resolved || same_inode(path,paths[i])) { error = "all files must be distinct"; return false; }
+    }
+    ms5::FixedDataResource resource;
+    if (!(name.compare(0,8,"palette_") == 0 ? ms5::load_banked_data_resource(path,resource,error) : ms5::load_fixed_data_resource(path,resource,error))) return false;
+    paths.push_back(path); canonical.push_back(resolved); resources.push_back(resource); return true;
+}
+std::uint32_t read_long(const std::vector<std::uint8_t>& data) {
+    return (static_cast<std::uint32_t>(data[0]) << 24) | (static_cast<std::uint32_t>(data[1]) << 16) |
+        (static_cast<std::uint32_t>(data[2]) << 8) | data[3];
+}
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 17 && argc != 18) { std::cerr << "usage: step_scene_command D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS SCRIPT_MS5D NODE_POINTERS_MS5D [DEPENDENCIES_DIR]\n"; return 2; }
-    std::uint32_t values[11] = {0};
-    for (unsigned int i = 0; i < 11; ++i) {
+    if (argc != 18 && argc != 19) { std::cerr << "usage: step_scene_command D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS SCRIPT_MS5D NODE_POINTERS_MS5D [DEPENDENCIES_DIR]\n"; return 2; }
+    std::uint32_t values[12] = {0};
+    for (unsigned int i = 0; i < 12; ++i) {
         if (!parse_integer(argv[i + 1],0xffffffffU,values[i])) { std::cerr << "invalid unsigned number\n"; return 1; }
     }
     ms5::SceneCommandState state; state.d0 = values[0]; state.d1 = values[1]; state.d2 = values[2]; state.d3 = values[3];
-    state.d4 = values[4]; state.d5 = values[5]; state.d6 = values[6]; state.d7 = values[7]; state.a0 = values[8]; state.a1 = values[9]; state.a2 = values[10];
+    state.d4 = values[4]; state.d5 = values[5]; state.d6 = values[6]; state.d7 = values[7]; state.a0 = values[8]; state.a1 = values[9]; state.a2 = values[10]; state.a4 = values[11];
     std::vector<std::string> paths, canonical;
-    for (int i = 12; i < 17; ++i) {
+    for (int i = 13; i < 18; ++i) {
         paths.push_back(argv[i]); std::string resolved;
         if (!canonical_path(paths.back(),resolved)) { std::cerr << "cannot resolve path\n"; return 1; }
         for (std::size_t j = 0; j < canonical.size(); ++j) {
@@ -111,7 +130,16 @@ int main(int argc, char** argv) {
         if (command.source_cpu_address != state.a1) continue;
         std::string filename;
         std::uint32_t address = 0;
-        if (command.opcode == 0 || command.opcode == 0x10) {
+        if (command.opcode == 4) {
+            if (argc != 19) { std::cerr << "command requires DEPENDENCIES_DIR\n"; return 1; }
+            const std::string directory = argv[18];
+            if (!load_dependency(directory,"palette_root.ms5d",paths,canonical,dependencies,error) || dependencies.back().data.size() != 4) { std::cerr << error << '\n'; return 1; }
+            const std::uint16_t offset = static_cast<std::uint16_t>(((static_cast<unsigned int>(command.operands[0]) << 8) | command.operands[1]) << 2);
+            const std::int64_t address64 = static_cast<std::int64_t>(read_long(dependencies.back().data)) + (offset < 0x8000 ? offset : static_cast<std::int32_t>(offset) - 65536);
+            if (address64 < 0 || address64 > 0xffffffffLL) { std::cerr << "palette lookup overflow\n"; return 1; }
+            if (!load_dependency(directory,resource_name("palette_lookup_",static_cast<std::uint32_t>(address64)),paths,canonical,dependencies,error) || dependencies.back().data.size() != 4) { std::cerr << error << '\n'; return 1; }
+            if (!load_dependency(directory,resource_name("palette_bindings_",read_long(dependencies.back().data)),paths,canonical,dependencies,error)) { std::cerr << error << '\n'; return 1; }
+        } else if (command.opcode == 0 || command.opcode == 0x10) {
             const std::size_t at = command.opcode == 0 ? 4 : 0;
             for (unsigned int j = 0; j < 4; ++j) address = (address << 8) | command.operands[at + j];
             if (command.opcode == 0x10 || address != 0) {
@@ -119,8 +147,8 @@ int main(int argc, char** argv) {
             }
         } else if (command.opcode == 0x24) filename = "path_nodes.ms5d";
         if (!filename.empty()) {
-            if (argc != 18) { std::cerr << "command requires DEPENDENCIES_DIR\n"; return 1; }
-            const std::string path = std::string(argv[17]) + "/" + filename; std::string resolved;
+            if (argc != 19) { std::cerr << "command requires DEPENDENCIES_DIR\n"; return 1; }
+            const std::string path = std::string(argv[18]) + "/" + filename; std::string resolved;
             if (!canonical_path(path,resolved)) { std::cerr << "cannot resolve dependency\n"; return 1; }
             for (std::size_t j = 0; j < paths.size(); ++j) {
                 if (canonical[j] == resolved || same_inode(path,paths[j])) { std::cerr << "all files must be distinct\n"; return 1; }
@@ -140,6 +168,6 @@ int main(int argc, char** argv) {
     }
     if (!save_bytes(paths[1],ram) || !save_bytes(paths[2],bytes)) { std::cerr << "cannot write outputs\n"; return 1; }
     std::cout << "{\"d0\":" << state.d0 << ",\"d1\":" << state.d1 << ",\"d2\":" << state.d2 << ",\"d3\":" << state.d3 << ",\"d4\":" << state.d4 << ",\"d5\":" << state.d5 << ",\"d6\":" << state.d6 << ",\"d7\":" << state.d7
-        << ",\"a0\":" << state.a0 << ",\"a1\":" << state.a1 << ",\"a2\":" << state.a2 << ",\"writes\":" << ports.size() << "}\n";
+        << ",\"a0\":" << state.a0 << ",\"a1\":" << state.a1 << ",\"a2\":" << state.a2 << ",\"a4\":" << state.a4 << ",\"writes\":" << ports.size() << "}\n";
     return 0;
 }

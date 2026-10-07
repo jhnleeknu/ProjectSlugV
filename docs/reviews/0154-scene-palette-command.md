@@ -1,0 +1,27 @@
+# 장면 팔레트 등록과 뱅크 리소스 리뷰
+
+Baseline `9c20d50`. 이전 goal turn은00/10/24와39개dependency를연결·검증·커밋한progress다. 이번은04의1a192..1a1c0와8da2..8e48을연결한다. 원본SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. 메인은native명령·주소매핑·scratch효과와규격을확정하고sol에구현/검증/추출문서를분담했다.
+
+## 주소와 원본순서
+
+Code는고정첫1MiB CPU=ROM offset이다.04는RAM100010.word를0으로만들고word2ffff2=1000,word2ffff0=0을기록해ROM bank200000을CPU200000에선택한다. CPU20000c의root를읽고WORD(selector<<2)를signed offset으로적용해lookup pointer를읽는다. 이순서는unsigned selector의단순배열조회와다르다. 추출root/lookup/binding은bank2MiB이며수치상CPU=ROMoffset이라고고정영역으로분류하지않는다.
+
+8da2는진입D0.byte로watchdog를쓴후6-bytebinding을순회한다. Slot이ffff인첫word가terminator이며sourcewordffff는일반record의특수비활성값이다. sourcebucket head이아닐때만unlink/prepend하며D2.low에oldprevious,D3.low에oldbuckethead를남긴다. D0종결wordffff와A0끝주소,D1source,D4bucket,A2node,A4bucket주소를노출한다. 각word상위16비트는보존한다. A1은scene명령의다음주소로복구한다.
+
+기존main_startup의privatebinding코어를재사용하고optionalregister결과를추가했다. 기존main/stage팔레트wrapper는기존계약을유지하며새genericbind API는자체transaction을제공한다. 추가등록기능은색상전송완료가아니다.
+
+## 규격과 리뷰수정
+
+기존MS5Dkind1loader의첫1MiB제약을메인이확인했다. 단순히제약을완화하지않고같은v1 header의kind2로bankedwindow를표현하며load_banked_data_resource를추가했다. 기존fixedloader는kind2를거부한다. CPU200000..2fffef창,정렬된1MiB ROM bank,8MiB source끝,CRC/reserved/정확한길이를검사한다.2ffff0이후PVC register overlay는payload에포함하지않는다. details는docs/resource-format.md를따른다.
+
+메인리뷰에서genericbinding의bank source_rom_offset검사가빠진것을발견해loader와같은매핑검사로보완했다. scene04는그중bank200000만받는다. Packer는75참조에서root1/lookup72/binding72의145kind2파일7228payloadbytes를추출한다. 일반binding1132records,최대94records이며나머지bytes와sixthbyte도원시보존한다. 기존kind1dependencies39개는유지한다.
+
+## 검증
+
+원본4330조건/오류99조건/순서있는ports19875개를통과했다. 지원773 canonical명령×4profile=3092,지원명령run검사773호출,기존slot260/video195조건,별도palette반복·재지정10호출이다. 길이2이상carry42개구간에781호출이포함되며singleton2호출을carry개수에섞지않았다.12레지스터와RAM전체,RTS/A7,bank ROM의overlay제외범위 및고정ROM불변을검사했다.
+
+보고서 `artifacts/scene_command/verification.json` SHA256 `308312679576dba7914c1bf16662b0443fb6136ce415346d789f700e327e4b51`. 실행파일SHA256 `24b8ee0a96d4107132a11e628fb035713d6fabd9bd964a6890775cd9db41778d`. 메인이최종보고서·verifier코드·실행파일해시를대조했다. Bank창은선택결과에맞게미리매핑하며이명령이내는고정bank선택쓰기순서/값을검사한다. 일반PVC주소변경장치의시간축검증이라고확대하지않는다.
+
+공유코어회귀main_startup209/오류32/418watchdog/2integration보고서SHA256 `2bf5387682dae840040749fb882917080a43ecedb22a1dd13766ca123cccea7a`는기존과같다. Stage preparation101/오류37/441ports의SHA256은 `800662368857e8ab8f11c8c72ab179ca9dbbf65d7fe6a14ed9814c29238c88fd`다. 전체make는exit0/Python137/C++99/경고0,로그 `artifacts/scene_command_build_test.log`다. 별도bankloader단위검사는kind분리·다른ROMbank·overlay/ROM범위·CRC/reserved실패시출력보존을검사한다.
+
+현행canonical814명령중773회(18종)를원본비교했다. 지원19번째4c는canonicaloccurrence가없어합성unit뿐이다. 미지원08의41회,1a26a loop와실제스테이지전체연결은남아있다. Palette링은임의randombytes를유효상태로간주하지않고원본3ef2초기화후검증한다. Canonicaloperand와준비된RAM/standalonecontext의비교이며자연부팅·전체script·실제색상frame표시의완료를뜻하지않는다.

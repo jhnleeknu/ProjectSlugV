@@ -1,5 +1,7 @@
 # Scene command의 motion·간접 참조 리소스
 
+이 문서는 `9c20d50`의18-handler/11-register milestone 기록이다. 수치·report hash는 당시 결과이고 같은 report 경로는 후속 검증에서 덮어쓸 수 있다. 현행19-handler/12-register API와 palette banked 의존성은 `scene-palette-command.md`를 참조한다.
+
 ## Source와 지원 경계
 
 Baseline은 `e495c44`다. Canonical decrypted 프로그램 SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이며 전체8MiB 크기·해시를 packer에서 확인한다. 이 문서의 script/table/path CPU 주소는 첫1MiB 고정 ROM이며 같은 파일 offset이다. Table payload의 RAM pointer는 별도 CPU RAM 주소다. 주소·상수는16진수, 개수는10진수다.

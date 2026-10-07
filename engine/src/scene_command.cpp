@@ -1,5 +1,6 @@
 #include "ms5/scene_command.h"
 #include "ms5/scene_node.h"
+#include "ms5/main_startup.h"
 #include <new>
 namespace ms5 {
 namespace {
@@ -16,7 +17,7 @@ void put_long(std::vector<std::uint8_t>& bytes, std::size_t at, std::uint32_t va
     put_word(bytes,at,static_cast<std::uint16_t>(value >> 16)); put_word(bytes,at + 2,static_cast<std::uint16_t>(value));
 }
 bool supported(unsigned int opcode) {
-    return opcode == 0 || opcode == 0x10 || opcode == 0x24 || opcode == 0x0c || opcode == 0x14 || opcode == 0x18 || opcode == 0x1c || opcode == 0x20 ||
+    return opcode == 0 || opcode == 4 || opcode == 0x10 || opcode == 0x24 || opcode == 0x0c || opcode == 0x14 || opcode == 0x18 || opcode == 0x1c || opcode == 0x20 ||
         opcode == 0x28 || opcode == 0x2c || opcode == 0x30 || opcode == 0x34 || opcode == 0x38 ||
         opcode == 0x3c || opcode == 0x40 || opcode == 0x44 || opcode == 0x48 || opcode == 0x4c;
 }
@@ -31,6 +32,17 @@ const FixedDataResource* dependency(const std::vector<FixedDataResource>* resour
         }
     }
     error = "missing or invalid exact scene command dependency"; return NULL;
+}
+const FixedDataResource* bank_dependency(const std::vector<FixedDataResource>* resources,
+    std::uint32_t address, std::size_t exact_size, std::string& error) {
+    if (resources != NULL && (address & 1U) == 0 && address >= 0x200000 && address < 0x2ffff0) {
+        for (std::size_t i = 0; i < resources->size(); ++i) {
+            const FixedDataResource& resource = (*resources)[i];
+            if (resource.source_cpu_address == address && resource.source_rom_offset == address &&
+                resource.data.size() <= 0x2ffff0 - address && (exact_size == 0 || resource.data.size() == exact_size)) return &resource;
+        }
+    }
+    error = "missing or invalid palette bank dependency"; return NULL;
 }
 bool select_node(const FixedDataResource& pointers, unsigned int selector, std::size_t span,
                  std::uint32_t& address, std::size_t& offset, std::string& error) {
@@ -61,7 +73,30 @@ bool execute_scene_command(std::vector<std::uint8_t>& ram, const SceneScript& sc
         const unsigned int opcode = command->opcode;
         next.d7 = (next.d7 & 0xffff0000U) | opcode;
         next.a1 = command->source_cpu_address + 2;
-        if (opcode == 0) {
+        if (opcode == 4) {
+            next.d0 = (next.d0 & 0xffff0000U) | word(operands,0);
+            put_word(candidate,0x10,0);
+            VideoPortWrite write; write.size = 2; write.address = 0x2ffff2; write.value = 0x1000; output.push_back(write);
+            write.address = 0x2ffff0; write.value = 0; output.push_back(write);
+            const FixedDataResource* root = bank_dependency(dependencies,0x20000c,4,error);
+            if (root == NULL) return false;
+            next.d0 = (next.d0 & 0xffff0000U) | static_cast<std::uint16_t>(next.d0 << 2);
+            const std::uint16_t offset = static_cast<std::uint16_t>(next.d0);
+            const std::int64_t lookup_address = static_cast<std::int64_t>(longword(root->data,0)) +
+                (offset < 0x8000 ? offset : static_cast<std::int32_t>(offset) - 65536);
+            if (lookup_address < 0 || lookup_address > 0xffffffffLL) { error = "palette lookup address overflow"; return false; }
+            const FixedDataResource* lookup = bank_dependency(dependencies,static_cast<std::uint32_t>(lookup_address),4,error);
+            if (lookup == NULL) return false;
+            const FixedDataResource* bindings = bank_dependency(dependencies,longword(lookup->data,0),0,error);
+            if (bindings == NULL) return false;
+            PaletteBindingState binding; binding.d0 = next.d0; binding.d1 = next.d1; binding.d2 = next.d2; binding.d3 = next.d3; binding.d4 = next.d4;
+            binding.a0 = bindings->source_cpu_address; binding.a1 = next.a1; binding.a2 = next.a2; binding.a4 = next.a4;
+            std::vector<VideoPortWrite> binding_ports;
+            if (!bind_palette_resource(candidate,*bindings,binding,binding_ports,error)) return false;
+            next.d0 = binding.d0; next.d1 = binding.d1; next.d2 = binding.d2; next.d3 = binding.d3; next.d4 = binding.d4;
+            next.a0 = binding.a0; next.a2 = binding.a2; next.a4 = binding.a4;
+            output.insert(output.end(),binding_ports.begin(),binding_ports.end());
+        } else if (opcode == 0) {
             next.a2 = longword(operands,4);
             put_word(candidate,0xd3b8,word(operands,0)); put_word(candidate,0xd3ba,word(operands,2));
             next.d0 = static_cast<std::uint32_t>(word(operands,0)) << 16;

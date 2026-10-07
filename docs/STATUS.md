@@ -1143,3 +1143,12 @@
 - 메인리뷰에서packer의time/type field혼동을발견해offset2 type검사로수정했다. 회귀3개를추가했으며실제firsttype은14/64/80이다. 후속운동명령의의미해석완료를주장하지않는다.
 - 원본3945조건/오류83조건/18720orderedports/79 CLI승계run 통과. 지원698 canonical명령,미지원116명령(04:75,08:41),4c는합성unit만이다. 추가dependency오류13조건은임시파일로검사했으며원본리소스와고정ROM은보존했다. 최종보고서 SHA256 `a69e2b5b136e4db0c14245b7602c36ec0ccd03b5868ed864b894eb5b3cc0f6fb`.
 - 전체빌드 Python134/C++99/경고0. 메인리뷰0153 및scene-command-dependencies.md에재생성/CLI/검증범위를기록했다. 다음은04의bank/palette 등록과08의map 초기화,이후1a26a phase loop 연결이다. 전체목표와직접실행가능한스테이지화면은미완료다.
+
+
+## 2026-10-07 — 장면 팔레트 명령과 뱅크 데이터 로더
+
+- opcode04를기존palette binding공통코어에연결했다. RAMbank shadow→PVC선택쓰기→root/lookup→등록순서를보존하고12레지스터(D0..D7/A0/A1/A2/A4)를승계한다. 지원19종,canonical773회이며미지원08은41회다.4c는canonical에없어합성unit범위다.
+- MS5D v1kind2 bankedwindow와별도bankedloader를추가했다. kind1고정첫1MiB제약은유지한다. Palette root1/lookup72/binding72의145리소스7228payloadbytes를추출했으며CPU/ROM/bank주소및PVCoverlay경계를명시한다. 전체dependencies184개8476payloadbytes,manifest SHA256 `c9df39f855b267c0b547e2392be4a334a4e698ea48d6a1593e571e72018b4dc1`.
+- 원본4330조건/오류99조건/19875ports/길이2이상carry42구간781호출통과. Palette상태는원본3ef2로준비하며전체자연부팅으로간주하지않는다. 최종보고서 SHA256 `308312679576dba7914c1bf16662b0443fb6136ce415346d789f700e327e4b51`.
+- 공유코어mainstartup209/32회귀는기존SHA와동일하며stageprep101/37회귀도통과했다. 전체make Python137/C++99/경고0. 메인리뷰0154,분석scene-palette-command.md,공통resource-format.md에규격·한계·검증을기록했다.
+- 다음은08의43ffc 맵/스프라이트초기화와외부데이터연결,이후1a26a실행루프다. 팔레트등록을색상전송·전체스테이지화면완료로취급하지않으며전체목표는계속미완료다.

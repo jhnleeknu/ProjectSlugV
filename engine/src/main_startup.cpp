@@ -50,15 +50,21 @@ void watchdog(std::vector<ms5::VideoPortWrite>& ports,std::uint8_t value) {
     write.size = 1; write.address = 0x300001; write.value = value; ports.push_back(write);
 }
 bool bind_palettes(std::vector<std::uint8_t>& ram, const ms5::FixedDataResource& bindings,
-                   std::uint32_t& d1, std::uint32_t& d3, std::string& error) {
+                   std::uint32_t& d1, std::uint32_t& d3, std::string& error, ms5::PaletteBindingState* registers = NULL) {
     for (std::size_t record = 0; record + 2 < bindings.data.size(); record += 6) {
         const std::uint16_t offset = static_cast<std::uint16_t>(word(bindings.data,record) << 4);
         const std::uint16_t source = word(bindings.data,record + 2);
         d1 = (d1 & 0xffff0000U) | source;
         const std::uint16_t bucket = static_cast<std::uint16_t>((source & 255U) * 16U + 4U);
         const std::size_t at = node_base + offset;
+        if (registers != NULL) {
+            registers->d0 = (registers->d0 & 0xffff0000U) | offset;
+            registers->d4 = (registers->d4 & 0xffff0000U) | bucket;
+            registers->a1 = 0x104d92; registers->a2 = 0x104d92 + offset; registers->a4 = 0x104d92 + bucket;
+        }
         if (!ring(ram,bucket,error)) return false;
         if (word(ram,node_base + bucket + 2) != offset) {
+            if (registers != NULL) registers->d2 = (registers->d2 & 0xffff0000U) | word(ram,at);
             if (!unlink(ram,offset,error)) return false;
             const std::uint16_t old_head = word(ram,node_base + bucket + 2);
             d3 = (d3 & 0xffff0000U) | old_head;
@@ -74,6 +80,32 @@ bool bind_palettes(std::vector<std::uint8_t>& ram, const ms5::FixedDataResource&
 }
 }
 namespace ms5 {
+bool bind_palette_resource(std::vector<std::uint8_t>& ram, const FixedDataResource& bindings,
+    PaletteBindingState& state, std::vector<VideoPortWrite>& ports, std::string& error) {
+    const std::size_t size = bindings.data.size();
+    const std::uint32_t address = bindings.source_cpu_address;
+    const bool fixed = address < 0x100000 && size <= 0x100000 - address;
+    const bool bank = address >= 0x200000 && address < 0x2ffff0 && size <= 0x2ffff0 - address;
+    const std::uint32_t rom = bindings.source_rom_offset;
+    const std::uint32_t position = bank ? address - 0x200000 : 0;
+    const bool bank_mapping = bank && rom >= position && rom < 0x800000 && size <= 0x800000 - rom &&
+        rom - position >= 0x100000 && (rom - position) % 0x100000 == 0;
+    if (ram.size() != 65536 || bindings.source_cpu_address == 0 || (bindings.source_cpu_address & 1U) ||
+        (fixed && bindings.source_cpu_address != bindings.source_rom_offset) || (!fixed && !bank_mapping) ||
+        size < 2 || (size - 2) % 6 || word(bindings.data,size - 2) != 0xffff) {
+        error = "invalid exact palette binding resource"; return false;
+    }
+    for (std::size_t at = 0; at + 2 < size; at += 6) {
+        if (word(bindings.data,at) > 255) { error = "palette binding slot must be a byte"; return false; }
+    }
+    try {
+        std::vector<std::uint8_t> candidate = ram; PaletteBindingState next = state; std::vector<VideoPortWrite> output;
+        watchdog(output,static_cast<std::uint8_t>(next.d0));
+        if (!bind_palettes(candidate,bindings,next.d1,next.d3,error,&next)) return false;
+        next.d0 = (next.d0 & 0xffff0000U) | 0xffff; next.a0 = bindings.source_cpu_address + static_cast<std::uint32_t>(size);
+        ram.swap(candidate); state = next; ports.swap(output); error.clear(); return true;
+    } catch (const std::bad_alloc&) { error = "cannot allocate palette binding transaction"; return false; }
+}
 bool initialize_main_palettes(std::vector<std::uint8_t>& ram,
                            const FixedDataResource& bindings,std::uint32_t& d0,
                            std::uint32_t& d1,std::uint32_t& d3,

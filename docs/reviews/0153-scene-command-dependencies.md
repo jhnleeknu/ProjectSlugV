@@ -24,7 +24,7 @@ API는D0..D7/A0/A1/A2를 입력·출력한다. 기존optional dependency없는AP
 
 ## 검증
 
-`tools/verify_scene_command.py`의 원본3945조건/오류83조건/18720순서있는ports가통과했다. Canonical지원698회×4profile=2792조건과CLI승계698회,기존slot260/video195조건을포함한다. 지원run79개에서실제CLI출력RAM과11레지스터를다음명령으로넘겼다. 고정ROM불변및A7반환도확인했다.
+`tools/verify_scene_command.py`의 원본3945조건/오류83조건/18720순서있는ports가통과했다. Canonical지원698회×4profile=2792조건과CLI run 검사698회(이 중 길이2이상79개run의696회와singleton2회),기존slot260/video195조건을포함한다. 지원run79개에서실제CLI출력RAM과11레지스터를다음명령으로넘겼다. 고정ROM불변및A7반환도확인했다.
 
 추가13개dependency오류검사는00/10/24각각directory생략·파일누락·malformed·CRC-valid주소불일치와dependency/output alias를포함한다. 임시복사파일만사용하며원본리소스를변경하지않았다. 잘못된입력이출력파일을보존하는지확인했다. 메인은검증스크립트와최종보고서를직접검토했다.
 

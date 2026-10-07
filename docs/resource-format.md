@@ -161,3 +161,12 @@ descriptor는BE필드의16byte헤더(title:u32,min_width:u8,min_height:u8,callba
 원본 `4d81c..4d84e`는 D1.word를 unsigned20미만으로 검사한 뒤 `4cf64 + (D1 & ff)*16`을 조회한다. 범위를 벗어나면 TRAP #15로 간다. 읽는 필드는 상대 byte1/byte2와 BE16 word0a/word0c/word0e다. `481de..48210`은 이 조회기를 호출하고 선택한 RAM 구조체에 값을 기록한다. 추출기는 두 명령 창의 정확한 바이트와 고정 프로그램 해시를 검증한다. payload SHA256은 `9b1c4db78844053dff88ac7c863b15852c1ad1b9e500a831ed5a01fa9eff923c`이며32바이트 헤더를 포함한 파일 길이는352바이트다.
 
 이 창은 기존 `FixedDataResource`가 직접 읽는 원본 BE데이터다. 레코드 필드의 게임 의미, 자연스러운 호출부 도달성, 전체 초기화 실행과 원본 TRAP 처리는 이 추출 규격의 검증 범위가 아니다.
+
+
+### MS5D v1 kind2 — 뱅크 ROM 데이터 창
+
+kind1의 고정 첫1MiB 계약은 유지한다. kind2는 같은32-byte header에서kind만2이며 CPUbase와ROMoffset을 따로 해석한다. Version1,CRC32,reserved0,정확한파일길이 규칙은kind1과같다. CPUbase는200000이상2ffff0미만이며payload는비영이고끝exclusive가2ffff0을넘지않는다.2ffff0부터의PVC register overlay는ROM payload에포함하지않는다.
+
+매핑은 `position = CPUbase - 200000`, `bank_base = ROMoffset - position`이다. ROMoffset은position이상이고bank_base는100000이상700000이하의100000배수여야한다. ROMoffset+payloadsize는canonical8MiB를넘지않는다. 이는정렬된1MiB bank 창의주소표현이며모든PVC bank offset을지원한다는뜻이아니다. `load_fixed_data_resource`는kind1만, `load_banked_data_resource`는kind2만받는다. 공통FixedDataResource의source CPU/ROM필드로매핑을보존한다.
+
+Scene opcode04의palette root/lookup/binding은ROM bank200000을사용하므로이경우CPU와ROMoffset이수치상같다. 이를고정ROM으로잘못분류하지않으며manifest에도bank_base=200000을남긴다. 실제bank선택의word2ffff2=1000,word2ffff0=0은scene command의순서있는hardware writes로별도보존한다. Rawbinding은6-byte records와마지막BE16ffff이며구조는기존main startup팔레트등록표와같다. Palette색상자체의전송및후속frame표시는이데이터창규격에포함하지않는다.

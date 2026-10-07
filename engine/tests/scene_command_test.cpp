@@ -1,4 +1,6 @@
 #include "ms5/scene_command.h"
+#include "ms5/main_startup.h"
+#include "ms5/palette_state.h"
 #include <cassert>
 #include <iostream>
 namespace {
@@ -23,7 +25,7 @@ ms5::SceneScript script(unsigned int opcode, const std::vector<unsigned int>& wo
 }
 ms5::SceneCommandState initial() {
     ms5::SceneCommandState state; state.d0 = 0x12345678; state.d1 = 0x23456789; state.d2 = 0x24681357; state.d4 = 0x13572468; state.d3 = 0x3456789a;
-    state.d5 = 0x76543210; state.d6 = 0x6543210f; state.d7 = 0x456789ab; state.a0 = 0x56789abc; state.a1 = 0x50000; state.a2 = 0xabcdefff; return state;
+    state.d5 = 0x76543210; state.d6 = 0x6543210f; state.d7 = 0x456789ab; state.a0 = 0x56789abc; state.a1 = 0x50000; state.a2 = 0xabcdefff; state.a4 = 0xfedcba98; return state;
 }
 ms5::FixedDataResource pointers() {
     ms5::FixedDataResource result; result.source_cpu_address = result.source_rom_offset = 0x1a08e; result.data.assign(16,0);
@@ -31,7 +33,7 @@ ms5::FixedDataResource pointers() {
     return result;
 }
 bool same(const ms5::SceneCommandState& a, const ms5::SceneCommandState& b) {
-    return a.d0 == b.d0 && a.d1 == b.d1 && a.d2 == b.d2 && a.d4 == b.d4 && a.d3 == b.d3 && a.d5 == b.d5 && a.d6 == b.d6 && a.d7 == b.d7 && a.a0 == b.a0 && a.a1 == b.a1 && a.a2 == b.a2;
+    return a.d0 == b.d0 && a.d1 == b.d1 && a.d2 == b.d2 && a.d4 == b.d4 && a.d3 == b.d3 && a.d5 == b.d5 && a.d6 == b.d6 && a.d7 == b.d7 && a.a0 == b.a0 && a.a1 == b.a1 && a.a2 == b.a2 && a.a4 == b.a4;
 }
 }
 int main() {
@@ -137,15 +139,38 @@ int main() {
     put(dependencies[1].data,4,0x10fffe);
     assert(!ms5::execute_scene_command(ram,script(0x24,{4,0,0}),empty,state,ports,error,&dependencies));
     assert(ram == invalid_before && same(state,invalid_state) && ports[0].value == 456);
+    assert(ms5::initialize_palette_state(&ram[0],ram.size(),error));
+    std::vector<ms5::FixedDataResource> palette_dependencies(3);
+    palette_dependencies[0].source_cpu_address = palette_dependencies[0].source_rom_offset = 0x20000c; palette_dependencies[0].data.assign(4,0); put(palette_dependencies[0].data,0,0x200100);
+    palette_dependencies[1].source_cpu_address = palette_dependencies[1].source_rom_offset = 0x200100; palette_dependencies[1].data.assign(4,0); put(palette_dependencies[1].data,0,0x200200);
+    palette_dependencies[2].source_cpu_address = palette_dependencies[2].source_rom_offset = 0x200200; palette_dependencies[2].data.assign(2,255);
+    state = initial();
+    assert(ms5::execute_scene_command(ram,script(4,{0}),empty,state,ports,error,&palette_dependencies));
+    assert(state.d0 == 0x1234ffff && state.d1 == 0x23456789 && state.a0 == 0x200202 && state.a2 == 0xabcdefff && state.a4 == 0xfedcba98);
+    assert(ports.size() == 3 && ports[0].address == 0x2ffff2 && ports[0].value == 0x1000 && ports[1].address == 0x2ffff0 && ports[2].value == 0);
+    palette_dependencies[2].data.assign(8,0); put(palette_dependencies[2].data,0,3,2); put(palette_dependencies[2].data,2,0xffff,2); put(palette_dependencies[2].data,6,0xffff,2);
+    state = initial();
+    assert(ms5::execute_scene_command(ram,script(4,{0}),empty,state,ports,error,&palette_dependencies));
+    assert(state.d0 == 0x1234ffff && state.d1 == 0x2345ffff && state.d4 == 0x13570ff4 && state.a1 == 0x50004 && state.a2 == 0x104dc2 && state.a4 == 0x105d86);
+    assert(get(ram,0x4d92 + 0x30 + 10,2) == 0xffff && ram[0x4d92 + 0x30 + 15] == 2);
+    const std::uint32_t relink_d2 = state.d2, relink_d3 = state.d3;
+    assert(ms5::execute_scene_command(ram,script(4,{0}),empty,state,ports,error,&palette_dependencies) == false); // A1 is now past the opcode.
+    state.a1 = 0x50000;
+    assert(ms5::execute_scene_command(ram,script(4,{0}),empty,state,ports,error,&palette_dependencies));
+    assert(state.d2 == relink_d2 && state.d3 == relink_d3);
+    state = initial(); const ms5::SceneCommandState palette_before = state; const std::vector<std::uint8_t> palette_ram = ram;
+    palette_dependencies[2].data[0] = 1;
+    assert(!ms5::execute_scene_command(ram,script(4,{0}),empty,state,ports,error,&palette_dependencies));
+    assert(ram == palette_ram && same(state,palette_before));
     // Forged decoded metadata cannot redirect execution away from raw source.
     ms5::SceneScript forged = script(0x4c,{0x1234,0x5678}); forged.commands[0].opcode = 0x40; forged.commands[0].operands.clear();
     state = initial();
     assert(ms5::execute_scene_command(ram,forged,empty,state,ports,error));
     assert(get(ram,0xd434) == 0x12345678 && state.d7 == 0x4567004c);
     // Failed resource/node checks preserve every output.
-    const unsigned int unsupported[2] = {4,8}; const unsigned int counts[2] = {1,2};
+    const unsigned int unsupported[1] = {8}; const unsigned int counts[1] = {2};
     ms5::VideoPortWrite marker = {123,456,2}; ports.assign(1,marker);
-    for (unsigned int i = 0; i < 2; ++i) {
+    for (unsigned int i = 0; i < 1; ++i) {
         state = initial(); const ms5::SceneCommandState old = state; const std::vector<std::uint8_t> before = ram;
         assert(!ms5::execute_scene_command(ram,script(unsupported[i],std::vector<unsigned int>(counts[i],0)),empty,state,ports,error));
         assert(ram == before && same(state,old) && ports.size() == 1 && ports[0].value == 456);

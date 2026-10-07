@@ -809,8 +809,8 @@ build/inspect_scene_script: $(SCENE_SCRIPT_SOURCES) $(SCENE_SCRIPT_HEADERS) engi
 build/scene_script_test: $(SCENE_SCRIPT_SOURCES) $(SCENE_SCRIPT_HEADERS) engine/tests/scene_script_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(SCENE_SCRIPT_SOURCES) engine/tests/scene_script_test.cpp -o $@
 
-SCENE_COMMAND_SOURCES = engine/src/scene_command.cpp engine/src/scene_script.cpp engine/src/fixed_data_resource.cpp engine/src/scene_node.cpp engine/src/position_state.cpp
-SCENE_COMMAND_HEADERS = engine/include/ms5/scene_command.h engine/include/ms5/scene_script.h engine/include/ms5/fixed_data_resource.h engine/include/ms5/scene_node.h engine/include/ms5/position_state.h engine/include/ms5/video_port.h
+SCENE_COMMAND_SOURCES = engine/src/main_startup.cpp engine/src/palette_control.cpp engine/src/palette_state.cpp engine/src/scene_command.cpp engine/src/scene_script.cpp engine/src/fixed_data_resource.cpp engine/src/scene_node.cpp engine/src/position_state.cpp
+SCENE_COMMAND_HEADERS = engine/include/ms5/main_startup.h engine/include/ms5/palette_control.h engine/include/ms5/palette_state.h engine/include/ms5/scene_command.h engine/include/ms5/scene_script.h engine/include/ms5/fixed_data_resource.h engine/include/ms5/scene_node.h engine/include/ms5/position_state.h engine/include/ms5/video_port.h
 build/step_scene_command: $(SCENE_COMMAND_SOURCES) $(SCENE_COMMAND_HEADERS) engine/tools/step_scene_command.cpp | build
 	$(CXX) $(CXXFLAGS) $(SCENE_COMMAND_SOURCES) engine/tools/step_scene_command.cpp -o $@
 build/scene_command_test: $(SCENE_COMMAND_SOURCES) $(SCENE_COMMAND_HEADERS) engine/tests/scene_command_test.cpp | build

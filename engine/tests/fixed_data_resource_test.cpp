@@ -139,6 +139,24 @@ int main() {
     check(result.source_cpu_address == 0 && result.source_rom_offset == 0);
     check(result.data.size() == 1048576 && error.empty());
 
+    std::vector<std::uint8_t> banked = bytes;
+    put(banked,8,2); put(banked,12,0x200100); put(banked,16,0x300100);
+    save(path,banked); check(ms5::load_banked_data_resource(path,result,error));
+    check(result.source_cpu_address == 0x200100 && result.source_rom_offset == 0x300100);
+    reject(path,banked,result,error);
+    for (unsigned int kind = 0; kind < 6; ++kind) {
+        std::vector<std::uint8_t> invalid = banked;
+        if (kind == 0) put(invalid,8,1);
+        if (kind == 1) put(invalid,16,0x300101);
+        if (kind == 2) put(invalid,12,0x2fffee);
+        if (kind == 3) put(invalid,16,0x800100);
+        if (kind == 4) invalid[32] ^= 1;
+        if (kind == 5) put(invalid,28,1);
+        const ms5::FixedDataResource unchanged = result; save(path,invalid);
+        check(!ms5::load_banked_data_resource(path,result,error));
+        check(result.data == unchanged.data && result.source_cpu_address == unchanged.source_cpu_address && result.source_rom_offset == unchanged.source_rom_offset);
+    }
+
     const ms5::FixedDataResource before = result;
     check(std::remove(path) == 0);
     check(!ms5::load_fixed_data_resource(path, result, error));
