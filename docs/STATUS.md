@@ -1080,3 +1080,11 @@
 - shared등록loop 변경후 기존main회귀209/32조건 및준비연결2조건통과. 전체make104Python/92C++통과/경고0. runtime-resources에두등록테이블packer추가.
 - 기존palette resource검증에서ffff 비활성등록을실제색ID로조회하던오류수정. 활성34bindings변환검증과비활성4개제외목록을분리했다.
 - 메인리뷰 docs/reviews/0145-stage-preparation.md,규격·명령·한계 docs/analysis/stage-preparation.md. 다음은479ba이후플레이어설정/레코드복구및일반scene script로확장한다. 476dc/47742와pointertable의초기근거를리뷰에남겼고아직동작완료가아니다.
+
+## 2026-10-07 — 스테이지 플레이어 선택·재시작 연결
+- 47742의 signed선택값 제거/정적재시작/1bd2e초기화/49a58난수선택을 기존 C++ 기능으로연결했다. callback0도활성이며D1을stack에서D0로복원하는정수폭을보존한다.
+- 476dc의두gate와stage/area선택을 MS5D stage_players.ms5d에연결했다.1040바이트주소가능창이며선두5pairs/3pointers/원본code겹침을구분한다. container1072bytes SHA2569248616256431f9e81b27ab938bf2d6cc8e108006b7f032929babfa8c1c604e9.
+- 479ba caller를479d0직전까지연결해앞선stage preparation 출력에서실제로이어간다. d681쓰기후LIVE area조회및조건부API검증을보존한다.
+- 원본1899/오류42조건/380ports/6CLI RNG승계/2prep→caller연결통과. 최종보고서 artifacts/stage_players/verification.json SHA2567d82d2427746eff1edea0e1f3659807d1f84db2e6a6327210dae4ef4e7235e77. 모든stage256및area256×3읽기검증은helpers gated; 선두조합80/overlap160실행을자연사용증거와구분했다.
+- 전체make111Python/93C++/경고0,기존game_objects원본회귀149/오류24통과. 메인review0146,분석docs/analysis/stage-players.md.
+- 다음은479d0의area0/비영분기,48180레코드복구와475ca설정,이후scene script연결이다. 플레이어callback전체게임플레이·자연scheduler는미완료다.

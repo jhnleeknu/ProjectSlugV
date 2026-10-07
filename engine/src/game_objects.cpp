@@ -44,6 +44,17 @@ bool first(std::vector<std::uint8_t>& ram, std::size_t object, std::uint32_t& d0
     return second(ram,object,d0,error);
 }
 }
+bool initialize_game_object(std::vector<std::uint8_t>& ram, std::uint32_t address,
+                            std::uint32_t& d0, std::string& error) {
+    if (ram.size() != 65536 || (address & 1U) || address < 0x100000 || address > 0x110000 - 0xc4) {
+        error = "game object initialization requires aligned c4-byte CPU RAM span"; return false;
+    }
+    try {
+        std::vector<std::uint8_t> candidate = ram; std::uint32_t next = d0;
+        if (!first(candidate,address - 0x100000,next,error)) return false;
+        ram.swap(candidate); d0 = next; error.clear(); return true;
+    } catch (const std::bad_alloc&) { error = "cannot allocate game object initialization transaction"; return false; }
+}
 bool reset_game_objects(std::vector<std::uint8_t>& ram, std::uint32_t entry,
                         std::uint32_t& d0, std::string& error) {
     if (ram.size() != 65536 || (entry != 0x1bcfe && entry != 0x1bd12)) {

@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 namespace ms5 {
+// Native1bd2e first setup and its fallthrough into second setup.
+// Address is an aligned complete c4-byte CPU RAM object; errors preserve RAM/D0.
+bool initialize_game_object(std::vector<std::uint8_t>& ram, std::uint32_t address,
+                            std::uint32_t& d0, std::string& error);
 // Native 1bcfe (including fallthrough into 1bd12), or 1bd12 alone.
 // Fixed objects at CPU 100cb8 and 100da8; D0 upper word is preserved.
 // Any callback except 270e is active, including zero. Entry 1bd12 follows
