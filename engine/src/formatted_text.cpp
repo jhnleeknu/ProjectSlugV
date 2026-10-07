@@ -72,7 +72,18 @@ bool parse(const Memory& memory,std::uint32_t& address,std::uint16_t& style,
 }
 bool render(const Memory& memory,const FixedDataResource& font,std::uint8_t glyph,
             std::uint32_t& address,std::uint16_t& cursor,std::uint16_t style,
-            std::vector<VideoPortWrite>& output,std::string& error,bool numeric=false) {
+            std::vector<VideoPortWrite>& output,std::string& error,
+            std::uint32_t renderer,bool numeric=false) {
+    if(renderer==0x3650U) {
+        if(output.size()>99998U) {error="formatted text exceeds100000 port events";return false;}
+        VideoPortWrite write;write.address=0x3c0000U;write.size=4;
+        write.value=(static_cast<std::uint32_t>(cursor)<<16) |
+            ((static_cast<std::uint32_t>(style)&0x0f00U)<<4) |
+            ((static_cast<std::uint32_t>(style)&15U)<<8) | glyph;
+        output.push_back(write);write.size=2;write.value=0x8200U;output.push_back(write);
+        cursor=static_cast<std::uint16_t>(static_cast<unsigned int>(cursor)+0x20U);
+        return true;
+    }
     std::vector<std::uint8_t> bytes;
     if(numeric) {
         // 3a62 supplies3650 for numeric glyph lookahead. Its first byte is48,
@@ -95,7 +106,10 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
                        const FixedDataResource& font,std::uint32_t format_address,
                        std::uint32_t arguments_address,const std::vector<std::uint8_t>& argument_bytes,
                        std::uint16_t cursor,std::uint16_t style,
-                       std::vector<VideoPortWrite>& writes,std::string& error) {
+                       std::vector<VideoPortWrite>& writes,std::string& error,std::uint32_t renderer) {
+    if(renderer!=0x3650U && renderer!=0xe84c8U) {
+        error="formatted text supports renderer3650 or e84c8";return false;
+    }
     if(ram.size()!=65536U) {error="formatted text requires64KiB work RAM";return false;}
     if(argument_bytes.size()>0x1000000U || arguments_address>0xffffffU ||
        argument_bytes.size()>0x1000000U-arguments_address) {
@@ -119,7 +133,7 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
     const Memory memory={pending_ram,resources,arguments_address,argument_bytes};
     putword(pending_ram,state,cursor);putword(pending_ram,state+2,cursor);
     putword(pending_ram,state+4,style);putlong(pending_ram,state+6,format_address);
-    putlong(pending_ram,state+10,0xe84c8U);putlong(pending_ram,state+14,arguments_address);
+    putlong(pending_ram,state+10,renderer);putlong(pending_ram,state+14,arguments_address);
     putword(pending_ram,state+22,0);
     for(unsigned int step=0;step<100000U;++step) {
         std::uint32_t at=longword(pending_ram,state+6);
@@ -165,7 +179,7 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
                 if(kind=='s') {
                     if(!parse(memory,argument,style,line,cursor,glyph,error))return false;
                     putword(pending_ram,state+4,style);putword(pending_ram,state+2,line);
-                    if(!render(memory,font,glyph,argument,cursor,style,pending,error))return false;
+                    if(!render(memory,font,glyph,argument,cursor,style,pending,error,renderer))return false;
                     putlong(pending_ram,state+18,argument);putword(pending_ram,state,cursor);
                     if(!memory.byte(argument,next,error))return false;
                     if(next==0)putword(pending_ram,state+22,width);
@@ -182,14 +196,14 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
                     static const char hex[]="0123456789ABCDEF ";
                     glyph=static_cast<std::uint8_t>(hex[visible?nibble:16U]);
                     std::uint32_t lookahead=0x3650U;
-                    if(!render(memory,font,glyph,lookahead,cursor,style,pending,error,true))return false;
+                    if(!render(memory,font,glyph,lookahead,cursor,style,pending,error,renderer,true))return false;
                     putword(pending_ram,state,cursor);
                 } else {error="formatted text unsupported conversion triggers original trap";return false;}
                 continue;
             }
         }
         cursor=word(pending_ram,state);
-        if(!render(memory,font,glyph,at,cursor,style,pending,error))return false;
+        if(!render(memory,font,glyph,at,cursor,style,pending,error,renderer))return false;
         putword(pending_ram,state,cursor);putlong(pending_ram,state+6,at);
     }
     error="formatted text exceeds100000 execution steps";return false;

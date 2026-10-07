@@ -800,3 +800,11 @@
 - 원본537조건, 포트286개 및 오류5조건 통과. 네 가지 팔레트D1 전달과 실제3dcc 콜백→팔레트→대기→IRQ신호→다음입력 주기를 비교했다. 인터럽트 사이의 CPU 문맥 복구는 명시적 호스트 동작이다.
 - Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0110-callback-frame-flow.md. 분석: docs/analysis/callback-frame-flow.md.
 - 다음은 ec4 앞부분의 진단 텍스트 출력과 ef2 대기를 연결하는 것이다. 이 경로는 renderer3650을 사용하며 기존 포맷터는e84c8 전용이므로 렌더러 차이를 먼저 반영해야 한다. 실제 게임 콜백 본문, SR/RTE/BIOS·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는active다.
+
+
+## 2026-10-07 — 진단 텍스트의 직접 문자 렌더러3650
+
+- 기존3a70포맷터에3650선택을추가했다. 실제renderer주소를RAM에저장하며font/lookahead없이한바이트타일을출력한다. 기본e84c8호출은유지한다.
+- 원본487조건과포트10,426개,오류13조건통과. 실제d56/df0진단4조건포함. 기존289조건회귀와Python73개/C++전체검사도통과했다.
+- 리뷰: docs/reviews/0111-formatted-direct.md. 분석: docs/analysis/formatted-text.md.
+- 다음은진단format/인자표의정규MS5D추출과ec4조건분기·최종D1전달을연결하는것이다. 실제게임콜백본문,SR/RTE/BIOS·장치시간축/Z80및전체부팅은미완료이며목표는active다.

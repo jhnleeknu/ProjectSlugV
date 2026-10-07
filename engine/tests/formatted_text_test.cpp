@@ -57,5 +57,40 @@ int main() {
     resources.push_back(resources[0]);
     assert(!ms5::format_fixed_text(ram,resources,font,0x60000,0x107000,arguments,0x7000,3,writes,error));
     assert(ram==saved);
+    // Renderer3650 consumes one byte per glyph, without a font or lookahead.
+    resources.resize(1); arguments.clear();
+    ms5::FixedDataResource empty_font;
+    resources[0].data[0]='@'; resources[0].data[1]=0x80;
+    resources[0].data[2]=0xff; resources[0].data[3]='A'; resources[0].data[4]=0;
+    assert(ms5::format_fixed_text(ram,resources,empty_font,0x60000,0x1fefe0,arguments,
+                                 0xfff0,0xffff,writes,error,0x3650));
+    assert(writes.size()==8);
+    const std::uint32_t glyph_values[4]={0xfff0ff40U,0x0010ff80U,0x0030ffffU,0x0050ff41U};
+    for(unsigned int i=0;i<4;++i) {
+        assert(writes[2*i].size==4 && writes[2*i].address==0x3c0000U &&
+               writes[2*i].value==glyph_values[i]);
+        assert(writes[2*i+1].size==2 && writes[2*i+1].address==0x3c0000U &&
+               writes[2*i+1].value==0x8200U);
+    }
+    assert(ram[0x4ce0]==0 && ram[0x4ce1]==0 && ram[0x4ce2]==0x36 && ram[0x4ce3]==0x50);
+    const std::vector<std::uint8_t> renderer_ram=ram;
+    const std::vector<ms5::VideoPortWrite> renderer_writes=writes;
+    assert(!ms5::format_fixed_text(ram,resources,empty_font,0x60000,0x1fefe0,arguments,
+                                  0x7000,0xffff,writes,error,0x123456));
+    assert(ram==renderer_ram && writes.size()==renderer_writes.size());
+    for(std::size_t i=0;i<writes.size();++i) {
+        assert(writes[i].size==renderer_writes[i].size &&
+               writes[i].address==renderer_writes[i].address &&
+               writes[i].value==renderer_writes[i].value);
+    }
+    text(resources[0],0,"A%q"); // Fails after a valid glyph was emitted internally.
+    assert(!ms5::format_fixed_text(ram,resources,empty_font,0x60000,0x1fefe0,arguments,
+                                  0x7000,0xffff,writes,error,0x3650));
+    assert(ram==renderer_ram && writes.size()==renderer_writes.size());
+    for(std::size_t i=0;i<writes.size();++i) {
+        assert(writes[i].size==renderer_writes[i].size &&
+               writes[i].address==renderer_writes[i].address &&
+               writes[i].value==renderer_writes[i].value);
+    }
     std::cout << "Formatted text state, padding, external arguments and rollback passed\n";
 }

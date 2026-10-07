@@ -130,8 +130,22 @@ bool write_bytes(const std::string& path, const std::uint8_t* bytes,
 } // namespace
 
 int main(int argc, char** argv) {
+    std::uint32_t renderer = 0xe84c8U;
+    if (argc > 1 && std::string(argv[1]) == "--renderer") {
+        if (argc != 12) {
+            std::cerr << "usage: format_text [--renderer CPU] INPUT_RAM OUTPUT_RAM MEMORY_MS5D FONT_MS5D FORMAT_CPU ARGUMENT_CPU CURSOR STYLE OUTPUT_PORTS\n";
+            return 2;
+        }
+        if (!parse_integer(argv[2], 0xffffffffU, renderer) ||
+            (renderer != 0x3650U && renderer != 0xe84c8U)) {
+            std::cerr << "renderer must be decimal or 0x-prefixed CPU address 0x3650 or 0xe84c8\n";
+            return 1;
+        }
+        argc -= 2;
+        argv += 2;
+    }
     if (argc != 10) {
-        std::cerr << "usage: format_text INPUT_RAM OUTPUT_RAM MEMORY_MS5D FONT_MS5D FORMAT_CPU ARGUMENT_CPU CURSOR STYLE OUTPUT_PORTS\n";
+        std::cerr << "usage: format_text [--renderer CPU] INPUT_RAM OUTPUT_RAM MEMORY_MS5D FONT_MS5D FORMAT_CPU ARGUMENT_CPU CURSOR STYLE OUTPUT_PORTS\n";
         return 2;
     }
     std::uint32_t format_address;
@@ -176,7 +190,7 @@ int main(int argc, char** argv) {
     if (!ms5::format_fixed_text(ram, resources, font, format_address,
                                 arguments_address, argument_bytes,
                                 static_cast<std::uint16_t>(cursor),
-                                static_cast<std::uint16_t>(style), writes, error)) {
+                                static_cast<std::uint16_t>(style), writes, error, renderer)) {
         std::cerr << error << '\n';
         return 1;
     }

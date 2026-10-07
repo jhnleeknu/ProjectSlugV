@@ -5,7 +5,7 @@
 
 ## 원본 구조
 
-3a70은 A3=104cd6으로 설정하고3950 초기화 뒤396e를 carry가 설정될 때까지 호출한다. A0는 format, A1은 renderer(현재 e84c8), A2는 BE32 인자 포인터 배열이다. 각 인자는 문자열 또는 숫자 원시 byte를 가리킨다. C printf와는 다르다.
+3a70은 A3=104cd6으로 설정하고3950 초기화 뒤396e를 carry가 설정될 때까지 호출한다. A0는 format, A1은 renderer(e84c8 또는3650), A2는 BE32 인자 포인터 배열이다. 각 인자는 문자열 또는 숫자 원시 byte를 가리킨다. C printf와는 다르다.
 
 104cd6부터24바이트 RAM 상태:
 
@@ -65,3 +65,21 @@ CLI는 하나의 MS5D 창과 RAM 인자 배열을 받는다. 라이브러리는 
 ## 남은 연결
 
 9602/9802의 스테이지/구역 상태 변경, 이 포맷터가 남긴 RAM/레지스터와 일반행 다시그리기, 구분선 출력 및 전체a370 프레임 연결이 남았다. 주소0 이름 pointer 등 실제 콜백 경로는 필요한 ROM창을 확보하여 별도 검증해야 한다. 다른 renderer, CPU 전체 레지스터/flags, 원본의 스택 잔여값과 최종픽셀/실행 타이밍은 이번 동등성 주장에 포함하지 않는다.
+
+## 직접 문자 렌더러3650
+
+메인ec4의 진단 출력은e84c8이 아닌3650을 A1로 전달한다. `format_fixed_text`의 선택적 마지막 renderer 인자로3650/e84c8을 지정할 수 있다. 기본값은 기존e84c8이며 다른 주소는 지원 오류다. RAM104ce0.long에는 실제 선택 renderer 주소를 저장한다.
+
+3650은D0의VRAM cursor와D1.style, D2.glyph로3c0000.long을 쓴다. style에byte단위4bit shift와word단위4bit shift를 차례로 적용하므로 출력하위word는 `((style & 0x0f00) << 4) | ((style & 0x000f) << 8) | glyph`다. 이후cursor에20을word로 더하고3c0000.word에8200을 쓴다. cursor는16비트로 순환한다.
+
+이 경로는 글꼴 테이블, 다음문자, `@` 대체나두바이트glyph를 조회하지 않는다. API의font가 비어 있어도 가능하다. CLI는 기존자리를 유지하므로FONT_MS5D를 여전히 로드하지만3650렌더링에서는 사용하지 않는다. 포맷의%s/%x/%%와제어문자, RAM상태 및 오류롤백은 기존파서를 공유한다.
+
+```sh
+build/format_text --renderer 0x3650 INPUT_RAM OUTPUT_RAM MEMORY_MS5D FONT_MS5D FORMAT_CPU ARGUMENT_CPU CURSOR STYLE OUTPUT_PORTS
+```
+
+실제 진단format은CPUd56, 인자포인터20개는df0..e3f다. 문자열안에는NUL인제어문자피연산자가 있으므로 첫NUL까지를문자열전체로 간주하면 안 된다. 검증용원본창d56..e49에는 e40..e49의10바이트 코드도 포함되며 이를순수텍스트로분류하지 않는다. ec4조건과진단출력후레지스터전달의전체연결은후속작업이다.
+
+3650 검증은 `.venv/bin/python tools/verify_formatted_direct.py`의487조건과포트10,426개, 오류13조건을통과했다. 합성format/인자는작업RAM108000..10bfff 등에두고원본첫1MiB의불변을확인했다. 원본d56/df0의진단출력4조건을포함한다. 253개literal byte와제어문자·폭·숫자·문자열·cursor경계에서전체RAM/포트가일치했고font영역읽기는0이었다. 보고서 `artifacts/formatted_direct/verification.json` SHA256: `172b71a08e5a0c40c557e18dd827ca13e54272c2229e1b8bc2e995bbd72e2b2e`.
+
+기본e84c8 경로는기존 `verify_formatted_text.py`의289조건(실제스테이지이름59개포함)을재검증했다. 이기존검사는원본문자열을fixture창으로옮기는방식이며새3650검사의원본전체불변주장과구분한다.
