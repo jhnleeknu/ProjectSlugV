@@ -5,11 +5,14 @@ import json
 from pathlib import Path
 import re
 import capstone
-from disassemble_program import load_verified_program
+from disassemble_program import disassemble_range,load_verified_program
 from inventory_game_initialization import asm,coverage_references
 from inventory_object_removal import listing,controls,fields
+from inventory_game_ready import fixed_references
 PROGRAM_SHA256='29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f'
 ENTRIES=(0x1a5a4,0xca48,0x1c5b0,0x4e24e,0x9056)
+FULL_WINDOWS=((0x1a7a8,0x1a910),(0x16fac,0x16fee),(0x19e30,0x19e60),
+              (0x19cee,0x19d08),(0x197da,0x19802),(0x1724c,0x17292),(0x1afda,0x1b160))
 
 
 def main():
@@ -37,6 +40,36 @@ def main():
             first_linear_rts_seen=rows[-1]['mnemonic']=='rts',controls=controls(rows),memory_operands=fields(rows),
             existing_references=coverage_references(root,address),
             classification='Direct-target bounded helper candidate only; no recursive reachability/behavior claim.'))
+    windows=[]
+    for start,end in FULL_WINDOWS:
+        rows=disassemble_range(program,start,end-start,start)
+        assert all(row['rom_offset']+row['size']<=end for row in rows)
+        assert sum(row['size'] for row in rows)==end-start
+        windows.append(dict(cpu_address=start,rom_offset=start,end_exclusive=end,max_bytes=end-start,
+            decoded_end_exclusive=end,instructions=rows,controls=controls(rows),memory_operands=fields(rows),
+            fixed_address_reference_candidates=fixed_references(rows),
+            rts_instruction_addresses=[row['cpu_address'] for row in rows if row['mnemonic']=='rts'],
+            undecoded_words=[row for row in rows if row['classification']!='candidate_instruction'],
+            classification='Full explicit window; every byte retained, does not stop at firstRTS.',
+            insufficient_boundary_evidence=start==0x1afda,
+            code_data_caveat='1b128..1b160 follows RTS1b126 and contains undecoded words plus syntactically decoded operands. '
+                'This tail is not established code; its instructions/references are candidates only.' if start==0x1afda else
+                'Explicit boundaries only; multipleRTS or finalJMP do not prove whole reachable routine ownership.'))
+    assert program[0x17292:0x17298]==bytes.fromhex('43e800807000')
+    repeated=program[0x17298:0x18298]
+    assert repeated==bytes.fromhex('22c0')*2048
+    assert program[0x18298:0x1829a]==bytes.fromhex('4e75')
+    pattern=dict(entry_cpu_address=0x17292,entry_rom_offset=0x17292,
+        prefix_instructions=disassemble_range(program,0x17292,6,0x17292),
+        repeated_start_cpu_address=0x17298,repeated_start_rom_offset=0x17298,
+        repeated_end_exclusive=0x18298,repeated_instruction_raw='22c0',instruction_count=2048,
+        repeated_code_size=4096,repeated_code_sha256=hashlib.sha256(repeated).hexdigest(),
+        rts_cpu_address=0x18298,rts_raw='4e75',pattern_asserted=True,
+        static_store_evidence='LEA80(A0),A1;MOVEQ0,D0;2048 consecutive MOVE.L D0,(A1)+;RTS.',
+        zero_store_size=8192,caller_a0_zero_spans=[dict(caller_instruction_cpu_address=0x1a648,a0=0x109156,
+            zero_start_cpu_address=0x1091d6,zero_end_exclusive=0x10b1d6),
+            dict(caller_instruction_cpu_address=0x1a654,a0=0x10b1d6,zero_start_cpu_address=0x10b256,zero_end_exclusive=0x10d256)],
+        classification='Exact rawcode assertion and mechanical store spans for these caller inputs; no runtime/wholecaller effects claimed.')
     families={
         'column':['column_control.h'],
         'sprite':['sprite_pool.h','sprite_queue.h','sprite_producer.h','sprite_prepare_queue.h','sprite_refresh_queue.h'],
@@ -58,21 +91,32 @@ def main():
         explicit_entries=blocks,primary_instruction_count=sum(len(block['instructions']) for block in blocks),
         primary_direct_calls=[entry for block in blocks for entry in block['control_targets'] if entry['mnemonic'].split('.')[0] in ('jsr','bsr')],
         helper_candidate_count=len(helpers),helper_candidates=helpers,reuse_api_candidates=candidates,
+        full_explicit_windows=windows,full_window_instruction_or_word_count=sum(len(window['instructions']) for window in windows),
+        exact17292_pattern=pattern,
+        insufficient_ranges=[dict(start=0x1afda,end_exclusive=0x1b160,
+            evidence='Undecoded words and unclassified tail after1b126 RTS; end not established as routine/code boundary.')],
         limitations='No original execution was observed; automatic decoding is not completed analysis. '
             'First linear RTS is a bounded endpoint, not proof every branch/callee returns or that all effects '
             'are represented. Internal branches and their raw target addresses are preserved but not followed. '
             'Helper128byte windows may truncate a longer routine or encounter data; undecoded words are explicit. '
             'disassemble_range handles incomplete instructions and every accepted row is range checked. '
+            'Full explicit windows preserve firstRTS successors without claiming them executable. '
+            'In1afda..1b160, tail1b128..1b160 remains code/data unknown. '
+            'Exact17292 pattern is rawinstruction evidence; othercalleeeffects/registercontracts remain unresolved. '
             'Exact address textual references are distinguished from family API candidates; no reuse is '
             'declared behaviorally equivalent. Memory operand fields and port constants are exact syntactic '
             'evidence, without inferred background/scene meaning, register outputs or hardware timing.')
     path=folder/'report.json';path.write_text(json.dumps(report,indent=2)+'\n')
     text=['; Original program SHA256 '+PROGRAM_SHA256,'; Candidate bounded listings only; no whole-path/behavior claim.']
-    for label,entries in (('Explicit assigned entry',blocks),('Direct-target helper candidate',helpers)):
+    for label,entries in (('Explicit assigned entry',blocks),('Direct-target helper candidate',helpers),('Full explicit window',windows)):
         for block in entries:text.extend(['','; '+label+' %06x..%06x, max%x bytes'%(block['rom_offset'],block['decoded_end_exclusive'],block['max_bytes']),asm(block['instructions'])])
+    text.extend(['','; Exact17292 prefix; repeated body summarized.',asm(pattern['prefix_instructions']),
+        ';17298..18298:22c0 repeated2048 times, sha256 '+pattern['repeated_code_sha256'],
+        '018298  4e75                     rts'])
     asm_path=folder/'inventory.asm';asm_path.write_text('\n'.join(text)+'\n')
     print(json.dumps(dict(instructions=report['primary_instruction_count'],direct_calls=len(report['primary_direct_calls']),
-        unique_helper_targets=len(helpers),primary_endpoints=[hex(block['decoded_end_exclusive']) for block in blocks],
+        unique_helper_targets=len(helpers),full_windows=len(windows),full_window_rows=report['full_window_instruction_or_word_count'],
+        full_window_undecoded_words=sum(len(window['undecoded_words']) for window in windows),pattern17292_asserted=True,primary_endpoints=[hex(block['decoded_end_exclusive']) for block in blocks],
         report_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),asm_sha256=hashlib.sha256(asm_path.read_bytes()).hexdigest())))
 
 

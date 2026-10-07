@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++11 -O2 -Wall -Wextra -pedantic -Iengine/include
 PYTHON = .venv/bin/python
 
 .PHONY: all test runtime-resources setup-tools
-all: build/step_game_ready build/restart_game build/reset_game_screen build/remove_object build/allocate_object build/finish_game build/initialize_game build/reset_game_objects build/configure_game_record build/reset_game_subsystem build/prepare_game build/step_game_startup build/step_random build/start_main build/prepare_main_frame build/dispatch_stage_area_menu build/dispatch_stage_group_menu build/dispatch_debug_menu build/initialize_interrupt build/step_irq_envelope build/step_interrupt build/queue_interrupt_task build/restore_interrupt_task build/trace_palette_transfer build/refresh_column_controls build/process_credit_request build/step_sound build/sound_word build/enqueue_sound_byte build/service_sound_queue build/poll_frame_gate build/step_input_control build/begin_input_frame build/update_input_status build/initialize_input build/sample_input build/step_control_caller build/consume_control build/advance_control_counter build/video_control build/step_control build/step_control_menu build/finish_control_menu build/step_control_wait build/start_control_menu build/activate_control build/step_menu_frame build/update_menu_header build/redraw_menu_stack build/query_stage build/stage_state build/trace_table_text build/dispatch_menu_event build/push_menu build/navigate_menu build/select_menu_input build/draw_menu_text build/trace_direct_text build/step_menu_motion build/trace_menu_border build/init_menu build/measure_fixed_text build/check_menu build/read_control_request build/snapshot_palette build/setup_palette_fill build/transfer_palette_banks build/transfer_palette build/control_palette build/step_palette_frame build/prepare_palette build/palette_allocator build/step_animation_data build/step_animation_resource build/step_animation build/decode_animation_draw build/emit_composition_blocks build/emit_composition_variant build/configure_sprite_pool build/produce_sprite_queue build/prepare_sprite_queue build/radix_sprite_queue build/refresh_sprite_queue build/emit_composition_reverse build/sort_sprite_queue build/parse_sprite_scanline build/emit_sprite_resource build/check_tiles build/reset_object build/init_objects build/upload_palette build/init_palette build/check_palettes build/trace_fixed_text build/render_fixed_words build/convert_color_words build/render_text_scene build/update_position build/emit_composition build/emit_composition_refresh build/format_text build/step_main_debug
+all: build/step_scene_node build/step_game_ready build/restart_game build/reset_game_screen build/remove_object build/allocate_object build/finish_game build/initialize_game build/reset_game_objects build/configure_game_record build/reset_game_subsystem build/prepare_game build/step_game_startup build/step_random build/start_main build/prepare_main_frame build/dispatch_stage_area_menu build/dispatch_stage_group_menu build/dispatch_debug_menu build/initialize_interrupt build/step_irq_envelope build/step_interrupt build/queue_interrupt_task build/restore_interrupt_task build/trace_palette_transfer build/refresh_column_controls build/process_credit_request build/step_sound build/sound_word build/enqueue_sound_byte build/service_sound_queue build/poll_frame_gate build/step_input_control build/begin_input_frame build/update_input_status build/initialize_input build/sample_input build/step_control_caller build/consume_control build/advance_control_counter build/video_control build/step_control build/step_control_menu build/finish_control_menu build/step_control_wait build/start_control_menu build/activate_control build/step_menu_frame build/update_menu_header build/redraw_menu_stack build/query_stage build/stage_state build/trace_table_text build/dispatch_menu_event build/push_menu build/navigate_menu build/select_menu_input build/draw_menu_text build/trace_direct_text build/step_menu_motion build/trace_menu_border build/init_menu build/measure_fixed_text build/check_menu build/read_control_request build/snapshot_palette build/setup_palette_fill build/transfer_palette_banks build/transfer_palette build/control_palette build/step_palette_frame build/prepare_palette build/palette_allocator build/step_animation_data build/step_animation_resource build/step_animation build/decode_animation_draw build/emit_composition_blocks build/emit_composition_variant build/configure_sprite_pool build/produce_sprite_queue build/prepare_sprite_queue build/radix_sprite_queue build/refresh_sprite_queue build/emit_composition_reverse build/sort_sprite_queue build/parse_sprite_scanline build/emit_sprite_resource build/check_tiles build/reset_object build/init_objects build/upload_palette build/init_palette build/check_palettes build/trace_fixed_text build/render_fixed_words build/convert_color_words build/render_text_scene build/update_position build/emit_composition build/emit_composition_refresh build/format_text build/step_main_debug
 
 build:
 	mkdir -p build
@@ -11,7 +11,7 @@ build:
 build/check_tiles: engine/src/tile_resource.cpp engine/tools/check_tiles.cpp engine/include/ms5/tile_resource.h | build
 	$(CXX) $(CXXFLAGS) engine/src/tile_resource.cpp engine/tools/check_tiles.cpp -o $@
 
-build/tile_resource_test: engine/src/tile_resource.cpp engine/tests/tile_resource_test.cpp engine/include/ms5/tile_resource.h | build
+build/tile_resource_test: build/scene_node_test engine/src/tile_resource.cpp engine/tests/tile_resource_test.cpp engine/include/ms5/tile_resource.h | build
 	$(CXX) $(CXXFLAGS) engine/src/tile_resource.cpp engine/tests/tile_resource_test.cpp -o $@
 
 build/reset_object: engine/src/object_state.cpp engine/tools/reset_object.cpp engine/include/ms5/object_state.h | build
@@ -43,6 +43,7 @@ test: build/game_ready_test build/game_restart_test build/object_removal_test bu
 	./build/random_state_test
 	./build/game_reset_test
 	./build/game_initialization_test
+	./build/scene_node_test
 	./build/game_ready_test
 	./build/game_restart_test
 	./build/object_removal_test
@@ -702,3 +703,10 @@ build/step_game_ready: $(GAME_READY_SOURCES) $(GAME_READY_HEADERS) engine/tools/
 	$(CXX) $(CXXFLAGS) $(GAME_READY_SOURCES) engine/tools/step_game_ready.cpp -o $@
 build/game_ready_test: $(GAME_READY_SOURCES) $(GAME_READY_HEADERS) engine/tests/game_ready_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(GAME_READY_SOURCES) engine/tests/game_ready_test.cpp -o $@
+
+SCENE_NODE_SOURCES = engine/src/scene_node.cpp engine/src/position_state.cpp
+SCENE_NODE_HEADERS = engine/include/ms5/scene_node.h engine/include/ms5/position_state.h
+build/step_scene_node: $(SCENE_NODE_SOURCES) $(SCENE_NODE_HEADERS) engine/tools/step_scene_node.cpp | build
+	$(CXX) $(CXXFLAGS) $(SCENE_NODE_SOURCES) engine/tools/step_scene_node.cpp -o $@
+build/scene_node_test: $(SCENE_NODE_SOURCES) $(SCENE_NODE_HEADERS) engine/tests/scene_node_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(SCENE_NODE_SOURCES) engine/tests/scene_node_test.cpp -o $@

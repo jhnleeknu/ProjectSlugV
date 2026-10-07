@@ -83,20 +83,38 @@ PVC 절대 word 저장은 네 개다. `1a5aa`의 `33fc2000002ffff2`는 주소2ff
 
 ## 메인의 추가 원시 바이트 확인
 
-다음 근거는 초기 bounded 목록 이후 메인이 원본을 직접 확인해 전달한 내용이다. 현재 목록 도구가 이 긴 구간과 모든 분기를 자동 재현하는 것은 아니므로 별도 재생성 검사를 다음 작업으로 남긴다.
+다음 근거는 초기 bounded 목록 이후 메인이 원본을 직접 확인한 내용이며, 이제 `inventory_stage_startup.py`가17292의 정확한 바이트 패턴과 지정한 추가 명령 창을 재현한다. 명령 창을 보존하는 것과 모든 분기의 동작을 해석하는 것은 별개다.
 
-`17292`는 A1=A0+80, D0 전체=0을 설정한다. canonical 프로그램의 `[17298,18298)`는 정확히 `22c0` 명령2048개의 연속 바이트와 일치하며 `18298`은 `4e75` RTS다. 각각 long 저장이므로 총8192바이트다. 호출부 A0=`109156`에 대응하는 저장 범위는 `[1091d6,10b1d6)`, A0=`10b1d6`에 대응하는 범위는 `[10b256,10d256)`다. 이 명령 반복과 범위는 원시 근거이며 다른 callee의 부작용을 포함하는 최종 상태 계약은 아니다.
+`17292`의 prefix `43e800807000`도 도구에서 assert한다. 이 명령은 A1=A0+80, D0 전체=0을 설정한다. canonical 프로그램의 `[17298,18298)`는 정확히 `22c0` 명령2048개의 연속 바이트와 일치하며 `18298`은 `4e75` RTS다. 각각 long 저장이므로 총8192바이트다. 호출부 A0=`109156`에 대응하는 저장 범위는 `[1091d6,10b1d6)`, A0=`10b1d6`에 대응하는 범위는 `[10b256,10d256)`다. 이 명령 반복과 범위는 원시 근거이며 다른 callee의 부작용을 포함하는 최종 상태 계약은 아니다.
 
-`1a7a8`의 메인 확인 끝은 `1a90e`의 RTS이며, 내부에서 `43ea8`, `1724c`, `1726c`, `1728c`, `1afda`, `19e64`를 호출한다. 기존 `update_position`은 `43e38`/`43ea8`의 RAM 효과만 지원하므로 그 API를 재사용해도 이 호출자의 레지스터 계약이 충족되는지는 별도 확인이 필요하다. 분기·반복·다른 callee의 효과는 아직 이 문서에서 해석하지 않는다.
+`1a7a8`의 메인 확인 끝은 `1a90e`의 RTS이며, 내부에서 `43ea8`, `1724c`, `1726c`, `1728c`, `1afda`, `19e64`를 호출한다. 기존 `update_position`은 `43e38`/`43ea8`의 RAM 효과만 지원한다. 이를 사용하는 신규 `scene_node`가 개별 helper의 D0/D1/D3/A0/A1 계약을 추가하는 작업은 [scene-node.md](scene-node.md)에 기록한다. 이것으로 `1a7a8` 전체 호출자 계약까지 완료됐다고 보지는 않는다. 분기·반복·다른 callee의 효과는 아직 이 문서에서 해석하지 않는다.
 
 `1afda`는 RAM10f000의 bit3/4에 따라 분기한다. 따라서 초기 D0=0/A0=0이라는 사실만으로 `1a5a4` 전체를 단순 zero 작업으로 축약할 수 없다. 메인이 확인한 `1b07c..1b0de` 경로에는 초기 D2=27/D3=1f와 DBRA 반복으로40열×32행의 VRAM3c0000 long 쓰기가 있다. 그 하위 `1b0e0`은 고정 표 `1af12`/`1afd2`를 참조한다. 임의 debug flag까지 동등하게 지원하려면 이 표의 원본 MS5D 리소스 계약이 필요할 가능성이 있으나 아직 미정이다. 이 경로는 미복원이며 기본 flag0만을 전체 완료 기준으로 축소하지 않는다.
 
 ## 재사용 후보와 남은 검토
 
-주소 검색에서는 위16개의 `1a5a4` callee에 대한 기존 엔진 구현 근거를 찾지 못했다. `column_control`, `sprite_pool`/`sprite_queue`/`sprite_producer`/prepare·refresh queue, `video_control`, `position_state`, palette 관련 API는 구현 가족을 탐색하기 위한 후보일 뿐 동일 주소·동일 효과의 증거가 아니다. 특히 `43e22`를 기존 `update_position`과 동일하다고 치환하지 않는다.
+초기 주소 검색에서는 위16개의 `1a5a4` callee에 대한 기존 엔진 구현 근거를 찾지 못했다. 이후17292와 하위 좌표 helper를 `scene_node`로 연결하는 작업이 진행 중이며 검증 상태는 별도 문서에 기록한다. `column_control`, `sprite_pool`/`sprite_queue`/`sprite_producer`/prepare·refresh queue, `video_control`, `position_state`, palette 관련 API는 구현 가족을 탐색하기 위한 후보일 뿐 동일 주소·동일 효과의 증거가 아니다. 특히 `43e22`를 기존 `update_position`과 동일하다고 치환하지 않는다.
 
 `9056`의107def.byte 저장은 기존 `main_startup.cpp`와 `game_startup.cpp`에 주소/값 참조가 있다. `289e` 판정은 [game-continuation.md](game-continuation.md)의 메인 분석과 연결되지만, 이 목록 자체는 독립 실행 검증을 추가하지 않는다. 전체 `1c5b0`와 초기 `477e4`를 기존 API 조합으로 대체할 수 있는지는 메인의 효과·레지스터·오류 경로 리뷰 이후 판단한다.
 
-현재 조사 도구는 `disassemble_range`의 실길이 검사를 사용한다. `1a5a4`를128바이트로 자르면 `1a620`의 절대 CLR.B가 잘리므로 이 진입만 최대512바이트로 확대했다. 그 결과 첫 RTS는 `1a73a`, 끝 exclusive는 `1a73c`다. 다른 진입 끝은 ca50/1c5ea/4e254/9060이다. helper 후보는 최대128바이트와 첫 선형 RTS/undecoded word 경계로 제한된다. 따라서 더 짧은 첫 RTS 뒤의 별도 분기 경로, 잘린 명령 이후, 코드·데이터 불명확 구간을 완료된 함수 분석으로 취급하지 않는다. 도구 개선을 추가 실행하기보다 이 제한을 보존한 뒤 다음 단계에서 각 callee의 실제 CFG와 부작용을 확인해야 한다.
+현재 조사 도구는 `disassemble_range`의 실길이 검사를 사용한다. `1a5a4`를128바이트로 자르면 `1a620`의 절대 CLR.B가 잘리므로 이 진입만 최대512바이트로 확대했다. 그 결과 첫 RTS는 `1a73a`, 끝 exclusive는 `1a73c`다. 다른 진입 끝은 ca50/1c5ea/4e254/9060이다. helper 후보는 최대128바이트와 첫 선형 RTS/undecoded word 경계로 제한된다. 따라서 더 짧은 첫 RTS 뒤의 별도 분기 경로, 잘린 명령 이후, 코드·데이터 불명확 구간을 완료된 함수 분석으로 취급하지 않는다. 확장 조사에서는 이 기존 first-RTS 목록과 별도로 일곱 개의 전체 지정 창을 보존한다: `1a7a8..1a910`, `16fac..16fee`, `19e30..19e60`, `19cee..19d08`, `197da..19802`, `1724c..17292`, `1afda..1b160`(모두 끝 exclusive). 합계248개의 명령 후보/undecoded word를 저장하며 첫 RTS 뒤도 버리지 않는다. `197da` 창에는197ea/19800의 두 RTS가, `1724c` 창에는1726a/1728a의 RTS와1728c의43ea8 tail JMP가 있다. `19e30` 창의 끝에는16fee tail JMP가 있다.
 
-재생성 명령은 `.venv/bin/python tools/inventory_stage_startup.py`다. 작성 시점의 `artifacts/stage_startup/inventory.asm` SHA256은 `adf864ea601193ad7d543bc0124e1dcd7af021edcf87f28b7e275fe2c26a1407`이고 report는 `6664908c593cd78cb6b8b8763b6df4e4541d093b84eae917e81a08c769330928`이다. report의 텍스트 주소 참조는 문서 추가로 재생성 시 달라질 수 있다. 이번 문서 작업은 도구·C++·STATUS·리뷰 기록·ROM을 수정하지 않는다.
+`1afda` 확장 창의 `1b128..1b160`은1b126 RTS 뒤의 데이터 가능성이 있는 구간이다. 여덟 개의 undecoded word와 디코더가 명령처럼 표시한 피연산자가 섞여 있다. 이 tail의 명령·참조는 확인된 실행 코드로 사용하지 않으며1b160을 함수 끝으로 확정하지 않는다. 다른 창 역시 명시한 경계의 바이트 보존이지 callee 부작용·반복 종료의 완료 판정이 아니다.
+
+재생성 명령은 `.venv/bin/python tools/inventory_stage_startup.py`다. 작성 시점의 `artifacts/stage_startup/inventory.asm` SHA256은 `2c3da050a743368d9e118efc2cc34c15f306d8f3043e1b7681785bda01ce3066`이고 report는 `3ce6dd670d4cf77310bc08135a6986133e2db51907f6ddd41606806b15a0fe19`이다. report의 텍스트 주소 참조는 문서 추가로 재생성 시 달라질 수 있다. 이번 문서 작업은 도구·C++·STATUS·리뷰 기록·ROM을 수정하지 않는다.
+
+## 원본 1a5a4의 제한된 실행 관측
+
+메인은 `tools/probe_stage_initialization.py`와 `artifacts/stage_initialization/probe.json`의 최종 결과를 직접 확인했다. 최종 report SHA256은 `18c241850f4c7e0adf715963cbe3bb98f653590cacb97e12715e9afd458c4e05`다. zero/seeded RAM, 원본2790+3ef2 초기화 여부, RAM10f000 bit 조합0/8/16/24를 조합한16개 조건 모두 RTS에 도달했다. 입력 A0=0/D0=0으로 한정된 관측이다. 일반 nonzero A0 script는 검증하지 않았다.
+
+bit 조합0에서는4개의 PVC word 쓰기, 나머지8/16/24에서는4개의 PVC와1280개의 VRAM 쓰기를 합친1284개의 포트 쓰기가 관측됐다. 외부 read는0회였으며 모든 조건의 반환 D0=0, D1/D3=`01000000`이었다. 다른 레지스터의 값은 보고서 원본을 근거로 읽으며 이 문서에서 일반 보존 계약으로 확대하지 않는다. 이 probe는 C++ 동등성이나 전체 callback477e4 실행을 검증한 것이 아니다.
+
+PVC2ffff2=2000/1000과2ffff0=0에 대응하는 source bank mapping은 probe의 명시한 모델 조건이다. 실제 뱅크 전환 전체, 임의 bank 상태 또는 자연 하드웨어 실행과의 동등성까지 검증한 것은 아니다. 메인 리뷰에서 초기 Capstone hook size가 짧아 call 표시가 틀린 문제가 발견됐으며,24바이트 full window와 canonical raw bytes 검증으로 재생성한 최종 report만 인용한다. 폐기된 짧은 창의 디코딩을 실행 근거로 사용하지 않는다.
+
+## A0=0/D0=0 호출자에 대한 메인의 정적 추론
+
+다음은 위16개 관측과 일치하는 메인의 명령 해석이며, probe 결과 자체와 구분한다. caller477e4의 A0=0/D0=0 조건에서 `1a07a`는 RAMd412/d416을0으로, `19768`은 d3b4와d3b8/d3ba를0으로 만든다는 해석이다. `1a26a`는 null script에서 바로 RTS하며 `199d4`는 D7=0을 만든다.
+
+이에 따라 `1a666`의0/0 비교는 `1a67c`로 이어지고, `1a682`의0/0 비교 뒤 D7.low와d418은0이다. `1a6aa`에서 d418=0/d41c=0을 비교하므로 해당 반복은1회라는 추론이다. null table의 `197da`는 D7.low=7fff를 반환해 d41e에 저장되며, `1a714`의 unsigned 비교로 추가 `1a29e` 호출을 건너뛴다. `1a414`는 d40e=0 조건에서 RTS한다.
+
+이 해석은 고정 caller 입력에 대한 다음 구현 계약의 후보 근거다. nonzero script/table이나 임의 debug flag 구현을 동일한 단순 경로로 치환하는 근거로 쓰지 않는다. 실행 probe의16개 조건과 일치해도 모든 입력·callee 레지스터·CCR 계약이 확정된 것은 아니다.

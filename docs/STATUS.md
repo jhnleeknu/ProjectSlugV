@@ -1037,3 +1037,13 @@
 - 전체 `make -j3 all test` 통과: Python88검사·C++86 test executable, 경고·오류0. 로그 `artifacts/game_ready_build_test.log`. 상세 `docs/analysis/game-ready.md`, 메인리뷰 `docs/reviews/0140-game-ready.md`.
 - stage startup을5개 명시진입/111명령후보/23직접호출/17helper후보 및14 API family 후보로 목록화했다. `artifacts/stage_startup/report.json` SHA256 `6664908c593cd78cb6b8b8763b6df4e4541d093b84eae917e81a08c769330928`. Capstone5.0.6의 bounded 디코딩이며 원본 실행은 관측하지 않았다. 후보분류·기존API 참조를 의미확정이나 동등성 근거로 취급하지 않는다.
 - 다음은477e4가 호출하는1a5a4의 복잡한 초기화와 후속 stage 연결 분석이다. 이번에 callbacks477e4/e66aa는 설치만 확인하고 실행하지 않았으며 BIOS c00444도 경계에서 멈췄다. 자연scheduler·전체스테이지게임플레이와 전체복원 목표는 계속 진행 중이다.
+
+
+## 2026-10-07 — stage 원본 관측과 scene-node 기반 함수
+
+- `inventory_stage_startup.py`가 일곱 전체 지정 창의248개 명령 후보/undecoded word를 추가하고17292의 prefix·22c0×2048·RTS를 assert한다. first-RTS 목록과 구분하며1b128..1b160은 데이터 가능성이 있는 미확정 구간이다. 보고서 SHA256 `3ce6dd670d4cf77310bc08135a6986133e2db51907f6ddd41606806b15a0fe19`.
+- 원본1a5a4 probe는 입력 A0=0/D0=0의16개 조건 모두 RTS에 도달했다. flag0은4 PVC, f000 bits8/16/24는4 PVC+1280 VRAM 쓰기였고 외부 read0/D0=0/D1=D3=01000000이다. 보고서 SHA256 `18c241850f4c7e0adf715963cbe3bb98f653590cacb97e12715e9afd458c4e05`. 이는 제한된 원본 관측이며 일반 script/실제 PVC 전환이나 C++1a5a4 동등성 검사가 아니다. 짧은 hook 바이트 디코딩 오류는24바이트 창과 canonical raw 검증으로 수정한 최종 결과만 수용했다.
+- `scene_node`는43dda/16fac 초기화,43e22/16fee parent 설정,43e38/43ea8/1728c 갱신,1724c/1726c 정수 폭·잔여 carry 계산과17292의8192바이트 clear를 연결했다. 전체 RAM/D0/D1/D3/A0/A1 transaction을 보장하며 다른 레지스터/CCR는 계약 밖이다.
+- 독립 원본 비교1904조건·오류94조건·8승계시퀀스가 통과했다. 승계의48호출은1904조건에 포함되며 실제 CLI RAM/레지스터 출력을 운반한다. set의 parent/위치는 명시적hostfixture다. MMIO0, 원본코드변경0. 보고서 SHA256 `c900dfc01d94c31633856b8ffae34478ce9ad281366b9322e23ccebd85a0c1c6`.
+- 전체 `make -j3 all test` exit0: Python88검사·C++87 test executable, warning/error0. 로그 `artifacts/scene_node_build_test.log`, 메인 리뷰 `docs/reviews/0141-scene-node.md`, 상세 `docs/analysis/scene-node.md`와 `docs/analysis/stage-startup.md`.
+- 다음은1a5a4 전체 호출자와 리소스 연결이다.1afda debug 표시의1280회 VRAM 쓰기와1af12/1afd2 표의 실제MS5D 계약을 생략하지 않는다. 일반 nonzero script, 전체477e4/scheduler·스테이지게임플레이와 전체복원은 미완료이며 목표는 계속 진행 중이다.
