@@ -43,3 +43,5 @@ c8c의 rendering branch는 기존 특수 팔레트 전송으로 bank1 전체를 
 `tools/verify_game_startup.py`는103경계(대기91/ready c584 12), 시작 포트260개 및 오류32조건을 통과했다. 명시적인 D0 상위word 경계0001/07ff/0800에서 각각00202000/ffe02000/00002000을 확인했다. 일반 참조·기존 고정 등록·object 경계 및 live counter0/1/2000/8000/ffff를 비교했다.
 
 8승계시퀀스의 실제 IRQ16회는 포트16,456개, RAM/양쪽palette bank/display와 일치한다. 비활성8회는counter2000을 보존하고 활성8회는bank1을 채우며counter0으로 만든다. 전체119호출/16,716포트다. 원본코드·현재ROM bank 불변을 확인했으며47570은 실행하지 않았다. 보고서 SHA256 `de8e6e4ca5ddd97c691e22d34e94c087fbfd950d635f62b203cd8cbd3c61a240`.
+
+후속47570의사운드접두부와9개리셋helper를추가로복원했다. 실제c584 JSR 및반환주소보존까지연결한검증은 [game-prelude.md](game-prelude.md)에기록했다.47570전체suffix는여전히남아있다.
