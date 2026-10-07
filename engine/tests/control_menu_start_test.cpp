@@ -10,7 +10,9 @@ void fails(std::vector<std::uint8_t>& ram,const ms5::FixedDataResource& menu,std
     ms5::MenuFrameResult result;result.status=17;result.external_jump=123;result.line=456;
     std::vector<ms5::VideoPortWrite> writes(1);writes[0].address=7;writes[0].size=2;writes[0].value=789;
     std::string error;
-    assert(!ms5::start_control_menu(ram,menu,0x7000,stack,result,writes,error));
+    std::uint32_t d1=0xffffffffU,d3=0xdead7000U;
+    assert(!ms5::start_control_menu(ram,menu,0x7000,stack,result,writes,error,&d1,&d3));
+    assert(d1==0xffffffffU && d3==0xdead7000U);
     assert(!error.empty() && ram==before && result.status==17 && result.external_jump==123 && result.line==456);
     assert(writes.size()==1 && writes[0].address==7 && writes[0].size==2 && writes[0].value==789);
 }
@@ -27,7 +29,9 @@ int main() {
     fails(ram,menu,0x110102);fails(ram,menu,0x1feffd);
     ms5::FixedDataResource invalid=menu;put(invalid.data,6,0x1234);
     fails(ram,invalid,0x1feffc); // Initialization/773 queued writes precede frame validation.
-    assert(ms5::start_control_menu(ram,menu,0x7000,0x1feffc,result,writes,error));
+    std::uint32_t d1=0xffffffffU,d3=0xdead7000U;
+    assert(ms5::start_control_menu(ram,menu,0x7000,0x1feffc,result,writes,error,&d1,&d3));
+    assert(d1==8 && d3==0xdead7000U);
     assert(writes.size()==773 && writes[0].value==0x75000000 && writes[767].value==0x77ff0000);
     assert(writes[768].value==0x75000200 && writes[772].value==0x7580ff02);
     assert(ram[0x4cab]==0xc1 && ram[0x4cb1]==0x8c && ram[0x7df3]==255);

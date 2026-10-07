@@ -8,10 +8,14 @@ namespace ms5 {
 // This entry assumes the caller already accepted a menu request. It does
 // not implement the active9136 controller or menu-exit indirect callback.
 // Failure preserves all outputs. Input ROM resource is caller-owned MS5D.
+// Optional D1/D3 return full registers and are preserved on failure.
+// D3 low word must match initial_line. Native ca9e clears all of D1.
+// The root descriptor must have a nonzero opening target height.
 bool start_control_menu(std::vector<std::uint8_t>& ram,
                         const FixedDataResource& menu,
                         std::uint16_t initial_line, std::uint32_t entry_stack,
                         MenuFrameResult& result,
-                        std::vector<VideoPortWrite>& writes, std::string& error);
+                        std::vector<VideoPortWrite>& writes, std::string& error,
+                       std::uint32_t* d1 = NULL, std::uint32_t* d3 = NULL);
 }
 #endif

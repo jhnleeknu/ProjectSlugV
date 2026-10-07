@@ -8,13 +8,20 @@ bool step_control_wait(std::vector<std::uint8_t>& ram,
                        const FixedDataResource& menu,const FixedDataResource& pause,
                        std::uint16_t initial_style,std::uint16_t initial_line,
                        std::uint32_t entry_stack,MenuFrameResult& result,
-                       std::vector<VideoPortWrite>& writes,std::string& error) {
+                       std::vector<VideoPortWrite>& writes,std::string& error,
+                       std::uint32_t* d1,std::uint32_t* d3) {
     if(ram.size()!=65536U) {error="control wait requires exactly 65536 RAM bytes";return false;}
     if(ram[0x7df0]==0 || ram[0x7dee]!=0) {
         error="control wait requires active control without an open menu";return false;
     }
+    if ((d1 != NULL && (*d1 & 0xffffU) != initial_style) ||
+        (d3 != NULL && (*d3 & 0xffffU) != initial_line)) {
+        error="control wait register low words must match style and line";return false;
+    }
+    std::uint32_t pending_d1 = d1 == NULL ? initial_style : *d1;
+    std::uint32_t pending_d3 = d3 == NULL ? initial_line : *d3;
     std::uint8_t request=0;
-    if(!read_control_request(ram,request,error))return false;
+    if(!read_control_request(ram,request,error,&pending_d1))return false;
     // Preserve the original player-by-player priority: player1 step/hold
     // wins even over a simultaneous player2 menu request.
     unsigned int action=0; // 0 idle,1 new step,2 held step,3 open menu.
@@ -27,7 +34,12 @@ bool step_control_wait(std::vector<std::uint8_t>& ram,
         else if(ram[0xf002]!=0 && (ram[0x4cb4]&step_bit)!=0)action=2;
         if(action!=0)break;
     }
-    if(action==3)return start_control_menu(ram,menu,initial_line,entry_stack,result,writes,error);
+    if(action==3) {
+        if(!start_control_menu(ram,menu,initial_line,entry_stack,result,writes,error,&pending_d1,&pending_d3))return false;
+        if (d1 != NULL) { *d1 = pending_d1; }
+        if (d3 != NULL) { *d3 = pending_d3; }
+        return true;
+    }
     try {
         std::vector<std::uint8_t> candidate(ram);
         std::vector<VideoPortWrite> pending;
@@ -47,15 +59,10 @@ bool step_control_wait(std::vector<std::uint8_t>& ram,
             }
             const std::size_t offset=address-pause.source_cpu_address;
             const std::vector<std::uint8_t> script(pause.data.begin()+offset,pause.data.end());
-            std::uint16_t style=initial_style;
-            // 9086 changes only D1's low byte in this selector branch.
-            if(candidate[0x12]==2 && candidate[0xfd82]!=0 && candidate[0xf002]!=0) {
-                style=static_cast<std::uint16_t>((style&0xff00U)|(candidate[0x4cb4]&10U));
-            }
-            if(!trace_direct_fixed_text(script,request,style,pending,error))return false;
-            FixedTextMeasure measurement;
-            if(!measure_fixed_text(script,style,request,measurement,error))return false;
-            outcome.line=measurement.line;
+            std::uint16_t style=static_cast<std::uint16_t>(pending_d1);
+            if(!trace_direct_fixed_text(script,request,style,pending,error,&style,&pending_d3))return false;
+            pending_d1 = (pending_d1 & 0xffff0000U) | style;
+            outcome.line=static_cast<std::uint16_t>(pending_d3);
             // 3650 leaves the last tile word in D0's upper half;9256 clears
             // only its low word. Preserve this register value, not just the
             // low-byte status used by the original caller.
@@ -74,6 +81,8 @@ bool step_control_wait(std::vector<std::uint8_t>& ram,
         candidate[0x7df3]=static_cast<std::uint8_t>(candidate[0x7df3]-1U);
         ram.swap(candidate);writes.swap(pending);result=outcome;
     } catch(const std::bad_alloc&) {error="cannot allocate control wait state";return false;}
+    if (d1 != NULL) { *d1 = pending_d1; }
+    if (d3 != NULL) { *d3 = pending_d3; }
     error.clear();return true;
 }
 }

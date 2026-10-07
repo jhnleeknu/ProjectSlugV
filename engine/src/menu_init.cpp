@@ -18,7 +18,7 @@ void write_u32(std::vector<std::uint8_t>& ram, std::size_t offset,
 
 bool measure_title(const FixedDataResource& resource, std::uint32_t address,
                    std::uint16_t& style, std::uint16_t& line,
-                   std::uint16_t& maximum, std::string& error) {
+                   std::uint16_t& maximum, std::string& error, std::uint32_t& d3) {
     if (address < resource.source_cpu_address ||
         address - resource.source_cpu_address >= resource.data.size()) {
         error = "menu title address is outside the fixed data resource";
@@ -34,6 +34,7 @@ bool measure_title(const FixedDataResource& resource, std::uint32_t address,
         }
         style = measurement.style;
         line = measurement.line;
+        d3 = (measurement.line_reset ? 0U : (d3 & 0xffff0000U)) | line;
         if (measurement.glyph_count > maximum) {
             maximum = measurement.glyph_count;
         }
@@ -52,7 +53,8 @@ bool configure_menu_slot(std::vector<std::uint8_t>& ram,
                          std::uint32_t descriptor_address,
                          std::uint16_t x, std::uint16_t y,
                          std::uint16_t initial_line, std::string& error,
-                         std::uint16_t* final_line) {
+                         std::uint16_t* final_line,
+                         std::uint16_t* final_style, std::uint32_t* d3) {
     if (ram.size() != 65536U) {
         error = "menu initialization requires exactly 65536 RAM bytes";
         return false;
@@ -70,15 +72,16 @@ bool configure_menu_slot(std::vector<std::uint8_t>& ram,
     std::uint16_t style = y;
     std::uint16_t line = initial_line;
     std::uint16_t maximum = 0;
+    std::uint32_t pending_d3 = (d3 == NULL ? 0U : (*d3 & 0xffff0000U)) | initial_line;
     if (descriptor.title_address != 0U &&
         !measure_title(resource, descriptor.title_address, style, line,
-                       maximum, error)) {
+                       maximum, error, pending_d3)) {
         return false;
     }
     for (std::size_t index = 0; index < descriptor.items.size(); ++index) {
         const std::uint32_t address = descriptor.items[index].title_address;
         if (address != 0U && address != UINT32_C(0xfffffffe) &&
-            !measure_title(resource, address, style, line, maximum, error)) {
+            !measure_title(resource, address, style, line, maximum, error, pending_d3)) {
             return false;
         }
     }
@@ -106,6 +109,8 @@ bool configure_menu_slot(std::vector<std::uint8_t>& ram,
     ram[slot + 14U] = 0xffU;
     ram[slot + 15U] = 0;
     if (final_line != NULL) *final_line = line;
+    if (final_style != NULL) *final_style = style;
+    if (d3 != NULL) *d3 = pending_d3;
     error.clear();
     return true;
 }
@@ -115,9 +120,10 @@ bool initialize_menu(std::vector<std::uint8_t>& ram,
                      std::uint32_t descriptor_address,
                      std::uint16_t x, std::uint16_t y,
                      std::uint16_t initial_line, std::string& error,
-                     std::uint16_t* final_line) {
+                     std::uint16_t* final_line,
+                     std::uint16_t* final_style, std::uint32_t* d3) {
     if (!configure_menu_slot(ram, resource, UINT32_C(0x107efe),
-                             descriptor_address, x, y, initial_line, error, final_line)) {
+                             descriptor_address, x, y, initial_line, error, final_line, final_style, d3)) {
         return false;
     }
     write_u32(ram, 0x7f16U, 0x00003650U);

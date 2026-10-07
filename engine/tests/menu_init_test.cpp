@@ -28,5 +28,20 @@ int main() {
     const std::vector<std::uint8_t> short_ram = ram;
     assert(!ms5::initialize_menu(ram, resource, 0x200, 0, 0, 0, error));
     assert(ram == short_ram);
+    // Title measurement can reset full D3 and change terminal style even
+    // when it emits no glyphs. These outputs must roll back on late failure.
+    ram.assign(65536, 0);
+    resource.data.resize(20);
+    const unsigned char title[]={92,'l',2,3,92,'c',0x68,0};
+    resource.data.insert(resource.data.end(),title,title+sizeof(title));
+    std::uint16_t line=0x7000,style=0xffff;
+    std::uint32_t d3=0xdead7000U;
+    assert(ms5::initialize_menu(ram,resource,0x200,4,8,line,error,&line,&style,&d3));
+    assert(line==0x7043 && style==0x68 && d3==0x7043U);
+    const std::vector<std::uint8_t> final_ram=ram;
+    resource.data.pop_back();
+    d3=0xdead7043U;
+    assert(!ms5::initialize_menu(ram,resource,0x200,4,8,line,error,&line,&style,&d3));
+    assert(ram==final_ram && line==0x7043 && style==0x68 && d3==0xdead7043U);
     std::cout << "Menu initialization preservation and failure checks passed\n";
 }

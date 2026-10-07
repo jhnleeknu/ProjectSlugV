@@ -848,3 +848,11 @@
 - 원본880조건/포트1,180개/오류63조건통과.3개40회연속꼬리호출은이전C++출력D1/D3를다음입력으로사용한다.Python73개및C++전체검사통과.
 - 리뷰: docs/reviews/0116-control-finish-registers.md. 분석: docs/analysis/control-request.md.
 - 다음은활성대기91c2·메뉴시작92ce·a370본체의전체레지스터반환이다.위치제어가D3상위를지우므로단순히기존line출력을상위word와합치면안된다.실제게임콜백본문,SR/RTE/BIOS·장치시간축/Z80및전체부팅은미완료이며목표는active다.
+
+
+## 2026-10-07 — 활성 대기·메뉴 시작 D1/D3
+
+- step_control_wait/start_control_menu에전체D1/D3전달을추가했다. selector변경,직접문구의위치제어,ca9e의D1초기화와메뉴제목측정의최종style을반영했다.
+- 원본1,470조건/포트279,922개/오류36조건통과. 네개반복호출흐름은이전C++RAM/D1/D3를이어입력한다.Python73개및C++전체검사와추가메뉴초기화단위검사통과.
+- 리뷰: docs/reviews/0117-control-wait-registers.md. 분석: docs/analysis/control-request.md.
+- 다음은이미열린a370메뉴프레임의전체D1/D3반환을복원하고step_control→호출자에통합하는것이다.현재비활성/활성대기/메뉴시작/종료꼬리의개별API는전체값을반환하지만통합API의전체반환은아직미완료다.실제게임콜백본문,SR/RTE/BIOS·장치시간축/Z80및전체부팅도남아있으며목표는active다.

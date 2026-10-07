@@ -95,8 +95,24 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
+    const bool registers = argc > 1 && std::string(argv[1]) == "--registers";
+    std::uint32_t d1 = 0U;
+    std::uint32_t d3 = 0U;
+    if (registers) {
+        if (argc != 10) {
+            std::cerr << "usage: start_control_menu [--registers INPUT_D1 INPUT_D3] INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LINE ENTRY_STACK\n";
+            return 2;
+        }
+        if (!parse_integer(argv[2], 0xffffffffU, d1) ||
+            !parse_integer(argv[3], 0xffffffffU, d3)) {
+            std::cerr << "INPUT_D1 and INPUT_D3 must be decimal or 0x-prefixed uint32\n";
+            return 1;
+        }
+        argc -= 3;
+        argv += 3;
+    }
     if (argc != 7) {
-        std::cerr << "usage: start_control_menu INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LINE ENTRY_STACK\n";
+        std::cerr << "usage: start_control_menu [--registers INPUT_D1 INPUT_D3] INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS LINE ENTRY_STACK\n";
         return 2;
     }
     std::uint32_t entry_stack = 0U;
@@ -104,6 +120,10 @@ int main(int argc, char** argv) {
     if (!parse_integer(argv[5], 0xffffU, line) ||
         !parse_integer(argv[6], 0xffffffU, entry_stack)) {
         std::cerr << "LINE must be decimal or 0x-prefixed uint16; ENTRY_STACK must be decimal or 0x-prefixed uint24\n";
+        return 1;
+    }
+    if (registers && (d3 & 0xffffU) != line) {
+        std::cerr << "LINE must match INPUT_D3 low16 bits in registers mode\n";
         return 1;
     }
     const std::string ram_path(argv[1]);
@@ -128,7 +148,7 @@ int main(int argc, char** argv) {
     ms5::MenuFrameResult result;
     if (!ms5::load_fixed_data_resource(resource_path, resource, error) ||
         !ms5::start_control_menu(ram, resource, static_cast<std::uint16_t>(line),
-                                 entry_stack, result, writes, error)) {
+                                 entry_stack, result, writes, error, registers ? &d1 : NULL, registers ? &d3 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -164,6 +184,10 @@ int main(int argc, char** argv) {
     }
     std::cout << "{\"status\":" << result.status
               << ",\"external_jump\":" << result.external_jump
-              << ",\"line\":" << result.line << "}\n";
+              << ",\"line\":" << result.line;
+    if (registers) {
+        std::cout << ",\"d1\":" << d1 << ",\"d3\":" << d3;
+    }
+    std::cout << "}\n";
     return 0;
 }

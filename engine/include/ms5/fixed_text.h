@@ -21,8 +21,9 @@ struct FixedTextMeasure {
     std::uint16_t style;
     std::uint16_t line;
     std::size_t consumed_bytes;
+    bool line_reset; // A location control cleared the full native D3.
 
-    FixedTextMeasure() : glyph_count(0), style(0), line(0), consumed_bytes(0) {}
+    FixedTextMeasure() : glyph_count(0), style(0), line(0), consumed_bytes(0), line_reset(false) {}
 };
 
 // CPU 0x0038e8 counts nonzero glyphs returned by the 0x00386e stream parser.
@@ -53,11 +54,14 @@ bool trace_fixed_text(const std::vector<std::uint8_t>& script,
 // accepted. Cursor and line are VRAM word addresses. Success replaces
 // writes and clears error; failure preserves writes. The trace is bounded
 // to 200000 port events and ignores bytes after the first terminator.
+// Optional final_style/D3 follow the same contract as the table trace below.
 bool trace_direct_fixed_text(const std::vector<std::uint8_t>& script,
                              std::uint16_t initial_address,
                              std::uint16_t initial_style,
                              std::vector<VideoPortWrite>& writes,
-                             std::string& error);
+                             std::string& error,
+                             std::uint16_t* final_style = NULL,
+                             std::uint32_t* d3 = NULL);
 
 // Called for each nonzero glyph at its current VRAM word address. Returning
 // false fails the trace; visible=false skips both port events and cursor advance.
@@ -73,7 +77,9 @@ bool trace_direct_fixed_text_visible(const std::vector<std::uint8_t>& script,
                                      FixedTextVisibility visibility,
                                      void* context,
                                      std::vector<VideoPortWrite>& writes,
-                                     std::string& error);
+                                     std::string& error,
+                                     std::uint16_t* final_style = NULL,
+                                     std::uint32_t* d3 = NULL);
 
 // Parse controls and return one glyph, including zero. Success updates all
 // referenced state and clears error; failure preserves every state output.

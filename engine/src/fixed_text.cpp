@@ -111,7 +111,7 @@ bool measure_fixed_text(const std::vector<std::uint8_t>& script,
     for (;;) {
         std::uint8_t glyph = 0;
         if (!next_text_glyph(script, pending.consumed_bytes, pending.style,
-                             pending.line, cursor, glyph, error)) {
+                             pending.line, cursor, glyph, error, &pending.line_reset)) {
             return false;
         }
         if (glyph == 0) {
@@ -176,9 +176,10 @@ bool trace_direct_fixed_text(const std::vector<std::uint8_t>& script,
                              std::uint16_t initial_address,
                              std::uint16_t initial_style,
                              std::vector<VideoPortWrite>& writes,
-                             std::string& error) {
+                             std::string& error,
+                             std::uint16_t* final_style, std::uint32_t* d3) {
     return trace_direct_fixed_text_visible(script, initial_address, initial_style,
-                                           NULL, NULL, writes, error);
+                                           NULL, NULL, writes, error, final_style, d3);
 }
 
 bool trace_direct_fixed_text_visible(const std::vector<std::uint8_t>& script,
@@ -187,19 +188,25 @@ bool trace_direct_fixed_text_visible(const std::vector<std::uint8_t>& script,
                                      FixedTextVisibility visibility,
                                      void* context,
                                      std::vector<VideoPortWrite>& writes,
-                                     std::string& error) {
+                                     std::string& error,
+                                     std::uint16_t* final_style, std::uint32_t* d3) {
     std::vector<VideoPortWrite> pending;
     std::uint16_t cursor = initial_address;
     std::uint16_t line = initial_address;
     std::uint16_t style = initial_style;
     std::size_t position = 0;
+    bool line_reset = false;
     for (;;) {
         std::uint8_t glyph = 0;
-        if (!next_text_glyph(script, position, style, line, cursor, glyph, error)) {
+        if (!next_text_glyph(script, position, style, line, cursor, glyph, error, &line_reset)) {
             return false;
         }
         if (glyph == 0) {
             writes.swap(pending);
+            if (final_style != NULL) { *final_style = style; }
+            if (d3 != NULL) {
+                *d3 = (line_reset ? 0U : (*d3 & 0xffff0000U)) | line;
+            }
             error.clear();
             return true;
         }

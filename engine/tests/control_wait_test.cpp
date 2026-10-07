@@ -8,7 +8,9 @@ void fail(std::vector<std::uint8_t>& ram,const ms5::FixedDataResource& menu,
     ms5::MenuFrameResult result;result.status=7;result.external_jump=8;result.line=9;
     std::vector<ms5::VideoPortWrite> writes(1);writes[0].address=1;writes[0].size=2;writes[0].value=3;
     std::string error;
-    assert(!ms5::step_control_wait(ram,menu,pause,0x0603,0x7000,0x1feffc,result,writes,error));
+    std::uint32_t d1=0xabcd0603U,d3=0xdead7000U;
+    assert(!ms5::step_control_wait(ram,menu,pause,0x0603,0x7000,0x1feffc,result,writes,error,&d1,&d3));
+    assert(d1==0xabcd0603U && d3==0xdead7000U);
     assert(!error.empty() && ram==before && result.status==7 && result.external_jump==8 && result.line==9);
     assert(writes.size()==1 && writes[0].address==1 && writes[0].size==2 && writes[0].value==3);
 }
@@ -35,7 +37,9 @@ int main() {
     assert(result.status==0x63200000 && result.line==0x725a && ram[0x7df3]==255 && writes.size()==10);
     assert(writes[0].value==0x725a6320);
     ram[0x7df3]=0;
-    assert(ms5::step_control_wait(ram,menu,pause,0x0603,0x7000,0x1feffc,result,writes,error));
+    std::uint32_t d1=0xabcd0603U,d3=0xdead7000U;
+    assert(ms5::step_control_wait(ram,menu,pause,0x0603,0x7000,0x1feffc,result,writes,error,&d1,&d3));
+    assert(d1==0xabcd0003U && d3==0x725aU);
     assert(ram[0x7df3]==254 && writes[0].value==0x725a0350);
     ram[0xf001]=0x40;
     assert(ms5::step_control_wait(ram,menu,pause,0x0603,0x7123,0x1feffc,result,writes,error));
