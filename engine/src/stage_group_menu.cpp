@@ -21,7 +21,7 @@ bool dispatch_stage_group_menu(std::vector<std::uint8_t>& ram,
                                const StageGroupMenuContext* context,
                                std::uint16_t event, std::uint32_t& a2,
                                std::vector<VideoPortWrite>& writes,
-                               std::string& error) {
+                               std::string& error, std::uint32_t* d1, std::uint32_t* d3) {
     bool covered=false;
     if(!menu_position_occluded(ram,0x7000U,covered,error))return false;
     const std::uint32_t current=read_long(ram,0x7f12);
@@ -34,11 +34,14 @@ bool dispatch_stage_group_menu(std::vector<std::uint8_t>& ram,
        descriptor.items[row].callback!=0x9802U) {
         error="stage group menu requires a valid row in the ten-entry9802 menu";return false;
     }
+    std::uint32_t pending_d1=d1==NULL?0U:*d1;
+    std::uint32_t pending_d3=d3==NULL?0U:*d3;
     try {
         std::vector<std::uint8_t> candidate=ram;
         std::vector<VideoPortWrite> pending;
         std::uint32_t result_a2=current;
         if(event==3U) {
+            pending_d1=static_cast<std::uint8_t>(candidate[slot+10U]+1U+row);
             candidate[0x7dfa]=0;candidate[0x7dfb]=1;
             if(!set_stage_state(candidate,SelectStage,static_cast<std::uint16_t>(row+9U),error))return false;
             candidate[0x7f1b]=2;result_a2=head;
@@ -85,7 +88,8 @@ bool dispatch_stage_group_menu(std::vector<std::uint8_t>& ram,
             std::vector<std::uint8_t> arguments(4,0);
             put_long(arguments,0,name);
             if(!format_fixed_text(candidate,resources,*font,0x9781U,stack-4U,
-                                  arguments,cursor,style,pending,error))return false;
+                                  arguments,cursor,style,pending,error,0xe84c8U,&style,NULL,&pending_d3))return false;
+            pending_d1=style; // 9f36/9850 clear the full D1 before style selection.
             // 396e has advanced the argument pointer back to the entry stack;
             // 9880 restores A7 but leaves A2 at that consumed argument pointer.
             result_a2=stack;
@@ -94,6 +98,8 @@ bool dispatch_stage_group_menu(std::vector<std::uint8_t>& ram,
     } catch(const std::bad_alloc&) {
         error="cannot allocate stage group menu state";return false;
     }
+    if(d1!=NULL) *d1=pending_d1;
+    if(d3!=NULL) *d3=pending_d3;
     error.clear();return true;
 }
 }

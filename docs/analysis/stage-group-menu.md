@@ -58,3 +58,15 @@ build/dispatch_menu_event INPUT_RAM MENU_MS5D OUTPUT_RAM OUTPUT_PORTS EVENT LINE
 ## 남은 작업
 
 다른 스테이지/구역 콜백9602,9802 event5를 전체행그리기/이동/부모다시그리기에 연결하는 작업, 구분선 및 헤더9430/전체a370이 남았다. 이번 작업은 이벤트 디스패처의9802 분기를 완성한 것이며 실제 스테이지 로딩·플레이 또는 전체화면 픽셀 검증은 아니다.
+
+## 직접 콜백의 전체 D1/D3 전달
+
+`dispatch_stage_group_menu`는 선택적 D1/D3 입출력을 지원한다. event3은 9f36의 MOVEQ와 byte 연산에 따라 D1을 `(y + 1 + row) & 255`로 반환하고 D3를 유지한다. event5는 9850에서 D1 전체를 지운 뒤 최종 포맷 style을 반환한다. D3는 포맷터의 위치 제어 실행 여부와 최종 line을 반영한다. 나머지 event는 두 레지스터를 유지한다. 실패 시 두 레지스터도 보존한다.
+
+```sh
+build/dispatch_stage_group_menu INPUT_RAM MENU_MS5D FONT_MS5D STAGES_DIRECTORY OUTPUT_RAM OUTPUT_PORTS EVENT D1 D3 CALLBACK_STACK
+```
+
+새 CLI는 실제 MS5D 메뉴·폰트·스테이지 카탈로그·주소0 이름 리소스를 읽고 A2/D1/D3 JSON 및 9바이트 포트 진단 레코드를 출력한다. A2 진입 문맥은 RAM의 현재 슬롯이다. `tools/verify_stage_group_registers.py`는 원본 9802에 직접 진입한다. 기존 9b3e 검증과 구별하며 상위 디스패처까지 레지스터가 연결되었다고 주장하지 않는다. 여섯 반복 흐름은 실제 C++ 출력 RAM/JSON을 다음 입력으로 전달한다.
+
+- `.venv/bin/python tools/verify_stage_group_registers.py`: 1,208조건, 포트 12,588개, 출력 보존 오류 검사 31조건 통과. 보고서 SHA256 `062aff35044fe73111a4ef14a3224a939ec95d57d75dcfdb070a5aee22828d2b`.

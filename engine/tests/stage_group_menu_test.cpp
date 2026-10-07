@@ -10,7 +10,9 @@ void expect_failure(std::vector<std::uint8_t>& ram,const ms5::FixedDataResource&
     const std::vector<std::uint8_t> before=ram;
     std::vector<ms5::VideoPortWrite> writes(1);writes[0].value=123;
     std::uint32_t a2=456;std::string error;
-    assert(!ms5::dispatch_stage_group_menu(ram,menu,font,context,5,a2,writes,error));
+    std::uint32_t d1=0xabcd1234U,d3=0xdead7000U;
+    assert(!ms5::dispatch_stage_group_menu(ram,menu,font,context,5,a2,writes,error,&d1,&d3));
+    assert(d1==0xabcd1234U && d3==0xdead7000U);
     assert(ram==before && a2==456 && writes.size()==1 && writes[0].value==123 && !error.empty());
 }
 }
@@ -43,16 +45,22 @@ int main() {
     }
     context.callback_stack=0x1feffc;
     std::uint32_t a2=0;std::vector<ms5::VideoPortWrite> writes;std::string error;
-    assert(ms5::dispatch_stage_group_menu(ram,menu,&font,&context,5,a2,writes,error));
+    std::uint32_t d1=0xabcd1234U,d3=0xdead7000U;
+    assert(ms5::dispatch_stage_group_menu(ram,menu,&font,&context,5,a2,writes,error,&d1,&d3));
+    assert(d1==3U && (d3>>16)==0xdeadU);
     assert(a2==context.callback_stack && writes.size()==16);
     assert((writes[8].value&65535U)==0x300U && (writes[10].value&65535U)==0x310U &&
            (writes[12].value&65535U)==0x3f3U);
     assert(ram[0x7e07]==1 && ram[0x7e0a]==0 && ram[0x7e0d]==0);
     ram[0x7f06]=9;
-    assert(ms5::dispatch_stage_group_menu(ram,menu,NULL,NULL,3,a2,writes,error));
+    d1=0xabcd1234U;
+    assert(ms5::dispatch_stage_group_menu(ram,menu,NULL,NULL,3,a2,writes,error,&d1,&d3));
+    assert(d1==10U && (d3>>16)==0xdeadU);
     assert(a2==0x107efe && ram[0xd680]==18 && ram[0xd681]==0 && ram[0x7dfb]==1 && ram[0x7f1b]==2);
     ram[0x7dfa]=0xab;ram[0x7dfb]=0xcd;
-    assert(ms5::dispatch_stage_group_menu(ram,menu,NULL,NULL,4,a2,writes,error));
+    d1=0xabcd1234U;
+    assert(ms5::dispatch_stage_group_menu(ram,menu,NULL,NULL,4,a2,writes,error,&d1,&d3));
+    assert(d1==0xabcd1234U && (d3>>16)==0xdeadU);
     assert(ram[0x7dfa]==0xab && ram[0x7dfb]==0xcd);
     ram[0x7f06]=10;expect_failure(ram,menu,&font,&context);
     std::cout << "Stage group menu selection, null-name bytes and transactional failures passed\n";

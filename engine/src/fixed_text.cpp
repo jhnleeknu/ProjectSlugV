@@ -80,14 +80,16 @@ bool next_text_glyph(const std::vector<std::uint8_t>& script,
 bool parse_fixed_text_glyph(const std::vector<std::uint8_t>& script,
                             std::size_t& position, std::uint16_t& style,
                             std::uint16_t& line, std::uint16_t& cursor,
-                            std::uint8_t& glyph, std::string& error) {
+                            std::uint8_t& glyph, std::string& error,
+                            bool* line_reset) {
     std::size_t pending_position = position;
     std::uint16_t pending_style = style;
     std::uint16_t pending_line = line;
     std::uint16_t pending_cursor = cursor;
     std::uint8_t pending_glyph = 0;
+    bool pending_reset = line_reset != NULL && *line_reset;
     if (!next_text_glyph(script, pending_position, pending_style, pending_line,
-                         pending_cursor, pending_glyph, error)) {
+                         pending_cursor, pending_glyph, error, &pending_reset)) {
         return false;
     }
     position = pending_position;
@@ -95,6 +97,7 @@ bool parse_fixed_text_glyph(const std::vector<std::uint8_t>& script,
     line = pending_line;
     cursor = pending_cursor;
     glyph = pending_glyph;
+    if (line_reset != NULL) { *line_reset = pending_reset; }
     error.clear();
     return true;
 }

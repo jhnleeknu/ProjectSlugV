@@ -99,14 +99,21 @@ int main() {
                                   0x7000,3,writes,error,0x3650,&final_style,&final_line));
     assert(final_style=='7' && ram[0x4cdb]==3 && final_line==0x7000);
     text(resources[0],0,"A\\n");
+    std::uint32_t d3=0xdead1234U;
     assert(ms5::format_fixed_text(ram,resources,empty_font,0x60000,0x1fefe0,arguments,
-                                  0x7000,3,writes,error,0x3650,&final_style,&final_line));
+                                  0x7000,3,writes,error,0x3650,&final_style,&final_line,&d3));
+    assert(d3==0xdead7001U);
     assert(final_line==0x7001 && ram[0x4cd8]==0x70 && ram[0x4cd9]==0);
-    text(resources[0],0,"A%q");
+    text(resources[0],0,"A\\l\2\3");
+    assert(ms5::format_fixed_text(ram,resources,empty_font,0x60000,0x1fefe0,arguments,
+                                  0x7000,3,writes,error,0x3650,&final_style,&final_line,&d3));
+    assert(d3==0x7043U && final_line==0x7043);
+    d3=0xdead1234U;
+    text(resources[0],0,"A\\l\2\3%q");
     final_line=0xabcd;
     assert(!ms5::format_fixed_text(ram,resources,empty_font,0x60000,0x1fefe0,arguments,
-                                  0x7000,3,writes,error,0x3650,&final_style,&final_line));
-    assert(final_line==0xabcd);
+                                  0x7000,3,writes,error,0x3650,&final_style,&final_line,&d3));
+    assert(final_line==0xabcd && d3==0xdead1234U);
     ms5::FixedDataResource debug;
     std::uint32_t d1=0x12345678U;
     ram[0xf000]=0;

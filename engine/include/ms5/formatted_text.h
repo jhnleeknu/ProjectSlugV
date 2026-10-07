@@ -10,6 +10,8 @@ namespace ms5 {
 // (for callers whose original table lies on the CPU stack outside work RAM).
 // Optional final_style receives D1.word after terminal controls, even when
 // those controls are not stored in formatter RAM. Errors preserve it too.
+// Optional D3 returns the full register: its low word follows final_line;
+// a parsed location control clears its high word, otherwise it is preserved.
 // Success replaces writes and RAM. Errors preserve both. Unsupported fonts,
 // invalid memory accesses and original trap paths return errors.
 bool format_fixed_text(std::vector<std::uint8_t>& ram,
@@ -22,7 +24,8 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
                        std::vector<VideoPortWrite>& writes, std::string& error,
                        std::uint32_t renderer = 0xe84c8U,
                        std::uint16_t* final_style = NULL,
-                       std::uint16_t* final_line = NULL);
+                       std::uint16_t* final_line = NULL,
+                       std::uint32_t* d3 = NULL);
 // ec4 through ef2 (before frame gate): conditional direct diagnostic text.
 // Optional line supplies/receives D3.word; bypass preserves its input.
 // D1 upper word is preserved; lower word follows terminal formatter parsing.

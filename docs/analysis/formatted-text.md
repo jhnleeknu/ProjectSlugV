@@ -83,3 +83,15 @@ build/format_text --renderer 0x3650 INPUT_RAM OUTPUT_RAM MEMORY_MS5D FONT_MS5D F
 3650 검증은 `.venv/bin/python tools/verify_formatted_direct.py`의487조건과포트10,426개, 오류13조건을통과했다. 합성format/인자는작업RAM108000..10bfff 등에두고원본첫1MiB의불변을확인했다. 원본d56/df0의진단출력4조건을포함한다. 253개literal byte와제어문자·폭·숫자·문자열·cursor경계에서전체RAM/포트가일치했고font영역읽기는0이었다. 보고서 `artifacts/formatted_direct/verification.json` SHA256: `172b71a08e5a0c40c557e18dd827ca13e54272c2229e1b8bc2e995bbd72e2b2e`.
 
 기본e84c8 경로는기존 `verify_formatted_text.py`의289조건(실제스테이지이름59개포함)을재검증했다. 이기존검사는원본문자열을fixture창으로옮기는방식이며새3650검사의원본전체불변주장과구분한다.
+
+## 전체 D1/D3 반환
+
+`format_fixed_text`는 선택적 `d3` 입출력을 지원한다. 397c의 MOVE.W는 D3 상위 16비트를 유지하지만 파서의 위치 제어 `\l`은 38ce의 MOVEQ로 전체 D3를 초기화한다. 포맷 본문과 `%s` 문자열 양쪽에서 위치 제어 실행 여부를 누적한다. 반환 하위 word는 종료 제어문자까지 처리한 line이며, 초기 D3 하위 word와 CURSOR가 같을 필요는 없다. 실패하면 RAM·포트·레지스터 출력은 보존한다.
+
+CLI의 `--registers D1 D3`는 기존 `--renderer CPU`와 어느 순서로든 함께 쓸 수 있다. STYLE은 D1 하위 word와 일치해야 한다. 새 옵션에서만 전체 D1/D3 JSON을 출력하며 D1 상위 word는 유지한다. 중복 옵션과 범위 밖 값은 거부한다.
+
+검증 도구 `tools/verify_formatted_registers.py`는 원본 3a70과 실제 3650/e84c8 렌더러를 실행한다. 합성 포맷·인자·포인터는 작업 RAM에만 배치하고 원본 첫 1MiB 불변을 확인한다. 전체 RAM·순서 있는 포트·전체 D1/D3를 비교하며 다른 레지스터, SR 및 하드웨어 타이밍은 범위 밖이다.
+
+검증 경계: `%s` 인자의 `A\n`과 CURSOR=ffff 조합은 원본 38c8의 TRAP #15에 도달한다. 정상 반환 비교에서 제외하며 C++는 지원하지 않는 줄 위치로 오류를 반환한다. `%s` 내부의 끝 제어문자는 첫 NUL을 glyph로 소비한 뒤 다음 바이트를 종료 판단에 사용할 수 있으므로, 해당 검증 입력은 명시적인 이중 NUL을 둔다. 임의의 뒤따르는 메모리나 예외 핸들러 실행을 검증한 것은 아니다.
+
+- `.venv/bin/python tools/verify_formatted_registers.py`: 914조건, 포트 5,392개, 출력 보존 오류 검사 18조건 통과. 보고서 SHA256 `8ccc6d16fd27b94fc32b2717d14c47b5ab96bd57a335270b8b2026158608f673`.

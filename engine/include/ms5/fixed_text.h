@@ -83,10 +83,12 @@ bool trace_direct_fixed_text_visible(const std::vector<std::uint8_t>& script,
 
 // Parse controls and return one glyph, including zero. Success updates all
 // referenced state and clears error; failure preserves every state output.
+// Optional line_reset is sticky: a location control sets it true.
 bool parse_fixed_text_glyph(const std::vector<std::uint8_t>& script,
                             std::size_t& position, std::uint16_t& style,
                             std::uint16_t& line, std::uint16_t& cursor,
-                            std::uint8_t& glyph, std::string& error);
+                            std::uint8_t& glyph, std::string& error,
+                            bool* line_reset = NULL);
 
 // Render an already parsed glyph using the table/direct paths below. Zero is
 // glyph data here. Combining marks and '@' operands consume script bytes from

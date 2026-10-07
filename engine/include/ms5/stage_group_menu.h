@@ -16,12 +16,14 @@ struct StageGroupMenuContext {
 // Callback9802 for descriptor978a: choose groups9..18, close, or draw FOR/name.
 // Drawing requires font and context; other events do not require resources.
 // Success updates RAM/A2 and replaces writes; failure preserves all outputs.
+// Optional full D1/D3 reflect the callback with A2=current-slot context.
 bool dispatch_stage_group_menu(std::vector<std::uint8_t>& ram,
                                const FixedDataResource& menu,
                                const FixedDataResource* font,
                                const StageGroupMenuContext* context,
                                std::uint16_t event, std::uint32_t& a2,
                                std::vector<VideoPortWrite>& writes,
-                               std::string& error);
+                               std::string& error,
+                               std::uint32_t* d1 = NULL, std::uint32_t* d3 = NULL);
 }
 #endif

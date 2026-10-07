@@ -63,11 +63,12 @@ struct Memory {
     }
 };
 bool parse(const Memory& memory,std::uint32_t& address,std::uint16_t& style,
-           std::uint16_t& line,std::uint16_t& cursor,std::uint8_t& glyph,std::string& error) {
+           std::uint16_t& line,std::uint16_t& cursor,std::uint8_t& glyph,std::string& error,
+           bool& line_reset) {
     std::vector<std::uint8_t> bytes;
     if(!memory.slice(address,bytes,error))return false;
     std::size_t position=0;
-    if(!parse_fixed_text_glyph(bytes,position,style,line,cursor,glyph,error))return false;
+    if(!parse_fixed_text_glyph(bytes,position,style,line,cursor,glyph,error,&line_reset))return false;
     address+=static_cast<std::uint32_t>(position);return true;
 }
 bool render(const Memory& memory,const FixedDataResource& font,std::uint8_t glyph,
@@ -107,7 +108,7 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
                        std::uint32_t arguments_address,const std::vector<std::uint8_t>& argument_bytes,
                        std::uint16_t cursor,std::uint16_t style,
                        std::vector<VideoPortWrite>& writes,std::string& error,std::uint32_t renderer,
-                       std::uint16_t* final_style,std::uint16_t* final_line) {
+                       std::uint16_t* final_style,std::uint16_t* final_line,std::uint32_t* d3) {
     if(renderer!=0x3650U && renderer!=0xe84c8U) {
         error="formatted text supports renderer3650 or e84c8";return false;
     }
@@ -136,16 +137,18 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
     putword(pending_ram,state+4,style);putlong(pending_ram,state+6,format_address);
     putlong(pending_ram,state+10,renderer);putlong(pending_ram,state+14,arguments_address);
     putword(pending_ram,state+22,0);
+    bool line_reset=false;
     for(unsigned int step=0;step<100000U;++step) {
         std::uint32_t at=longword(pending_ram,state+6);
         cursor=word(pending_ram,state);style=word(pending_ram,state+4);
         std::uint16_t line=word(pending_ram,state+2);
         std::uint8_t glyph=0;
-        if(!parse(memory,at,style,line,cursor,glyph,error))return false;
+        if(!parse(memory,at,style,line,cursor,glyph,error,line_reset))return false;
         if(glyph==0) {
             ram.swap(pending_ram);writes.swap(pending);
             if(final_style!=NULL) *final_style=style;
             if(final_line!=NULL) *final_line=line;
+            if(d3!=NULL) *d3=(line_reset?0U:(*d3&0xffff0000U))|line;
             error.clear();return true;
         }
         putword(pending_ram,state,cursor);putword(pending_ram,state+2,line);
@@ -181,7 +184,7 @@ bool format_fixed_text(std::vector<std::uint8_t>& ram,
                 const std::uint16_t digit=static_cast<std::uint16_t>(static_cast<unsigned int>(count)+1U);
                 putword(pending_ram,state+22,digit);
                 if(kind=='s') {
-                    if(!parse(memory,argument,style,line,cursor,glyph,error))return false;
+                    if(!parse(memory,argument,style,line,cursor,glyph,error,line_reset))return false;
                     putword(pending_ram,state+4,style);putword(pending_ram,state+2,line);
                     if(!render(memory,font,glyph,argument,cursor,style,pending,error,renderer))return false;
                     putlong(pending_ram,state+18,argument);putword(pending_ram,state,cursor);

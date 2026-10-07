@@ -131,21 +131,44 @@ bool write_bytes(const std::string& path, const std::uint8_t* bytes,
 
 int main(int argc, char** argv) {
     std::uint32_t renderer = 0xe84c8U;
-    if (argc > 1 && std::string(argv[1]) == "--renderer") {
-        if (argc != 12) {
-            std::cerr << "usage: format_text [--renderer CPU] INPUT_RAM OUTPUT_RAM MEMORY_MS5D FONT_MS5D FORMAT_CPU ARGUMENT_CPU CURSOR STYLE OUTPUT_PORTS\n";
-            return 2;
+    std::uint32_t d1 = 0U;
+    std::uint32_t d3 = 0U;
+    bool renderer_option = false;
+    bool registers = false;
+    while (argc > 1) {
+        const std::string option(argv[1]);
+        if (option == "--renderer") {
+            if (renderer_option || argc < 3) {
+                std::cerr << "--renderer requires one value and cannot be repeated\n";
+                return 2;
+            }
+            if (!parse_integer(argv[2], 0xffffffffU, renderer) ||
+                (renderer != 0x3650U && renderer != 0xe84c8U)) {
+                std::cerr << "renderer must be decimal or 0x-prefixed CPU address 0x3650 or 0xe84c8\n";
+                return 1;
+            }
+            renderer_option = true;
+            argc -= 2;
+            argv += 2;
+        } else if (option == "--registers") {
+            if (registers || argc < 4) {
+                std::cerr << "--registers requires D1 and D3 and cannot be repeated\n";
+                return 2;
+            }
+            if (!parse_integer(argv[2], 0xffffffffU, d1) ||
+                !parse_integer(argv[3], 0xffffffffU, d3)) {
+                std::cerr << "D1 and D3 must be decimal or 0x-prefixed uint32\n";
+                return 1;
+            }
+            registers = true;
+            argc -= 3;
+            argv += 3;
+        } else {
+            break;
         }
-        if (!parse_integer(argv[2], 0xffffffffU, renderer) ||
-            (renderer != 0x3650U && renderer != 0xe84c8U)) {
-            std::cerr << "renderer must be decimal or 0x-prefixed CPU address 0x3650 or 0xe84c8\n";
-            return 1;
-        }
-        argc -= 2;
-        argv += 2;
     }
     if (argc != 10) {
-        std::cerr << "usage: format_text [--renderer CPU] INPUT_RAM OUTPUT_RAM MEMORY_MS5D FONT_MS5D FORMAT_CPU ARGUMENT_CPU CURSOR STYLE OUTPUT_PORTS\n";
+        std::cerr << "usage: format_text [--renderer CPU] [--registers D1 D3] INPUT_RAM OUTPUT_RAM MEMORY_MS5D FONT_MS5D FORMAT_CPU ARGUMENT_CPU CURSOR STYLE OUTPUT_PORTS\n";
         return 2;
     }
     std::uint32_t format_address;
@@ -159,6 +182,11 @@ int main(int argc, char** argv) {
         std::cerr << "CPU addresses must be 24-bit and cursor/style 16-bit decimal or 0x-prefixed integers\n";
         return 1;
     }
+    if (registers && (d1 & 0xffffU) != style) {
+        std::cerr << "STYLE must match D1 low16 bits in registers mode\n";
+        return 1;
+    }
+    std::uint16_t final_style = static_cast<std::uint16_t>(style);
     const std::string input_paths[3] = {argv[1], argv[3], argv[4]};
     const std::string output_paths[2] = {argv[2], argv[9]};
     if (same_file(output_paths[0], output_paths[1])) {
@@ -190,7 +218,7 @@ int main(int argc, char** argv) {
     if (!ms5::format_fixed_text(ram, resources, font, format_address,
                                 arguments_address, argument_bytes,
                                 static_cast<std::uint16_t>(cursor),
-                                static_cast<std::uint16_t>(style), writes, error, renderer)) {
+                                static_cast<std::uint16_t>(style), writes, error, renderer, registers ? &final_style : NULL, NULL, registers ? &d3 : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -212,6 +240,10 @@ int main(int argc, char** argv) {
         !write_bytes(output_paths[1], port_bytes.empty() ? &empty_output : &port_bytes[0],
                      port_bytes.size())) {
         return 1;
+    }
+    if (registers) {
+        d1 = (d1 & 0xffff0000U) | final_style;
+        std::cout << "{\"d1\":" << d1 << ",\"d3\":" << d3 << "}\n";
     }
     return 0;
 }

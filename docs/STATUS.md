@@ -872,3 +872,12 @@
 - 원본3,988조건/포트2,952개/오류44조건과6개C++출력연속전달흐름통과. Python73개및C++전체검사통과.
 - 리뷰: docs/reviews/0119-menu-input-debug-registers.md. menu-input.md/menu-debug.md/menu-frame.md에근거와경계를기록했다.
 - 다음은stage group/area동적콜백및menu_text의전체D1/D3를완성하는것이다.9d3a는숨은행에서도D1.lowbyte를바꾸고,보이는행은D1전체를초기화한뒤9b3e에서항목argument word를읽는다.이를반영한뒤a370→step_control→호출자를통합해야한다.전체게임콜백/부팅/장치시간축은미완료이며목표는active다.
+
+## 2026-10-07 — 포맷터·스테이지 그룹 콜백 전체 D1/D3
+- 포맷터의 위치 제어에 따른 D3 상위 word 초기화와 최종 style/line을 연결했다. 스테이지 그룹 콜백은 이벤트별 전체 D1/D3를 반환한다. 오류 시 상태와 레지스터를 보존한다.
+- C++11 API, MS5D를 읽는 새 CLI 및 기본 문법 구현을 유지한다.
+- `.venv/bin/python tools/verify_formatted_registers.py`: 914조건, 포트 5,392개, 출력 보존 오류 검사 18조건 통과. 보고서 SHA256 `8ccc6d16fd27b94fc32b2717d14c47b5ab96bd57a335270b8b2026158608f673`.
+- `.venv/bin/python tools/verify_stage_group_registers.py`: 1,208조건, 포트 12,588개, 출력 보존 오류 검사 31조건 통과. 보고서 SHA256 `062aff35044fe73111a4ef14a3224a939ec95d57d75dcfdb070a5aee22828d2b`.
+- 전체 빌드/테스트 통과: Python 73개와 C++ 전체 검사. 메인 리뷰 `docs/reviews/0120-formatted-stage-group-registers.md`.
+- 원본 문자열 줄바꿈 TRAP #15 경계는 정상 반환 검증에서 제외하고 C++ 오류 보존을 확인했다. 실제 예외 핸들러와 임의의 문자열 후속 메모리 실행은 미검증이다.
+- 다음: 9602 구역 메뉴와 메뉴 텍스트의 전체 레지스터를 연결한 뒤 a370/제어기/메인 프레임으로 통합한다. 전체 목표는 미완료다.
