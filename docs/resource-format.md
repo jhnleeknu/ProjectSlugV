@@ -185,3 +185,12 @@ Typed C++ loader는kind1 path와kind2 map을구분한다. Map 소비기는양수
 `extracted/runtime/scene_secondary/secondary_%06x.ms5d`는기존v1kind2이며bank2 CPU주소=물리ROM offset이다. Stable ID는 `scene-secondary:%08x`(물리ROM시작)이다. 원본183c6의알려진비영secondary참조에서root4bytes,각lookup4bytes,descriptor width의두배개수인상대offset WORD들,각offset이참조하는height개의LONG cell 창을수집한다. Offset은각WORD자신의CPU주소를기준으로sign16하여더한다. Table시작기준으로변환하지않는다.
 
 수집한창의겹침·인접구간만합쳐서각container로포장하며미관찰hole은채워넣지않는다. Manifest의coverage_origins는각descriptor/selector/column과원래읽기창을기록한다. 셀재배열·중복제거·PNG변환없이원본bytes와주소관계를보존한다. 이추출범위는source column/row0부터descriptor full width/height의읽기후보union이며전체논리자료의길이나모든동적접근의완전성·collision의미를주장하지않는다. Bank3 primary자료와CPU주소가겹쳐도물리ROM주소로구분한다.
+
+
+### MS5D 장면 배치 스트림
+
+`extracted/runtime/scene_placements/placement_%06x.ms5d`는기존v1kind1을사용하며고정CPU주소=ROMoffset이다. Stable ID는 `scene-placement:%08x`(rootCPU)다. Stream의BE16첫WORD가정확ffff이면2byte terminal이다. 그외record는16byteheader와BE16+2의inlinebytecount만큼의원시payload로구성된다. Header는+0gate,+2inlinecount,+4/+6좌표WORD,+8optionalbounds pointerLONG,+ccallback pointerLONG이다. 필드를재배열하거나pointer를호스트주소로바꾸지않는다.
+
+Typed C++ decoder는aligned first1MiB window와정확한terminal/end를검사한다. Gate8000..fffe는일반record로보존한다. Inlinecount는even/<8000이어야하며odd복사loop와signedskip해석은지원밖오류다. 좌표word/포인터는원시값이며callback과bounds를자동실행·역참조하지않는다. Decoder결과는sourcebytes의소유복사와각record source/next CPU·ROM주소,inlinebytes,terminal주소를포함하며실패시기존결과를보존한다.
+
+Canonical18streams의payload합계422bytes,일반record24개/terminal18개다. Optionalbounds는모두0이므로이번package에는bounds의추측자료를만들지않는다. 이구문형식과로드검증은1a414/1a470 실행,object할당,callback구현또는자연도달검증을대체하지않는다.

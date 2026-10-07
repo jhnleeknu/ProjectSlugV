@@ -1,0 +1,25 @@
+# 장면 배치 리소스 리뷰
+
+Baseline `d66faee`. 직전goal turn은전체1a7a8 통합·검증완료progress다. 이번에는일반초기화의1a414가읽는opcode0c pointed자료를추출한다. 메인이원본1a414/1a470/19802/18efa와28ae/43e08을읽어rawrecord 경계와실행상의미완료범위를분리했다.
+
+## 구조·구현 리뷰
+
+정확ffff만terminal이며다른highgate는일반WORD다. Record는16byteheader+WORDcount의inlinebytes다. Copy loop의SUB.W2와skip의signedWORD index를구분해odd/8000이상count는현재지원밖오류로문서화했다. Canonicalcount0/2이며18root/24record/18terminal/422bytes를확인했다. Bounds모두0,callback24unique는원시주소로보존하며호출하지않는다.
+
+C++decoder는기존FixedDataResource loader를사용하고result를candidate에만들어성공시swap한다. CPU=ROM/first1MiB/alignment와모든header/payload/terminal범위를검사한다. 주소·포인터·좌표는명시uint폭이며host pointer로변환하지않는다. Inlineffff를terminal로오인하지않는roundtrip,highgate,rawoddpointer,ROM끝terminal,오류시완전출력보존과bad_alloc검사를읽고확인했다.
+
+Pythonpacker는고정source와scriptmanifest의raw명령을다시읽고참조closure를검사한다. Inventory의각row/rawfield/terminal/end를별도parser와원본bytes로재구성해대조하며MS5D v1kind1만쓴다. Main리뷰에서단독placement_payload helper의negative/범위밖root를명시거부하도록요청했다. Canonicalbuild의rootclosure와별개로Pythonnegativeindex를허용하지않기위함이다.
+
+## 확인된 자료
+
+Inventory SHA256 `82c39694c35ecd59523f5ae73ed1eaae170915831af7c056e8e8576fc3c203d5`, disassembly SHA256 `0b1b8a849a442fead14e8635b08e128cbefa32405012fefdc979ca7778e6ca1b`.
+
+메인이18container의payload422bytes와원본주소slice 및container SHA를직접대조했다. Manifest SHA256 `d958cd6ad42dfa84c6675f20c1e1a3251dab95ea71c184d70c4e2efe4fea3306`. 최종C++ JSON에서재조립한18payload/24record/18terminal/422bytes가원본과일치했다. CLI오류26조건·합성raw양성1조건·Python5tests 통과. 전체make Python175/C++108/경고0,CLI SHA256 `8848bbc7c193223edcac1b6abf54a9cf9b9e20fe42e99f31d98526d5bb78a20a`,검증보고서 SHA256 `5e4c65d7bbdd46daa77a773f0ee0ba0328603174cdf56db92cb64529b9cb0e92`.
+
+메인은최종verifier 전체를읽고current binary/manifest/inventory/report hash를재계산했다. Source/metadata/컨테이너전수비교와전체MS5D파일집합검사가있으며canonical재조립은실제CLIJSON을사용한다. 기존engine core를변경하지않아추가runtime동등성회귀는실행하지않았다.
+
+Makefile의새pack명령에필요한inventory생성이빠진것을발견해scriptpack→inventory→placementpack 순서로보완했다. 이세명령을재실행해관련hash가모두동일함을확인했으며문서에재현순서를남겼다. 이후엔진binary변경이없어fullmake를반복하지않았다.
+
+## 남은 실행
+
+Read-only syntax/리소스검증이며원본placement handler동등성은아니다. 19802 inverse motion/selection재계산,1a470 bounds·allocation·position·inlinecopy,일반1a5a4 phase루프와후속stage진입이남았다. 전체goal은active이며직접플레이화면을완료로취급하지않는다.

@@ -1252,3 +1252,12 @@
 - 메인리뷰에서native포트allowlist의3c0004누락과slot0이지만전부clip되는mapfixture를발견해보완했다. 기존극단좌표를보존하고추가visible72에서원본전송성공/3c0000쓰기를필수검사했다. 이72조건에실제96,616ports가있다. 최종native와C++를전체재실행했으며재사용positive는없다.
 - Report SHA256 `b9a0e96aa5e041411a578da4756e71cd716e8f96eb1452f5fe253ff1b87b58c5`. Native SHA256 `a04fd624e808e1f58f3c22d1ba5ead5fbdb4cb411bde008b20e4c2c14157e030`. 전체make Python170/C++107/경고0과기존초기화회귀576/24를확인했고리뷰0165·scene-update.md에원본계약/재생성/한계를확정했다.
 - 다음은일반1a5a4 초기화와phase반복연결이다. 종료후1a414가소비하는opcode0c pointed자료18개는현재41script/199dependency에포함되지않는것을원본명령과manifest로확인했다. 해당배치자료추출·1a470/object할당·position·inlinepayload까지연결해야한다. 현재전체update검증을일반초기화나자연frame·직접플레이화면완료로취급하지않으며전체goal은active다.
+
+
+## 2026-10-08 — 장면 배치 스트림 바이너리·C++ 로더
+
+- Scene command0c가참조하는18root를원본1a414/1a470의경계로분석했다. 일반record24개/정확ffff terminal18개,총422bytes이며inline길이0/2,bounds모두0,callback24개는rawpointer로보존한다. 미실행callback을복원완료로취급하지않는다.
+- 기존MS5D v1kind1으로18resources를생성하고C++ typedloader/검사CLI를추가했다. Highgate8000..fffe와opaque pointer를보존하며odd/8000이상inlinecount는명시지원밖오류다. Native의copy loop와signedskip차이를근거로제약을기록했다.
+- 18container의C++JSON을재조립한422bytes가원본과전수일치했다. CLI오류26/합성raw양성1/Python합성5 포함전체Python175/C++108/경고0. Report SHA256 `5e4c65d7bbdd46daa77a773f0ee0ba0328603174cdf56db92cb64529b9cb0e92`,manifest SHA256 `d958cd6ad42dfa84c6675f20c1e1a3251dab95ea71c184d70c4e2efe4fea3306`.
+- 메인이packer root범위검사와Makefile선행inventory생성을보완하고리뷰0166·scene-placements.md·공통resource-format.md를확정했다. 관련세재생성명령의hash동일성을확인했다. 이번검증은구문/데이터읽기이며placement 실행검증이아니다.
+- 다음은19802 inverse motion의구간선택과1a470 bounds/object allocation/position/inlinecopy,1a414 phase gate를연결하고일반1a5a4로통합하는작업이다. 자연frame·직접플레이스테이지화면·전체게임복원은계속미완료이며goal은active다.
