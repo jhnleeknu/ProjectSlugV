@@ -109,7 +109,8 @@ bool menu_position_occluded(const std::vector<std::uint8_t>& ram,
 
 bool trace_menu_border(const std::vector<std::uint8_t>& ram,
                        const FixedDataResource& resource,
-                       std::vector<FixedWrite>& writes, std::string& error) {
+                       std::vector<FixedWrite>& writes, std::string& error,
+                       std::uint32_t* d3) {
     std::size_t head = 0U;
     std::size_t current = 0U;
     if (!validate_slots(ram, head, current, error)) {
@@ -161,12 +162,14 @@ bool trace_menu_border(const std::vector<std::uint8_t>& ram,
             }
             emit_border_row(ram, head, current, row_start, width, color,
                             0xf6U, 0xf1U, 0xf7U, pending);
+            row_start = static_cast<std::uint16_t>(row_start + 1U);
         }
     } catch (const std::bad_alloc&) {
         error = "cannot allocate menu border writes";
         return false;
     }
     writes.swap(pending);
+    if (d3 != NULL) { *d3 = (*d3 & 0xffff0000U) | row_start; }
     error.clear();
     return true;
 }

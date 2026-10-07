@@ -9,12 +9,16 @@ namespace ms5 {
 // These do not implement the full CPU 0x00a370 menu dispatcher.
 // RAM is exactly 65536 bytes; writes contain VRAM word address/value pairs.
 // Success replaces RAM and writes and clears error. Failure preserves both.
+// Optional full D1/D3 are transactional. Opening preserves D1; closing
+// replaces D1.lowword with the removed row count. Border output supplies D3.
 bool open_menu_step(std::vector<std::uint8_t>& ram,
                     const FixedDataResource& resource,
-                    std::vector<FixedWrite>& writes, std::string& error);
+                    std::vector<FixedWrite>& writes, std::string& error,
+                    std::uint32_t* d1 = NULL, std::uint32_t* d3 = NULL);
 bool close_menu_step(std::vector<std::uint8_t>& ram,
                      const FixedDataResource& resource,
-                     std::vector<FixedWrite>& writes, std::string& error);
+                     std::vector<FixedWrite>& writes, std::string& error,
+                    std::uint32_t* d1 = NULL, std::uint32_t* d3 = NULL);
 
 } // namespace ms5
 

@@ -30,9 +30,12 @@ void store_height(std::vector<std::uint8_t>& ram, std::size_t current,
 
 bool open_menu_step(std::vector<std::uint8_t>& ram,
                     const FixedDataResource& resource,
-                    std::vector<FixedWrite>& writes, std::string& error) {
+                    std::vector<FixedWrite>& writes, std::string& error,
+                    std::uint32_t* d1, std::uint32_t* d3) {
+    (void)d1; // Native opening and border routines preserve D1.
+    std::uint32_t pending_d3 = d3 == NULL ? 0U : *d3;
     std::vector<FixedWrite> pending;
-    if (!trace_menu_border(ram, resource, pending, error)) {
+    if (!trace_menu_border(ram, resource, pending, error, &pending_d3)) {
         return false;
     }
     try {
@@ -50,17 +53,21 @@ bool open_menu_step(std::vector<std::uint8_t>& ram,
         error = "cannot allocate menu opening step";
         return false;
     }
+    if (d3 != NULL) { *d3 = pending_d3; }
     error.clear();
     return true;
 }
 
 bool close_menu_step(std::vector<std::uint8_t>& ram,
                      const FixedDataResource& resource,
-                     std::vector<FixedWrite>& writes, std::string& error) {
+                     std::vector<FixedWrite>& writes, std::string& error,
+                    std::uint32_t* d1, std::uint32_t* d3) {
     bool covered = false;
     if (!menu_position_occluded(ram, 0x7000U, covered, error)) {
         return false;
     }
+    std::uint32_t pending_d3 = d3 == NULL ? 0U : *d3;
+    std::uint32_t pending_d1 = d1 == NULL ? 0U : *d1;
     try {
         std::vector<std::uint8_t> candidate(ram);
         std::vector<FixedWrite> pending;
@@ -70,8 +77,9 @@ bool close_menu_step(std::vector<std::uint8_t>& ram,
         const unsigned int decrement = old < step ? old : step;
         const unsigned int next = old - decrement;
         const unsigned int clear_rows = ((next & 0xffU) + decrement) >> 8;
+        pending_d1 = (pending_d1 & 0xffff0000U) | clear_rows;
         store_height(candidate, current, next);
-        if (!trace_menu_border(candidate, resource, pending, error)) {
+        if (!trace_menu_border(candidate, resource, pending, error, &pending_d3)) {
             return false;
         }
         const unsigned int shifted_x = static_cast<unsigned int>(candidate[current + 9U]) << 5;
@@ -104,6 +112,8 @@ bool close_menu_step(std::vector<std::uint8_t>& ram,
         error = "cannot allocate menu closing step";
         return false;
     }
+    if (d1 != NULL) { *d1 = pending_d1; }
+    if (d3 != NULL) { *d3 = pending_d3; }
     error.clear();
     return true;
 }

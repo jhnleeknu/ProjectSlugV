@@ -10,9 +10,12 @@ namespace ms5 {
 // occlusion helper. RAM is a 65536-byte snapshot of CPU 0x100000..0x10ffff.
 // Write addresses are VRAM word addresses. No RAM bytes are modified.
 // Success replaces writes and clears error; failure preserves writes.
+// Optional D3 receives the full native result, preserving its upper word.
+// Zero height preserves D3 entirely; failure also preserves it. D1 is unchanged.
 bool trace_menu_border(const std::vector<std::uint8_t>& ram,
                        const FixedDataResource& resource,
-                       std::vector<FixedWrite>& writes, std::string& error);
+                       std::vector<FixedWrite>& writes, std::string& error,
+                       std::uint32_t* d3 = NULL);
 
 // Query the confirmed CPU 0x00a018 helper using the same RAM/slot
 // constraints as trace_menu_border. Failure preserves covered.

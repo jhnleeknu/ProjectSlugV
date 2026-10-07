@@ -58,11 +58,61 @@ bool read_ram(const std::string& path, std::vector<std::uint8_t>& ram) {
     return true;
 }
 
+bool parse_integer(const std::string& text, std::uint32_t maximum,
+                   std::uint32_t& result) {
+    unsigned int base = 10;
+    std::size_t start = 0;
+    if (text.size() >= 2 && text[0] == '0' &&
+        (text[1] == 'x' || text[1] == 'X')) {
+        base = 16;
+        start = 2;
+    }
+    if (start == text.size()) {
+        return false;
+    }
+    std::uint32_t value = 0;
+    for (std::size_t index = start; index < text.size(); ++index) {
+        const char c = text[index];
+        unsigned int digit;
+        if (c >= '0' && c <= '9') {
+            digit = static_cast<unsigned int>(c - '0');
+        } else if (base == 16 && c >= 'a' && c <= 'f') {
+            digit = static_cast<unsigned int>(c - 'a') + 10U;
+        } else if (base == 16 && c >= 'A' && c <= 'F') {
+            digit = static_cast<unsigned int>(c - 'A') + 10U;
+        } else {
+            return false;
+        }
+        if (digit >= base || digit > maximum || value > (maximum - digit) / base) {
+            return false;
+        }
+        value = value * base + digit;
+    }
+    result = value;
+    return true;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
+    const bool registers = argc > 1 && std::string(argv[1]) == "--registers";
+    std::uint32_t d1 = 0U;
+    std::uint32_t d3 = 0U;
+    if (registers) {
+        if (argc != 9) {
+            std::cerr << "usage: step_menu_motion [--registers INPUT_D1 INPUT_D3] open|close INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES\n";
+            return 2;
+        }
+        if (!parse_integer(argv[2], 0xffffffffU, d1) ||
+            !parse_integer(argv[3], 0xffffffffU, d3)) {
+            std::cerr << "INPUT_D1 and INPUT_D3 must be decimal or 0x-prefixed uint32\n";
+            return 1;
+        }
+        argc -= 3;
+        argv += 3;
+    }
     if (argc != 6 || (std::string(argv[1]) != "open" && std::string(argv[1]) != "close")) {
-        std::cerr << "usage: step_menu_motion open|close INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES\n";
+        std::cerr << "usage: step_menu_motion [--registers INPUT_D1 INPUT_D3] open|close INPUT_RAM INPUT_MS5D OUTPUT_RAM OUTPUT_WRITES\n";
         return 2;
     }
     const bool opening = std::string(argv[1]) == "open";
@@ -89,8 +139,8 @@ int main(int argc, char** argv) {
         return 1;
     }
     std::vector<ms5::FixedWrite> writes;
-    const bool success = opening ? ms5::open_menu_step(ram, resource, writes, error) :
-        ms5::close_menu_step(ram, resource, writes, error);
+    const bool success = opening ? ms5::open_menu_step(ram, resource, writes, error, registers ? &d1 : NULL, registers ? &d3 : NULL) :
+        ms5::close_menu_step(ram, resource, writes, error, registers ? &d1 : NULL, registers ? &d3 : NULL);
     if (!success) {
         std::cerr << error << '\n';
         return 1;
@@ -126,6 +176,9 @@ int main(int argc, char** argv) {
     if (!output) {
         std::cerr << "cannot write writes output\n";
         return 1;
+    }
+    if (registers) {
+        std::cout << "{\"d1\":" << d1 << ",\"d3\":" << d3 << "}\n";
     }
     return 0;
 }
