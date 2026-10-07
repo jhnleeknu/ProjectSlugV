@@ -75,3 +75,5 @@ Zero WORD loop count는SUBQ.W/BNE와같이65536반복으로처리한다. 임시�
 - 전체make Python162/C++104/경고0. 로그 `artifacts/scene_map_transfer_build_test.log`.
 
 관찰의초기window는bank3이고C++의암시진입bank는2이지만검증descriptor는fixed/RAM이며첫banked읽기전에명시bank3선택이있다. 이fixture의일치를임의진입bank동등성으로확대하지않는다. 현재확인한bank전환은정렬된2MiB/3MiB창이며일반PVC전동작의검증이아니다.
+
+후속 refresh helper를같은번역단위에추가한뒤기존183c6 회귀492/오류29/16620ports를다시통과했다. 원본관찰은동일하고새binary SHA256은 `1250966f33a091e9bd01e64f37329b61df7354d5c6de29c2d7b03f60443088a0`,현재비교report SHA256은 `9ce11ab6a2fe4b75fbeeb91db32c02fad42f94f55bed9e9ae68681d7d1ce0404`다. 위최초구현검증해시와구분한다.

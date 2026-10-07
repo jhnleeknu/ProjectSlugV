@@ -1,4 +1,5 @@
 #include "ms5/scene_map_transfer.h"
+#include "ms5/scene_map_refresh.h"
 #include <new>
 namespace ms5 {
 namespace {
@@ -146,4 +147,159 @@ bool transfer_scene_map(std::vector<std::uint8_t>& ram, const std::vector<FixedD
         ram.swap(candidate); state = next; copied = accepted; ports.swap(output); error.clear(); return true;
     } catch (const std::bad_alloc&) { error = "cannot allocate scene map transfer transaction"; return false; }
 }
+namespace {
+std::uint32_t asr4(std::uint32_t value) { return (low(value) >> 4) | ((low(value) & 0x8000U) ? 0xf000U : 0); }
+bool node_read(const std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, unsigned int offset, unsigned int size, std::uint32_t& value, std::string& error) {
+    return read(ram,windows,2,s.a[0] + offset,size,value,error);
+}
+bool columns(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, std::string& error) {
+    std::uint32_t value = 0; unsigned int searches = 0;
+    if (!node_read(ram,windows,s,0x36,4,s.a[2],error) || !node_read(ram,windows,s,0x2e,4,s.a[1],error)) return false;
+    set_word(s.d[6],s.d[2] - 1U);
+    do {
+        if (!read(ram,windows,2,s.a[1]+4,2,value,error)) return false;
+        if (low(s.d[0]) < value) {
+            set_word(s.d[7],(s.d[4] & 31U)*2U); s.a[3] = add_signed_word(s.a[0]+0x3a,s.d[7]);
+            if (s.a[2] == 0) { if (!write(ram,s.a[3],2,0x21,error)) return false; }
+            else if (s.a[2] == 0xffffffffU) { if (!write(ram,s.a[3],1,0,error)) return false; }
+            else {
+                for (;;) {
+                    if (!read(ram,windows,2,s.a[2],2,value,error)) return false; set_word(s.d[7],value);
+                    if (value == 0 || low(s.d[0]) >= value) break;
+                    if (++searches > 1048576U) { error = "scene column temporary search budget exceeded"; return false; }
+                    s.a[2] -= 4;
+                }
+                for (;;) {
+                    s.a[4] = s.a[2]+4;
+                    if (!read(ram,windows,2,s.a[4],2,value,error)) return false; set_word(s.d[7],value);
+                    if ((value & 0x8000U) || low(s.d[0]) < value) break;
+                    if (++searches > 1048576U) { error = "scene column temporary search budget exceeded"; return false; }
+                    s.a[2] = s.a[4];
+                }
+                if (!read(ram,windows,2,s.a[2]+3,1,value,error)) return false; set_byte(s.d[7],value);
+                if (!write(ram,s.a[3]+1,1,s.d[7],error)) return false;
+                if (!node_read(ram,windows,s,0x35,1,value,error)) return false; set_byte(s.d[7],value);
+                if (!read(ram,windows,2,s.a[2]+2,1,value,error)) return false;
+                set_byte(s.d[7],s.d[7]-value); set_byte(s.d[7],s.d[7]+1U); set_byte(s.d[7],s.d[7]<<3);
+                if (!write(ram,s.a[3],1,s.d[7],error)) return false;
+            }
+        }
+        set_word(s.d[0],s.d[0]+1U); set_word(s.d[4],s.d[4]+1U); set_word(s.d[6],s.d[6]-1U);
+    } while (low(s.d[6]) != 0xffffU);
+    set_word(s.d[0],s.d[0]-s.d[2]); set_word(s.d[4],s.d[4]-s.d[2]);
+    return write(ram,s.a[0]+0x36,4,s.a[2],error);
+}
+bool flag(const std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, unsigned int bit, bool& enabled, std::string& error) {
+    std::uint32_t value = 0; if (!node_read(ram,windows,s,0x7a,1,value,error)) return false;
+    enabled = (value & (1U << bit)) != 0; return true;
+}
+bool copy_map(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, std::vector<VideoPortWrite>& ports, bool restore, std::string& error) {
+    std::uint16_t saved[6]; for (unsigned int i = 0; i < 6; ++i) saved[i] = low(s.d[i]);
+    std::vector<VideoPortWrite> output; bool copied = false;
+    if (!transfer_scene_map(ram,windows,s,copied,output,error)) return false;
+    ports.insert(ports.end(),output.begin(),output.end());
+    if (restore) for (unsigned int i = 0; i < 6; ++i) s.d[i] = signed_word(saved[i]);
+    return true;
+}
+bool wrapped(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, std::vector<VideoPortWrite>& ports, std::string& error) {
+    bool enabled = false; std::uint32_t dimension = 0;
+    for (unsigned int i = 0; i < 2; ++i) {
+        if (!flag(ram,windows,s,3+i,enabled,error)) return false;
+        if (enabled) {
+            if (!read(ram,windows,2,s.a[1]+4+2*i,2,dimension,error)) return false;
+            if (low(s.d[i]) >= dimension) {
+                if (dimension == 0) { error = "scene wrap zero divisor"; return false; }
+                const std::uint32_t coordinate = low(s.d[i]);
+                s.d[i] = ((coordinate / dimension) << 16) | (coordinate % dimension);
+            }
+        }
+    }
+    if (!columns(ram,windows,s,error) || !copy_map(ram,windows,s,ports,true,error)) return false;
+    if (!flag(ram,windows,s,4,enabled,error)) return false;
+    if (enabled) {
+        std::uint16_t saved[6]; for (unsigned int i = 0; i < 6; ++i) saved[i] = low(s.d[i]);
+        if (!read(ram,windows,2,s.a[1]+6,2,dimension,error)) return false; set_word(s.d[1],s.d[1]-dimension);
+        if (!copy_map(ram,windows,s,ports,false,error)) return false;
+        for (unsigned int i = 0; i < 6; ++i) s.d[i] = signed_word(saved[i]);
+    }
+    if (!flag(ram,windows,s,3,enabled,error)) return false;
+    if (!enabled) return true;
+    if (!read(ram,windows,2,s.a[1]+4,2,dimension,error)) return false; set_word(s.d[0],s.d[0]-dimension);
+    if (!columns(ram,windows,s,error) || !copy_map(ram,windows,s,ports,true,error)) return false;
+    if (!flag(ram,windows,s,4,enabled,error)) return false;
+    if (enabled) {
+        if (!read(ram,windows,2,s.a[1]+6,2,dimension,error)) return false; set_word(s.d[1],s.d[1]-dimension);
+        if (!copy_map(ram,windows,s,ports,false,error)) return false;
+    }
+    return true;
+}
+bool scroll_coordinates(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, std::string& error) {
+    std::uint32_t value = 0; set_word(s.d[0],s.d[4]); set_word(s.d[1],s.d[5]);
+    if (!node_read(ram,windows,s,0x32,2,value,error)) return false; set_word(s.d[0],s.d[0]-value);
+    if (!node_read(ram,windows,s,0x34,2,value,error)) return false; set_word(s.d[1],s.d[1]-value); set_word(s.d[1],0U-s.d[1]); return true;
+}
+bool refresh(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& s, std::vector<VideoPortWrite>& ports, bool moved, std::string& error) {
+    std::uint32_t value = 0; bool enabled = false;
+    if (!node_read(ram,windows,s,0x2e,4,s.a[1],error)) return false;
+    if (s.a[1] == 0) return true;
+    if (!moved) {
+        set_word(s.d[4],0xffa0);
+        if (!node_read(ram,windows,s,0x14,2,value,error)) return false; set_word(s.d[4],s.d[4]-value); set_word(s.d[4],asr4(s.d[4]));
+        set_word(s.d[5],0x27f);
+        if (!node_read(ram,windows,s,0x18,2,value,error)) return false; set_word(s.d[5],s.d[5]-value); set_word(s.d[5],asr4(s.d[5]));
+        if (!scroll_coordinates(ram,windows,s,error)) return false;
+        set_word(s.d[2],32); set_word(s.d[3],32); return wrapped(ram,windows,s,ports,error);
+    }
+    if (!flag(ram,windows,s,1,enabled,error)) return false;
+    if (enabled) {
+        if (!node_read(ram,windows,s,0x14,2,value,error)) return false; set_word(s.d[2],asr4(value));
+        if (!node_read(ram,windows,s,0x1c,2,value,error)) return false; set_word(s.d[3],asr4(value)); set_word(s.d[2],s.d[2]-s.d[3]);
+        if (low(s.d[2]) != 0) {
+            s.d[4] = 0xfffffffaU; set_word(s.d[4],s.d[4]-s.d[3]); set_word(s.d[4],s.d[4]-s.d[2]);
+            if (low(s.d[2]) & 0x8000U) { set_word(s.d[4],s.d[4]+32); set_word(s.d[4],s.d[4]+s.d[2]); set_word(s.d[2],0U-s.d[2]); }
+            set_word(s.d[5],0x27);
+            if (!node_read(ram,windows,s,0x18,2,value,error)) return false; set_word(s.d[3],asr4(value)); set_word(s.d[5],s.d[5]-s.d[3]); s.d[3] = 32;
+            if (!scroll_coordinates(ram,windows,s,error) || !wrapped(ram,windows,s,ports,error)) return false;
+        }
+    }
+    if (!flag(ram,windows,s,2,enabled,error)) return false;
+    if (enabled) {
+        if (!node_read(ram,windows,s,0x18,2,value,error)) return false; set_word(s.d[3],asr4(value));
+        if (!node_read(ram,windows,s,0x20,2,value,error)) return false; set_word(s.d[2],asr4(value)); set_word(s.d[3],s.d[3]-s.d[2]);
+        if (low(s.d[3]) != 0) {
+            s.d[5] = 7; set_word(s.d[5],s.d[5]-s.d[2]);
+            if (low(s.d[3]) & 0x8000U) { set_word(s.d[3],0U-s.d[3]); set_word(s.d[5],s.d[5]+32); set_word(s.d[5],s.d[5]+s.d[3]); }
+            if (!node_read(ram,windows,s,0x14,2,value,error)) return false; set_word(s.d[2],asr4(value));
+            set_word(s.d[4],0xfffa); set_word(s.d[4],s.d[4]-s.d[2]); s.d[2] = 32;
+            if (!scroll_coordinates(ram,windows,s,error) || !wrapped(ram,windows,s,ports,error)) return false;
+        }
+    }
+    return true;
+}
+bool refresh_transaction(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
+    SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error, unsigned int mode) {
+    if (ram.size() != 65536 || (state.a[0]&1U) || state.a[0] < 0x100000 || state.a[0] >= 0x110000) { error = "scene refresh requires64KiB RAM and aligned node"; return false; }
+    try {
+        std::vector<std::uint8_t> candidate = ram; SceneMapTransferState next = state; std::vector<VideoPortWrite> output;
+        bool success = false;
+        if (mode == 0) success = columns(candidate,windows,next,error);
+        else if (mode == 1) success = wrapped(candidate,windows,next,output,error);
+        else success = refresh(candidate,windows,next,output,mode == 3,error);
+        if (!success) return false;
+        ram.swap(candidate); state = next; ports.swap(output); error.clear(); return true;
+    } catch (const std::bad_alloc&) { error = "cannot allocate scene refresh transaction"; return false; }
+}
+}
+bool update_scene_columns(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error) { return refresh_transaction(ram,windows,state,ports,error,0); }
+bool transfer_wrapped_scene_map(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error) { return refresh_transaction(ram,windows,state,ports,error,1); }
+bool refresh_scene_map(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error) { return refresh_transaction(ram,windows,state,ports,error,2); }
+bool refresh_moved_scene_map(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, SceneMapTransferState& state, std::vector<VideoPortWrite>& ports, std::string& error) { return refresh_transaction(ram,windows,state,ports,error,3); }
+
 }

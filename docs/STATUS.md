@@ -1220,3 +1220,11 @@
 - 원본492조건/CLI오류29조건/ordered16620ports 비교통과. 전체RAM·13register·copied가일치하며복사420/거부72,RAMdescriptor-bankshadowalias4조건을포함한다. ReportSHA256 `ba687e364602ab08a4074d3aa09f5b17ae8396576132a30c75d5ae99f611acef`.
 - 전체make Python162/C++104/경고0,메인리뷰0162완료. Sentinel secondary는canonical원본관찰에없어합성unit범위이며다회호출승계/자연streaming은아직검증하지않았다. 임시primary/secondary각1048576cell실행한계초과는명시API오류다.
 - 다음은18702 wrapping/16f0e columncontrol/1861a·18656 refresh와19e64 handler를연결하는작업이다. 영상메모리쓰기복원은실제스테이지화면완료가아니다. 일반scene진입·자연시간축·직접플레이·전체게임복원목표는계속미완료다.
+
+
+## 2026-10-07 — 맵 열 제어·반복 경계·스크롤 갱신 연결
+
+- 16f0e column control,18702 wrapping,1861a 전체32x32갱신,18656 이동strip갱신을기존183c6과연결했다. DBRA0의65536회,relative columncursor, unsignedDIVU/SWAP, MOVEM.W sign-extension과마지막미복원호출,helper후LIVE flags/dimensions를보존한다. 기존MS5D리소스를직접소비한다.
+- 원본1744조건/오류35조건/ordered23636ports에서전체RAM·13register가일치했다. 72canonicaldescriptor와경계/이동/null/합성RAMcolumn경로,비power-height와초기A1≠node2e10조건을포함한다. 최종전체비교SHA256 `2ec30f6b5727a14a977d3d1d525a5a1c02d253580749d134790dc4bd7ba45944`.
+- 메인리뷰에서LIVEwidth unit의변별력을수정하고증분검증의자료재사용검사를보강했다. 최종결과는자료재사용없이1744조건전체를재대조했다. 합성guard8개포함Python170/C++105/경고0,기존183c6 회귀492/29/16620ports통과. 리뷰0163과scene-map-refresh.md에근거·한계·재생성을저장했다.
+- 다음은19e64 path handler와16ff8 descriptor설정,1afda 전체register승계,전체1a7a8/일반1a5a4/47a94진입연결이다. 임시탐색/전송예산한계,자연frame/다회호출승계·직접플레이화면과전체게임복원은미완료이며goal은active다.
