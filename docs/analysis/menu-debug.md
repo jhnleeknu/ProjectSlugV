@@ -63,3 +63,9 @@ build/trace_table_text INPUT_MS5D CPU_ADDRESS CURSOR STYLE OUTPUT_WRITES FONT_MS
 ```
 
 다른 두 자식 콜백9602/9802, 헤더9430과 전체a370, 실제 픽셀·음향 출력은 아직 남아 있다. 전체 게임 완성이나 자연스러운 부팅 경로 검증으로 확대 해석하지 않는다.
+
+## 콜백의 전체 D1/D3 반환
+
+`dispatch_debug_menu`에 선택적 전체D1/D3 입출력을추가했다. event1/2/3/5는9f36의좌표계산에서D1을전체초기화한뒤,9f78과9332에서선택/중첩상태에맞는글꼴style을만든다. 최종D1은0확장된style이고D3는3918의최종줄값이다. 정규ON/OFF문자열에는위치제어가없으므로D3상위word는보존된다. 다른이벤트는D1/D3를모두보존한다.
+
+입력A2문맥은9b3e가정한현재슬롯에대응한다. 직접콜백검증도A2를RAM7f12로초기화한다. 새로운CLI는 `dispatch_debug_menu INPUT_RAM MENU_MS5D FONT_MS5D OUTPUT_RAM OUTPUT_PORTS EVENT D1 D3`이며JSONa2/line/d1/d3와9바이트포트기록을출력한다. 엔진API는오류시기존RAM/레지스터/포트를보존한다.

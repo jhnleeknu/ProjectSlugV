@@ -28,3 +28,11 @@ build/select_menu_input INPUT_RAM OUTPUT_RAM OUTPUT_ACTION
 ACTION은진단용kind/event/sources의3byte다. 검증은원본a472에서실제분기대상에도달하면멈추며행동본문은건너뛴다. 두입력의256×256조합과enable mask0/1/2/3/255,총327,680조건에서C++결과표와일치했다. 원본의RAM쓰기hook은7f1a초기화와선택source쓰기외의변경이없음을검사했고C++표생성기는매호출전체RAM을비교했다. 전체기존검사와오류보존검사통과.
 
 이는메뉴입력판정복원이다. 실제항목이동·callback처리·전체a370프레임및게임입력도달성검증은남아있다.
+
+## 입력 결정 경계의 전체 D1
+
+`select_menu_input`은 선택적으로 전체 D1을 반환한다. a474의MOVEQ0,D1 다음에 활성화된P2의RAM4cc0byte만 읽으므로 반환값은 비활성P2이면0, 활성P2이면 그 전체byte를0확장한 값이다. 선택된동작bit만 남기는 것은 아니다. D3는 이구간에서변경되지않는다.
+
+이 API의 경계는 이동/이벤트 처리 직전이다. 원본비교는 a566/a574/a596/a5a0/a58c/a582/a5ce에서 멈춰 RAM7f1a와 선택결과, D1을비교한다. 이미 열린메뉴전체의 최종D1을의미하지않는다. CLI `select_menu_input --d1 INPUT_D1 INPUT_RAM OUTPUT_RAM OUTPUT_ACTION`은 추가JSONd1을 반환하며 기존3바이트동작파일은 유지한다.
+
+`update_menu_header`도 선택적D1을 받아9430→9086이실제로변경한byte를전달한다. 이후종료표시와헤드복사는D1/D3를변경하지않는다. CLI는 기존인자앞에같은 `--d1 INPUT_D1` 옵션을받는다. 두API 모두실패시D1을보존한다.

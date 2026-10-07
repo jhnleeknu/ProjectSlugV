@@ -44,11 +44,16 @@ int main() {
     std::uint32_t a2 = 0xdeadbeefu;
     assert(ms5::update_menu_header(ram, a2, error));
     assert(ram == before && a2 == 0xdeadbeefu);
+    ram[0xfd82]=ram[0xf002]=1;ram[0x4cb4]=255;
+    std::uint32_t d1=0xabcdef12U;
+    assert(ms5::update_menu_header(ram,a2,error,&d1));
+    assert(d1==0xabcdef0aU && a2==0xdeadbeefU);
     const unsigned int sizes[] = {0, 1, 65535, 65537};
     for (unsigned int i = 0; i < 4; ++i) {
         ram.assign(sizes[i], 0x5a);
         before = ram;
-        assert(!ms5::update_menu_header(ram, a2, error));
+        assert(!ms5::update_menu_header(ram, a2, error,&d1));
+        assert(d1==0xabcdef0aU);
         assert(ram == before && a2 == 0xdeadbeefu && !error.empty());
     }
     std::cout << "Menu header enable/request mapping and failure preservation passed\n";

@@ -8,12 +8,15 @@ int main() {
     out.kind = ms5::MenuInputEvent; out.event = 99; out.sources = 77;
     std::string error;
     const std::vector<std::uint8_t> invalid = ram;
-    assert(!ms5::select_menu_input(ram, out, error));
+    std::uint32_t d1=0xabcdef12U;
+    assert(!ms5::select_menu_input(ram, out, error,&d1));
+    assert(d1==0xabcdef12U);
     assert(ram == invalid && out.event == 99 && out.sources == 77);
     ram[0x7f13] = 0x10; ram[0x7f14] = 0x7e; ram[0x7f15] = 0xfe;
     ram[0x7f0b] = 3;
     ram[0x4cba] = 0x10; ram[0x4cc0] = 0x20;
-    assert(ms5::select_menu_input(ram, out, error));
+    assert(ms5::select_menu_input(ram, out, error,&d1));
+    assert(d1==0x20U);
     assert(out.kind == ms5::MenuInputEvent && out.event == 4 && out.sources == 2);
     ram[0x4cba] = ram[0x4cc0] = 1;
     assert(ms5::select_menu_input(ram, out, error));

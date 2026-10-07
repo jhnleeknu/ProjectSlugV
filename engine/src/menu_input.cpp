@@ -3,7 +3,8 @@
 namespace ms5 {
 
 bool select_menu_input(std::vector<std::uint8_t>& ram,
-                       MenuInput& out, std::string& error) {
+                       MenuInput& out, std::string& error,
+                        std::uint32_t* d1) {
     if (ram.size() != 65536U) {
         error = "menu input requires exactly 65536 RAM bytes";
         return false;
@@ -44,6 +45,7 @@ bool select_menu_input(std::vector<std::uint8_t>& ram,
     }
     ram[0x7f1aU] = candidate.sources;
     out = candidate;
+    if (d1 != NULL) { *d1 = player2; } // a474 clears the full register.
     error.clear();
     return true;
 }

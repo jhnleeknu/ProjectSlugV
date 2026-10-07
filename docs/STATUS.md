@@ -864,3 +864,11 @@
 - 원본408조건/출력256,136개/오류34조건과 8개16단계 개폐 흐름 통과. 실제 가림39,416회도 확인했다. Python73개 및 C++ 전체 검사 통과.
 - 리뷰: docs/reviews/0118-menu-motion-registers.md. 분석: docs/analysis/menu-motion.md.
 - a370 통합을 위해 개폐 경로의 의존 기능을 복원한 단계다. 입력 판정은 a474에서 전체D1을0으로 만들고 활성P2입력byte를 읽는다. 다음은 입력 판정과 텍스트·콜백의 반환값을 연결하여 이미 열린 메뉴의 전체D1/D3를 완성하는 것이다. 전체 프레임·실제 게임 콜백·부팅은 아직 미완료이며 목표는active다.
+
+
+## 2026-10-07 — 메뉴 입력·헤더·디버그 콜백의 레지스터 반환
+
+- select_menu_input/update_menu_header에D1, dispatch_debug_menu에전체D1/D3입출력을추가했다. 입력의전체D1초기화, 헤더의selector변경, 디버그좌표계산의D1초기화와그리지않는이벤트의보존을구분했다.
+- 원본3,988조건/포트2,952개/오류44조건과6개C++출력연속전달흐름통과. Python73개및C++전체검사통과.
+- 리뷰: docs/reviews/0119-menu-input-debug-registers.md. menu-input.md/menu-debug.md/menu-frame.md에근거와경계를기록했다.
+- 다음은stage group/area동적콜백및menu_text의전체D1/D3를완성하는것이다.9d3a는숨은행에서도D1.lowbyte를바꾸고,보이는행은D1전체를초기화한뒤9b3e에서항목argument word를읽는다.이를반영한뒤a370→step_control→호출자를통합해야한다.전체게임콜백/부팅/장치시간축은미완료이며목표는active다.

@@ -26,8 +26,11 @@ struct MenuInput {
 // this phase does not read the head pointer. Success writes the selected
 // sources to RAM 0x7f1a, replaces out, and clears error. Failure preserves
 // RAM and out.
+// Optional D1 returns the native full register; errors preserve it.
+// Native D3 is unchanged.
 bool select_menu_input(std::vector<std::uint8_t>& ram,
-                       MenuInput& out, std::string& error);
+                       MenuInput& out, std::string& error,
+                        std::uint32_t* d1 = NULL);
 
 } // namespace ms5
 

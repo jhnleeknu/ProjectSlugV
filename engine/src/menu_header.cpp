@@ -4,9 +4,10 @@
 namespace ms5 {
 
 bool update_menu_header(std::vector<std::uint8_t>& ram,
-                        std::uint32_t& a2, std::string& error) {
+                        std::uint32_t& a2, std::string& error,
+                        std::uint32_t* d1) {
     std::uint8_t request = 0;
-    if (!read_control_request(ram, request, error)) {
+    if (!read_control_request(ram, request, error, d1)) {
         return false;
     }
     if (((ram[0x7df0] & 1u) != 0 && (request & 2u) != 0) ||

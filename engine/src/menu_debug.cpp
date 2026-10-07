@@ -21,9 +21,13 @@ bool dispatch_debug_menu(std::vector<std::uint8_t>& ram,
                          const FixedDataResource* font,
                          std::uint16_t event,std::uint16_t& line,
                          std::uint32_t& a2,std::vector<VideoPortWrite>& writes,
-                         std::string& error) {
+                         std::string& error, std::uint32_t* d1, std::uint32_t* d3) {
     bool covered=false;
     if (!menu_position_occluded(ram,0x7000,covered,error)) return false;
+    if (d3 != NULL && (*d3 & 0xffffU) != line) {
+        error="debug menu D3 low word must match line";return false;
+    }
+    std::uint32_t pending_d3=d3 == NULL ? line : *d3;
     const std::uint32_t current=read_u32(ram,0x7f12);
     const std::uint32_t head=read_u32(ram,0x7f0e);
     const std::size_t slot=current-0x100000;
@@ -63,11 +67,14 @@ bool dispatch_debug_menu(std::vector<std::uint8_t>& ram,
     else if ((descriptor.flags&14U)==2U && ram[slot+7]!=row) style=0x0b6b;
     try {
         const std::vector<std::uint8_t> script(resource.data.begin()+text_offset,resource.data.end());
-        if (!trace_table_fixed_text(script,address,style,*font,pending,error,&result_line)) return false;
+        if (!trace_table_fixed_text(script,address,style,*font,pending,error,&result_line,&style,&pending_d3)) return false;
     } catch (const std::bad_alloc&) {
         error="cannot allocate debug menu output";return false;
     }
     if (toggle) {ram[0xf000]=static_cast<std::uint8_t>(flags>>8);ram[0xf001]=static_cast<std::uint8_t>(flags);}
-    writes.swap(pending);a2=result_a2;line=result_line;error.clear();return true;
+    writes.swap(pending);a2=result_a2;line=result_line;
+    if (d1 != NULL) { *d1=style; } // 9f36 clears D1 before selecting text style.
+    if (d3 != NULL) { *d3=pending_d3; }
+    error.clear();return true;
 }
 }
