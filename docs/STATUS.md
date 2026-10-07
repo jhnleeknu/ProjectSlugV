@@ -955,3 +955,11 @@
 - `verify_sprite_prepare_wait.py`: 원본1,297경계(begin329/wait640/release328), 실제 CLI 상태 승계328시퀀스, VRAM459,520개, 오류 보존27조건 통과. 보고서 SHA256 `fc59d6fc5b1e296a18f20e4195a67f0557bd793734119c425d2027ee1fd2c0d4`.
 - 전체 빌드·Python73개·C++전체 검사 및 기존 동기 준비96조건→갱신96조건 통과. 메인 리뷰 `docs/reviews/0129-sprite-prepare-wait.md`.
 - 다음은 emitter의 D1 상위word와 PVC 포트 전달, sound3c08 대기/재개를 포함한 e74→ec4 연결이다. sprite emitter의 SWAP이 D1 상위word를 바꾸므로 단순 보존/0 가정은 금한다. 실제 IRQ 소비·물리 시간·전체 게임 복원은 미완료이며 목표는 진행 중이다.
+
+
+## 2026-10-07 — sprite 준비 전체 D1/D3와 PVC·VRAM 순서
+- 스프라이트 begin/resume/동기 준비에 전체 D1/D3를 연결했다. 비어 있지 않은 radix의 반환값, emitter의 마지막 attribute 주소 상위word, 빈 큐/클리핑/disabled 보존을 반영한다.
+- 실제 MS5C 사용을 유지하면서 레코드별 PVC 선택→VRAM 쓰기→마지막 PVC 복구를 선택적으로 출력한다. CLI `--registers D1 D3`/`--ports OUTPUT_PORTS`를 제공하며 실패 시 기존 출력을 보존한다.
+- `verify_sprite_prepare_registers.py`: 원본1,873경계, 470승계시퀀스, 전체 포트688,064개(VRAM681,860개), 오류42조건 통과. 실제2/3/2블록 리소스도 포함한다. sprite 반환 RAM/D1/D3→scene좌표 준비4조건/포트16개도 통과했다.
+- 보고서 SHA256 `5fc87b656fd8679312163060e7c58a0557511148f4081f7f0a574296ac77a04b`. 전체 빌드·Python73개·C++전체 검사 통과. 메인 리뷰 `docs/reviews/0130-sprite-prepare-registers.md`.
+- 다음은 sound3c08 대기·재개 및 e74→ec4 순서 연결이다. 원본 D0/기타scratch/CCR, 자연 IRQ와 물리 시간·전체 게임 복원은 남아 있으며 전체 목표는 진행 중이다.

@@ -31,7 +31,13 @@ static void reject(std::vector<std::uint8_t> ram,
     std::vector<ms5::SpriteWrite> writes(1);
     writes[0].address = 123; writes[0].value = 456;
     std::string error;
-    require(!ms5::prepare_sprite_queue(ram, resources, writes, error), "invalid state accepted");
+    std::uint32_t d1 = 0x12345678U, d3 = 0x98765432U;
+    std::vector<ms5::VideoPortWrite> ports(1);
+    ports[0].size = 2; ports[0].address = 123; ports[0].value = 456;
+    require(!ms5::prepare_sprite_queue(ram, resources, writes, error, &d1, &d3, &ports), "invalid state accepted");
+    require(d1 == 0x12345678U && d3 == 0x98765432U && ports.size() == 1 &&
+            ports[0].size == 2 && ports[0].address == 123 && ports[0].value == 456,
+            "error changed registers or hardware ports");
     require(ram == before && writes.size() == 1 && writes[0].address == 123 &&
             writes[0].value == 456 && !error.empty(), "error changed caller state");
 }
@@ -91,15 +97,68 @@ int main() {
             writes.size() == completed_writes.size() && writes[0].address == completed_writes[0].address &&
             writes[0].value == completed_writes[0].value, "invalid resume changed outputs");
 
+    // Full sort scratch registers are carried through the wait and emitter.
+    ram = fixture(); put(ram, 0x8d34, 2);
+    put(ram, 0x7f34 + 12, 0x1200); put(ram, 0x7f34 + 24, 0x3401);
+    std::uint32_t d1 = 0x12345678U, d3 = 0x98765432U;
+    std::vector<ms5::VideoPortWrite> ports;
+    require(ms5::begin_sprite_queue(ram, pending, error, &d1, &d3), "register begin failed");
+    require(d1 == 0x24U && d3 == 0, "wrong radix scratch registers");
+    const std::vector<std::uint8_t> register_wait = ram;
+    ports.resize(1); ports[0].value = 789;
+    require(ms5::resume_sprite_queue(ram, resources, pending, writes, error, &d1, &d3, &ports),
+            "register wait failed");
+    require(ram == register_wait && d1 == 0x24U && d3 == 0 && ports.empty() && writes.empty(),
+            "wait changed registers or ports");
+    put(ram, 0x8d34, 0);
+    const std::vector<std::uint8_t> register_ready = ram;
+    ports.resize(1); ports[0].size = 2; ports[0].address = 123; ports[0].value = 789;
+    writes.resize(1); writes[0].value = 456;
+    require(!ms5::resume_sprite_queue(ram, absent, pending, writes, error, &d1, &d3, &ports),
+            "register release accepted missing resource");
+    require(ram == register_ready && pending.waiting && d1 == 0x24U && d3 == 0 &&
+            ports.size() == 1 && ports[0].value == 789 && writes.size() == 1 && writes[0].value == 456,
+            "register release failure changed outputs");
+    require(ms5::resume_sprite_queue(ram, resources, pending, writes, error, &d1, &d3, &ports),
+            "register release failed");
+    require(ports.size() == 14 && writes.size() == 8, "wrong ordered port count");
+    require(d1 == (static_cast<std::uint32_t>(writes[6].address) << 16 | 0x1500U) && d3 == 0,
+            "emitter failed to return last attribute address and style");
+    for (unsigned int record = 0; record < 2; ++record) {
+        const unsigned int first = record * 6;
+        require(ports[first].size == 2 && ports[first].address == 0x2ffff2U && ports[first].value == 0x3000U &&
+                ports[first + 1].size == 2 && ports[first + 1].address == 0x2ffff0U && ports[first + 1].value == 0,
+                "wrong per-record PVC ordering");
+        for (unsigned int index = 0; index < 4; ++index) {
+            const ms5::SpriteWrite& write = writes[record * 4 + index];
+            const ms5::VideoPortWrite& port = ports[first + 2 + index];
+            require(port.size == 4 && port.address == 0x3c0000U &&
+                    port.value == (static_cast<std::uint32_t>(write.address) << 16 | write.value),
+                    "sprite write missing or reordered in hardware ports");
+        }
+    }
+    require(ports[12].address == 0x2ffff2U && ports[12].value == 0x1000U &&
+            ports[13].address == 0x2ffff0U && ports[13].value == 0, "missing final PVC reset");
+    ram = fixture();
+    for (unsigned int offset = 0; offset < 8; offset += 2) put(ram, 0x8d3e + offset, 0xffff);
+    d1 = 0x12345678U; d3 = 0x98765432U;
+    require(ms5::prepare_sprite_queue(ram, resources, writes, error, &d1, &d3, &ports), "disabled pool failed");
+    require(writes.empty() && ports.size() == 6 && d1 == 0x1500U && d3 == 0,
+            "disabled pool changed attribute highword or omitted PVC events");
+
     // Empty preparation still publishes ready and clears the old tag.
     ram = fixture(); put(ram, 0x8d38, 0); put(ram, 0x8d3a, 0); put(ram, 0x9150, 123);
     resources.clear();
     require(ms5::prepare_sprite_queue(ram, resources, writes, error), "empty preparation failed");
     require(writes.empty() && ram[0x8d3d] == 255 && ram[0x9150] == 0 && ram[0x9151] == 0,
             "empty preparation state wrong");
-    require(ms5::begin_sprite_queue(ram, pending, error), "empty begin failed");
+    d1 = 0x12345678U; d3 = 0x98765432U;
+    require(ms5::begin_sprite_queue(ram, pending, error, &d1, &d3), "empty begin failed");
+    require(d1 == 0x12345678U && d3 == 0x98765432U, "empty begin changed registers");
     require(pending.waiting, "empty begin must expose a wait even when synchronized");
-    require(ms5::resume_sprite_queue(ram, resources, pending, writes, error), "empty resume failed");
+    require(ms5::resume_sprite_queue(ram, resources, pending, writes, error, &d1, &d3, &ports), "empty resume failed");
+    require(d1 == 0x12345678U && d3 == 0x98765432U && ports.size() == 2,
+            "empty resume changed registers or final PVC reset");
     require(!pending.waiting && pending.cursor == 0 && writes.empty(), "empty resume did not clear pending");
     std::cout << "sprite_prepare_queue_test: passed\n";
 }

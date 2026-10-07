@@ -21,6 +21,17 @@ int main() {
             writes[5].address == 0x8202 && writes[5].value == 0xf801 &&
             writes[6].address == 0x8402 && writes[6].value == 2048 &&
             writes[9].address == 128 && writes[9].value == 12, "wrong block placement");
+    std::uint32_t d1 = 0xabcd0000U;
+    require(ms5::emit_sprite_blocks(data, 0, 0, 0, 0, 380, true, false, 0,
+                                    writes, next, error, &d1), "register emission failed");
+    require(d1 == 0x00810000U, "last block attribute address not returned");
+    d1 = 0xabcd0000U;
+    require(ms5::emit_sprite_blocks(data, 0, 0, 0, 0, 380, true, false, 380,
+                                    writes, next, error, &d1), "cached emission failed");
+    require(d1 == 0xabcd0000U && writes.size() == 2,
+            "cached columns changed D1 without tile emission");
+    require(ms5::emit_sprite_blocks(data, 0, 0, 0, 0, 380, true, false, 0,
+                                    writes, next, error), "reference emission failed");
     const std::vector<ms5::SpriteWrite> reference = writes;
     for (unsigned int low=0; low<256; ++low) {
         data[1] = static_cast<std::uint8_t>(low);
@@ -36,8 +47,9 @@ int main() {
     data[17] = 0;
     const std::vector<ms5::SpriteWrite> before = writes;
     require(!ms5::emit_sprite_blocks(data,0,0,0,0,1,true,false,0,
-                                     writes,next,error), "bad later block accepted");
-    require(next == 2 && writes.size() == before.size(), "failure changed outputs");
+                                     writes,next,error, &d1), "bad later block accepted");
+    require(next == 2 && writes.size() == before.size() && d1 == 0xabcd0000U,
+            "failure changed outputs or D1 after first block emission");
     for (std::size_t i=0; i<writes.size(); ++i) {
         require(writes[i].address == before[i].address && writes[i].value == before[i].value,
                 "failure changed writes");

@@ -24,8 +24,13 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
                     std::uint16_t limit, bool refresh, bool reverse,
                     std::uint16_t cached_boundary, std::uint16_t geometry_flip,
                     std::vector<ms5::SpriteWrite>& writes,
-                    std::uint16_t& next_slot, std::string& error) {
+                    std::uint16_t& next_slot, std::string& error,
+                    std::uint32_t* d1 = 0) {
     error.clear();
+    if (d1 != 0 && static_cast<std::uint16_t>(*d1) != style) {
+        error = "D1 low word must equal the sprite style";
+        return false;
+    }
     if (data.size() < 8 || read_be_word(data, 0) != 0x0100U) {
         error = "input must begin with one rectangular block (0x0100)";
         return false;
@@ -56,6 +61,7 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
         return false;
     }
 
+    std::uint32_t next_d1 = d1 != 0 ? *d1 : style;
     std::vector<ms5::SpriteWrite> result;
     result.reserve(static_cast<std::size_t>(
         width * (2U + height * 2U + (refresh ? 1U : 0U))));
@@ -100,6 +106,12 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
         }
         append_write(result, 0x8401U + slot, (xword * 2U) & 0xffffU);
         append_write(result, 0x8001U + slot, 0xffffU);
+        // Native SWAP/MOVE.W/ADDQ.W/SWAP stores the first attribute
+        // destination in D1.high. The unrolled row loop uses copies of D1.
+        const std::uint32_t attribute_address =
+            (static_cast<std::uint32_t>(slot) + 1U) * 64U +
+            (vertical ? (height - 1U) * 2U : 0U) + 1U;
+        next_d1 = (attribute_address << 16) | (next_d1 & 0xffffU);
         for (std::uint32_t row = 0; row < height; ++row) {
             const std::size_t offset = 8U + (column * height + row) * 4U;
             const std::uint32_t attribute = read_be_word(data, offset);
@@ -117,6 +129,7 @@ bool emit_rectangle(const std::vector<std::uint8_t>& data,
     }
     writes.swap(result);
     next_slot = slot;
+    if (d1 != 0) *d1 = next_d1;
     return true;
 }
 
@@ -175,10 +188,10 @@ bool emit_sprite_rectangle_variant(
     std::uint16_t style, std::uint16_t first_slot, std::uint16_t limit,
     bool refresh, bool reverse, std::uint16_t cached_boundary,
     std::vector<SpriteWrite>& writes, std::uint16_t& next_slot,
-    std::string& error) {
+    std::string& error, std::uint32_t* d1) {
     return emit_rectangle(data, coordinate_u, coordinate_v, style, first_slot,
                           limit, refresh, reverse, cached_boundary, style & 3U,
-                          writes, next_slot, error);
+                          writes, next_slot, error, d1);
 }
 
 bool emit_sprite_blocks(
@@ -187,7 +200,12 @@ bool emit_sprite_blocks(
     std::uint16_t style, std::uint16_t first_slot, std::uint16_t limit,
     bool refresh, bool reverse, std::uint16_t cached_boundary,
     std::vector<SpriteWrite>& writes, std::uint16_t& next_slot,
-    std::string& error) {
+    std::string& error, std::uint32_t* d1) {
+    if (d1 != 0 && static_cast<std::uint16_t>(*d1) != style) {
+        error = "D1 low word must equal the sprite style";
+        return false;
+    }
+    std::uint32_t next_d1 = d1 != 0 ? *d1 : style;
     if (data.size() < 2 || data[0] == 0) {
         error = "counted rectangle header must have nonzero count";
         return false;
@@ -217,7 +235,7 @@ bool emit_sprite_blocks(
         std::vector<SpriteWrite> block_writes;
         if (!emit_sprite_rectangle_variant(block, coordinate_u, coordinate_v,
                 style, slot, limit, refresh, reverse, cached_boundary,
-                block_writes, slot, error)) {
+                block_writes, slot, error, &next_d1)) {
             return false;
         }
         result.insert(result.end(), block_writes.begin(), block_writes.end());
@@ -229,6 +247,7 @@ bool emit_sprite_blocks(
     }
     writes.swap(result);
     next_slot = slot;
+    if (d1 != 0) *d1 = next_d1;
     error.clear();
     return true;
 }

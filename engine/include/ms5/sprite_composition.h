@@ -75,13 +75,16 @@ bool emit_sprite_rectangle_reverse_refresh(
 // limit <= first_slot <= 380 and slots at or above cached_boundary retain them.
 // The same input/style, clipping, cache-boundary and failure contracts apply.
 // The four normal APIs above continue to use normal geometry for all styles.
+// Optional D1 must have low word equal to style. An emitted tile column sets
+// its high word to that column's first attribute destination; clipped/cached
+// columns preserve it. Failure preserves D1 along with the other outputs.
 bool emit_sprite_rectangle_variant(
     const std::vector<std::uint8_t>& data,
     std::uint16_t coordinate_u, std::uint16_t coordinate_v,
     std::uint16_t style, std::uint16_t first_slot, std::uint16_t limit,
     bool refresh, bool reverse, std::uint16_t cached_boundary,
     std::vector<SpriteWrite>& writes, std::uint16_t& next_slot,
-    std::string& error);
+    std::string& error, std::uint32_t* d1 = 0);
 
 // Counted rectangles (header count in high byte, followed by count block bodies).
 // Low header byte is preserved but does not affect this consumer.
@@ -94,7 +97,7 @@ bool emit_sprite_blocks(
     std::uint16_t style, std::uint16_t first_slot, std::uint16_t limit,
     bool refresh, bool reverse, std::uint16_t cached_boundary,
     std::vector<SpriteWrite>& writes, std::uint16_t& next_slot,
-    std::string& error);
+    std::string& error, std::uint32_t* d1 = 0);
 
 } // namespace ms5
 
