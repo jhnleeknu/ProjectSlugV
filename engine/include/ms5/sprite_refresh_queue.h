@@ -2,6 +2,7 @@
 #define MS5_SPRITE_REFRESH_QUEUE_H
 
 #include "ms5/composition_resource.h"
+#include "ms5/video_port.h"
 #include "ms5/sprite_composition.h"
 
 namespace ms5 {
@@ -16,11 +17,13 @@ namespace ms5 {
 // error. Failure preserves RAM, writes and processed. A non-ready queue skips
 // all validation except RAM size. Optional D0 preserves input on a non-ready
 // return and reports native cleanup output on ready success. Other registers,
-// flags and timing are omitted. Errors preserve D0 as well.
+// flags and timing are omitted. Optional ports records ordered PVC and video
+// MMIO writes. Errors preserve D0 and ports as well.
 bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
                           const std::vector<CompositionResource>& resources,
                           std::vector<SpriteWrite>& writes,
-                          bool& processed, std::string& error, std::uint32_t* d0 = 0);
+                          bool& processed, std::string& error, std::uint32_t* d0 = 0,
+                          std::vector<VideoPortWrite>* ports = 0);
 
 } // namespace ms5
 

@@ -40,3 +40,14 @@ CLI의선택적인 `--d0 UINT32`는기존 인자앞에붙이며 기존RAM/그리
 추가 검증 `tools/verify_sprite_refresh_d0.py`는 원본584조건의 전체RAM/전체D0와370,740개 비디오long 쓰기를 비교했다. 준비된296조건에서 정리 함수가 정확히두번 호출됨을 확인했고 그중116조건은비디오출력이0개였다. 실제 MS5C 두 리소스와 양방향/링순환/비활성pool/승계8회, 오류8조건을 포함한다. 원본고정ROM과매핑된resource bank는변경하지않았다.
 
 보고서: `artifacts/sprite_refresh_d0/verification.json`, SHA256 `f9c3f2ab5ba5b8db4175227453060310d7ef68e28f0e5564875943f45676296f`. 네이티브PVC 쓰기4,208건은다음통합을위한별도관찰이며현재C++비디오출력과동등성검증한것이아니다.
+
+
+## PVC와 비디오의 통합 포트 기록
+
+선택적 마지막 인자 `std::vector<VideoPortWrite>* ports`로 PVC와 비디오를 한 순서에 기록한다. 각 레코드의 packed ID 하위3비트를bank로 취하고, 해당레코드의비디오쓰기전에2ffff2.word=`(bank+1)<<12`,2ffff0.word=0을쓴다. 이 전환은pool이비활성이거나실제그리기가0개여도발생한다. 두pool의후행정리까지끝나면2ffff2=1000/2ffff0=0을쓴다. 준비bit가0인진입은포트기록도비어있다.
+
+비디오쓰기각각은3c0000의long값으로 `(address<<16)|value`를기록한다. 기존SpriteWrite출력과선택적D0는그대로유지한다. CLI `--ports D0` 모드는출력파일을9바이트(size/address/value)기록으로내며JSON은d0/processed/writes를반환한다. 기존기본및--d0출력형식은바뀌지않는다.
+
+원본608조건의전체RAM/D0와378,428개통합포트기록이일치했다(PVC4,448개/비디오373,980개). 양방향,네flip스타일,비활성pool,0레코드,링순환/캐시/승계8회와오류8조건을확인했다. 실제MS5C 두리소스는bank2를사용하며다른bank의리소스해석을이실험이추가검증한것은아니다. 원본고정ROM과매핑된resource bank는불변이다.
+
+보고서: `artifacts/sprite_refresh_ports/verification.json`, SHA256 `8b6ba15a5fc4034bc06188cb5090c8f5f3a808b7cf35248cfe69a9bc51e86511`. 앞절의PVC미비교제한은이새검증범위에대해해소되었다. 실제뱅크장치의시간축과임의bank리소스,전체CPU레지스터/CCR은여전히범위밖이다.

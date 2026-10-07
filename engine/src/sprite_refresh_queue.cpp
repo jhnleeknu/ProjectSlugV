@@ -13,6 +13,13 @@ void put(std::vector<std::uint8_t>& ram, std::size_t offset,
     ram[offset + 1] = static_cast<std::uint8_t>(value);
 }
 
+void port(std::vector<ms5::VideoPortWrite>& writes,std::uint8_t size,std::uint32_t address,std::uint32_t value) {
+    ms5::VideoPortWrite write;write.size=size;write.address=address;write.value=value;writes.push_back(write);
+}
+void video(std::vector<ms5::VideoPortWrite>& writes,const ms5::SpriteWrite& value) {
+    port(writes,4,0x3c0000,(static_cast<std::uint32_t>(value.address)<<16)|value.value);
+}
+
 } // namespace
 
 namespace ms5 {
@@ -20,7 +27,8 @@ namespace ms5 {
 bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
                           const std::vector<CompositionResource>& resources,
                           std::vector<SpriteWrite>& writes,
-                          bool& processed, std::string& error, std::uint32_t* d0) {
+                          bool& processed, std::string& error, std::uint32_t* d0,
+                          std::vector<VideoPortWrite>* ports) {
     if (ram.size() != 65536U) {
         error = "refresh queue requires exactly 65536 RAM bytes";
         return false;
@@ -28,6 +36,7 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
     if ((ram[0x8d3d] & 0x80U) == 0) {
         ram[0x8d3d] &= 0x7fU;
         writes.clear();
+        if(ports!=0) ports->clear();
         processed = false;
         error.clear();
         return true;
@@ -63,6 +72,7 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
     }
     std::vector<std::uint8_t> updated(ram);
     std::vector<SpriteWrite> output;
+    std::vector<VideoPortWrite> hardware;
     const bool forward = (ram[0x8d3c] & 0x80U) != 0;
     const std::size_t current_offset = forward ? 4U : 6U;
     const std::size_t cached_offset = forward ? 6U : 4U;
@@ -99,6 +109,10 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
         for (unsigned int byte = 0; byte < 4; ++byte) {
             packed = (packed << 8) | updated[record + 8 + byte];
         }
+        if(ports!=0) {
+            port(hardware,2,0x2ffff2,((packed&7U)+1U)<<12);
+            port(hardware,2,0x2ffff0,0);
+        }
         const std::uint32_t identifier = packed & 0x7fffffU;
         const CompositionResource* resource = 0;
         for (std::size_t index = 0; index < resources.size(); ++index) {
@@ -129,6 +143,7 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
         if (!disabled) {
             put(updated, pool + current_offset, next_slot);
             output.insert(output.end(), record_writes.begin(), record_writes.end());
+            if(ports!=0) for(std::size_t i=0;i<record_writes.size();++i) video(hardware,record_writes[i]);
         }
     }
     for (unsigned int index = 0; index < 2; ++index) {
@@ -143,6 +158,7 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
             write.address = static_cast<std::uint16_t>((forward ? 0x8201U : 0x8200U) + slot);
             write.value = 0x8000U;
             output.push_back(write);
+            if(ports!=0) video(hardware,write);
             if (forward) {
                 ++slot;
             } else {
@@ -158,10 +174,14 @@ bool refresh_sprite_queue(std::vector<std::uint8_t>& ram,
     // The second pool determines the final address; incoming upper bits vanish.
     const std::uint32_t final_address=(static_cast<std::uint32_t>(
         word(updated, pools[1]+(forward ? 2U : 0U)))+(forward ? 0x8201U : 0x8200U))&65535U;
+    if(ports!=0) {
+        port(hardware,2,0x2ffff2,0x1000);port(hardware,2,0x2ffff0,0);
+    }
     ram.swap(updated);
     writes.swap(output);
     processed = true;
     if(d0!=0) *d0=(final_address<<16)|0x8000U;
+    if(ports!=0) ports->swap(hardware);
     error.clear();
     return true;
 }

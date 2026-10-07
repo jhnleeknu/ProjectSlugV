@@ -710,3 +710,11 @@
 - 원본584조건의전체RAM/D0와370,740비디오쓰기가일치했다.8개오류/별칭에서출력보존을확인했다. 네이티브PVC4,208쓰기는다음통합용관찰이며현재C++과비교한전체포트결과가아니다.
 - Python73개및C++전체검사통과. 리뷰: docs/reviews/0099-sprite-refresh-d0.md. 분석: docs/analysis/sprite-refresh-queue.md.
 - 다음은스프라이트PVC쓰기를비디오쓰기사이에정확히연결하고작업복구/c8c호출자를복원하는것이다. 전체IRQ/장치시간축/Z80/상위맵자료와전체부팅은미완료이며목표는active다.
+
+
+## 2026-10-07 — 스프라이트 뱅크 전환과 비디오 순서 통합
+
+- `refresh_sprite_queue`의선택적ports출력으로매레코드PVC전환·비디오·후행정리·기본bank복구를연결했다. 비활성pool에서도원본뱅크전환을보존한다.
+- 원본608조건의전체RAM/D0와378,428포트(PVC4,448/비디오373,980)가일치했다. 네flip/양방향/0레코드/승계8회및8개실패/별칭을확인했다. 실제리소스는bank2범위다.
+- Python73개및C++전체검사통과. 리뷰: docs/reviews/0100-sprite-refresh-ports.md. 분석: docs/analysis/sprite-refresh-queue.md.
+- 다음은c8c의기존하위함수연결과대기작업복구를복원하는것이다. 전체IRQ/장치시간축/Z80/상위맵자료와전체부팅은미완료이며목표는active다.

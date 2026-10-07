@@ -53,8 +53,10 @@ bool save_bytes(const std::string& path, const std::vector<std::uint8_t>& bytes)
     if (!output) {
         return false;
     }
-    output.write(reinterpret_cast<const char*>(&bytes[0]),
-                 static_cast<std::streamsize>(bytes.size()));
+    if (!bytes.empty()) {
+        output.write(reinterpret_cast<const char*>(&bytes[0]),
+                     static_cast<std::streamsize>(bytes.size()));
+    }
     output.close();
     return static_cast<bool>(output);
 }
@@ -96,11 +98,12 @@ bool parse_integer(const std::string& text, std::uint32_t maximum,
 } // namespace
 
 int main(int argc, char** argv) {
-    const bool trace_d0 = argc > 1 && std::string(argv[1]) == "--d0";
+    const bool trace_ports = argc > 1 && std::string(argv[1]) == "--ports";
+    const bool trace_d0 = argc > 1 && (std::string(argv[1]) == "--d0" || trace_ports);
     std::uint32_t d0 = 0U;
     if (trace_d0) {
         if (argc < 7) {
-            std::cerr << "usage: refresh_sprite_queue --d0 UINT32 INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]\n";
+            std::cerr << "usage: refresh_sprite_queue --d0/--ports UINT32 INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]\n";
             return 2;
         }
         if (!parse_integer(argv[2], 0xffffffffU, d0)) {
@@ -111,8 +114,8 @@ int main(int argc, char** argv) {
         argv += 2;
     }
     if (argc < 5) {
-        std::cerr << "usage: refresh_sprite_queue [--d0 UINT32] INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]\n"
-                  << "output writes: BE32 processed (0 or 1), then BE16 address/value pairs\n";
+        std::cerr << "usage: refresh_sprite_queue [--d0/--ports UINT32] INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]\n"
+                  << "output writes: BE32 processed (0 or 1), then BE16 address/value pairs; --ports uses 9-byte hardware records\n";
         return 2;
     }
     std::vector<std::string> paths;
@@ -161,16 +164,37 @@ int main(int argc, char** argv) {
     }
     std::vector<ms5::SpriteWrite> writes;
     bool processed = false;
-    if (!ms5::refresh_sprite_queue(ram, resources, writes, processed, error, trace_d0 ? &d0 : NULL)) {
+    std::vector<ms5::VideoPortWrite> ports;
+    if (!ms5::refresh_sprite_queue(ram, resources, writes, processed, error, trace_d0 ? &d0 : NULL, trace_ports ? &ports : NULL)) {
         std::cerr << error << '\n';
         return 1;
     }
     std::vector<std::uint8_t> output_bytes;
-    append_word(output_bytes, 0);
-    append_word(output_bytes, processed ? 1U : 0U);
-    for (std::size_t index = 0; index < writes.size(); ++index) {
-        append_word(output_bytes, writes[index].address);
-        append_word(output_bytes, writes[index].value);
+    if (trace_ports) {
+        // Diagnostic records: byte size, BE32 CPU port address, BE32 value.
+        for (std::size_t index = 0U; index < ports.size(); ++index) {
+            const ms5::VideoPortWrite& port = ports[index];
+            output_bytes.push_back(port.size);
+            for (unsigned int shift = 24U; ; shift -= 8U) {
+                output_bytes.push_back(static_cast<std::uint8_t>((port.address >> shift) & 0xffU));
+                if (shift == 0U) {
+                    break;
+                }
+            }
+            for (unsigned int shift = 24U; ; shift -= 8U) {
+                output_bytes.push_back(static_cast<std::uint8_t>((port.value >> shift) & 0xffU));
+                if (shift == 0U) {
+                    break;
+                }
+            }
+        }
+    } else {
+        append_word(output_bytes, 0);
+        append_word(output_bytes, processed ? 1U : 0U);
+        for (std::size_t index = 0; index < writes.size(); ++index) {
+            append_word(output_bytes, writes[index].address);
+            append_word(output_bytes, writes[index].value);
+        }
     }
     // Validate all input, resource and queue data before opening either output.
     if (!save_bytes(paths[1], ram) || !save_bytes(paths[2], output_bytes)) {
@@ -179,7 +203,11 @@ int main(int argc, char** argv) {
     }
     if (trace_d0) {
         std::cout << "{\"d0\":" << d0 << ",\"processed\":"
-                  << (processed ? "true" : "false") << "}\n";
+                  << (processed ? "true" : "false");
+        if (trace_ports) {
+            std::cout << ",\"writes\":" << ports.size();
+        }
+        std::cout << "}\n";
     }
     return 0;
 }

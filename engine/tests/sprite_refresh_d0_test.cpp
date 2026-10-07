@@ -8,19 +8,20 @@ void put(std::vector<std::uint8_t>& ram,unsigned int at,unsigned int value) {
 }
 int main() {
     std::vector<std::uint8_t> ram(65536,0);std::vector<ms5::CompositionResource> resources;
-    std::vector<ms5::SpriteWrite> writes;bool processed=true;std::string error;std::uint32_t d0=0x12345678;
-    assert(ms5::refresh_sprite_queue(ram,resources,writes,processed,error,&d0));
-    assert(!processed && d0==0x12345678);
+    std::vector<ms5::SpriteWrite> writes;std::vector<ms5::VideoPortWrite> ports;bool processed=true;std::string error;std::uint32_t d0=0x12345678;
+    assert(ms5::refresh_sprite_queue(ram,resources,writes,processed,error,&d0,&ports));
+    assert(!processed && d0==0x12345678 && ports.empty());
     for(unsigned int direction=0;direction<2;++direction) {
         ram.assign(65536,0);ram[0x8d3c]=direction ? 128 : 0;ram[0x8d3d]=128;
         for(unsigned int at=0x8d3e;at<0x8d4e;++at) ram[at]=255;
-        assert(ms5::refresh_sprite_queue(ram,resources,writes,processed,error,&d0));
+        assert(ms5::refresh_sprite_queue(ram,resources,writes,processed,error,&d0,&ports));
+        assert(ports.size()==2 && ports[0].address==0x2ffff2 && ports[0].value==0x1000 && ports[1].address==0x2ffff0);
         assert(processed && writes.empty() && d0==(direction ? 0x82008000U : 0x81ff8000U));
     }
     // Late missing resource rejection leaves D0 and caller outputs intact.
     ram.assign(65536,0);ram[0x8d3d]=128;put(ram,0x8d36,2);put(ram,0x7f38,65535);
     d0=0xabcdef00;processed=false;const std::vector<std::uint8_t> before=ram;
-    assert(!ms5::refresh_sprite_queue(ram,resources,writes,processed,error,&d0));
-    assert(d0==0xabcdef00 && !processed && ram==before && writes.empty());
+    assert(!ms5::refresh_sprite_queue(ram,resources,writes,processed,error,&d0,&ports));
+    assert(ports.size()==2 && d0==0xabcdef00 && !processed && ram==before && writes.empty());
     std::cout<<"Sprite refresh D0 early return, zero cleanup, disabled pools and rollback passed\n";
 }
