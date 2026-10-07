@@ -61,11 +61,45 @@ bool save_bytes(const std::string& path, const std::vector<std::uint8_t>& bytes)
     return static_cast<bool>(output);
 }
 
+bool parse_cursor(const std::string& text, std::uint16_t& result) {
+    unsigned int base = 10U;
+    std::size_t start = 0U;
+    if (text.size() >= 2U && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
+        base = 16U; start = 2U;
+    }
+    if (start == text.size()) return false;
+    unsigned int value = 0U;
+    for (std::size_t index = start; index < text.size(); ++index) {
+        const char c = text[index];
+        unsigned int digit;
+        if (c >= '0' && c <= '9') digit = static_cast<unsigned int>(c - '0');
+        else if (base == 16U && c >= 'a' && c <= 'f') digit = static_cast<unsigned int>(c - 'a') + 10U;
+        else if (base == 16U && c >= 'A' && c <= 'F') digit = static_cast<unsigned int>(c - 'A') + 10U;
+        else return false;
+        if (digit >= base || value > (65535U - digit) / base) return false;
+        value = value * base + digit;
+    }
+    result = static_cast<std::uint16_t>(value);
+    return true;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 5) {
-        std::cerr << "usage: prepare_sprite_queue INPUT_RAM OUTPUT_RAM OUTPUT_WRITES RESOURCE1.ms5c [RESOURCE2.ms5c ...]\n"
+    bool begin = false, resume = false;
+    ms5::SpritePreparePending pending;
+    if (argc > 1 && std::string(argv[1]) == "--begin") {
+        begin = true; --argc; ++argv;
+    } else if (argc > 1 && std::string(argv[1]) == "--resume") {
+        if (argc < 3 || !parse_cursor(argv[2], pending.cursor)) {
+            std::cerr << "--resume requires decimal or 0x-prefixed uint16 CURSOR\n";
+            return 1;
+        }
+        resume = true; pending.waiting = true;
+        argc -= 2; argv += 2;
+    }
+    if (argc < (begin || resume ? 4 : 5)) {
+        std::cerr << "usage: prepare_sprite_queue [--begin | --resume CURSOR] INPUT_RAM OUTPUT_RAM OUTPUT_WRITES [RESOURCE.ms5c ...] (legacy requires at least one resource)\n"
                   << "output writes: raw BE16 address/value pairs\n";
         return 2;
     }
@@ -114,7 +148,11 @@ int main(int argc, char** argv) {
         resources.push_back(resource);
     }
     std::vector<ms5::SpriteWrite> writes;
-    if (!ms5::prepare_sprite_queue(ram, resources, writes, error)) {
+    bool succeeded;
+    if (begin) succeeded = ms5::begin_sprite_queue(ram, pending, error);
+    else if (resume) succeeded = ms5::resume_sprite_queue(ram, resources, pending, writes, error);
+    else succeeded = ms5::prepare_sprite_queue(ram, resources, writes, error);
+    if (!succeeded) {
         std::cerr << error << '\n';
         return 1;
     }
@@ -127,6 +165,10 @@ int main(int argc, char** argv) {
     if (!save_bytes(paths[1], ram) || !save_bytes(paths[2], output_bytes)) {
         std::cerr << "cannot write output files\n";
         return 1;
+    }
+    if (begin || resume) {
+        std::cout << "{\"waiting\":" << (pending.waiting ? "true" : "false")
+                  << ",\"cursor\":" << pending.cursor << "}\n";
     }
     return 0;
 }

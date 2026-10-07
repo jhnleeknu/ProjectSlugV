@@ -18,10 +18,14 @@ void put(std::vector<std::uint8_t>& ram, std::size_t offset,
 
 namespace ms5 {
 
-bool prepare_sprite_queue(std::vector<std::uint8_t>& ram,
-                          const std::vector<CompositionResource>& resources,
-                          std::vector<SpriteWrite>& writes,
-                          std::string& error) {
+SpritePreparePending::SpritePreparePending() : waiting(false), cursor(0) {}
+
+bool begin_sprite_queue(std::vector<std::uint8_t>& ram,
+                        SpritePreparePending& pending, std::string& error) {
+    if (pending.waiting) {
+        error = "prepare queue already has a pending wait";
+        return false;
+    }
     if (ram.size() != 65536U) {
         error = "prepare queue requires exactly 65536 RAM bytes";
         return false;
@@ -35,15 +39,50 @@ bool prepare_sprite_queue(std::vector<std::uint8_t>& ram,
         error = "prepare queue ring indices must be even and in 0..510";
         return false;
     }
-    if (read != start) {
-        error = "prepare queue consumer-not-synchronized: read and prepared cursors differ";
-        return false;
-    }
     const unsigned int deferred_bytes = word(ram, 0x914e);
     const unsigned int normal_bytes = (normal_end + 512U - start) & 510U;
     if (((normal_end + deferred_bytes) & 510U) != end ||
         normal_bytes + deferred_bytes > 510U) {
         error = "prepare queue producer end must match normal plus deferred entries, at most 255";
+        return false;
+    }
+    std::vector<std::uint8_t> updated(ram);
+    if (!sort_deferred_sprites(updated, 0, error) ||
+        !radix_sort_sprite_queue(updated, error)) {
+        return false;
+    }
+    SpritePreparePending next;
+    next.waiting = true;
+    next.cursor = word(updated, 0x8d36);
+    ram.swap(updated);
+    pending = next;
+    error.clear();
+    return true;
+}
+
+bool resume_sprite_queue(std::vector<std::uint8_t>& ram,
+                         const std::vector<CompositionResource>& resources,
+                         SpritePreparePending& pending,
+                         std::vector<SpriteWrite>& writes, std::string& error) {
+    if (ram.size() != 65536U || !pending.waiting ||
+        pending.cursor > 510U || (pending.cursor & 1U)) {
+        error = "prepare queue resume requires RAM and a valid pending cursor";
+        return false;
+    }
+    const std::uint16_t read = word(ram, 0x8d34);
+    if (read > 510U || (read & 1U)) {
+        error = "prepare queue read cursor must be even and in 0..510";
+        return false;
+    }
+    if (read != pending.cursor) {
+        writes.clear();
+        error.clear();
+        return true;
+    }
+    const std::uint16_t start = word(ram, 0x8d36);
+    const std::uint16_t end = word(ram, 0x8d3a);
+    if (start > 510U || end > 510U || (start & 1U) || (end & 1U)) {
+        error = "prepare queue prepared and end cursors must be even and in 0..510";
         return false;
     }
     const std::size_t pools[2] = {0x8d3e, 0x8d46};
@@ -70,10 +109,6 @@ bool prepare_sprite_queue(std::vector<std::uint8_t>& ram,
         }
     }
     std::vector<std::uint8_t> updated(ram);
-    if (!sort_deferred_sprites(updated, 0, error) ||
-        !radix_sort_sprite_queue(updated, error)) {
-        return false;
-    }
     std::vector<SpriteWrite> output;
     const bool forward = (ram[0x8d3c] & 0x80U) != 0;
     const std::size_t current_offset = forward ? 4U : 6U;
@@ -147,6 +182,28 @@ bool prepare_sprite_queue(std::vector<std::uint8_t>& ram,
     updated[0x8d3d] = 0xffU;
     ram.swap(updated);
     writes.swap(output);
+    pending = SpritePreparePending();
+    error.clear();
+    return true;
+}
+
+bool prepare_sprite_queue(std::vector<std::uint8_t>& ram,
+                          const std::vector<CompositionResource>& resources,
+                          std::vector<SpriteWrite>& writes, std::string& error) {
+    // Preserve the synchronous API's all-or-nothing contract.
+    std::vector<std::uint8_t> updated(ram);
+    SpritePreparePending pending;
+    if (!begin_sprite_queue(updated, pending, error)) {
+        return false;
+    }
+    if (word(updated, 0x8d34) != pending.cursor) {
+        error = "prepare queue consumer-not-synchronized: read and prepared cursors differ";
+        return false;
+    }
+    if (!resume_sprite_queue(updated, resources, pending, writes, error)) {
+        return false;
+    }
+    ram.swap(updated);
     error.clear();
     return true;
 }

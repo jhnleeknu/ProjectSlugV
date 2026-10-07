@@ -947,3 +947,11 @@
 - `verify_column_prepare.py`: 준비1,482조건, 준비→기존화면갱신4조건, 포트1,312개와 오류29조건 통과. 실제 CLI RAM/full D0/D1/D3 승계도 검증했다. 보고서 SHA256 `1ee49b44a787cf2b279b99252ec8639b9183b2139b37450386bce9a8b38d6069`.
 - 전체 빌드·Python73개·C++전체 통과. 메인 리뷰 `docs/reviews/0128-column-prepare-callback-inventory.md`.
 - 다음은 메인 e74의 사운드 큐 비우기3c08, 일반 sprite 준비16bba, 배경 좌표 준비1ae56, 팔레트5728을 원본 순서로 잇는 작업이다. callback/IRQ 작업의 자연 실행 대상과 전체 게임 복원은 미완료다.
+
+
+## 2026-10-07 — sprite 준비의 정렬 후 대기·재개
+- `begin_sprite_queue`/`resume_sprite_queue`와 pending cursor를 추가했다. 원본16bba는 병합·정렬 후16bd0에서 소비자를 기다린다. 재개는 정렬을 반복하지 않고 현재 방향과 슬롯 경계를 읽는다. 기존 동기 API의 오류 시 출력 보존은 유지한다.
+- CLI `--begin`/`--resume CURSOR`는 실제 MS5C 런타임 리소스를 사용한다. 대기 시에는 리소스가 없어도 RAM을 보존하고 빈 쓰기 목록을 반환한다.
+- `verify_sprite_prepare_wait.py`: 원본1,297경계(begin329/wait640/release328), 실제 CLI 상태 승계328시퀀스, VRAM459,520개, 오류 보존27조건 통과. 보고서 SHA256 `fc59d6fc5b1e296a18f20e4195a67f0557bd793734119c425d2027ee1fd2c0d4`.
+- 전체 빌드·Python73개·C++전체 검사 및 기존 동기 준비96조건→갱신96조건 통과. 메인 리뷰 `docs/reviews/0129-sprite-prepare-wait.md`.
+- 다음은 emitter의 D1 상위word와 PVC 포트 전달, sound3c08 대기/재개를 포함한 e74→ec4 연결이다. sprite emitter의 SWAP이 D1 상위word를 바꾸므로 단순 보존/0 가정은 금한다. 실제 IRQ 소비·물리 시간·전체 게임 복원은 미완료이며 목표는 진행 중이다.
