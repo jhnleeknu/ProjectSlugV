@@ -646,3 +646,10 @@
 - 모든 signal/threshold 조합과 video word 총131,072조건에서 원본과 일치했다. 대기32,640건은 비디오 읽기가 없었고 준비98,432건은 정확히1회였다.
 - C++ 전체RAM48조건, 통합14조건과 늦은 오류2조건 통과. 호스트 신호를 명시적으로 바꾸는8회 승계로 대기/준비 재진입을 확인했다. Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0091-frame-gate.md.
 - 다음은ec4의 선택적 디버그 출력과 인터럽트 신호 생산을 연결하는 것이다. 현재 호스트 신호 fixture는 실제 interrupt 구현이 아니다. BIOS·사운드·작업 복구·장치 시간축·전체 부팅은 남아 있으며 목표는 active다.
+
+## 2026-10-07 — 인터럽트 실행 근거와 사운드 큐 소비
+
+- c8c 원본5,632개 진입 조건과864개 제한된 전체 반환 조건을 실행해 재진입·신호 포화·watchdog·플래그 종료 순서를 확인했다. 사운드 생산/렌더링/credit 관련 실제 의존 경계4개를 기록했다.
+- `service_sound_queue`로3cb2의 status 읽기, 우선 명령과128바이트 큐의 연속 중복 합치기를 복원했다. 원본2,575조건의 전체RAM과 사운드 포트2,394건이 일치했다.14개 실패 조건은 출력 보존을 확인했다.
+- Python73개와 C++ 전체 검사 통과. 리뷰: docs/reviews/0092-sound-queue-interrupt-flow.md. 분석: docs/analysis/interrupt-flow.md 및 sound-queue.md.
+- 다음은48156/3af8의 사운드 생산과3ac8 byte 큐의 대기 관계를 복원하여3cac 호출을 완성하는 것이다. 전체 interrupt·BIOS·작업 복구·사운드CPU·오디오 시간축은 아직 미완료이며 목표는 active다.
