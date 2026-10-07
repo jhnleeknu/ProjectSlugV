@@ -1103,3 +1103,12 @@
 - 보고서 SHA256: prelude `7432265d5ecaabe8603866d176133cfe32a2f58b96aa49580971795e29e68896`, initialization `9610a86247038cb92cf810dde218aa9764dacfe79950e5aa5f7e191f2b8fe876`. 전체make Python118/C++94/경고0. 메인 리뷰 `docs/reviews/0148-first-area-sound.md`.
 - 후속 본문 호출21개/15대상과16개 명시 창을558행으로 목록화했다. 원시 selector lookup128바이트는 논리 테이블 크기나 동작 검증으로 주장하지 않는다. 상세 `docs/analysis/stage-area-body.md`.
 - 다음은479d0 양쪽 분기를 같은 진입으로 연결하고4e666, d760a/49c32와 후속 일반 scene script를 복원하는 것이다. 전체 게임플레이·자연scheduler 및 전체 목표는 계속 미완료다.
+
+## 2026-10-07 — 구역 진입 양분기와 후속 할당 통합
+
+- stage_area_initialization으로479d0부터47a1c까지 연결했다. 첫 구역47594 초기화/사운드 대기와 다른 구역의 두 snapshot/475ca를 구분하며, 재개 시 분기를 반복하지 않는다. 이후LIVE d684 gate,4e666 selector 정리,d760a 할당,두49c32 저장을 원본 순서로 실행한다.
+- 원시 selector lookup128바이트를 기존MS5D128payload/160container로 보존하고 C++에서 소비한다. Container SHA256 `59541b176a2819fd0f7aefbaa481d309c9e06e1fb4b722df52fe28e3285d6046`. 논리 테이블 전체 크기나 standalone signed-index 범위를 주장하지 않는다.
+- 원본453조건/오류47조건/실제CLI승계16개/이전player caller 연결2개를 통과했다. 네 사운드 대기,128 lookup주소,대기중LIVE gate 변경과분기유지,할당실패/alias쓰기순서를 확인했다. MMIO쓰기0,ROM·binary불변. 보고서 SHA256 `76e22c1c64acba38eecb095c5d2e989b17079dd58be3685a4e5d0bf6b4712778`.
+- 전체make Python125/C++95/경고0. 상세 `docs/analysis/stage-area-initialization.md`,메인리뷰 `docs/reviews/0149-stage-area-initialization.md`.
+- 후속 장면 포인터42개(59레코드,41비영/4개레코드의null)를 목록화했다.41개 스크립트의855구문행이 종료점까지 읽혔고9개inline block은원시보존했다. 구문보고서 SHA256 `21b526531039763241fb8a01bc240df657ce0a357e240d21fab50ec8a42dd1a6`;실행검증은아니다.
+- 다음은47a1c 이후 사운드 선택/대기 묶음과47a94 일반 scene interpreter다. 설치한d764a callback 실행·자연scheduler·전체게임플레이를 포함한 전체 목표는 미완료다.

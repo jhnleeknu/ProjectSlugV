@@ -6,7 +6,7 @@ Canonical decrypted 프로그램 SHA256은 `29112a94b5c073de95919ab4efbc75427287
 
 `.venv/bin/python tools/inventory_stage_area_body.py`는 `artifacts/stage_area_body/report.json`과 `inventory.asm`을 만든다. Caller 창은479d0..47af0이며 end exclusive다. 직접 호출21개·unique15대상에 대한 bounded 후보와49c20을 포함한16개 callee 창을 보존한다. 전체558행은 후보 명령과 undecoded word의 합계이며 실행이나 분석 완료 수치가 아니다.4e666..4e68e는 명시40-byte 창이고 다른 callee는 명시128-byte 창이다. 첫RTS 이후도 남기고 지정 끝을 넘어가는 decode는 `dc.w`로 기록한다.
 
-보고서 SHA256은 `a3996a4d2d3afefcd0a366b167160544bd8ac4d8193eff697aeb6d5f5e5f0f11`, ASM SHA256은 `b69c4e7ecaa21bb7acf70f5a86fc38fb078eb4b5ebfd81c8129385ca75ce053d`다. Reports의 engine/docs address text 참조는 기존 API 재사용 후보일 뿐 같은 RAM 효과·레지스터 계약을 확인한 결과가 아니다. 겹치는 callee 창은 의도적인 bounded 목록이며 코드/데이터 경계나 함수 소유권을 자동 확정하지 않는다.
+보고서 SHA256은 `9cd717df064b9f201ae194f667045913a2b9a62a8768450f56df35753a00644d`, ASM SHA256은 `b69c4e7ecaa21bb7acf70f5a86fc38fb078eb4b5ebfd81c8129385ca75ce053d`다. Reports의 engine/docs address text 참조는 기존 API 재사용 후보일 뿐 같은 RAM 효과·레지스터 계약을 확인한 결과가 아니다. 겹치는 callee 창은 의도적인 bounded 목록이며 코드/데이터 경계나 함수 소유권을 자동 확정하지 않는다.
 
 ## Caller 직접 호출 목록
 
