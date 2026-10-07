@@ -1,0 +1,25 @@
+# 배치 실행 통합 리뷰
+
+Baseline `d632fe4`. 직전goal turn은43e08 좌표 초기화의 구현·원본 비교·커밋을완료한progress다. 이번에는메인이원본1a414/1a470 계약을확정하고sol에게구현,독립원본비교,canonical참조목록을분담했다. 중간사용자입력으로종료된agent는실제agent/process/파일상태를확인한뒤새담당으로재개했다.
+
+## 메인 검토
+
+Core전체와CLI/unit을읽고원본순서와대조했다. 19802전입력상위WORD가fraction으로이동하고반환뒤복원된다. Signedbounds의WORD wrap, X에서도d3a6읽기, allocation carry무시,43e08뒤inlinecount LIVE재조회,WORD별복사,stream의phase LIVE재조회와cursor게시를보존한다. Helper실패나뒤record실패는전체RAM/state를게시하지않는다. 변환macro는평범한필드대입으로바꿨다.
+
+CLI숫자범위,정확64KiB RAM,resource/input/output canonical/symlink/hardlink alias검사와성공뒤파일출력을확인했다. Fixedwindow읽기는aligned/유일/전체span이며RAM은LIVE다. RAMmotion,odd/8000이상inline길이,임시1048576record한도밖실행은지원밖이다. 이지원제약을전체원본동작완료로해석하지않는다.
+
+## 검증 보강
+
+원본observer와비교verifier를메인이읽었다. 처음범위오류입력은phase0이어서bounds검사를건너뛸수있어nullmotion/phase1 acceptedbounds입력으로고쳤다. 기존겹침입력은실제payload목적지476과맞지않아464 record의474 source→476 destination으로수정하고앞선WORD가뒤로전파되는지assert한다.
+
+네bounds분기에서1a51c로이동하는실제PC edge,callback0/count0의2912→43e08과100ec6쓰기,배치payload가phase를1로바꿔동일stream호출의다음record까지실행하는경우를assert한다. Canonical앞선motion참조16개를입력구성에사용하지만실행도달성이라고주장하지않는다. 나머지2개는임의선택한canonicalmotion과null을검사하는명시fixture다.
+
+Alias record100468은allocation inheritance가length상위byte를a5로바꾸어8000이상이되는것을관찰했다. 이원본실행은현재명시지원밖이므로해당양성fixture의상속byte를0으로수정한다. 검증편의를위해원본이나C++결과를고친것이아니다.
+
+전체make Python175/C++110/경고0,로그artifacts/scene_placement_execution_build_test.log. 최종독립native/C++전체비교1,625조건과오류113조건이통과했다. 18CLIsequence90호출중72호출이이전출력을소비하되phase/A0/A6는명시host입력이다. 메인은최종native와verifier의모든fixture/input/output hash/register일치,55resource와manifest/contexthash,현재binaryhash를확인했다.
+
+Native SHA256 `716b54add2b2733cbd04b7274e6d6fe852e7762cc8558f32056720da457b2820`. Verification SHA256 `341085cfa6992a09e44fefc3d23cfe18b3f409c88e5d1d65abf6102ae994996b`. CLI SHA256 `636c4b0769d9aaceee8ddb1c270bdbff48cd100825905c0c478fcd0d303eab43`. 마지막오류복사fixture는6010+7ffe가RAM끝을넘지않아source를a000으로이동해실제latecopy실패를확인했다. 보강후최종전체corpus를재실행했으며기존부분실행수치를합산하지않는다.
+
+## 다음 단계
+
+일반1a5a4 초기화의스크립트/phase반복/전체update/배치연결이남았다. 메인이원본을직접읽어scene-general-initialization.md에입력D0/A0보존과callee순서를기록했다. 자연frame·플레이화면·전체스테이지및전체게임목표는미완료이며goal은active다.

@@ -1278,3 +1278,12 @@
 - 원본2,020조건/오류72조건/MMIO0통과. Parent/self/overlap/stamp aliases와유효RAM경계,할당거절후에도원본이쓰는100ec6주소를포함한다. 실제CLI승계4sequence/20호출중16이직전출력을소비한다. 신규report SHA256 `69cc9998a64b73427ac99aa46579e4c6032dbce91862391f6accd33b588598b6`.
 - 기존좌표회귀5,248/오류135/MMIO0,전체make Python175/C++109/경고0. 회귀report SHA256 `ca8a3b769e504965d2c2e2ad0f2d531433576cef5861bced5212be35d2ac7066`. 리뷰0168과scene-placement-execution.md에근거·재현·한계를기록했다.
 - 다음작업의1a414/1a470전체원본순서를분석했다. X bounds도d3a6을읽는점,allocation실패시에도position쓰기,WORD inlinecopy와signedskip차이를보존해야한다. 이전체배치실행·일반1a5a4·자연frame·플레이화면·전체게임goal은아직미완료다.
+
+
+## 2026-10-08 — 장면 배치 실행 통합
+
+- 1a414 phase gate와1a470 시간조회/bounds/할당/좌표/WORD payload복사를단일C++ API·CLI로연결했다. 기존18placement/37motion MS5D를직접읽고RAMalias는LIVE읽기순서로처리한다. 할당거절후에도100ec6에위치쓰기,inlinecount의후반재조회,stream중phase재조회를보존한다.
+- 원본1,625조건/오류113조건에서전체64KiB RAM·13register가일치했다. 18root/24record/37motion과네bounds제외분기,겹치는WORD복사,같은호출중phase변경뒤두번째record실행을포함한다. 18CLIsequence90호출중72는직전출력을소비하되phase/A0/A6는명시host입력이다.
+- Verification SHA256 `341085cfa6992a09e44fefc3d23cfe18b3f409c88e5d1d65abf6102ae994996b`. Native SHA256 `716b54add2b2733cbd04b7274e6d6fe852e7762cc8558f32056720da457b2820`. 전체make Python175/C++110/경고0. 메인이core/CLI/unit/observer/verifier를읽고검증fixture의bounds우회·잘못된복사겹침·RAM끝계산을보강했다. 최종전체재실행과현재hash를확인했다.
+- 리뷰0169와scene-placement-execution.md에재생성·지원제약을기록했다. RAMmotion과odd/8000이상inline길이,임시record한도밖은지원밖오류다. Callback은저장만하며실행하지않는다.
+- 다음은일반1a5a4 초기화의script/phase반복/전체update/배치연결이다. 메인이원본을대조해scene-general-initialization.md에후속계약을저장했다. 자연frame·직접플레이화면·전체게임복원은미완료이며goal은active다.
