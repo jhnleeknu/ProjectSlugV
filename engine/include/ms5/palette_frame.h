@@ -2,6 +2,7 @@
 #define MS5_PALETTE_FRAME_H
 
 #include "ms5/palette_resource.h"
+#include "ms5/video_port.h"
 
 namespace ms5 {
 
@@ -15,11 +16,12 @@ namespace ms5 {
 // flag mask 2. Low-byte changes alone do not dirty nodes. When pending
 // byte 0x7ded has bit 7 set, preparation is deferred and frame updates
 // still commit. Otherwise prepare_palettes supplies normal preparation.
-// Alternate control-flow entries and watchdog/hardware MMIO are omitted.
-// Failure preserves all RAM bytes and sets error; success clears error.
+// Optional writes receive ordered watchdog and PVC bank word writes. Device
+// timing and alternate entries are excluded. Failure preserves RAM/writes.
 bool step_palette_frame(std::vector<std::uint8_t>& ram,
                         const std::vector<PaletteRecord>& records,
-                        std::string& error);
+                        std::string& error,
+                        std::vector<VideoPortWrite>* writes = NULL);
 
 } // namespace ms5
 

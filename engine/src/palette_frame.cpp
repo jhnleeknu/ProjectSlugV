@@ -24,14 +24,16 @@ namespace ms5 {
 
 bool step_palette_frame(std::vector<std::uint8_t>& ram,
                         const std::vector<PaletteRecord>& records,
-                        std::string& error) {
+                        std::string& error, std::vector<VideoPortWrite>* writes) {
     if (ram.size() != 65536) {
         error = "RAM must contain exactly 65536 bytes at CPU 0x100000";
         return false;
     }
     std::vector<std::uint8_t> candidate;
+    std::vector<VideoPortWrite> pending;
     try {
         candidate = ram;
+        if (writes != NULL) pending.reserve(260);
     } catch (const std::bad_alloc&) {
         error = "cannot allocate palette frame RAM";
         return false;
@@ -42,7 +44,7 @@ bool step_palette_frame(std::vector<std::uint8_t>& ram,
         };
         candidate[0x7dd4] = static_cast<std::uint8_t>(
             candidate[0x7dd4] - 1U);
-        bool changed = false;
+        std::uint8_t difference = 0;
         for (std::size_t channel = 0; channel < 3; ++channel) {
             const std::size_t current = 0x7dc2 + channel * 2;
             const std::uint16_t value = candidate[0x7dd4] == 0 ?
@@ -51,12 +53,15 @@ bool step_palette_frame(std::vector<std::uint8_t>& ram,
                     static_cast<std::uint32_t>(read_be16(candidate, current)) +
                     read_be16(candidate, 0x7dce + channel * 2));
             write_be16(candidate, current, value);
-            if (candidate[current] != previous[channel]) {
-                changed = true;
-            }
+            difference = static_cast<std::uint8_t>(difference |
+                static_cast<std::uint8_t>(previous[channel] - candidate[current]));
         }
-        if (changed) {
+        if (difference != 0) {
             for (std::size_t slot = 0; slot < 256; ++slot) {
+                if (writes != NULL) {
+                    VideoPortWrite write;write.address=0x300001U;write.size=1;
+                    write.value=difference;pending.push_back(write);
+                }
                 const std::size_t flags = 0x4d92 + slot * 16 + 15;
                 if ((candidate[flags] & 2U) == 0) {
                     candidate[flags] = static_cast<std::uint8_t>(
@@ -65,11 +70,18 @@ bool step_palette_frame(std::vector<std::uint8_t>& ram,
             }
         }
     }
-    if ((candidate[0x7ded] & 0x80U) == 0 &&
-        !prepare_palettes(candidate, records, error)) {
-        return false;
+    if ((candidate[0x7ded] & 0x80U) == 0) {
+        if (!prepare_palettes(candidate, records, error)) return false;
+        if (writes != NULL) {
+            for (unsigned int i=0;i<2;++i) {
+                VideoPortWrite write;write.size=2;write.address=0x2ffff2U;
+                write.value=0x1000U;pending.push_back(write);
+                write.address=0x2ffff0U;write.value=0;pending.push_back(write);
+            }
+        }
     }
     ram.swap(candidate);
+    if (writes != NULL) writes->swap(pending);
     error.clear();
     return true;
 }

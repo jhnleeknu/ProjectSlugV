@@ -583,3 +583,13 @@
 - 원본과1,734조건전체RAM/경계일치. 실제trap경계863회,phasehelper871회,모든256phase와메모리중첩순서를확인했다. CLI오류/별칭25조건도출력을보존했다.
 - `make all test`(Python61개/C++전체)통과. 리뷰: docs/reviews/0083-control-counter.md. 보고서: artifacts/control_counter/verification.json.
 - 비디오제어와진행카운터의연결준비가끝났다. 다음은기존팔레트효과API까지포함하여f5a호출자순서를통합하고,효과갱신의watchdog·뱅크쓰기출력범위를확인하는것이다. 전체목표는active다.
+
+
+## 2026-10-07 — 컨트롤러 반환값 소비와 팔레트 하드웨어 출력 연결
+
+- `consume_control_result`로f5a의상태전환·비디오조회/복구·팔레트저장/설정/갱신/복구·카운터처리를원본순서로연결했다. ec4루프,fee trap직전,정상rts를구분한다.
+- `step_palette_frame`에watchdog256회와준비전후PVC bank word4회의선택적출력을추가했다. 기존RAM전용호출은유지한다.
+- 원본호출자276조건의전체RAM·경계·포트16,108회와독립팔레트140조건의전체RAM·포트18,712회가일치했다. 미지원palette ID의늦은실패는앞선변경과출력을취소한다. 원본trap경계는앞선복구변경을확정한다.
+- 실제MS5P파일을원본에서재추출한전체내용과비교했다. 고정ROM/팔레트뱅크의불변부분도확인했다.
+- `make all test`(Python61개/C++전체),CLI범위·별칭검사통과. 리뷰: docs/reviews/0084-control-caller.md. 보고서: artifacts/control_caller/verification.json.
+- 다음은f54의9136호출부터이후소비까지단일진입으로연결하고,ec4의입력·인터럽트대기를추적하는것이다. 전체CPU상태·장치타이밍·게임부팅은미완료이며전체목표는active다.

@@ -6,7 +6,7 @@
 namespace ms5 {
 
 // Ordered CPU hardware writes used by video/menu traces, including the
-// watchdog port during object restart. size is measured in bytes;
+// watchdog and PVC bank-control ports. size is measured in bytes;
 // address is a CPU address and value preserves the full write width.
 struct VideoPortWrite {
     std::uint32_t address;

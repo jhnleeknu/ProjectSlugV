@@ -1,6 +1,6 @@
 # 컨트롤러 반환값을 사용하는 호출자
 
-프로그램 SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. 이 문서의 CPU 주소는 복호화 프로그램의 파일 오프셋과 같다. 진입f54는9136을 호출하고, f5a부터 반환값을 소비한다. 아래 분석은 원본 코드 실행과 명령 근거이며 호출자 전체의 C++ 복원 완료는 아니다.
+프로그램 SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. 이 문서의 CPU 주소는 복호화 프로그램의 파일 오프셋과 같다. 진입f54는9136을 호출하고, f5a부터 반환값을 소비한다. 아래 분석은 원본 코드 실행과 명령 근거다. 후속 C++ 구현은f5a 이후를 연결하며, f54의9136 호출부터 포함한 통합과ec4 루프 실행은 아직 분리되어 있다.
 
 ## 상태 전환과 표시 효과
 
@@ -14,7 +14,7 @@ f5a는 object(A6)+84의 이전 상태 byte를D1로 읽고, f5e는 반환D0의 �
 | 비영 | 0 | object+82를3d7e로 복구;object+80이 비영이면 효과 복구 후+80=0;카운터 검사 |
 | 비영 | 비영 | 카운터 검사 |
 
-효과 저장 경로는8bbc(0)으로7dec를0으로 만들고8bc8로7dc2..7dd5의20바이트를7dd6..7de9에 복사한다. object+80을ff로 설정하고8c16(-4,-4,-4,4)를 호출한다. 이어5728을 즉시 호출하므로 일반적인 이 입력에서는 타이머4를 설정한 같은 호출 안에서3으로 감소한다. 효과 저장/복구와 설정·갱신은 기존 C++ API로 각각 복원되어 있지만 이 호출자의 순서로 연결한 런타임은 아직 없다.
+효과 저장 경로는8bbc(0)으로7dec를0으로 만들고8bc8로7dc2..7dd5의20바이트를7dd6..7de9에 복사한다. object+80을ff로 설정하고8c16(-4,-4,-4,4)를 호출한다. 이어5728을 즉시 호출하므로 일반적인 이 입력에서는 타이머4를 설정한 같은 호출 안에서3으로 감소한다. 효과 저장/복구와 설정·갱신을 기존 C++ API로 복원했고, 아래 consume_control_result에서 이 호출자의 순서로 연결했다.
 
 3db2는4d91 bit3이 켜져 있으면0, 꺼져 있으면4d90 byte+1을 반환한다. byte255는 word256이 된다.3d7e는 입력word에서1을 빼고 borrow 여부로 분기한다. 입력0이면4d90=0 및4d91 bit3 설정, 그 외에는 감소 결과의 하위byte를4d90에 쓰고bit3을 지운다. 이어4d90/91 word를 포트3c0006에 쓴다. 이 문서는 명령 수준의 shadow/포트 동작을 기록하며 장치 타이밍까지 구현한 것으로 취급하지 않는다.
 
@@ -76,3 +76,23 @@ OBJECT_ADDRESS는100000..10ff80 사이의짝수CPU주소이며끝의0x80바이�
 1,734조건(독립1,716 및RAM승계18회)에서전체64KiB RAM과종료경계가일치했다. 실제fee 경계863회와43dbc 호출871회를hook으로확인했다. 모든256개초기phase,word0/1/7fff/8000/ffff,최저·최고object주소와phase중첩을포함한다. 오류주소·RAM크기·입출력직접/하드링크/심볼릭링크별칭25조건은출력을보존했다. 영상/watchdog포트출력이없고원본mapped1MiB가불변임을확인했다.
 
 전체 `make all test`(Python61개/C++전체)통과. 보고서 `artifacts/control_counter/verification.json` SHA256: `7deacddda16f7717b17b375b421d65bd346239381bdd4b768d5f0d5f3e92dbf5`. 다른CPU레지스터/flags,trap handler와실제게임동기화는API범위밖이다. 다음연결작업은f5a의상태소비와팔레트효과·비디오제어·이카운터API를원본순서로호출하는것이다.
+
+
+## 반환값 소비·비디오·팔레트·카운터의 C++ 연결
+
+```
+build/consume_control INPUT_RAM PALETTES_MS5P OUTPUT_RAM OUTPUT_PORTS OBJECT_ADDRESS CONTROL_D0
+.venv/bin/python tools/verify_control_caller.py
+```
+
+`consume_control_result`는9136이반환한뒤의f5a부터실행한다. RAM과입력CONTROL_D0는반환직후상태다. 상태의하위byte를object+84에기록한뒤이전byte와조합하여video조회/설정,효과저장·설정·갱신또는복구,카운터검사를원본순서대로호출한다. 팔레트준비는실제MS5P를사용한다. OBJECT_ADDRESS는짝수100000..10ff7a이며0x85byte전체가RAM안에있어야한다.
+
+결과 `next_pc`는0xec4(대기루프경계),0xfee(trap15명령직전),0(정상rts)이다. 경계뒤코드는실행하지않는다. trap은원본에서실제로도달한성공결과이므로그전에변경한상태byte·비디오/효과복구와포트를유지한다. 지원하지않는팔레트ID같은호스트오류는그이전변경까지전체트랜잭션으로취소한다. 두경우를같은실패처리로묶지않는다.
+
+팔레트프레임 API에선택적포트출력을추가했다. 색상상위byte가변한경우 `(old_red-new_red) OR (old_green-new_green) OR (old_blue-new_blue)`의각차를byte로계산한값을watchdog300001에256회쓴다. 이값은단순boolean이아니다. 준비를실행하면2ffff2에1000,2ffff0에0을쓴뒤팔레트준비를하고같은쌍을다시쓴다. 출력목록은watchdog→두쌍의bank word순서이며준비gate가켜져있으면bank쓰기는없다. RAM갱신도기존과같이보존한다. 장치의시간축과RAM/포트간세부관측타이밍은모델밖이다.
+
+원본f5a의276조건(독립256 및RAM승계20)에서전체64KiB RAM,루프/return/trap경계와16,108개의순서있는video/watchdog/PVC쓰기가일치했다. 실제도달수는video query54/set108,효과저장/설정20,효과복구32,팔레트프레임74/준비32,카운터phase102,ec4루프74와fee경계100이다. 별도5728의140조건도전체RAM과18,712개의포트가일치했다. timer/gate,일반/혼합palette,효과우회와word경계를포함한다.
+
+잘못된palette ID로인한늦은실패2조건은출력파일을보존했다. 단위검사는video조회후효과저장·첫tick·포트순서,복구후진행,trap시앞선변경확정,지원오류시모든출력rollback을검사한다. 원본고정ROM과PVC영역을제외한팔레트ROM뱅크불변을확인했다. 보고서 `artifacts/control_caller/verification.json` SHA256: `7e2cc2b35b657d8baf55358b3f3b0ff837742364e06d022584ef8bdd560e427a`.
+
+남은연결은f54의실제9136호출과이소비API를단일실행으로묶는것이다. 이때9136진입스택은f54진입보다4작다. ec4의입력·인터럽트대기,trap handler,전체CPU레지스터/flags,픽셀·사운드·게임부팅은여전히미완료다.
