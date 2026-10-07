@@ -11,6 +11,13 @@ bool initialize_main_palettes(std::vector<std::uint8_t>& ram,
                               const FixedDataResource& bindings,std::uint32_t& d0,
                               std::uint32_t& d1,std::uint32_t& d3,
                               std::vector<VideoPortWrite>& ports,std::string& error);
+// Native e7c36: main helper then four e7bda bindings. Final D0=ffff,
+// D1.low=last source and D3.low=last actual relink, upper words preserved.
+// Failure preserves RAM, full registers and ports, including late table errors.
+bool initialize_stage_palettes(std::vector<std::uint8_t>& ram,
+                               const FixedDataResource& main_bindings, const FixedDataResource& stage_bindings,
+                               std::uint32_t& d0, std::uint32_t& d1, std::uint32_t& d3,
+                               std::vector<VideoPortWrite>& ports, std::string& error);
 // Native e4a..e74 startup. Object is an even RAM offset with 0x85 bytes.
 // Bindings use the fixed e7b58 window: seventeen six-byte records and ffff.
 // Releases fixed palette references, prepends bindings to bucket heads, sets

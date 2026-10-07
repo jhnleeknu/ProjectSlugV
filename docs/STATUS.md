@@ -1072,3 +1072,11 @@
 - 전체 make -j3 all test: Python95/C++91 통과, 경고0. 독립 원본1249/오류49조건,618179포트,실제CLI 승계6시퀀스 통과. callback 호출과 flag 변경은 host fixture다. 보고서 artifacts/stage_transition/verification.json SHA256 fa20a6699046a1429b21094909462a5f7cd9be89688f6016ae195ff7756f97d3.
 - 다음 본문 호출18대상/582행 목록화와 API 재사용 후보를 artifacts/stage_body에 보존했다. code/data 경계 및 실행 도달 여부는 자동 목록으로 확정하지 않는다.
 - 다음 분석은 e7c36 추가 팔레트 등록e7bda(26bytes),477c2의 제거/팔레트/사운드 연결 및479b0 본문이다. docs/reviews/0144-stage-transition.md에 메인 해석을 기록했다.
+
+## 2026-10-07 — 스테이지 팔레트·오브젝트 준비 연결
+- e7bda의4등록 레코드를 기존MS5D v1로 추출했다.26payload/58container, stage_palettes.ms5d SHA256 de398dc6e5c917c83709a325dd72b557faa0b94a66b3a5d71b5c955fd7f3fdc6. 실제색4IDs도MS5P에추가해33IDs/2276bytes다.
+- e7c36은 기존main팔레트 초기화 뒤 새테이블을 실제소비한다.477c2는 자손과고정100bf4제거,팔레트gate와사운드callback초기화를 원본순서로 연결했다.479b0 준비API는두호출후479ba직전에멈춘다.
+- 원본101/오류37조건/441orderedports/2CLI승계 통과. 신규4슬롯의원본등록→색변환→전송도MS5P와일치했다. 보고서 artifacts/stage_preparation/verification.json SHA256 226820728af213cb3fc73808809723e951d4e8a00dbd39d644793f69d08a17ab.
+- shared등록loop 변경후 기존main회귀209/32조건 및준비연결2조건통과. 전체make104Python/92C++통과/경고0. runtime-resources에두등록테이블packer추가.
+- 기존palette resource검증에서ffff 비활성등록을실제색ID로조회하던오류수정. 활성34bindings변환검증과비활성4개제외목록을분리했다.
+- 메인리뷰 docs/reviews/0145-stage-preparation.md,규격·명령·한계 docs/analysis/stage-preparation.md. 다음은479ba이후플레이어설정/레코드복구및일반scene script로확장한다. 476dc/47742와pointertable의초기근거를리뷰에남겼고아직동작완료가아니다.

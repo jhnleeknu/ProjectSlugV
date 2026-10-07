@@ -14,7 +14,7 @@ try:
 except ImportError:
     from disassemble_program import load_verified_program
 
-BINDING_TABLES = (0xcb78, 0x4e47a, 0xddf08, 0xe7b58)
+BINDING_TABLES = (0xcb78, 0x4e47a, 0xddf08, 0xe7b58, 0xe7bda)
 DYNAMIC_REQUESTS = ((0x2b6fc, 0x3d3), (0x2b70a, 0x39d), (0x2b718, 0x203),
                     (0x2b7e4, 0x87d), (0x2b7f2, 0x39d), (0x2b800, 0x87a))
 
@@ -87,6 +87,12 @@ def extract(program):
         except ImportError:
             from pack_main_startup import extract as extract_startup
         extract_startup(program)
+    if 0xe7bda in BINDING_TABLES:
+        try:
+            from .pack_stage_palettes import extract as extract_stage
+        except ImportError:
+            from pack_stage_palettes import extract as extract_stage
+        extract_stage(program)
     for table in BINDING_TABLES:
         table_bindings = extract_bindings(program, table)
         bindings.extend(table_bindings)

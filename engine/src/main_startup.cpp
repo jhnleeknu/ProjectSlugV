@@ -49,6 +49,29 @@ void watchdog(std::vector<ms5::VideoPortWrite>& ports,std::uint8_t value) {
     ms5::VideoPortWrite write;
     write.size = 1; write.address = 0x300001; write.value = value; ports.push_back(write);
 }
+bool bind_palettes(std::vector<std::uint8_t>& ram, const ms5::FixedDataResource& bindings,
+                   std::uint32_t& d1, std::uint32_t& d3, std::string& error) {
+    for (std::size_t record = 0; record + 2 < bindings.data.size(); record += 6) {
+        const std::uint16_t offset = static_cast<std::uint16_t>(word(bindings.data,record) << 4);
+        const std::uint16_t source = word(bindings.data,record + 2);
+        d1 = (d1 & 0xffff0000U) | source;
+        const std::uint16_t bucket = static_cast<std::uint16_t>((source & 255U) * 16U + 4U);
+        const std::size_t at = node_base + offset;
+        if (!ring(ram,bucket,error)) return false;
+        if (word(ram,node_base + bucket + 2) != offset) {
+            if (!unlink(ram,offset,error)) return false;
+            const std::uint16_t old_head = word(ram,node_base + bucket + 2);
+            d3 = (d3 & 0xffff0000U) | old_head;
+            put_word(ram,node_base + old_head,offset);
+            put_word(ram,at + 2,old_head); put_word(ram,at,bucket);
+            put_word(ram,node_base + bucket + 2,offset);
+        }
+        put_word(ram,at + 8,0xffffU);
+        put_word(ram,at + 10,source); put_word(ram,at + 12,source);
+        ram[at + 15] = source == 0xffffU ? 2U : static_cast<std::uint8_t>(bindings.data[record + 4] | 128U);
+    }
+    return true;
+}
 }
 namespace ms5 {
 bool initialize_main_palettes(std::vector<std::uint8_t>& ram,
@@ -85,24 +108,8 @@ bool initialize_main_palettes(std::vector<std::uint8_t>& ram,
             candidate[at + 15] = 2;
         }
         watchdog(output,0);
-        for (std::size_t record = 0; record < 102; record += 6) {
-            const std::uint16_t offset = static_cast<std::uint16_t>(word(bindings.data,record) << 4);
-            const std::uint16_t source = word(bindings.data,record + 2);
-            const std::uint16_t bucket = static_cast<std::uint16_t>((source & 255U) * 16U + 4U);
-            const std::size_t at = node_base + offset;
-            if (!ring(candidate,bucket,error)) return false;
-            if (word(candidate,node_base + bucket + 2) != offset) {
-                if (!unlink(candidate,offset,error)) return false;
-                const std::uint16_t old_head = word(candidate,node_base + bucket + 2);
-                next_d3 = (next_d3 & 0xffff0000U) | old_head;
-                put_word(candidate,node_base + old_head,offset);
-                put_word(candidate,at + 2,old_head); put_word(candidate,at,bucket);
-                put_word(candidate,node_base + bucket + 2,offset);
-            }
-            put_word(candidate,at + 8,0xffffU);
-            put_word(candidate,at + 10,source); put_word(candidate,at + 12,source);
-            candidate[at + 15] = source == 0xffffU ? 2U : static_cast<std::uint8_t>(bindings.data[record + 4] | 128U);
-        }
+        std::uint32_t binding_d1 = d1;
+        if (!bind_palettes(candidate,bindings,binding_d1,next_d3,error)) return false;
         if (!set_palette_blend(candidate,6,1,12,error)) return false;
         ram.swap(candidate); ports.swap(output);
         d0 = 0x60U; d1 = (d1 & 0xffff0000U) | 1U; d3 = next_d3;
@@ -110,6 +117,27 @@ bool initialize_main_palettes(std::vector<std::uint8_t>& ram,
         error = "cannot allocate main startup state"; return false;
     }
     error.clear(); return true;
+}
+bool initialize_stage_palettes(std::vector<std::uint8_t>& ram,
+                               const FixedDataResource& main_bindings, const FixedDataResource& stage_bindings,
+                               std::uint32_t& d0, std::uint32_t& d1, std::uint32_t& d3,
+                               std::vector<VideoPortWrite>& ports, std::string& error) {
+    try {
+        std::vector<std::uint8_t> candidate = ram; std::vector<VideoPortWrite> output;
+        std::uint32_t next_d0 = d0, next_d1 = d1, next_d3 = d3;
+        if (!initialize_main_palettes(candidate,main_bindings,next_d0,next_d1,next_d3,output,error)) return false;
+        if (stage_bindings.source_cpu_address != 0xe7bda || stage_bindings.source_rom_offset != 0xe7bda ||
+            stage_bindings.data.size() != 26 || word(stage_bindings.data,24) != 0xffff) {
+            error = "stage palettes require the exact e7bda binding window"; return false;
+        }
+        for (std::size_t at = 0; at < 24; at += 6) {
+            if (word(stage_bindings.data,at) > 255) { error = "stage palette slot must be a byte"; return false; }
+        }
+        watchdog(output,static_cast<std::uint8_t>(next_d0));
+        if (!bind_palettes(candidate,stage_bindings,next_d1,next_d3,error)) return false;
+        ram.swap(candidate); ports.swap(output); d0 = 0xffff; d1 = next_d1; d3 = next_d3;
+        error.clear(); return true;
+    } catch (const std::bad_alloc&) { error = "cannot allocate stage palette transaction"; return false; }
 }
 bool initialize_main_frame(std::vector<std::uint8_t>& ram,std::size_t object,
                            const FixedDataResource& bindings,std::uint32_t& d0,
