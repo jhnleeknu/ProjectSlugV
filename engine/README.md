@@ -204,3 +204,13 @@ build/initialize_scene D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 INPUT_RAM OUTPU
 필요한 바이너리 자료는 `extracted/runtime/scene_scripts`, `scene_maps`, `scene_secondary`, `scene_placements` 및 `scene_debug.ms5d`다. 위 경로들의 생성·검증 방법과 세부 지원 범위는 `docs/analysis/scene-general-initialization.md`에 기록한다. 입력 RAM의 palette/object 초기 상태도 갖춰야 한다. 임의의0 채움 RAM을 모든script의 유효한 게임 초기 상태로 가정하지 않는다.
 
 출력은 RAM,14개 레지스터와 쓰기 개수의JSON,순서 있는9byte 비디오/뱅크/기타 포트 명령이다. 이 CLI는 화면 창을 띄우거나 키보드로 플레이하는 실행 파일이 아니다. 원본과 비교하는 Python 도구는 분석 입력으로 ROM을 사용하며 C++ 실행 파일의 런타임 입력과 구분된다.
+
+## 전체 레지스터 오브젝트 재시작
+
+`ms5::restart_object_full`은 원본2a28의 팔레트 해제·좌표 연결 해제·필드 초기화·callback 저장을 수행한다. A0는 초기 종류 WORD가0인 RAM 오브젝트, A1은 저장할 callback 값이다. D0-D7/A0-A6를 모두 승계하고 A5는108000으로 설정한다. 정리 중 메모리 겹침으로 종류가 바뀌는 연결 오브젝트 경로도 처리한다.
+
+```text
+build/restart_object_full D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS
+```
+
+입력 RAM은64KiB, 출력JSON은15개 레지스터와 포트 쓰기 개수다. 포트는 기존9byte 형식이다. 이 함수에는 별도 리소스 입력이 없으며 callback을 실행하지 않는다. 지원 RAM 밖 접근·원본 TRAP·연결 반복 한도는 명시적 오류다. 상세 원본 계약과 검증은 `docs/analysis/object-restart-full.md`를 따른다.

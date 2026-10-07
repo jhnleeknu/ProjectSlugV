@@ -83,3 +83,11 @@ Corpus는41script target0,59catalog실제script/target쌍,41script의추가debug
 - CLI SHA256 `ec40eaeb8e7f0d379c841c331629552fc38a47851a84385cafc5d1ce2c13c163`.
 
 458resource·5manifest·contextinventory·binary의전후불변을확인했고메인도현재hash와각native/report행을대조했다. 전체make Python175/C++111/경고0. 메인은실제directory인자경로로canonical첫조건을추가실행해RAM/orderedports일치도확인했다. 물리bank는CPU주소와ROM주소를모두사용해구분한다. Nativefixture instruction cap은2,000,000이며이는C++ API의phase한도와별개다.
+
+## 후속 이벤트 입력 목록
+
+`inventory_stage_event_contexts.py`는 원본 및 기존 stage catalog를 대조해59record의+0a 간접 포인터와+0e target을 목록화한다. 비영 stream 입력52개, null7개이며 고유 간접 포인터와 stream은 각각47개다. 비영 stream의 첫 WORD를 부호 있는 상대 오프셋으로 읽고, header 직후를 기준으로 첫 gate를 찾는다. Gate는 첫 BYTE가0이고+2 WORD가target 비교값,+4 WORD가다음 gate의 부호 있는 상대 오프셋이다. ff BYTE에서 이 건너뛰기 과정이 멈춘다.
+
+47개 stream의 gate chain에서고유612개 gate를확인했고모두ff에종료한다. 실제catalog target으로선택하면42개는target0의header직후,10개는gate,7개는null이다. Target0은첫WORD jump를적용하지않는다. 보고서SHA256은 `42dd9abc3b757545521fca62a14dab435b51b236c7f97434d515d6b383394372`다.
+
+이목록은원본e905c의선택알고리즘을기계적으로적용한결과이며native실행검증은아니다. 건너뛴내용은opaque로남기며ff를전체event resource의끝으로단정하지않는다. 이벤트opcode전체문법·runtime리소스추출·e905c실행연결은다음작업이다. 재시작2a28의전체레지스터계약은별도 `object-restart-full.md`에서관리한다.

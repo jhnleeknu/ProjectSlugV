@@ -1296,3 +1296,11 @@
 - Verification SHA256 `950e3dd90209d2efd6a6629bf1568996396fb6005bede6e79df0f2ae290316eb`. Native SHA256 `7cf8f965dd1b774eafff1ad73400eab54dca1a8373f8a75ce6cb14557ddffa6e`. 전체make Python175/C++111/경고0. 메인이core/CLI/unit/observer/verifier와현재458resource/binary/report hash를확인했다. DirectoryCLI도별도canonical조건에서RAM/ports일치했다.
 - 리뷰0170·scene-general-initialization.md에재생성·입력fixture·지원제약·한계를확정했다. engine/README.md의오래된현재상태설명을갱신하고CLI사용법을추가했다. 현재결과는직접플레이화면이나전체stagecallback실행을뜻하지않는다.
 - 다음은47a94 caller의e8a1c/48398/e905c및480bc연결이다. e905c의stream자료와2a28전체register계약은추가복원이필요하다. 메인이후속원본을직접확인해분석문서에저장했다. 자연frame·전체게임복원은미완료이며goal은active다.
+
+## 2026-10-08 — 전체 레지스터 오브젝트 재시작
+
+- 원본2a28의palette해제·좌표연결해제·초기화·callback저장을새C++ API/CLI로구현했다. D0-D7/A0-A6전체15register를승계하고기존부분API는보존했다. 메인이callee와LIVE alias를직접해석했고구현/원본비교/목록화는sol3개에분담했다.
+- 597조건에서전체64KiB RAM·15register·597orderedwatchdog출력이원본과일치했다. 팔레트rawcount255,부호있는link,coordinate부모/self/overlap,종류변경뒤연속연결정리와이전static종료를포함한다. 4실제CLIsequence12호출중8호출은이전출력을소비한다. 오류136조건에서입력/기존출력을보존했으며self-cycle65,536회한도도검사했다.
+- Verification SHA256 `6a196fae937d7d558b8d885ec5c237a02236bc216683a0740e820dc4037483d6`. Native SHA256 `ac50d120ef409636185808d039c4a1c0425d20f526f6f74fd83afb3aa86b670c`. 전체make Python175/C++112/경고0. 메인이core/CLI/unit/observer/verifier·597저장결과와현재hash를확인했다. 리뷰0171·object-restart-full.md에계약/재생성/제약을기록했다.
+- 후속e905c의실제입력도목록화했다. Catalog59record중비영stream52/null7,고유stream47/gate612다. 이는선택알고리즘의raw목록이며전체event문법·runtime자료추출·callback실행완료는아니다. Report SHA256 `42dd9abc3b757545521fca62a14dab435b51b236c7f97434d515d6b383394372`.
+- 다음은event리소스추출과e905c실행,47a94후반e8a1c/48398/480bc연결이다. 자연frame·직접플레이화면·전체게임복원은미완료이며goal은active다.
