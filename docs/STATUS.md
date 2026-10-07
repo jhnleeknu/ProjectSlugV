@@ -1047,3 +1047,12 @@
 - 독립 원본 비교1904조건·오류94조건·8승계시퀀스가 통과했다. 승계의48호출은1904조건에 포함되며 실제 CLI RAM/레지스터 출력을 운반한다. set의 parent/위치는 명시적hostfixture다. MMIO0, 원본코드변경0. 보고서 SHA256 `c900dfc01d94c31633856b8ffae34478ce9ad281366b9322e23ccebd85a0c1c6`.
 - 전체 `make -j3 all test` exit0: Python88검사·C++87 test executable, warning/error0. 로그 `artifacts/scene_node_build_test.log`, 메인 리뷰 `docs/reviews/0141-scene-node.md`, 상세 `docs/analysis/scene-node.md`와 `docs/analysis/stage-startup.md`.
 - 다음은1a5a4 전체 호출자와 리소스 연결이다.1afda debug 표시의1280회 VRAM 쓰기와1af12/1afd2 표의 실제MS5D 계약을 생략하지 않는다. 일반 nonzero script, 전체477e4/scheduler·스테이지게임플레이와 전체복원은 미완료이며 목표는 계속 진행 중이다.
+
+
+## 2026-10-07 — null-script 장면 초기화와 원본 debug 표시
+
+- 원본1afda debug 갱신과477e4의 D0=0/A0=0 준비→1a5a4→477ee 경계를 C++로 연결했다. 첫 노드를 반복 읽는 원본 history 판정, sticky SUBX Z, word high 보존, descending1280 VRAM 쓰기와 네 PVC 쓰기를 유지한다. 메인 리뷰에서 scale의 BTST.B/BNE 조건 방향을 수정하고 네 노드의 X/Y helper 호출을 실제 순서로 보존했다.
+- `[1af12,1b112)`의512바이트를 기존 MS5D v1 kind1 리소스로 보존하고 C++ fixed-data loader로 소비한다. byte index 전체의 addressable window이며 논리 table extent로 단정하지 않는다. flag/code 겹침도 보존한다. container SHA256 `ca28489b53c66df310f32a2afca6312f56714f2e5af3fb65a2da17e3c2c4581f`.
+- `verify_scene_initialization.py`: 원본576조건(debug524/initializer52), 오류 보존24조건, 순서 있는 포트672744개 및 실제 CLI 승계7시퀀스 통과. 전체 RAM/D0/D1/D3가 일치했고256 index×4 upper flag의1024조합을 실제 lookup에서 관측했다. MMIO read0·원본 코드 변경0이며 시작/종료 binary hash가 동일하다. 보고서 SHA256 `451015b835b3a4e741bddf61b43e21cf5c8d72d1d4dc30ff4c4c5107f7554bb4`.
+- 전체 `make -j3 all test` exit0: Python95검사·C++88 test executable, warning/error0. 로그 `artifacts/scene_initialization_build_test.log`, 메인 리뷰 `docs/reviews/0142-scene-initialization.md`, 상세 `docs/analysis/scene-initialization.md`. 이전 원본1a5a4 probe16조건과 이번 C++ 동등성576조건을 구분한다.
+- 다음은477ee stage catalog 연결과3d58의 two-byte queue 대기/재개다.4814e의d68c.word=1,3d58의0a 전송→원래D0.byte 복구·ADD.B20/SCS.B/OR.W→두 번째3ac8 호출을 메인이 확인했으며 wrapper 구현은 아직 남아 있다. 일반 nonzero script·전체477e4·자연 scheduler/물리 timing·전체 스테이지 게임플레이와 복원 목표는 계속 진행 중이다.
