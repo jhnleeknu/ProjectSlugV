@@ -1088,3 +1088,10 @@
 - 원본1899/오류42조건/380ports/6CLI RNG승계/2prep→caller연결통과. 최종보고서 artifacts/stage_players/verification.json SHA2567d82d2427746eff1edea0e1f3659807d1f84db2e6a6327210dae4ef4e7235e77. 모든stage256및area256×3읽기검증은helpers gated; 선두조합80/overlap160실행을자연사용증거와구분했다.
 - 전체make111Python/93C++/경고0,기존game_objects원본회귀149/오류24통과. 메인review0146,분석docs/analysis/stage-players.md.
 - 다음은479d0의area0/비영분기,48180레코드복구와475ca설정,이후scene script연결이다. 플레이어callback전체게임플레이·자연scheduler는미완료다.
+
+## 2026-10-07 — 플레이어 상태 기록과 구역 재개
+- 4d7a6의byte selector·활성조건·레지스터폭과48180의8-byte RAM snapshot을복원했다. 현재상태저장이며복원이아니다. leaf는D0..D6전체를검증한다.
+- player_record_lookup.ms5d는4cf64..4df60의4092바이트원시주소창이다. 기존20records/320bytes규격은그대로고prefix일치. container4124bytes SHA256 aad55489c3ee994e32b0ca8301e97d546746d5735cea2f5181ec9f71d136ac45.
+- 475ca공통tail을기존초기화에서분리하고479ee..479fe의두snapshot→tail을연결했다. 원본3372leaf+50area조건/49오류조건/MMIO0/8CLI승계/2실제playercaller→원본분기연결통과. report artifacts/player_record_capture/verification.json SHA256 3be3c5e82d570c78096f49cdff1f34e6947a858efaf832a41af1c0c600cf97cd.
+- 전체make118Python/94C++/경고0. 기존game initialization 회귀562/오류31통과. 메인review0147,분석docs/analysis/player-record-capture.md.
+- 첫구역47594사운드대기경로와4e666, 479fe이후d760a/49c32및scene script 연결은다음범위다. 전체stage/gameplay와자연scheduler는미완료다.

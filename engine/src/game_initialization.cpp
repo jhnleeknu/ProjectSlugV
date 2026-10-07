@@ -18,16 +18,8 @@ bool suffix_state(const GamePreludeState& state) {
     return state.next_pc==0x475a4&&state.word.kind==0&&state.word.phase==0&&state.word.low==0&&
         state.word.cursor==0&&empty(state.word.byte)&&empty(state.byte);
 }
-bool suffix(std::vector<std::uint8_t>& ram,const FixedDataResource& records,
-            std::uint32_t& d0,std::uint32_t& d1,std::uint32_t& d3,std::string& error) {
-    word(ram,0xd686,0);
-    if(!reset_game_subsystem(ram,0xb7a20,d0,d1,d3,error)||
-       !reset_game_subsystem(ram,0x4d126,d0,d1,d3,error)||
-       !reset_game_objects(ram,0x1bcfe,d0,error))return false;
-    d0=0;d1=0;
-    if(!configure_game_record(ram,records,d0,d1,d3,error))return false;
-    d0=1;d1=0;
-    if(!configure_game_record(ram,records,d0,d1,d3,error))return false;
+bool area_suffix(std::vector<std::uint8_t>& ram, std::uint32_t& d0, std::uint32_t& d1,
+                 std::uint32_t& d3, std::string& error) {
     ram[0xd682]=0;
     if(!reset_game_objects(ram,0x1bd12,d0,error))return false;
     longword(ram,0xde2a,0xe89ec);
@@ -41,6 +33,28 @@ bool suffix(std::vector<std::uint8_t>& ram,const FixedDataResource& records,
     ram[0xd68e]=0;word(ram,0xd688,0);word(ram,0xd68a,0);word(ram,0xd68c,0);
     return true;
 }
+bool suffix(std::vector<std::uint8_t>& ram,const FixedDataResource& records,
+            std::uint32_t& d0,std::uint32_t& d1,std::uint32_t& d3,std::string& error) {
+    word(ram,0xd686,0);
+    if(!reset_game_subsystem(ram,0xb7a20,d0,d1,d3,error)||
+       !reset_game_subsystem(ram,0x4d126,d0,d1,d3,error)||
+       !reset_game_objects(ram,0x1bcfe,d0,error))return false;
+    d0=0;d1=0;
+    if(!configure_game_record(ram,records,d0,d1,d3,error))return false;
+    d0=1;d1=0;
+    if(!configure_game_record(ram,records,d0,d1,d3,error))return false;
+    return area_suffix(ram,d0,d1,d3,error);
+}
+}
+bool reset_stage_area(std::vector<std::uint8_t>& ram, std::uint32_t& d0,
+                      std::uint32_t& d1, std::uint32_t& d3, std::string& error) {
+    if (ram.size() != 65536) { error = "stage area reset requires64KiB RAM"; return false; }
+    try {
+        std::vector<std::uint8_t> candidate = ram;
+        std::uint32_t next0 = d0, next1 = d1, next3 = d3;
+        if (!area_suffix(candidate,next0,next1,next3,error)) return false;
+        ram.swap(candidate); d0 = next0; d1 = next1; d3 = next3; error.clear(); return true;
+    } catch (const std::bad_alloc&) { error = "cannot allocate stage area reset transaction"; return false; }
 }
 bool finish_game_initialization(std::vector<std::uint8_t>& ram,const FixedDataResource& records,
     std::uint32_t& d0,std::uint32_t& d1,std::uint32_t& d3,std::string& error) {

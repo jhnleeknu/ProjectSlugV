@@ -8,6 +8,10 @@ struct GameInitializationState {
     bool returned;
     GameInitializationState() : returned(false) {}
 };
+// Native475ca..47642 RTS area suffix, shared by initial setup and area resume.
+// Failure preserves full RAM and D0/D1/D3; no hardware writes occur.
+bool reset_stage_area(std::vector<std::uint8_t>& ram, std::uint32_t& d0,
+                      std::uint32_t& d1, std::uint32_t& d3, std::string& error);
 // Original475a4..47642 suffix, including its confirmed nested callees.
 // Failure preserves RAM and registers.
 bool finish_game_initialization(std::vector<std::uint8_t>& ram,
