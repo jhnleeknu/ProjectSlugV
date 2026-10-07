@@ -3,7 +3,7 @@
 Canonical decrypted program SHA256: `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`.
 All addresses below are fixed ROM CPU addresses, equal to canonical program offsets. RAM offsets refer to base100000.
 
-`sample_input` reconstructs31d6..349a and its native352a replay helper. Raw active-low port samples are supplied by a hardware boundary:380000,300000,340000, followed in mode0 by300000 and340000 again. The two reads of each player port are independent. The API returns consumed read count3 or5, not CPU register/CCR results.
+`sample_input` reconstructs31d6..349a and its native352a replay helper. Raw active-low port samples are supplied by a hardware boundary:380000,300000,340000, followed in mode0 by300000 and340000 again. The two reads of each player port are independent. The API returns consumed read count3 or5, with optional incoming/outgoing D1.word propagation for the caller; other CPU register/CCR results are excluded.
 
 System input is inverted/masked to0f, stored4cb4, and its newly pressed bits stored4cb5. The first P1/P2 reads update six-byte blocks4cb6/4cbc. Each block preserves byte0; byte1 becomes previous byte2; byte2 is current held input; byte3 is `(old XOR current)&current`. A nonzero edge becomes byte4 and reloads byte5 from4cd2. Otherwise byte5 decrements modulo256, including when no buttons are held. When it reaches zero, byte4 becomes current held input and byte5 reloads4cd3; otherwise byte4 clears.
 

@@ -23,12 +23,14 @@ bool update_input_status(std::vector<std::uint8_t>& ram,
 }
 bool step_input(std::vector<std::uint8_t>& ram,const FixedDataResource& streams,
                 const FixedDataResource& table,const InputPortSamples& ports,
-                std::uint8_t& read_count,std::string& error) {
+                std::uint8_t& read_count,std::string& error,std::uint16_t* style) {
     std::vector<std::uint8_t> candidate;
     try {candidate=ram;} catch(const std::bad_alloc&) {error="cannot allocate input status state";return false;}
     std::uint8_t candidate_reads=0;
-    if(!sample_input(candidate,streams,ports,candidate_reads,error) ||
+    std::uint16_t candidate_style=style!=NULL ? *style : 0;
+    if(!sample_input(candidate,streams,ports,candidate_reads,error,&candidate_style) ||
        !update_input_status(candidate,table,error)) return false;
+    if(style!=NULL) *style=candidate_style;
     ram.swap(candidate);read_count=candidate_reads;error.clear();return true;
 }
 }

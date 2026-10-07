@@ -9,6 +9,6 @@ bool update_input_status(std::vector<std::uint8_t>& ram,
 // Native 31d6 followed by b68, transactional across both calls.
 bool step_input(std::vector<std::uint8_t>& ram, const FixedDataResource& streams,
                 const FixedDataResource& table, const InputPortSamples& ports,
-                std::uint8_t& read_count, std::string& error);
+                std::uint8_t& read_count, std::string& error, std::uint16_t* style = NULL);
 }
 #endif

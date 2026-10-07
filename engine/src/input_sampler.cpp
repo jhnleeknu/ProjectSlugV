@@ -30,7 +30,7 @@ bool read_stream(const FixedDataResource& streams, std::uint32_t base,
     }
     value=streams.data[static_cast<std::size_t>(offset)];return true;
 }
-bool replay(std::vector<std::uint8_t>& ram,const FixedDataResource& streams,std::string& error) {
+bool replay(std::vector<std::uint8_t>& ram,const FixedDataResource& streams,std::uint16_t& style,std::string& error) {
     unsigned int cursor=word(ram,0x4cce);
     // Original exits before accessing the resource when the cursor is exhausted.
     if(cursor>=0x600U) {ram[0x4cd4]=2;return true;}
@@ -61,6 +61,7 @@ bool replay(std::vector<std::uint8_t>& ram,const FixedDataResource& streams,std:
         std::uint8_t event=0;
         if(!read_stream(streams,base,previous,event,error)) return false;
         put_word(ram,0x4cc2,word(ram,0x4cc2)^(1U<<(event>>4)));
+        style=static_cast<std::uint16_t>(word(ram,0x4cc2));
     }
     ram[0x4cd4]=2;return true;
 }
@@ -87,10 +88,12 @@ bool initialize_input(std::vector<std::uint8_t>& ram, const FixedDataResource& s
     error.clear();return true;
 }
 bool sample_input(std::vector<std::uint8_t>& ram,const FixedDataResource& streams,
-                  const InputPortSamples& ports,std::uint8_t& read_count,std::string& error) {
+                  const InputPortSamples& ports,std::uint8_t& read_count,std::string& error,
+                  std::uint16_t* style) {
     if(ram.size()!=65536U) {error="input sampler requires 64KiB RAM";return false;}
     std::vector<std::uint8_t> candidate;
     try {candidate=ram;} catch(const std::bad_alloc&) {error="cannot allocate input state";return false;}
+    std::uint16_t candidate_style=style!=NULL ? *style : 0;
     const std::uint8_t system=static_cast<std::uint8_t>((~ports.system)&15U);
     candidate[0x4cb5]=static_cast<std::uint8_t>((candidate[0x4cb4]^system)&system);
     candidate[0x4cb4]=system;
@@ -103,12 +106,15 @@ bool sample_input(std::vector<std::uint8_t>& ram,const FixedDataResource& stream
         candidate[0x4cae]=candidate[0xfd9a];
         update(candidate,0x4cae,static_cast<std::uint8_t>(~ports.player2_game));
     } else if(mode==1) {
-        if(!replay(candidate,streams,error)) return false;
+        if(!replay(candidate,streams,candidate_style,error)) return false;
         update(candidate,0x4ca8,candidate[0x4cc2]);
         update(candidate,0x4cae,candidate[0x4cc3]);
     } else {
         update(candidate,0x4ca8,0);update(candidate,0x4cae,0);
     }
-    ram.swap(candidate);read_count=mode==0 ? 5 : 3;error.clear();return true;
+    candidate_style=static_cast<std::uint16_t>((candidate_style&0xff00U)|candidate[0x4cb1]);
+    ram.swap(candidate);
+    if(style!=NULL) *style=candidate_style;
+    read_count=mode==0 ? 5 : 3;error.clear();return true;
 }
 }

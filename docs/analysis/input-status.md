@@ -12,7 +12,7 @@ ADD.B의 결과로 조회 인덱스는 `(4 + slot_byte) & 255`다. 251은255를,
 - payload256바이트 SHA256: `3a9b0abce59ff1b1b9f93b2d729519def993bd1e9ca3a3b0655c1d2fefc9b756`
 - MS5D288바이트 SHA256: `14ea9e73e6089df26586b8b678f34d99c6b4bb7fdfaae0516ddc34fa76b31bd4`
 
-`update_input_status`는64KiB RAM과 정확한 b58..c58 창을 요구한다. 검사가 끝난 후 RAM을 변경한다. `step_input`은 기존31d6 샘플러 뒤에 이 후처리를 호출하고, 어느 쪽이든 실패하면 RAM과 read_count를 모두 보존한다. CPU 레지스터·CCR 출력과 물리적 포트 시간축은 모델링하지 않는다.
+`update_input_status`는64KiB RAM과 정확한 b58..c58 창을 요구한다. 검사가 끝난 후 RAM을 변경한다. `step_input`은 기존31d6 샘플러 뒤에 이 후처리를 호출하고, 어느 쪽이든 실패하면 RAM과 read_count를 모두 보존한다. 선택적인 D1.word style 전달을 지원하며 나머지 CPU 레지스터·CCR 출력과 물리적 포트 시간축은 모델링하지 않는다.
 
 재생성: `python3 tools/pack_input_status.py`.
 빌드: `make build/update_input_status`.

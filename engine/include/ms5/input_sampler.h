@@ -12,9 +12,10 @@ struct InputPortSamples {
 bool initialize_input(std::vector<std::uint8_t>& ram, const FixedDataResource& streams,
                       std::uint16_t selector, std::string& error);
 // Native 31d6 with ROM selector 000180 == 0. Models RAM and consumed reads,
-// not CPU register outputs. Failure preserves RAM and read_count.
+// optional style is incoming/outgoing D1.word, not a complete CPU register set.
+// Failure preserves RAM, read_count and style.
 bool sample_input(std::vector<std::uint8_t>& ram, const FixedDataResource& streams,
                   const InputPortSamples& ports, std::uint8_t& read_count,
-                  std::string& error);
+                  std::string& error, std::uint16_t* style = NULL);
 }
 #endif
