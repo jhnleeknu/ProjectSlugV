@@ -121,10 +121,15 @@ int main(int argc, char** argv) {
     const std::string mode = argc > 1 ? argv[1] : "";
     const bool begin = mode == "begin";
     const bool finish = mode == "finish";
+    const bool raster_begin = mode == "raster-begin";
+    const bool raster_finish = mode == "raster-finish";
     const bool callback = mode == "callback";
-    if ((!begin && !finish && !callback) || ((begin || callback) && argc != 10) || (finish && argc != 11)) {
+    if ((!begin && !finish && !callback && !raster_begin && !raster_finish) ||
+        ((begin || callback || raster_begin || raster_finish) && argc != 10) ||
+        (finish && argc != 11)) {
         std::cerr << "usage: step_irq_envelope begin|callback INPUT_RAM INPUT_STACK INPUT_REGS OUTPUT_RAM OUTPUT_STACK OUTPUT_REGS OUTPUT_PORTS STACK_BASE\n"
-                  << "       step_irq_envelope finish INPUT_RAM INPUT_STACK INPUT_REGS OUTPUT_RAM OUTPUT_STACK OUTPUT_REGS OUTPUT_PORTS STACK_BASE VIDEO_STATUS\n";
+                  << "       step_irq_envelope finish INPUT_RAM INPUT_STACK INPUT_REGS OUTPUT_RAM OUTPUT_STACK OUTPUT_REGS OUTPUT_PORTS STACK_BASE VIDEO_STATUS\n"
+                  << "       step_irq_envelope raster-begin|raster-finish INPUT_RAM INPUT_STACK INPUT_REGS OUTPUT_RAM OUTPUT_STACK OUTPUT_REGS OUTPUT_PORTS STACK_BASE\n";
         return 2;
     }
     std::uint32_t stack_base = 0U;
@@ -187,11 +192,19 @@ int main(int argc, char** argv) {
     ms5::IrqEnvelopeResult result;
     std::vector<ms5::VideoPortWrite> writes;
     std::string error;
-    const bool succeeded = begin ?
-        ms5::begin_irq_envelope(ram, stack, stack_base, registers, result, writes, error) :
-        callback ? ms5::return_default_irq_callback(stack, stack_base, registers, result, writes, error) :
-        ms5::finish_irq_envelope(ram, stack, stack_base, registers,
-                                 static_cast<std::uint16_t>(video_status), result, writes, error);
+    bool succeeded=false;
+    if(begin) {
+        succeeded=ms5::begin_irq_envelope(ram,stack,stack_base,registers,result,writes,error);
+    } else if(finish) {
+        succeeded=ms5::finish_irq_envelope(ram,stack,stack_base,registers,
+                                          static_cast<std::uint16_t>(video_status),result,writes,error);
+    } else if(callback) {
+        succeeded=ms5::return_default_irq_callback(stack,stack_base,registers,result,writes,error);
+    } else if(raster_begin) {
+        succeeded=ms5::begin_raster_irq(ram,stack,stack_base,registers,result,writes,error);
+    } else {
+        succeeded=ms5::finish_raster_irq(ram,stack,stack_base,registers,result,writes,error);
+    }
     if (!succeeded) {
         std::cerr << error << '\n';
         return 1;

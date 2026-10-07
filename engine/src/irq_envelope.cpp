@@ -93,4 +93,45 @@ bool return_default_irq_callback(const std::vector<std::uint8_t>& stack,
     registers.a[7]+=4U;result=next;ports.clear();error.clear();return true;
 }
 
+bool begin_raster_irq(std::vector<std::uint8_t>& ram,
+                      std::vector<std::uint8_t>& stack,std::uint32_t stack_base,
+                      InterruptRegisters& registers,IrqEnvelopeResult& result,
+                      std::vector<VideoPortWrite>& ports,std::string& error) {
+    if(ram.size()!=65536U) {error="raster IRQ entry requires 64KiB RAM";return false;}
+    IrqEnvelopeResult next;std::vector<VideoPortWrite> hardware;
+    if((ram[0xfd80]&128U)==0) {
+        emit(hardware,2,0x3c000c,2);next.next_pc=0x2d6;
+        result=next;ports.swap(hardware);error.clear();return true;
+    }
+    const std::uint32_t sp=registers.a[7];
+    if(&ram==&stack || sp<0x11000aU || sp>0xfffffeU || (sp&1U)!=0 ||
+       !valid_span(stack,stack_base,sp-10U,sp)) {
+        error="raster IRQ entry stack span does not cover the save frame";return false;
+    }
+    std::vector<std::uint8_t> candidate=stack;InterruptRegisters saved=registers;
+    push(candidate,stack_base,saved.a[7],4,registers.a[5],next.stack_writes);
+    push(candidate,stack_base,saved.a[7],2,read(ram,0x4d8e,2),next.stack_writes);
+    saved.a[5]=read(ram,0xa,4);
+    push(candidate,stack_base,saved.a[7],4,0x2b6,next.stack_writes);
+    next.next_pc=saved.a[5];
+    stack.swap(candidate);registers=saved;result=next;ports.swap(hardware);error.clear();return true;
+}
+bool finish_raster_irq(std::vector<std::uint8_t>& ram,
+                       std::vector<std::uint8_t>& stack,std::uint32_t stack_base,
+                       InterruptRegisters& registers,IrqEnvelopeResult& result,
+                       std::vector<VideoPortWrite>& ports,std::string& error) {
+    const std::uint32_t sp=registers.a[7];
+    if(ram.size()!=65536U || &ram==&stack || sp<0x110000U || sp>0xfffff8U ||
+       (sp&1U)!=0 || !valid_span(stack,stack_base,sp,sp+6U)) {
+        error="raster IRQ finish requires a complete external restore frame";return false;
+    }
+    IrqEnvelopeResult next;std::vector<VideoPortWrite> hardware;
+    emit(hardware,2,0x3c000c,2);
+    const std::uint32_t vram=read(stack,sp-stack_base,2);
+    emit(hardware,2,0x3c0000,vram);
+    const std::uint32_t a5=read(stack,sp+2U-stack_base,4);
+    put(ram,0x4d8e,2,vram);registers.a[5]=a5;registers.a[7]+=6U;
+    next.next_pc=0x2cc;result=next;ports.swap(hardware);error.clear();return true;
+}
+
 }

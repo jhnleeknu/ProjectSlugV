@@ -768,3 +768,11 @@
 - 초기화640조건, envelope/콜백35조건, 초기화→20c→실제3dcc→23c의JSR c8c→242 연결16조건 및 오류/별칭13조건 통과. Python73개 및 C++ 전체 검사 통과.
 - 검증 도구의 캐시된 실행이 중단 경계를 넘는 문제를 code hook 중단으로 수정했다. 원본 ROM은 변경하지 않았다. 리뷰: docs/reviews/0106-interrupt-init.md. 분석: docs/analysis/interrupt-init.md.
 - 다음은 IRQ 서비스의 메인 루프 입력/프레임 대기 연결 및 남은 raster IRQ29c/비디오 제어 경계다. BIOS/RTE/SR/CCR·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는 active다.
+
+
+## 2026-10-07 — 실제 IRQ 신호로 프레임 대기 해제 및29c 복구
+
+- 실제 c8c 서비스가 만든 신호를 공유 RAM의 메인 ef2 poll에 연결해573조건(IRQ279/poll294), 포트1,070개를 비교했다. 호스트가 RAM16을 직접 변경하지 않고0→255를 서비스255회로 생성했다. 메인 문맥 복구와 다음 프레임 진입은 명시적 호스트 조건이다.
+- `begin_raster_irq`/`finish_raster_irq`로29c의 활성·비활성 분기, 기본 콜백과VRAM/A5 복구를 구현했다. 원본386조건, 포트314개/스택 쓰기441개 및 오류23조건 통과.
+- CLI 모드 검사/분기 누락을 메인이 수정하고 재검증했다. Python73개 및 C++ 전체 검사 통과. 리뷰: docs/reviews/0107-interrupt-frame-raster.md.
+- 다음은ec4 앞부분과f3c 콜백 재개를 연결하여 명시적인 다음 poll 진입을 실제 메인 흐름으로 대체하는 것이다. SR/RTE/BIOS·장치 시간축/Z80 및 전체 부팅은 미완료이며 목표는 active다.

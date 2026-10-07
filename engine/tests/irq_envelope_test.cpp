@@ -39,5 +39,20 @@ int main() {
     regs.a[7]=0x110080;
     assert(!ms5::return_default_irq_callback(stack,0x110000,regs,result,ports,error));
     assert(regs.a[7]==0x110080 && result.next_pc==0x29a && ports.size()==4);
+    // Raster IRQ preserves only A5, so callback changes to other registers survive.
+    regs=original;put(ram,0xa,4,0x3dcc);put(ram,0x4d8e,2,0x3344);
+    assert(ms5::begin_raster_irq(ram,stack,0x110000,regs,result,ports,error));
+    assert(result.next_pc==0x3dcc && result.stack_writes.size()==3 && ports.empty());
+    assert(regs.a[7]==0x110076 && regs.a[5]==0x3dcc);
+    assert(ms5::return_default_irq_callback(stack,0x110000,regs,result,ports,error));
+    assert(result.next_pc==0x2b6 && regs.a[7]==0x11007a);
+    regs.d[0]=0xaabbccdd;regs.a[0]=0xbbbb;regs.a[5]=0xdeadbeef;put(ram,0x4d8e,2,0);
+    assert(ms5::finish_raster_irq(ram,stack,0x110000,regs,result,ports,error));
+    assert(regs.a[5]==original.a[5] && regs.a[7]==original.a[7]);
+    assert(regs.d[0]==0xaabbccdd && regs.a[0]==0xbbbb && result.next_pc==0x2cc);
+    assert(ports.size()==2 && ports[0].value==2 && ports[1].value==0x3344 && result.stack_writes.empty());
+    ram[0xfd80]=0;regs.a[7]=0;
+    assert(ms5::begin_raster_irq(ram,stack,1,regs,result,ports,error));
+    assert(result.next_pc==0x2d6 && !result.bios_handoff && ports.size()==1 && regs.a[7]==0);
     std::cout<<"IRQ envelope saved frame, explicit stack writes and rollback passed\n";
 }

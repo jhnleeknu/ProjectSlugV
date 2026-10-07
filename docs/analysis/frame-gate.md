@@ -25,3 +25,7 @@
 
 보고서: `artifacts/frame_gate/verification.json`.
 SHA256: `51db2650febb37abb93aa025ab2353588419a624045ad4516322b3d2231ba723`.
+
+## 실제 서비스가 만든 신호와의 후속 연결
+
+후속 `tools/verify_interrupt_frame_flow.py`는 RAM16을 호스트가 덮어쓰던 초기 fixture와 달리 실제 c8c 서비스가 만든 신호를 메인 poll에 전달한다. 573조건의 전체 RAM/포트/읽기 횟수가 일치했다. 별도 스택에서 서비스를 호출한 뒤 메인 CPU 문맥을 복구하는 명시적 스케줄링 조건이며, SR/RTE/BIOS와 자연 IRQ 시간축의 구현은 아니다. 상세 범위와 보고서 해시는 `docs/analysis/interrupt-frame-flow.md`를 따른다.

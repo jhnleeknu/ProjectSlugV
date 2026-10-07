@@ -35,5 +35,19 @@ bool return_default_irq_callback(const std::vector<std::uint8_t>& stack,
                                  IrqEnvelopeResult& result,
                                  std::vector<VideoPortWrite>& ports,std::string& error);
 
+// Raster IRQ29c: inactive ->2d6 before RTE with acknowledge2; active saves
+// only A5 and VRAM address, then calls RAM10000a (return2b6). Entry SP-10
+// must fit the external stack. Unlike20c, this path does not save all registers.
+bool begin_raster_irq(std::vector<std::uint8_t>& ram,
+                      std::vector<std::uint8_t>& stack,std::uint32_t stack_base,
+                      InterruptRegisters& registers,IrqEnvelopeResult& result,
+                      std::vector<VideoPortWrite>& ports,std::string& error);
+// Native2b6 ->2cc before RTE. InputSP follows callback RTS. Restore VRAM/A5
+// from6 stack bytes, preserve all other callback register changes; no stack writes.
+bool finish_raster_irq(std::vector<std::uint8_t>& ram,
+                       std::vector<std::uint8_t>& stack,std::uint32_t stack_base,
+                       InterruptRegisters& registers,IrqEnvelopeResult& result,
+                       std::vector<VideoPortWrite>& ports,std::string& error);
+
 }
 #endif
