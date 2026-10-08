@@ -12,7 +12,7 @@ from disassemble_program import load_verified_program
 from observe_scene_motion_bounds import build_cases,fixture,values,sha,KEYS,HIGHS,STACK,RETURN,FIXED,ENTRIES,assert_evidence
 from verify_stage_catalog import SOURCE_SHA256
 
-BINARY_SHA256='41b1481bf18b1aa132601e8c8b07a6835f42140049d537b233396c0aa71bba4f'
+BINARY_SHA256='26a6a36905958222df410a61b662d9a224fa134755390bc1a9f54dfdafbbcd3d'
 def container(body,cpu=FIXED,rom=FIXED,version=1,kind=1,reserved=0):
     return struct.pack('<4s7I',b'MS5D',version,kind,cpu,rom,len(body),zlib.crc32(body),reserved)+body
 

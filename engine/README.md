@@ -236,3 +236,13 @@ build/step_scene_motion_bounds ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_R
 ```
 
 ENTRY는0x198ee/0x19978/0x19d98/0x19d08이다. 64KiB RAM과12register를입출력하고포트명령은없다. Nonnullcursor에는해당exactmotion자료가필요하다. 이API는전체frame루프를실행하지않으며원본연산·합성자료구분·재현검증은 `docs/analysis/scene-motion-bounds.md`를따른다.
+
+## 두 좌표의 경로 검사와 구간 선택
+
+`ms5::step_scene_motion_pair`는 현재 좌표와 제안 좌표를 사용해 경로 구간을 선택한다. `0x192c4`는 입력 A1의 구간에서 D0/D1과 D2/D3을 검사한다. `0x19832`는 RAM의 현재/제안 좌표와 cursor로 시작해 인접 구간 검사, 구간 되돌림, 시작/끝 제한을 수행한다.
+
+```text
+build/step_scene_motion_pair ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_RAM OUTPUT_RAM [MOTION_MS5D]
+```
+
+입출력 RAM은 64 KiB이며 JSON은 12개 레지스터와 boolean `carry`를 포함한다. 리소스는 기존 motion MS5D를 사용한다. `0x19832`의 null cursor만 리소스 없이 실행할 수 있다. 실패하면 API의 RAM·레지스터·carry를 보존한다. 전체 프레임이나 직접 조작하는 게임 실행은 아직 지원하지 않는다. 상세 계약은 `docs/analysis/scene-motion-pair.md`를 따른다.

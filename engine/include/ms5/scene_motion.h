@@ -23,5 +23,13 @@ bool resolve_scene_motion_time(std::vector<std::uint8_t>& ram,
 // whole64KiB RAM and twelve public registers. CCR/timing are excluded.
 bool step_scene_motion_bounds(std::vector<std::uint8_t>& ram, std::uint32_t entry,
     const FixedDataResource* path, SceneCommandState& state, std::string& error);
+// Native192c4 raw strip test uses inputA1;19832 pair traversal starts at live
+// RAMd3b4 and projects current/proposed coordinates. All36 strip handlers,
+// including native repeatedD0 additions, are preserved. Exact path validation
+// and selection access limits match19938; null19832 ignores path. Pair loop
+// budget1048576, all normal19832 returns carry=false. Failure preserves whole
+// RAM/twelve registers/carry; callback execution and fullCCR are excluded.
+bool step_scene_motion_pair(std::vector<std::uint8_t>& ram, std::uint32_t entry,
+    const FixedDataResource* path, SceneCommandState& state, bool& carry, std::string& error);
 }
 #endif

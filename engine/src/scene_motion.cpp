@@ -63,6 +63,33 @@ bool validate_motion(const FixedDataResource* path, std::uint32_t cursor,
     at = cursor - path->source_cpu_address;
     return true;
 }
+bool retreat_motion(std::vector<std::uint8_t>& ram, const FixedDataResource& path,
+    SceneCommandState& state, std::size_t& at, std::string& error) {
+    state.d4 = (state.d4 & 0xffff0000U) | word(path.data,at + 2);
+    state.d0 = (state.d0 & 0xffff0000U) | word(path.data,at + 6);
+    const std::size_t base = static_cast<std::uint16_t>(state.d4) < 0x58 ? 0xd3ba : 0xd3b8;
+    put_word(ram,base,static_cast<std::uint16_t>(word(ram,base) - state.d0));
+    if (at < 10) { error = "scene motion needs a previous record outside window"; return false; }
+    at -= 10; state.a1 = path.source_cpu_address + static_cast<std::uint32_t>(at);
+    interval(path,at,state);
+    put_word(ram,0xd3b8,static_cast<std::uint16_t>(word(ram,0xd3b8) - state.d0));
+    put_word(ram,0xd3ba,static_cast<std::uint16_t>(word(ram,0xd3ba) - state.d1));
+    put_long(ram,0xd3b4,state.a1);
+    return true;
+}
+bool advance_motion(std::vector<std::uint8_t>& ram, const FixedDataResource& path,
+    SceneCommandState& state, std::size_t& at, std::size_t records, std::string& error) {
+    interval(path,at,state);
+    put_word(ram,0xd3b8,static_cast<std::uint16_t>(word(ram,0xd3b8) + state.d0));
+    put_word(ram,0xd3ba,static_cast<std::uint16_t>(word(ram,0xd3ba) + state.d1));
+    if (at/10+1 >= records) { error = "scene motion needs a next record outside window"; return false; }
+    at += 10; state.a1 = path.source_cpu_address + static_cast<std::uint32_t>(at);
+    state.d4 = (state.d4 & 0xffff0000U) | word(path.data,at + 2);
+    state.d0 = (state.d0 & 0xffff0000U) | word(path.data,at + 6);
+    const std::size_t base = static_cast<std::uint16_t>(state.d4) < 0x58 ? 0xd3ba : 0xd3b8;
+    put_word(ram,base,static_cast<std::uint16_t>(word(ram,base) + state.d0));
+    return true;
+}
 bool select_motion(std::vector<std::uint8_t>& ram, const FixedDataResource& path,
     SceneCommandState& state, std::size_t& at, std::size_t records, std::string& error) {
     state.d7 = (state.d7 << 16) | (state.d7 >> 16);
@@ -73,34 +100,33 @@ bool select_motion(std::vector<std::uint8_t>& ram, const FixedDataResource& path
         const std::uint16_t start = word(path.data,at), end = word(path.data,at + 10);
         if ((static_cast<std::uint16_t>(time - start) & 0x8000U) != 0) {
             if (start == 0) { state.d7 = static_cast<std::uint32_t>(start) << 16; break; }
-            state.d4 = (state.d4 & 0xffff0000U) | word(path.data,at + 2);
-            state.d0 = (state.d0 & 0xffff0000U) | word(path.data,at + 6);
-            const std::size_t base = static_cast<std::uint16_t>(state.d4) < 0x58 ? 0xd3ba : 0xd3b8;
-            put_word(ram,base,static_cast<std::uint16_t>(word(ram,base) - state.d0));
-            if (at < 10) { error = "scene motion needs a previous record outside window"; return false; }
-            at -= 10; state.a1 = path.source_cpu_address + static_cast<std::uint32_t>(at);
-            interval(path,at,state);
-            put_word(ram,0xd3b8,static_cast<std::uint16_t>(word(ram,0xd3b8) - state.d0));
-            put_word(ram,0xd3ba,static_cast<std::uint16_t>(word(ram,0xd3ba) - state.d1));
-            put_long(ram,0xd3b4,state.a1);
+            if (!retreat_motion(ram,path,state,at,error)) return false;
         } else if ((static_cast<std::uint16_t>(time - end) & 0x8000U) != 0) {
             state.d7 = (state.d7 << 16) | (state.d7 >> 16); break;
         } else if ((word(path.data,at + 12) & 0x8000U) != 0) {
             state.d7 = (static_cast<std::uint32_t>(end) << 16) - 1U; break;
         } else {
-            interval(path,at,state);
-            put_word(ram,0xd3b8,static_cast<std::uint16_t>(word(ram,0xd3b8) + state.d0));
-            put_word(ram,0xd3ba,static_cast<std::uint16_t>(word(ram,0xd3ba) + state.d1));
-            at += 10; state.a1 = path.source_cpu_address + static_cast<std::uint32_t>(at);
-            state.d4 = (state.d4 & 0xffff0000U) | word(path.data,at + 2);
-            state.d0 = (state.d0 & 0xffff0000U) | word(path.data,at + 6);
-            const std::size_t base = static_cast<std::uint16_t>(state.d4) < 0x58 ? 0xd3ba : 0xd3b8;
-            put_word(ram,base,static_cast<std::uint16_t>(word(ram,base) + state.d0));
+            if (!advance_motion(ram,path,state,at,records,error)) return false;
         }
     }
     return true;
 }
 
+void project_motion(const std::vector<std::uint8_t>& ram, const FixedDataResource& path, std::size_t at, SceneCommandState& state) {
+    const std::uint16_t type = word(path.data,at+2); const unsigned int index = type/4;
+    state.d4 = (state.d4 & 0xffff0000U) | type;
+    const std::uint32_t axis = index < 22 ? state.d0 : state.d1;
+    const std::uint16_t base = word(ram,index < 22 ? 0xd3b8 : 0xd3ba);
+    if (!reverse(index)) {
+        state.d7 = (axis<<16)|(axis>>16);
+        state.d7 = (state.d7 & 0xffff0000U) | static_cast<std::uint16_t>(state.d7-base);
+    } else {
+        state.d7 = (static_cast<std::uint32_t>(base)<<16)-axis;
+        state.d7 = (state.d7<<16)|(state.d7>>16);
+    }
+    state.d7 = (state.d7 & 0xffff0000U) | static_cast<std::uint16_t>(state.d7+word(path.data,at));
+    state.d7 = (state.d7<<16)|(state.d7>>16);
+}
 void selected_position(const std::vector<std::uint8_t>& ram, const FixedDataResource& path, std::size_t at, SceneCommandState& state) {
     const std::uint16_t type = word(path.data,at + 2); const unsigned int index = type / 4;
     state.d4 = (state.d4 & 0xffff0000U) | type;
@@ -150,19 +176,7 @@ bool resolve_scene_motion_time(std::vector<std::uint8_t>& ram, const FixedDataRe
             bool done = false;
             for (unsigned int iteration = 0; iteration < 1048576U; ++iteration) {
                 const std::uint32_t saved0 = next.d0, saved1 = next.d1;
-                const std::uint16_t type = word(path->data,at+2); const unsigned int index = type/4;
-                next.d4 = (next.d4 & 0xffff0000U) | type;
-                const std::uint32_t axis = index < 22 ? next.d0 : next.d1;
-                const std::uint16_t base = word(candidate,index < 22 ? 0xd3b8 : 0xd3ba);
-                if (!reverse(index)) {
-                    next.d7 = (axis<<16)|(axis>>16);
-                    next.d7 = (next.d7 & 0xffff0000U) | static_cast<std::uint16_t>(next.d7-base);
-                } else {
-                    next.d7 = (static_cast<std::uint32_t>(base)<<16)-axis;
-                    next.d7 = (next.d7<<16)|(next.d7>>16);
-                }
-                next.d7 = (next.d7 & 0xffff0000U) | static_cast<std::uint16_t>(next.d7+word(path->data,at));
-                next.d7 = (next.d7<<16)|(next.d7>>16);
+                project_motion(candidate,*path,at,next);
                 if (!select_motion(candidate,*path,next,at,records,error)) return false;
                 next.d0 = saved0; next.d1 = saved1;
                 if (next.a1 == longword(candidate,0xd3b4)) { done = true; break; }
@@ -181,6 +195,86 @@ void set_word(std::uint32_t& value, std::uint32_t input) { value = (value & 0xff
 std::uint32_t swap(std::uint32_t value) { return (value << 16) | (value >> 16); }
 std::int32_t signed_word(std::uint32_t value) { return low(value) < 0x8000 ? low(value) : static_cast<std::int32_t>(low(value))-65536; }
 void exchange(std::uint32_t& left, std::uint32_t& right) { const std::uint32_t saved = left; left = right; right = saved; }
+void set_byte(std::uint32_t& value, std::uint32_t input) { value = (value & 0xffffff00U) | (input & 255U); }
+bool signed_long_less(std::uint32_t left, std::uint32_t right) { return (left ^ 0x80000000U) < (right ^ 0x80000000U); }
+void extend_word(std::uint32_t& value) { set_word(value,(value & 128U) ? 0xff00U | (value & 255U) : value & 255U); }
+void strip_motion(const std::vector<std::uint8_t>& ram, const FixedDataResource& path,
+    std::size_t at, SceneCommandState& s, bool& carry) {
+    const std::uint16_t type = word(path.data,at+2); const unsigned int index = type/4; set_word(s.d4,type);
+    const bool y_axis = index < 22;
+    const unsigned int j = y_axis ? index%11 : (index-22)%7;
+    if (y_axis && j != 5) {
+        s.d4 = static_cast<std::uint32_t>(word(ram,0xd3b8)) << 16;
+        s.d0 -= s.d4; s.d2 -= s.d4;
+        Factor factor = Identity;
+        if (j == 0 || j == 10) factor = Left;
+        else if (j == 2 || j == 8) factor = Right1;
+        else if (j == 3 || j == 7) factor = Right2;
+        else if (j == 4 || j == 6) factor = Right3;
+        s.d0 = scale(s.d0,factor,32); s.d2 = scale(s.d2,factor,32);
+        if (j < 5) { s.d1 -= s.d0; s.d3 -= s.d2; }
+        else { s.d1 += s.d0; s.d3 += s.d0; }
+    } else if (!y_axis && j != 3) {
+        s.d4 = static_cast<std::uint32_t>(word(ram,0xd3ba)) << 16;
+        s.d1 -= s.d4; s.d3 -= s.d4;
+        Factor factor = Identity;
+        if (j == 1 || j == 5) factor = Right1;
+        else if (j == 2 || j == 4) factor = Right2;
+        s.d1 = scale(s.d1,factor,32); s.d3 = scale(s.d3,factor,32);
+        if (j < 3) { s.d0 -= s.d1; s.d2 -= s.d3; }
+        else { s.d0 += s.d1; s.d2 += s.d3; }
+    }
+    s.d4 = 0; s.d5 = 0; set_word(s.d4,word(ram,y_axis ? 0xd3ba : 0xd3b8)); set_word(s.d5,word(path.data,at+4));
+    set_word(s.d5,s.d5+s.d4);
+    if (signed_word(s.d4) > signed_word(s.d5)) exchange(s.d4,s.d5);
+    set_word(s.d4,s.d4-1U); set_word(s.d5,s.d5+1U); s.d4 = swap(s.d4);
+    const std::uint32_t first = y_axis ? s.d1 : s.d0, second = y_axis ? s.d3 : s.d2;
+    set_byte(s.d6,signed_long_less(first,s.d4) ? 0xff : 0);
+    set_byte(s.d7,signed_long_less(second,s.d4) ? 0xff : 0); extend_word(s.d6); extend_word(s.d7);
+    s.d5 = swap(s.d5);
+    set_byte(s.d6,signed_long_less(s.d5,first) ? 0xff : 0);
+    set_byte(s.d7,signed_long_less(s.d5,second) ? 0xff : 0);
+    set_word(s.d7,s.d7 & s.d6); carry = low(s.d7) == 0;
+}
+void pair_coordinates(const std::vector<std::uint8_t>& ram, SceneCommandState& s) {
+    s.d0 = longword(ram,0xd3bc); s.d1 = longword(ram,0xd3c0);
+    s.d2 = longword(ram,0xd3c4); s.d3 = longword(ram,0xd3c8);
+}
+bool pair_motion(std::vector<std::uint8_t>& ram, const FixedDataResource* path, SceneCommandState& s, std::string& error) {
+    s.a1 = longword(ram,0xd3b4);
+    if (s.a1 == 0) { s.d6 = 0; s.d7 = 0; return true; }
+    std::size_t records = 0, at = 0;
+    if (!validate_motion(path,s.a1,records,at,error)) return false;
+    s.d0 = longword(ram,0xd3bc); s.d1 = longword(ram,0xd3c0); project_motion(ram,*path,at,s); s.d6 = s.d7;
+    s.d0 = longword(ram,0xd3c4); s.d1 = longword(ram,0xd3c8); project_motion(ram,*path,at,s);
+    for (unsigned int iteration = 0; iteration < 1048576U; ++iteration) {
+        s.d5 = swap(s.d7);
+        const bool backward = ((s.d7-s.d6) & 0x80000000U) != 0;
+        if (!backward) {
+            if ((low(s.d5-word(path->data,at+10)) & 0x8000U) != 0) { put_long(ram,0xd3b4,s.a1); return true; }
+            if (word(path->data,at+12) & 0x8000U) {
+                s.d7 = (static_cast<std::uint32_t>(word(path->data,at+10)) << 16)-1U; put_long(ram,0xd3b4,s.a1); return true;
+            }
+            if (!advance_motion(ram,*path,s,at,records,error)) return false;
+        } else {
+            if ((low(s.d5-word(path->data,at)) & 0x8000U) == 0) { put_long(ram,0xd3b4,s.a1); return true; }
+            if (word(path->data,at) == 0) { s.d7 = 0; put_long(ram,0xd3b4,s.a1); return true; }
+            if (!retreat_motion(ram,*path,s,at,error)) return false;
+        }
+        pair_coordinates(ram,s); const std::uint32_t saved6 = s.d6, saved7 = s.d7; bool accepted = false;
+        strip_motion(ram,*path,at,s,accepted); s.d6 = saved6; s.d7 = saved7;
+        if (accepted) continue;
+        if (!backward) {
+            if (!retreat_motion(ram,*path,s,at,error)) return false;
+            s.d7 = (static_cast<std::uint32_t>(word(path->data,at+10)) << 16)-1U;
+        } else {
+            if (!advance_motion(ram,*path,s,at,records,error)) return false;
+            s.d7 = static_cast<std::uint32_t>(word(path->data,at)) << 16;
+        }
+        put_long(ram,0xd3b4,s.a1); return true;
+    }
+    error = "scene motion pair temporary record budget exceeded"; return false;
+}
 bool span_motion(std::vector<std::uint8_t>& ram, const FixedDataResource* path, SceneCommandState& s, std::string& error) {
     s.a1 = longword(ram,0xd3b4);
     if (s.a1 == 0) {
@@ -257,5 +351,21 @@ bool step_scene_motion_bounds(std::vector<std::uint8_t>& ram, std::uint32_t entr
         if (!success) return false;
         ram.swap(candidate); state = next; error.clear(); return true;
     } catch (const std::bad_alloc&) { error = "cannot allocate scene motion bounds transaction"; return false; }
+}
+
+bool step_scene_motion_pair(std::vector<std::uint8_t>& ram, std::uint32_t entry,
+    const FixedDataResource* path, SceneCommandState& state, bool& carry, std::string& error) {
+    if (ram.size() != 65536 || (entry != 0x192c4 && entry != 0x19832)) {
+        error = "scene motion pair requires64KiB RAM and entry192c4/19832"; return false;
+    }
+    try {
+        std::vector<std::uint8_t> candidate = ram; SceneCommandState next = state; bool result = false;
+        if (entry == 0x192c4) {
+            std::size_t records = 0, at = 0;
+            if (!validate_motion(path,next.a1,records,at,error)) return false;
+            strip_motion(candidate,*path,at,next,result);
+        } else if (!pair_motion(candidate,path,next,error)) return false;
+        ram.swap(candidate); state = next; carry = result; error.clear(); return true;
+    } catch (const std::bad_alloc&) { error = "cannot allocate scene motion pair transaction"; return false; }
 }
 }

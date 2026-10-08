@@ -1320,3 +1320,14 @@
 - Verification SHA256 `d867cf922bba3631da01ee66a160ae9098e1d2af7677e521cf2209dd4acdc20f`,native `f32ba07b37962d31b86feb720d25c8c72754feef529eb7d9e82193a24077d528`. 메인이전체core/CLI/unit/observer/verifier와3,606저장RAM/결과·37resources/원본hash를확인했다. 리뷰0173·scene-motion-bounds.md에재생성/합성자료/지원한계를기록했다.
 - 기존19938 12,170/오류69,19802 2,664/오류69 회귀와전체make Python182/C++114/경고0을확인했다. 최종build의세CLI hash도각report와동일하다. Frame10창548행목록과37motion108record+4WORD가모두0인사실을기록했다. 이목록밖미사용자료의값이나도달성을추론하지않는다.
 - 다음은19832/192c4의두좌표경로선택,19a40/19ac8/19b96의좌표진행,1a2b4조건등을연결하여전체1a73c frame을복원하는작업이다. 자연frame·직접플레이화면·전체게임goal은아직미완료이며active다.
+
+
+## 2026-10-08 — 두 좌표 경로 검사·선택과 독립 CPU 검증
+
+- 원본 192c4/19832를 C++11 API·CLI로 복원했다. 기존 37개 motion MS5D를 직접 사용하며 두 좌표 변환, 구간 이동·되돌림, 시작/끝 제한을 연결한다. 원본의 비대칭 D0 재사용 열 명령과 N-only 분기를 보존한다. 전체 RAM·12레지스터·carry는 성공 시에만 게시한다.
+- 4,232조건에서 Musashi로 실행한 원본의 전체 RAM·12레지스터·반환 carry가 C++와 일치했다. Canonical 2,376 / 합성 주소 정규화 1,846 / null 10이다. 모든 108개 canonical record와 합성 36type을 포함한다. 오류 107조건에서 입력/기존 출력을 보존했다. 8개 CLI sequence의 24호출 중 16호출은 직전 출력을 소비한다. XY 갱신은 명시 host 입력이며 자연 프레임 검증은 아니다.
+- 메인이 Unicorn 2.1.4의 실행 중 SR-read hook이 분기를 바꾸는 문제를 36개 별도 합성 조건으로 재현했다. 최종 secondary는 실행 중 SR을 읽지 않으며 모든 RAM·레지스터가 Musashi와 일치했다. 반환 후 raw SR.C의 1,326개 불일치는 진단값으로 남긴다. 원본 ROM이나 CPU 플래그를 보정하지 않았다.
+- 고정 revision의 공식 Musashi를 ignored artifact에서 빌드하는 도구·C bridge·Python wrapper를 추가했다. 메인이 코드와 callback/메모리/budget 계약을 리뷰하고 CCR·관찰 기능 무간섭·예외 거절 검사를 직접 확인했다. 버전·archive·191 vendor 파일·빌드 옵션·라이선스·현재 library/source hash를 결과에 결합한다. 게임 엔진에 에뮬레이터를 넣은 것은 아니며 사이클/MMIO 재현은 이 검증 도구의 범위 밖이다.
+- Verification SHA256 `5cb8f44eff5d7552bba9eed5e146bb3c6b984d1180e1622df5ef4f13c3917853`, primary native `e9aaaf121cdddf157aa8d756d29ee2659a18611ee62f5b6fd426ea17d4ae9408`. 메인이 최종 4,232개 결과·저장 RAM·모든 원본/리소스/oracle/CLI/probe hash를 직접 대조했다. 리뷰0174와 scene-motion-pair.md에 재현·제약을 기록했다.
+- 전체 make Python182/C++115/경고0, 기존 19938의 12,170/오류69, 19802의 2,664/오류69, bounds의 3,606/오류117 회귀를 통과했다. 별도 oracle 빌드의 macOS linker alignment 경고 1개는 metadata에 남겼다. C++ 방어적 반복 cap은 현재 공개 입력으로 도달하지 않아 소진 검증을 주장하지 않는다.
+- 다음은 19a40/19ac8/19b96의 좌표 진행이다. 메인이 Y 선행 저장, X/Y 후진 검사 비대칭, unsigned 제한과 N-only/signed 분기를 분석해 scene-camera-progress.md에 계약을 남겼다. 이후 조건·배치 단일 실행과 전체 1a73c를 연결한다. 자연 frame·직접 플레이·전체 goal은 계속 미완료이며 active다.
