@@ -1644,3 +1644,12 @@
 - 실제CLI30단계/이전실제출력기반8재개/PVC176개/외부읽기3회가전체RAM15regs/metadata/carry까지일치했다. 오류72조건통과. SHA `baf581cbb12606b3af6ec8bc344793d3ffaf61ec7b53231305396601700d3ae0`,현재274고유참조hash일치. 리뷰0208와animation-sound-execution.md.
 - 전체make Python225/C++145/경고0,normal/UBSan통과. 기존회귀90/98+15추가157오류와control178+2혼합48오류도통과했다. 최신회귀SHA는각각 `be59ad90077a495574387fff762a851fb9b7919e44b46c38edab710f604b8694`, `9150fea35c22643b418821fe01c75ae629463b78c9433bcebb85b0f75fd36714`다.
 - 다음은10 indexed draw와해당list복귀·sprite대기상태다. 다른callback·나머지opcode·자연scheduler/IRQ·직접플레이·전체Goal은미완료다. 기존전체범위·완료기준을유지한다.
+
+## 2026-10-08 — animation10 indexed draw 전체 상태 분석
+
+- Baseline `27cadc4`, branch `codex/animation-indexed-analysis`. 메인은 원본 의미·복귀 계약을 확정하고 Sol6.1/medium 세 작업자가 native 관측·리소스 조사·독립 감사를 분담했다. 후속 구현 준비도 core/CLI/검증으로 나눴다. 기존 목표·진행·완료 기준을 유지한다.
+- selector의 raw WORD 상위BYTE 유지, signed 주소/unsigned 비교, 길이0의livefield 읽기, 길이7의8BYTE draw, 음수길이의역방향list end를 구분했다. indexed복귀는4a276을 생략하므로D6/상태포인터를 임의 갱신하지 않는다. 실제대기프레임S-22와별도list end를 관측하고phase3/saved_list_end 및공통CLI확장계약을 정했다.
+- native846조건/854단계·sameCPU4연쇄·PVC3564개. 메인이 전부 재실행하고 전체RAM15regs/carry/trace/PVC 및 입력6/단계파일3416개hash를 대조했다. 독립Sol도대표90조건98단계를 재실행했다. SHA `db3247ceba5327719b84882b7d1abe006f0e30c87d28642ed7c2f9a9f75a6508`.
+- 실제고정script65f56..662c2의30조건30RTS/PVC300개도 독립전체재실행·129참조hash검사통과. SHA `7f50c9d4ddf4023e47dd22abc6849cbd6322bd4916f2e620a04a2ca78b61fd37`. 도달한list는65f64/6605a두곳이며known8전체·자연도달성을증명하지않는다.
+- 기존wideMS5D에fullBYTE선택table512BYTE가있고기존MS5A876BYTE가known8list를보존한다. 새리소스형식은필요없다. 이번단위에는C++구현변경이없다. 리뷰0209와animation-indexed-full-contract.md가후속구현근거다.
+- 다음은10/phase3 C++·기존두CLI·세회귀검증기의상태규격연결과실제원본비교다. 다른opcode/callback·상위활성화·자연scheduler/IRQ·직접플레이·전체Goal은미완료다. 전체복원률은확정된분모가없어퍼센트로추정하지않는다.
