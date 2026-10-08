@@ -1569,3 +1569,12 @@
 - 다음47c6c 활성화 경로의4e216/bee/16ed2/49f8c를메인이직접읽고stage-activation-small-helpers-contract.md에조건부읽기·carry·signedWORD·livealias·PVC쓰기순서를확정했다. bee..c34 범위에는BIOS호출이없다. 실제원본관측을별도로진행하며fullanimation49fc6/sound47672/sprite16ea4 연결은이후작업이다.
 - 후속네helper의원본441조건과PVC150개관측을확보했다. 메인이관찰코드와입력7/조건산출물1,764개hash를확인했고별도Sol이대표20조건을메모리에서재실행했다. 정상9분기양쪽·signedWORD·flagalias·A6fffea의bank-shadow/state-pointer overlap순서를검증했다. SHA `ed26b6cc85ec93c777f211d1fa1d184eeb965659cbaec281116ed7bb4a28b0cf`. 해당C++연결은다음작업이며TRAP실패/물리PVC동등성은이관측범위밖이다.
 - 자연scheduler/IRQ·직접플레이·전체callback과전체게임Goal은아직미완료다. 기존범위·완료기준을유지한다.
+
+
+## 2026-10-08 — stage 활성화 helper 네 개 연결
+
+- Baseline `730c943`, branch `codex/stage-activation-helpers`. Sol6.1/medium 세 작업자가 구현·CLI/문서·원본 비교를 나눴고 메인이 실제 변경과 검증기를 리뷰했다. 4e216/bee의 반환 carry, 16ed2의 signed WORD/flag alias, 49f8c의 animation state/PVC 순서를 전체15레지스터로 연결했다.
+- 실제 CLI443조건(원본441 재실행+조건부 읽기 원본2)의 전체 RAM/15regs/지정 carry/ordered PVC150개가 일치했다. 오류155조건과 API 전체 rollback을 검증했다. 독립 리뷰 후 A6=10ffd4의 마지막 WORD 실패를 false/true carry 양쪽으로 추가했다.
+- 전체make exit0, Python196/C++142/경고0. 최종 단위 보강 뒤 메인의 normal/UBSan 재실행도 exit0으로 통과했다. 입력9/native입력7/native산출물1774개 해시를 대조했다. Verification SHA `4600addebfe6aed363c07387ee9d5e13fa9f4c4ef241199931e33806718fa07a`; 리뷰0201과 stage-activation-small-helpers-execution.md.
+- 다음16ea4 sprite wrapper와47672 sound/lookup wrapper의 원본 계약을 기록했다. 16ea4 원본96조건/112단계/8대기 연쇄를 확보했다. C++ wrapper 구현과 원본 비교는 다음 단위이며,49fc6 전체 animation 및 상위 활성화 흐름 연결도 남아 있다.
+- 자연scheduler/IRQ·직접플레이·전체게임 Goal은 미완료다. 기존 범위·완료 기준·진행 기록을 유지한다.
