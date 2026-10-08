@@ -1359,3 +1359,11 @@
 - Setup replay와 debug8/16은 명시된 초기 host 입력으로 구분한다. 조건 false/phase 유지/camera 거절도 관찰했다. 실행 중 SR을 읽지 않는 Unicorn 원본 실행이며 CCR·IRQ·scheduler·상위callback 완료를 주장하지 않는다.
 - 메인이 core/CLI/unit/관측·검증·목록 도구를 리뷰하고 전체 저장RAM·ports·register/입력승계·현재 provenance를 직접 확인했다. 초기 coverage 오해와 negative resource 목록 비교를 수정했다. 전체make Python182/C++118/경고0. 리뷰0177과 scene-frame-execution.md에 재현·해시·한계를 기록했다.
 - Native SHA256 `fc060d8c4d74b43d8bdb424f07d99478da6534f86db1426d4d7e3bd93ddac9f2`, verification `bdbeea5e8caa803f045d574a2fd67d726dc7fed23c829a43dfc50ad1dfc56fad`. 다음은480bc 상위 루프의 입력·오브젝트·사운드 연결이다. 입력 callback 원본 계약은 stage-frame-followup.md에 저장했다. 직접 플레이 화면과 전체게임 goal은 계속 미완료이며 active다.
+
+## 2026-10-08 — 입력 매핑·게시·callback 주소 설정
+
+- 49ab4/49afe/49bb4/49c20/49c32/49c66 여섯 보조 함수를 C++11 API/CLI로 복원했다. BYTE/WORD 상위 보존, 겹치는 버튼 mask 처리, mask 읽기·소모·게시 순서, callback 슬롯 선택을 유지한다. 전체13register/RAM은 성공 시에만 게시한다.
+- 기본4-byte mask는 새 MS5D v1 kind1 파일로 추출하고 실제 C++ 로더로 검증했다. 원본/metadata/CRC/정확한주소를 검증하며 기본값을 엔진에 하드코딩하지 않는다. 생성 파일·ROM은 Git에 포함하지 않는다.
+- Musashi 원본2,694조건과 실제CLI의64KiB RAM·13register가 일치했다. 오류42조건에서 입력과 기존 출력을 보존했다. 두 sequence12호출 중10은 호스트 재작성 없이 직전 출력을 소비한다. 전체 재실행에서도 보고서 SHA가 같았다.
+- 메인이 전체source/검증도구/packer를 리뷰하고 저장RAM2,694개·입력승계·원본 쓰기 순서·현재 source/resource/oracle/CLI hash를 대조했다. 복사된CLI오류문구를 수정했다. 전체make Python182/C++119/경고0, scene frame CLI도 이전 hash 유지. 리뷰0178과 stage-input.md에 근거·재현·한계를 기록했다.
+- Native SHA256 `987ac8dca989d70198c636e1d0f1713d2a8f84d112b686e5a488125efc089ac2`, verification `6b8e948dbef5e6eed8ff8cdc35f94179c664cc58382dab4e4e0864a424c9b7b6`. 다음은 알려진 입력 callback 실행과 전체49b0c,47642 및상위480bc 연결이다. 현재 callback 주소 설치는 callback 실행 완료를 뜻하지 않는다. 직접플레이와 전체게임 goal은 계속 active다.

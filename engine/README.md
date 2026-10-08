@@ -285,3 +285,13 @@ build/step_scene_frame D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 INPUT_RAM OUTPU
 ```
 
 TABLES는 `extracted/runtime/scene_debug.ms5d`이며 의존 리소스 디렉터리는 `scene_scripts`, `scene_maps`, `scene_secondary`, `scene_placements`다. RAM은64KiB, port 출력은 이벤트당9바이트이며 JSON은14register와 writes 수를 반환한다. API 실패 시 RAM·레지스터·기존 ports를 보존한다. 재현 명령과 비교 범위는 `docs/analysis/scene-frame-execution.md`를 따른다. 상위 스테이지 루프·입력·오브젝트 callback 및 직접 플레이 화면 연결은 진행 중이다.
+
+## 스테이지 입력 보조 함수
+
+`ms5::step_stage_input`은 버튼 mask 매핑49ab4, 이전 입력 처리49afe, mask 소모·결과 게시49bb4, callback 주소 지정/해제49c20·49c32·49c66을 지원한다.
+
+```text
+build/step_stage_input ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 INPUT_RAM OUTPUT_RAM [MS5D_OR_DIRECTORY ...]
+```
+
+기본 버튼 mask는 `tools/pack_stage_input.py`가 만든 `extracted/runtime/stage_input/default_masks.ms5d`에서 읽는다.64KiB RAM과13register를 입출력하며 실패 시 모두 보존한다. `docs/analysis/stage-input.md`에 원본 비교·재생성 명령이 있다. 동적 callback 실행과 전체49b0c 연결은 후속 작업이다.
