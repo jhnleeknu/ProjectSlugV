@@ -1467,3 +1467,11 @@
 - Opus 지적에 따라 특수highbyte3 성공 이후 lowbyte오류의rollback과재개주소오류 API검증을 추가했다. 최종 make all test Python182/C++131/경고0. 메인리뷰0189, 상세 sound-word-execution.md/stage-sound-frame.md. WORD reportSHA e8d035a20eaf7a24500ded9945be71a97d8ae59c8e5507622cf0d24319eda0bd; stage5d1d8ecfa01264218f0f367221f25d9375717c2594f302da5a327c0fbe60f2df.
 - 다음 전체480bc 연결을 위한 실제원본smoke 입력을 확보했다. 원본9직접호출 순서/정상반환/4PVCwrite/203RAMwrite를 관찰했으며 C++전체frame비교는 아직이다. docs/analysis/stage-frame-integration-contract.md와stage-frame-fixture-plan.md에호출단계/캡처상태/정확한RAM입력/기존MS5D459개bundle계획/공유필드충돌을 기록했다. 완료된callee를재시작하지않고상위연결을진행한다.
 - 실제 자연scheduler·직접플레이·전체게임Goal은 미완료이며계속active다. 새리소스는이번RAM사운드단위에필요하지않다.
+
+## 2026-10-08 — 전체 stage frame 480bc 통합
+
+- Baseline0552615, branch codex/stage-frame-execution. Sol6.1/medium 세 작업자가 core/unit, CLI/문서, 원본 비교를 분담했고 메인이 원본 계약과 실제 변경·검증 결과를 리뷰했다. Opus5.5/high 독립 리뷰에서 발견한 비활성 pending metadata 검증과 새 출력 파일의 case alias 문제를 수정한 뒤 재검증했다.
+- 전체480bc의9개 직접 호출과 buffer/cue/sound 재개를 C++11 API/CLI로 연결했다. 성공한 대기는 완료 효과를 유지하며 이전 단계를 반복하지 않는다. 호출 실패는 RAM/상태/ports/read count를 보존한다. 실제 사용 데이터는 기존 MS5D506개를 C++ 로더로 읽으며 PNG/재생용 오디오를 런타임 입력으로 대체하지 않았다.
+- 수정하지 않은 원본 실행과 실제 CLI96단계의 전체 RAM/14레지스터/bank/pending/순서 있는264 ports/조건부 외부 read/정확한 JSON이 일치했다. buffer2상태/cue/sound5상태, 동일 CPU 재개, 실제 CLI 출력 연속 입력, 활성 spatial/region/cue allocation을 확인했다. 오류148조건 및 실제 대소문자 비구분 출력 별칭 회귀1조건도 통과했다.
+- 최종 make test Python182/C++132/경고0. 메인이 현재279개 소스·실행파일 및 리소스 해시와 보고서 provenance를 대조했다. Verification SHA256 `a6194a8280159525dde8266c1a54a214e0101f86b606c426fc13042946f53567`, 리뷰0190, 실행 규격 docs/analysis/stage-frame-execution.md. 원격 없는 로컬 통합이다.
+- 다음은47a94 진입 본문에서 scene/cue/event 초기화와480bc를 연속 연결하는 작업이다. 메인이 원본 명령과A5상대주소를 다시 확인했고30ec lookup은 기존 stage_events MS5D에 이미 있음을 확인했다. 후속 계약은 docs/analysis/stage-entry-body-contract.md다. 자연 scheduler/IRQ·직접 플레이·전체 게임 Goal은 아직 미완료다.
