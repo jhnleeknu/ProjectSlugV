@@ -1417,3 +1417,17 @@
 
 - 상위480bc의 남은 주요 호출은 b4a2a/4701e/2efa6이다. 다음은 b4a2a의 두 player 조회/좌표영역 게시 및 b481e 후속을 원본에서 해석한다. 49392/1c028/4d9d6의 반환register·조건과 기존 player lookup 재사용 여부를 확인한다.
 - 전체scheduler·자연적인 스테이지 실행·직접 플레이는 아직 완료하지 않았다. 리소스 8byte 검증 probe를 자연 실행 record나 사용 여부 확정으로 취급하지 않는다.
+
+
+## 2026-10-08 — 전체 stage region frame b4a2a
+
+- Baseline `77ff5cc`, branch `codex/stage-region-frame`. b4a2a와49392/1c028/4d9d6/b481e를 C++11 API/CLI로 복원했다. A6상위WORD 기반포인터, MOVEM.W sign extension, D0.low복원, live 게시순서, 타이머와교대6WORD clear를 유지한다.
+- 원본801조건(Musashi797/banked Unicorn4)의 RAM·14register·bank·activity_carry가 일치했다. 15지원조건분기 양쪽,65signextend snapshot,40byte선택/bit0fallback불일치,6회전체frame chain(5회이전출력승계),CLI오류154/API원자성5도 통과했다.
+- 메인이 core/header/CLI/unit와전체도구를리뷰했다. 둘째source가자신의dd50sentinel을읽는조건을보강했고 문서hash순환을피하도록inventory는문서경로만참조한다. 801저장RAM을원본2407write순서로독립재생하고provenance/branch를대조했다. 실제CLI재검증도동일hash다. 전체make Python182/C++126/경고0,리뷰0185.
+- Native SHA256 `46a80065db1ccc48d27696743c04e9e005f8dedc8024eecf2fcd4f27c3d0c1a9`,verification `7aa3576aa81864ba55e3ab21252ebe3d31ee4e8c1f81658d8443dbce67bce078`. 원격없는로컬통합이며전체goal은active다.
+
+### 다음 분석 인수인계
+
+- 남은 상위480bc 주요호출은4701e/2efa6이다. 메인이4701e/46f52원본을직접읽어 `docs/analysis/stage-spatial-frame.md`에계약초안을저장했다. 43e38은기존scene_node를재사용할수있지만A3보존adapter와live RAM경계를검토해야한다. 46fcc원본은D2가아닌D1을비교하며SUB후signed분기는overflow를포함해해석한다. 아직이후속단위구현/검증완료가아니다.
+- 2efa6은RAMd490상태를d491로게시하고0→비영이면3af8command1d28,비영→0이면3c44command1d28을호출한다. 기존sound_word API는D0/D1만반환하므로A0/A1및3c44의세byte제출대기까지연결해야한다. 메인이3ac8..3c08/3c44..3c7c를읽었으나전체계약/구현은후속이다.
+- 에이전트들은완료상태다. 다음위임은새담당파일/입력/규격/검증기준으로시작한다. 자연scheduler·스테이지 직접플레이 및전체게임goal은아직완료되지않았다.
