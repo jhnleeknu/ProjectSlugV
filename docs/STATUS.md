@@ -1766,3 +1766,14 @@
 - 대기는 실제3aea/A7=S-18에서관측했다. 호출사이savedlow55→77/savedouterA0→104900/HEAD1→40 변경후원본3c00·4a2ec가새값을읽고04/77 enqueue 및104900에106004→10600a publication을수행했다.40도새stackpointer를읽었다. Padding/전체RAM eventreplay/16mirror/ROM불변확인. 메인리뷰에서wait사이SR읽기의lazyflag개입가능성을제거했고초기설정외SR읽기없이전부재검증했다.
 - 최종 native source3965fe15ec0852a454ed2005a3f0fd88bab34567d780336e5bfd1c44201af371, report43a6627828fa9047ba1b3a89becc0731c1f19e38aa2f1f2dd8f4f9e098cb94cc. 독립Sol이8조건+대기연쇄를재실행해60payload/전체register·근거일치를확인했고메인·Sol이71참조hash를확인했다. 리뷰0218에서기반단위를수용했다.
 - **아직새whole49fc6 C++ 실행기에연결하지않았다.** 다음은sharedstack machine경로에기존animation/callee와40을연결하고모든지원wait/hold/release,liveframe변경,script/queue/shadowalias,returndispatch와PVCtransaction을대조하는것이다. 현재17명령중14종+14/3c일부,전체게임복원율미산정,전체Goal active를유지한다.
+
+## 2026-10-08 — 실제 PC/A7 기반 animation machine 통합
+
+- Baseline `e526370`, branch `codex/animation-machine`. 사용자 요청에 따라 진행률을 보고하고 메인은 복잡한 의미 분석·계약·실제 source 리뷰·통합 역할을 재개했다. 기존 전체 Goal/완료 기준/진행을 유지한다. 전체게임복원율은 분모 미확정으로 산정하지 않으며 기존 애니메이션17명령 중14종(약82%)+14/3c 일부 callback 집계를 유지한다.
+- 새 C++11 `run_animation_machine`에 기존17명령과 지원 callee·40을 연결했다. 실제 caller A7/return LONG, MOVEM/JSR/RTS/PEA와 live pop을 공유 RAM으로 처리한다. 저장값을 host continuation metadata로 대체하지 않는다. 일반 CCR/carry·임의 PC·IRQ/timing은 아직 지원 계약에 없다. 기존 실행기 ABI는 변경하지 않았다.
+- 기본8조건+별도1chain2단계와 확장85조건121단계, 합계94 fixture/131단계가 전체RAM·16register/PC·PVC 모델 상태/bank·ordered ports·외부 읽기 수까지 일치했다. 실제 이전 C++ 출력37회 재개, API 오류9조건 전체 출력 보존을 확인했다. Native는 ROM patch/중간register주입/SR읽기/stack차이mask 없이 실행했다. 통제된 입력이며 자연 실행 도달성이나 모든 alias/bank 경로 검증을 뜻하지 않는다.
+- 확장 관측은 fresh CPU170회/242단계로 재현했고, Sol 독립 감사에서 대표19조건/37단계와 guard3개를 추가 확인했다. Field7종은 alias 없는 조건이며 overlap 증거는14/+7a callback 경로임을 구분한다. 메인은 native772참조와 C++1707고유파일(1717문자열경로 key)의 해시를 확인했다.
+- PVC unit은65536pen 왕복,162 bank 순서조건, BYTE merge/마스크·홀수base·LONG포트순서·live ROM읽기를 pinned 모델로 검증했다. 두 unit normal/UBSan 통과. 메인의 `make all test` exit0: Python257/C++실행150/경고0. 하드웨어 실측을 주장하지 않는다.
+- Sol6.1/medium 세 작업자가 interpreter/sprite·sound/device·관측/검증을 분담한 뒤 독립 리뷰·문서화를 진행했다. 현재 독립 작업3개를 내부 한도 안에서 운영했고 불필요한 외부 작업자는 추가하지 않았다. 메인은 실제 core/observer/verifier/unit 소스와 결과를 읽고 리뷰0219·실행 계약 문서에 근거와 제한을 기록한다.
+- 다음은 새 machine의 반환 carry 계약과 더 넓은 live stack/script/queue/shadow alias, 자연 caller와 상위 활성화 연결이다. 사용자용 실행 경로 통합, 다른 callback, scheduler/IRQ·직접플레이·전체스테이지/적/보스·전체미사용자료 의미와 전체 Goal은 미완료/active다.
+- 독립 감사에서 실패한 native 재실행이 이전 성공 보고서를 남길 수 있음을 발견해 시작 시 삭제하도록 수정했다. 임시폴더 실패시험과 원본/C++ 전체 재실행 모두 통과했다. 최종 native SHA `5ca26b65cb413860fab9fb5b488023665f2a5ec7dd27a729d6e71734c7262029`, C++ report SHA `5462fac8893d9c614888e52476eaffdfaa2afbcd785b2591266bd87b519cb0e2`. 메인이 최종772/1707 고유 파일 해시도 다시 확인했다. 독립 Sol의 실제 C++ 전체 비교·37재개·9오류 재검사도 통과했다.
