@@ -256,3 +256,21 @@ build/step_scene_camera ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_RAM OUTP
 ```
 
 64 KiB RAM과 12레지스터를 입출력한다. 축별 요청 함수는 리소스가 필요 없고, 전체 진행은 비영 motion cursor일 때 해당 리소스가 필요하다. 거절된 이동의 제안 좌표·경로 변경도 원본처럼 남긴다. 상세 연산·원본 비교 범위는 `docs/analysis/scene-camera-progress.md`를 따른다. 전체 프레임·플레이 화면은 후속 작업이다.
+
+## 장면 진행 조건·설정·흔들림
+
+`ms5::step_scene_frame_control`은 진행 조건(`0x1a2b4`), 사각형 검사(`0x1a34c`), 기간 재설정(`0x1a29e`), 설정 합성(`0x1a526`), 흔들림(`0x1a3d6`)을 실행한다.
+
+```text
+build/step_scene_frame_control ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_RAM OUTPUT_RAM [MS5D_OR_DIRECTORY ...]
+```
+
+64 KiB RAM을 읽고 결과 RAM과 12레지스터·boolean `carry`의 JSON을 출력한다. 조건과 기간 자료는 기존 script/motion MS5D 파일 또는 디렉터리로 제공한다. Live RAM 자료도 읽으며 실제로 접근하는 부분만 검사한다. 기간 조회는 원본처럼 10바이트 간격에서 terminal을 찾고, motion의 전체 형식 검사와 구분된다. 설정·흔들림은 별도 리소스가 필요 없다. API 실패 시 RAM·레지스터·carry를 보존한다. 상세 지원 범위와 원본 비교는 `docs/analysis/scene-frame-control.md`를 따른다.
+
+장면 배치 API는 전체 eligible record 반복(`0x1a414`), 한 번 실행(`0x1a442`), 직접 record 실행(`0x1a470`)을 지원한다.
+
+```text
+build/execute_scene_placement ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 A6 INPUT_RAM OUTPUT_RAM [RESOURCE_FILE_OR_DIR ...]
+```
+
+`0x1a442`는 RAM의 현재 cursor에서 조건을 만족하는 record를 최대 하나만 실행하고 다음 record는 읽지 않는다. A6는 부모 오브젝트 주소이며 보존된다. 배치와 motion은 기존 바이너리 리소스를 사용한다. 이 함수들을 전체 `1a73c` 프레임 순서에 연결하는 작업과 직접 플레이 화면은 아직 남아 있다.

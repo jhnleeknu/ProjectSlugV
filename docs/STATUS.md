@@ -1341,3 +1341,13 @@
 - Verification SHA256 `6e98c13f63080f3859d99446d618990d615e2e1c2fb756a818be46b74f0b86c2`, native `94e5b900cb10941cccca10dbf08392218beefb4fda498b6ad8ba72eb61736e65`. 메인이 모든 native 저장 RAM·report 행·현재 원본/리소스/oracle/CLI hash와 분기 근거를 대조했다. 전체make Python182/C++116/경고0과 수정 후 대상unit 재검증이 통과했다. 기존 motion core/binary는 그대로다.
 - Camera 두 코드 창193행과 literal 비대칭 명령6개를 보존했다. 후속 조건 데이터는41script/814명령 중9개 opcode2c의 inline98bytes이며 기존 MS5D 안에 있다. Selector4는8개,8은1개이고 정의된 길이와 정확히 맞는다. 메인이 source/container/catalog 참조 대조 도구와현재hash를 확인했다. 미사용 전체 범위나 조건 실행 완료로 확대하지 않는다.
 - 리뷰0175와 scene-camera-progress.md에 구현·재현·한계를 정리했다. 다음1a2b4 조건,1a526 설정,1a3d6 흔들림,1a442 단일 배치와전체1a73c 계약은 scene-frame-control.md에 저장했다. 전체frame·직접플레이·전체goal은 계속미완료이며 active다.
+
+## 2026-10-08 — 장면 조건·설정·흔들림과 단일 배치
+
+- 1a2b4 진행 조건,1a34c 사각형,1a29e raw 기간,1a526 설정,1a3d6 흔들림을 C++11 API/CLI로 복원했다. 기존 script/motion MS5D와 live RAM을 읽고 전체 RAM·12register·carry를 성공 시에만 게시한다. Packed LONG 덧셈·단락 평가·signed/unsigned 경계·WORD 상위 보존·ASR/NEG wrap을 유지한다.
+- 2,235조건/오류133조건에서 Musashi 원본의 전체 RAM·12register·실제 C와 일치했다. Canonical9 조건/108 motion cursor를 포함한다. 선택299조건은 SR-read hook 없는 Unicorn과도 RAM/register가 일치했다. 네 CLI sequence42호출 중38회는 이전 실제 출력을 재작성 없이 소비하며 두16-shake 연속 호출을 포함한다.
+- 메인이 구현·unit·검증 도구를 읽고 packed rectangle unit 기대값과 설정 fixture 주소 오류를 발견했다. 잘못된0444 대신d444 등에 입력하도록 수정하고 실제 분기 양쪽·입력 필드 assertion을 추가한 후 전체 원본/C++ 비교를 재실행했다. 양축 fallback 각각100회, signed rectangle 네 분기 모두 양쪽 경로를 확인했다.
+- 기존 placement API에1a442를 추가했다. 원본814조건/오류19조건에서 RAM·12register/A6가 일치한다.18root/24record/18terminal/37motion 입력 집합을 대조했고744조건은 한 번,70조건은0번 record를 실행했다. 실제 unmapped 다음 페이지를 읽지 않으며 같은 두 eligible 입력의 loop/single 차이도 확인했다. 세 CLI 호출 중 두 후속 호출은 RAM/register를 그대로 승계한다.
+- 기존 placement1,625/오류113과 일반 초기화221/오류111/3,176,113 ordered ports 회귀가 통과했다. 전체make Python182/C++117/경고0. 메인이 최종 저장 RAM·결과 행·현재 원본/리소스/oracle/core/CLI hash를 확인하고 리뷰0176을 수용했다. 원격/PR 없이 로컬 branch/commit으로 관리한다.
+- Frame verification SHA256 `fbe67ae4b00712c0579f6cb991dfdfcfbfaca3d46c6fea22ba3192312f61c2b2`, native `8bff6c9466994aff28d0c338acfd5ed7630349cc6e2cb583b0e586aae3eb810f`. Single verification `e09fa63f51a0a804fa299889b0304d53e0df6e95c1c4e6c9213fbe3843fed633`. 재생성 명령·전체 hash·지원 한계는 scene-frame-control.md와 리뷰0176에 기록했다.
+- 다음은 전체1a73c의 조건→script→설정→camera→bounds→phase→shake→update→단일 배치 연결이다. 리소스는 현재 cursor를 각 호출 직전에 다시 조회하고13register/보존A6/ordered ports를 승계해야 한다. 외부47642의 d68e 생성 원본도 분석 계약에 추가했다. 전체frame·stage callback·직접플레이·전체게임 goal은 계속 미완료이며 active다.

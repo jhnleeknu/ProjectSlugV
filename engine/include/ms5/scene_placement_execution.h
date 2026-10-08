@@ -2,7 +2,9 @@
 #define MS5_SCENE_PLACEMENT_EXECUTION_H
 #include "ms5/scene_command.h"
 namespace ms5 {
-// Native1a414 stream /1a470 record. Windows are borrowed fixed CPU=ROM data.
+// Native1a414 stream /1a442 single eligible record /1a470 direct record.
+// Single-record execution does not read the returned next cursor.
+// Windows are borrowed fixed CPU=ROM data.
 // Reads are live, aligned and uniquely covered; writes require CPU RAM.
 // Payload lengths must be even and below8000. Non-null motion requires an
 // exact fixed motion resource; RAM motion is unsupported. A6 is unchanged.

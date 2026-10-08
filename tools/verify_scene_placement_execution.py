@@ -36,7 +36,7 @@ def main():
     for field in range(13):
         for bad in ('-1','4294967296','0x100000000','0x','1x',''):
             r=list(regs);r[field]=bad;reject(ram,r,label='invalid-register-parser')
-    for entry in (0,0x1a442,-1,'0x',''):
+    for entry in (0,0x1a443,-1,'0x',''):
         reject(ram,entry=entry,label='invalid-entry-parser')
     for length in (1,3,0x8000,0x8002,0xffff):
         data=bytearray(ram);struct.pack_into('>H',data,sample['cursor']-BASE+2,length);reject(data,label='unsupported-inline-length')

@@ -54,7 +54,7 @@ make -j3 all test
 
 ## 배치 실행 API와 지원 경계
 
-`execute_scene_placement(ram, entry, windows, state, parent_a6, error)`는1a414와1a470을지원한다. `SceneCommandState`의12register와별도A6입력을사용하며A6는원본에서도보존된다. 전체호출이성공한경우에만RAM/state를게시한다. Stream중뒤record가실패해도앞record의할당·좌표·payload와cursor쓰기를모두되돌린다.
+`execute_scene_placement(ram, entry, windows, state, parent_a6, error)`는1a414/1a442/1a470을지원한다. 1a442는 eligible record를 최대 한 번만 실행하고 다음 record를 읽지 않는다. `SceneCommandState`의12register와별도A6입력을사용하며A6는원본에서도보존된다. 전체호출이성공한경우에만RAM/state를게시한다. Stream중뒤record가실패해도앞record의할당·좌표·payload와cursor쓰기를모두되돌린다.
 
 리소스는기존MS5D fixed CPU=ROM창을빌려읽는다. Record/bounds/payload는LIVE RAM에서도읽을수있고겹치는복사는WORD별로원본순서대로처리한다. ROM읽기는완전히포함하는유일한창이필요하며부분창·중복창을거부한다. Motion은기존19802가요구하는완전한fixed motion리소스를사용한다. RAM에배치한motion자체는현재지원하지않는다. Native가읽지않는bounds나allocation parent를미리검사하지않는다.
 
@@ -86,3 +86,7 @@ Canonical24record 경계조합1,152조건,18root의phase2종36조건,terminal18�
 - CLI SHA256 `636c4b0769d9aaceee8ddb1c270bdbff48cd100825905c0c478fcd0d303eab43`.
 
 55resource와두manifest,contextinventory의hash를실행전후확인했고메인도현재hash를재확인했다. 전체make Python175/C++110/경고0. 일반1a5a4초기화·자연frame·플레이화면·전체게임복원은미완료다.
+
+## 후속1a442 단일 실행
+
+프레임 제어 단위에서1a442를 추가하고814조건/오류19조건을 대조했다. 동일한 두 eligible record에서1a442는 한 번,1a414는 두 번 실행하며 다음 unmapped 페이지를 읽지 않는 동작도 확인했다. 기존1a414/1a470의1,625/오류113과 이미 구현된 일반1a5a4의221/오류111 회귀를 재검증했다. 최종 hash·재현 명령·상태 승계와 지원 한계는 [scene-frame-control.md](scene-frame-control.md)의 단일 배치와 회귀 절에 기록한다. 위 최초 구현 시점의 hash와 구분한다.

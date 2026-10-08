@@ -51,6 +51,24 @@ int main() {
     b = initial(); record(b,0x5000,0); put(b,0xd40e,4,0x105000); put(b,0x5010,2,0); put(b,0x5012,2,1);
     const std::vector<std::uint8_t> stream_before = b; s = ms5::SceneCommandState(); const ms5::SceneCommandState stream_saved = s;
     assert(!ms5::execute_scene_placement(b,0x1a414,windows,s,0x103000,error)); assert(b == stream_before && same(s,stream_saved));
+    // Native1a442 consumes only one of two eligible records.
+    b = initial(); record(b,0x5000,0); record(b,0x5010,0); put(b,0x5020,2,0xffff); put(b,0xd40e,4,0x105000);
+    s = ms5::SceneCommandState(); assert(ms5::execute_scene_placement(b,0x1a442,windows,s,0x103000,error));
+    assert(s.a0 == 0x105010 && get(b,0xd40e,4) == 0x105010 && get(b,0x4ca0,2) == 0 && get(b,0x5010,2) == 0);
+    // An invalid next record is not consumed or validated by the single call.
+    b = initial(); record(b,0x5000,0); put(b,0x5010,2,0); put(b,0x5012,2,1); put(b,0xd40e,4,0x105000);
+    s = ms5::SceneCommandState(); assert(ms5::execute_scene_placement(b,0x1a442,windows,s,0x103000,error)); assert(s.a0 == 0x105010 && get(b,0xd40e,4) == 0x105010);
+    // No next WORD exists in the fixed window: one record still succeeds.
+    ms5::FixedDataResource single; single.source_cpu_address = single.source_rom_offset = 0x60000; single.data.resize(16); record(single.data,0,0);
+    windows.push_back(single); b = initial(); put(b,0xd40e,4,0x60000); s = ms5::SceneCommandState();
+    assert(ms5::execute_scene_placement(b,0x1a442,windows,s,0x103000,error)); assert(s.a0 == 0x60010 && get(b,0xd40e,4) == 0x60010); windows.clear();
+    // Null, terminal and wait retain the same early-return register effects.
+    b = initial(); s = ms5::SceneCommandState(); s.d7 = 0xabcd1234; const std::vector<std::uint8_t> null_before = b;
+    assert(ms5::execute_scene_placement(b,0x1a442,windows,s,0x103000,error)); assert(s.a0 == 0 && s.d7 == 0xabcd1234 && b == null_before);
+    put(b,0xd40e,4,0x105000); put(b,0x5000,2,0xffff);
+    assert(ms5::execute_scene_placement(b,0x1a442,windows,s,0x103000,error)); assert(s.a0 == 0x105000 && s.d7 == 0xabcdffff && get(b,0xd40e,4) == 0x105000);
+    put(b,0x5000,2,1); const std::vector<std::uint8_t> wait_before = b;
+    assert(ms5::execute_scene_placement(b,0x1a442,windows,s,0x103000,error)); assert(s.a0 == 0x105000 && s.d7 == 0xabcd0001 && b == wait_before);
     // Borrowed fixed window reads; ambiguous and partial windows are errors.
     b = initial(); ms5::FixedDataResource w; w.source_cpu_address = 0x50000; w.source_rom_offset = 0x50000; w.data.resize(20); record(w.data,0,4); windows.push_back(w);
     s = ms5::SceneCommandState(); s.a0 = 0x50000; assert(ms5::execute_scene_placement(b,0x1a470,windows,s,0x103000,error));

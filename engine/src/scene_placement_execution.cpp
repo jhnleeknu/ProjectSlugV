@@ -123,7 +123,7 @@ bool record(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>
 bool execute_scene_placement(std::vector<std::uint8_t>& ram, std::uint32_t entry,
     const std::vector<FixedDataResource>& windows, SceneCommandState& state,
     std::uint32_t parent_a6, std::string& error) {
-    if (ram.size() != 65536 || (entry != 0x1a414 && entry != 0x1a470)) { error = "scene placement requires64KiB RAM and entry1a414/1a470"; return false; }
+    if (ram.size() != 65536 || (entry != 0x1a414 && entry != 0x1a442 && entry != 0x1a470)) { error = "scene placement requires64KiB RAM and entry1a414/1a442/1a470"; return false; }
     try {
         std::vector<std::uint8_t> candidate = ram; SceneCommandState next = state;
         if (entry == 0x1a470) { if (!record(candidate,windows,next,parent_a6,error)) return false; }
@@ -138,6 +138,7 @@ bool execute_scene_placement(std::vector<std::uint8_t>& ram, std::uint32_t entry
                     if (value > phase) break;
                     if (++records > 1048576U) { error = "scene placement temporary record budget exceeded"; return false; }
                     if (!record(candidate,windows,next,parent_a6,error) || !write(candidate,0x10d40e,4,next.a0,error)) return false;
+                    if (entry == 0x1a442) break;
                 }
             }
         }

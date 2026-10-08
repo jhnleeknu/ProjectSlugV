@@ -112,9 +112,9 @@ bool load_windows(const std::string& path, std::vector<std::string>& paths,
 }
 } // namespace
 int main(int argc, char** argv) {
-    if (argc < 17) { std::cerr << "usage: execute_scene_placement ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 A6 INPUT_RAM OUTPUT_RAM [RESOURCE_FILE_OR_DIR ...]\n"; return 2; }
+    if (argc < 17) { std::cerr << "usage: execute_scene_placement ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 A6 INPUT_RAM OUTPUT_RAM [RESOURCE_FILE_OR_DIR ...] (ENTRY 0x1a414/0x1a442/0x1a470)\n"; return 2; }
     std::uint32_t entry = 0, values[13] = {0};
-    if (!parse_integer(argv[1],0xffffffffU,entry) || (entry != 0x1a414 && entry != 0x1a470)) { std::cerr << "unsupported entry\n"; return 1; }
+    if (!parse_integer(argv[1],0xffffffffU,entry) || (entry != 0x1a414 && entry != 0x1a442 && entry != 0x1a470)) { std::cerr << "unsupported entry\n"; return 1; }
     for (unsigned int i = 0; i < 13; ++i) {
         if (!parse_integer(argv[i+2],0xffffffffU,values[i])) { std::cerr << "invalid unsigned number\n"; return 1; }
     }
