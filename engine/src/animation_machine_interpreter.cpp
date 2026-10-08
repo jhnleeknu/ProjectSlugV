@@ -158,6 +158,23 @@ bool callback(AnimationMachineContext& c,bool wide) {
 bool animation_interpreter_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t v=0;
     switch(r.pc) {
+    case 0x47cec:
+        if(!write_offset(c,6,0x42,2,0xa0) || !write_offset(c,6,0x46,2,0x170) ||
+            !write_offset(c,6,0x12,1,255) || !write_offset(c,6,0x13,1,255) ||
+            !write_offset(c,6,0x14,1,4))return false;
+        r.pc=0x47d0a;return true;
+    case 0x47d0a:r.a[1]=0x489c2;r.pc=0x47d10;return true;
+    case 0x47d10:am_word(r.d[0],0x100);r.pc=0x47d14;return true;
+    case 0x47d14:return am_call(c,0x49f8c,0x47d1a);
+    case 0x47d1a:return am_call(c,0x49fc6,0x47d20);
+    case 0x47f04:return am_call(c,0x49fc6,0x47f0a);
+    case 0x49f8c:
+        r.a[0]=r.a[6]+0x26U;
+        if(!write_offset(c,6,0x18,1,0) || !am_zero_bank(c))return false;
+        if(r.a[5]!=0x108000U)return am_error(c,"unsupported original animation initializer TRAP15");
+        if(!am_write(c,r.a[0],4,r.a[1]) || !write_offset(c,0,4,2,0) ||
+            !write_offset(c,0,6,2,r.d[0]))return false;
+        return am_return(c);
     case 0x49fc6:
         r.a[0]=r.a[6]+0x26U;if(!am_zero_bank(c) || !am_read(c,r.a[0],4,r.d[7]))return false;
         if(r.d[7]==0)return am_return(c);

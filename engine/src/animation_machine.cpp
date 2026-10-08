@@ -107,7 +107,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             if ((next.pc>=0x3ac8 && next.pc<0x3c08) || (next.pc>=0x47672 && next.pc<0x476bc) ||
                 (next.pc>=0xca70 && next.pc<0xca76))ok=animation_sound_block(c);
             else if (next.pc>=0xcd50 && next.pc<0xce02)ok=animation_sprite_block(c);
-            else if ((next.pc>=0x49fc6 && next.pc<0x4a46c) || next.pc==0x3679e ||
+            else if ((next.pc>=0x49f8c && next.pc<0x4a46c) || next.pc==0x3679e ||
+                next.pc==0x47cec || next.pc==0x47d0a || next.pc==0x47d10 ||
+                next.pc==0x47d14 || next.pc==0x47d1a || next.pc==0x47f04 ||
                 (next.pc>=0x2b3e8 && next.pc<0x2b40c))ok=animation_interpreter_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;

@@ -1777,3 +1777,13 @@
 - Sol6.1/medium 세 작업자가 interpreter/sprite·sound/device·관측/검증을 분담한 뒤 독립 리뷰·문서화를 진행했다. 현재 독립 작업3개를 내부 한도 안에서 운영했고 불필요한 외부 작업자는 추가하지 않았다. 메인은 실제 core/observer/verifier/unit 소스와 결과를 읽고 리뷰0219·실행 계약 문서에 근거와 제한을 기록한다.
 - 다음은 새 machine의 반환 carry 계약과 더 넓은 live stack/script/queue/shadow alias, 자연 caller와 상위 활성화 연결이다. 사용자용 실행 경로 통합, 다른 callback, scheduler/IRQ·직접플레이·전체스테이지/적/보스·전체미사용자료 의미와 전체 Goal은 미완료/active다.
 - 독립 감사에서 실패한 native 재실행이 이전 성공 보고서를 남길 수 있음을 발견해 시작 시 삭제하도록 수정했다. 임시폴더 실패시험과 원본/C++ 전체 재실행 모두 통과했다. 최종 native SHA `5ca26b65cb413860fab9fb5b488023665f2a5ec7dd27a729d6e71734c7262029`, C++ report SHA `5462fac8893d9c614888e52476eaffdfaa2afbcd785b2591266bd87b519cb0e2`. 메인이 최종772/1707 고유 파일 해시도 다시 확인했다. 독립 Sol의 실제 C++ 전체 비교·37재개·9오류 재검사도 통과했다.
+
+## 2026-10-08 — 초기화와 실제 stage caller 연결
+
+- Baseline `ff25485`, branch `codex/animation-machine-caller`. 이전 턴을 progress로 승계하고 목표파일/AGENTS와 현재 Git을 확인했다. 메인은 원본 의미·계약·실제 source 리뷰·통합, Sol6.1/medium3명은 caller inventory/검증기, native 관측/C++ 독립 리뷰, core/unit/native 독립 감사를 분담했다. 독립 작업3개에 맞춰 내부3명으로 운영했으며 전체 목표·완료 기준은 유지한다.
+- 원본 확인 결과47d1a 뒤의 BCC는 후속4847c의 C를 소비하고47f04 뒤 TST.W는 C를 덮는다. 이번 두 stage caller 연결에 일반 carry를 선행 조건으로 두지 않았다. 다른 실제 지역 caller1dc84→1dc8a BCC는 animation C를 소비하므로 일반 반환 carry는 미완료다.1622 aligned raw caller 후보와736BCC/25BCS 후속 pattern을 목록화하고 메인이 원본 목록과 일치 확인했다. 후보 수를 분석 완료 함수 수로 취급하지 않는다.
+- 새 machine에49f8c와47cec/47d0a/47d10/47d14/47d1a/47f04를 연결했다. 초기화의 원본 쓰기 순서, opaque A1, full32bit A5 검사, 실제 두JSR 및 live RTS를 보존한다. API/header/런타임 리소스 규격을 바꾸지 않았다.32개 unit의 normal/UBSan과 독립 normal 검사 통과.
+- Native59정상/91단계+4TRAP직전guard를 각각2회 실행했다. Initializer18/47cec6/47f0435조건,32재개다. 원본 전체 재실행 뒤 실제 C++ fullRAM/16R/PC/device/PVC806포트가 일치했다. API 오류6조건 출력 보존 확인. Final native SHA `f735043941529a9e020020715735b45e60890ab8b2b94211aeb0e4fbe22e17d5`, C++ SHA `5b1ac7cc62ccbaba2982f83ac03ca43f61c3be69980a70ba7df55be61b49c9f5`.
+- 독립 native 감사19정상+4guard/43단계와 최종617참조 해시 통과. 반환 slot·indexed PEA·saved low BYTE·outer A0 변경 후 실제 pop/publication 근거를 확인했다. 메인은 native617/C++1233고유파일 해시를 직접 검사했다. Native stale report 삭제와 metadata 일치, verifier 입력 해시 capture 순서를 리뷰에서 보강하고 최종 대조를 통과했다.
+- 기존 machine131단계/37재개/9오류 회귀 통과, report SHA `6ebfb4ecb742bc4aa7b023a344e70e432eab9e284c099f194724cd021f622196`, 메인1707고유파일 해시 확인. `make all test` Python257/C++151/경고0/exit0. 리뷰0220과 실행 계약 문서에 근거·제약·재현 명령을 남겼다.
+- 다음은 carry를 실제로 소비하는 caller의 반환 계약,16ea4 등 남은 상위 활성화 callee와47c6c 연속 흐름 연결이다. 현재 연결은47d20/47f0a 직전까지만이며 자연 stage 진입·scheduler/IRQ·직접플레이·전체스테이지/적/보스·전체미사용자료 의미를 완료했다고 주장하지 않는다. 전체 Goal active, 애니메이션17중14종+14/3c일부, 전체게임복원율 미산정을 유지한다.
