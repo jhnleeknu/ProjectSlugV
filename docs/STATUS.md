@@ -1587,3 +1587,12 @@
 - 다음47672의 원본277조건/291단계/6같은CPU 연쇄,128개rawWORD주소와live source/queuealias 근거를 확보했다. SHA `42f093ee7d31dbd3e70b986dd7d7edd7fc409eeb543892ff5c3c6d4494e99f5d`. C++ 및256byte MS5D리소스 연결은 아직이다.
 - 후속49fc6 분석에서 세MOVEM.W 복귀 위치의D0/D7 부호확장을 원본75개instruction실행으로 확인하고 animation-full-register-boundaries.md에기록했다. 전체animation실행으로 확대해 주장하지 않는다.
 - 상위활성화callback·자연scheduler/IRQ·직접플레이·전체Goal은 계속미완료다. 기존범위와완료기준을유지한다.
+
+## 2026-10-08 — object sound lookup 47672와 실제 MS5D 연결
+
+- Baseline `ca809b3`, branch `codex/object-sound-lookup`. Sol6.1/medium 세 작업자가 구현·CLI/문서·패커를 담당했고 메인이 원본 비교 도구 작성과 실제 diff 리뷰를 맡았다. 독립 Sol 리뷰도 수행했다.
+- source/object 비교, 실제3af8 high/low대기, savedA0복원과live BYTE→WORD조회, D1signedoverflow/zero결과를연결했다. source+1 alias와queue가source를덮는실제순서를보존한다. 아직대기중이면리소스없이반환한다.
+- 원본256byte조회창을MS5Dv1kind1와metadata로제공하고실제C++loader가읽었다. container288bytes SHA `b8fb48ea03880f2285abf550e43cae731889b3545e1241b48074dcc05a3e6b7e`. 생성도구와합성테스트만Git에추가한다.
+- 원본277조건/291단계와actualCLI전체RAM/15regs/continuation/external_reads 일치.14재개는직전실제C++출력을이어받고14대기단계는리소스를생략한다.128rawWORD주소전체관측. 오류163조건과API rollback통과. 리뷰에서lateWORDfixture를보강했다.
+- fullmake exit0 Python205/C++144/경고0, 패커9테스트와core normal/UBSan통과. 검증SHA `785bc6249e24f89fc96fa69fabe5365d1cbe2871948a33b07f5e9d58eec2d0b5`; 입력18/산출물1172개해시일치. 리뷰0203과object-sound-lookup-execution.md.
+- 다음은활성화caller의49fc6전체register/ports/pending과실제48980/489c2 scripts 연결이다. 상위callback·자연scheduler/IRQ·직접플레이·전체Goal은미완료이며기존범위와완료기준을유지한다.
