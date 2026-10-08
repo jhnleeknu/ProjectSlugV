@@ -65,4 +65,7 @@ D1.byte=RAMd491을 보존한 뒤 RAMd490의0/비영을 D0.byte=00/ff로 바꿔 R
 
 4836e는 RAMd683.bit2가1일 때 carry0,0일 때carry1을 반환하며 일반 register/RAM은 바꾸지 않는다. 따라서1d5ac는 해당bit가 켜졌을 때 callback을 해제한다. 49c38은 A0=10d734,D0.low=(D0.low&1)<<2로 만든 뒤 해당 LONG이 비영이면carry1,0이면carry0이다. 49c56은 같은 주소 선택 후 LONG을 A0에 읽는다.
 
-1da60은1d664와 같은 X 차분/부호 검사지만 현재차분0 또는 교차 시1da98로 간다. 여기서는 object78→D0.low로4d7a6을 호출하고 D0.byte 비영일 때 **반환된 A0**의78 WORD를 읽어49c32,49f66 순서로 호출한다. 4d7a6은 입력 D0.byte가0이면 A4=10dcba,A0=100cb8,비영이면 A4=10dce6,A0=100da8로 선택한다. 289e의 carry와 WORD(A4)가 조건을 만족하지 않으면 D0.low=0,D1..D4=0,D5=ffffffff,D6=0을 반환한다. 조건이 맞으면 record byte27과25/26/2a,WORD1c/20 및 ROM4cf64+index*16+10 조회가 있다. Byte27=0은TRAP15다. 이 후반 조회 리소스와 trap 계약은 후속 추출·검증 대상으로 남긴다.
+1da60은1d664와 같은 X 차분/부호 검사지만 현재차분0 또는 교차 시1da98로 간다. 여기서는 object78→D0.low로4d7a6을 호출하고 D0.byte 비영일 때 **반환된 A0**의78 WORD를 읽어49c32,49f66 순서로 호출한다. 4d7a6은 입력 D0.byte가0이면 A4=10dcba,A0=100cb8,비영이면 A4=10dce6,A0=100da8로 선택한다. 289e의 carry와 WORD(A4)가 조건을 만족하지 않으면 D0.low=0,D1..D4=0,D5=ffffffff,D6=0을 반환한다. 조건이 맞으면 record byte27과25/26/2a,WORD1c/20 및 ROM4cf64+index*16+10 조회가 있다. Byte27=0은TRAP15다. 후속 대조에서 기존 `player-record-capture.md`와 `read_player_record`가 D0..D6 및 조회/trap 계약을 이미 구현·검증했음을 확인했다. 기존 `player_record_lookup.ms5d`4092-byte 창을 재사용할 수 있다. 전체 callback 연결에는 추가 A0/A4 반환을 아래처럼 운반해야 한다.
+
+
+4d7a6의 추가 주소 register 계약: 첫 D0.byte 선택에 따라 A0=100cb8/100da8,A4=10dcba/10dce6로 만든다. Inactive marker270e 또는 source 활성WORD0이면 그대로 반환한다. Active 비영index이면 반환 A4=4cf64+index*16이고 A0는 선택한 player 주소다. A1/A2/A3/A6/D7은 그대로다. 기존 read_player_record의 D0..D6 결과를 재사용하고 이 두 A register를 보완하면 원본 전체 일반 register를 운반할 수 있다.1da60에서 이 호출 뒤 D0.byte가0이면 D7은 이미 계산된 값을 유지한다. 비영이면 반환 A0의78 WORD를 읽어49c32→49f66을 실행한다. `game_records.ms5d`의20개 논리 record와4092-byte raw lookup 창은 서로 다른 규격이다.

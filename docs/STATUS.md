@@ -1367,3 +1367,11 @@
 - Musashi 원본2,694조건과 실제CLI의64KiB RAM·13register가 일치했다. 오류42조건에서 입력과 기존 출력을 보존했다. 두 sequence12호출 중10은 호스트 재작성 없이 직전 출력을 소비한다. 전체 재실행에서도 보고서 SHA가 같았다.
 - 메인이 전체source/검증도구/packer를 리뷰하고 저장RAM2,694개·입력승계·원본 쓰기 순서·현재 source/resource/oracle/CLI hash를 대조했다. 복사된CLI오류문구를 수정했다. 전체make Python182/C++119/경고0, scene frame CLI도 이전 hash 유지. 리뷰0178과 stage-input.md에 근거·재현·한계를 기록했다.
 - Native SHA256 `987ac8dca989d70198c636e1d0f1713d2a8f84d112b686e5a488125efc089ac2`, verification `6b8e948dbef5e6eed8ff8cdc35f94179c664cc58382dab4e4e0864a424c9b7b6`. 다음은 알려진 입력 callback 실행과 전체49b0c,47642 및상위480bc 연결이다. 현재 callback 주소 설치는 callback 실행 완료를 뜻하지 않는다. 직접플레이와 전체게임 goal은 계속 active다.
+
+
+## 2026-10-08 — 입력 callback 실행
+
+- 알려진18 callback을 C++11 API/CLI로 연결했다. 좌표차분·목표교차·callback교체/해제·flag/latch·기본입력매핑을 원본순서대로 실행한다.49eba/49ef0의 absolute-memory CMPA,버려지는OR20,D0→D1복원과1d628 A0zero 유지도 보존한다.
+- 원본2,943조건에서 전체64KiB RAM·14register가 일치하고 오류160조건이 통과했다. 실제18entry 집합과38조건분기의 양쪽을 확인했다. 네 sequence32호출 중28회는 호스트 재작성 없이 이전 실제 CLI 출력을 소비한다.16 unused-mask 생략과 directory loader도 확인했다.
+- 메인이 원본계약·core/header/CLI/unit·관측/검증/목록도구를 리뷰하고2,943개 저장RAM/fixture/register/branch와현재 provenance를 직접 대조했다. 전체make Python182/C++120/경고0. 원격 없는 로컬 검증·리뷰0179·stage-input-callbacks.md에 재현/한계를 기록했다.
+- Native SHA256 `2bb75aa89ee636ee8a6afee4df7662def786b02f7a8ee9e3d1b850ff8a41cd0c`, verification `ef931982b559b333ef52a6bd9b9020c78c782568ff874cd9a01a3ef21c97c398`. 다음은49b0c두player loop/47642활동mask와1da60/4d7a6연결이다. 기존플레이어조회resource를 재사용하고A0/A4계약을 보완한다. 직접플레이 및 전체게임goal은 계속 active다.

@@ -295,3 +295,13 @@ build/step_stage_input ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 INPUT_RAM OU
 ```
 
 기본 버튼 mask는 `tools/pack_stage_input.py`가 만든 `extracted/runtime/stage_input/default_masks.ms5d`에서 읽는다.64KiB RAM과13register를 입출력하며 실패 시 모두 보존한다. `docs/analysis/stage-input.md`에 원본 비교·재생성 명령이 있다. 동적 callback 실행과 전체49b0c 연결은 후속 작업이다.
+
+## 입력 callback 실행
+
+`ms5::step_stage_input_callback`은 `docs/analysis/stage-input-callbacks.md`에 명시한18진입을 실행한다. 기본 mask가 필요한 경로에서는 기존 stage_input MS5D를 읽고 A6의 조건부 WORD 읽기 및 callback slot 변경을 원본대로 수행한다.
+
+```text
+build/step_stage_input_callback ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 INPUT_RAM OUTPUT_RAM [MS5D_OR_DIRECTORY ...]
+```
+
+전체RAM·14register를 전달하며 API 오류는 이전 상태를 보존한다. 상위두player입력loop는 후속연결단위다.
