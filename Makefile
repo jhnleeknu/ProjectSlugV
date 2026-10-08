@@ -175,6 +175,7 @@ test: build/animation_execution_test build/object_sound_lookup_test build/stage_
 	./build/sprite_pool_test
 
 runtime-resources:
+	$(PYTHON) tools/pack_animation_control.py
 	$(PYTHON) tools/pack_activation_animation.py
 	$(PYTHON) tools/pack_object_sound_lookup.py
 	$(PYTHON) tools/pack_stage_hud_counter.py
@@ -1182,7 +1183,7 @@ build/object_sound_lookup_test: $(OBJECT_SOUND_LOOKUP_SOURCES) $(OBJECT_SOUND_LO
 
 ANIMATION_EXECUTION_SOURCES = $(sort engine/src/animation_execution.cpp $(SPRITE_SUBMIT_EXECUTION_SOURCES))
 ANIMATION_EXECUTION_HEADERS = $(sort engine/include/ms5/animation_execution.h engine/include/ms5/animation_resource.h $(SPRITE_SUBMIT_EXECUTION_HEADERS))
-build/step_animation_execution: $(ANIMATION_EXECUTION_SOURCES) engine/src/animation_resource.cpp $(ANIMATION_EXECUTION_HEADERS) engine/tools/step_animation_execution.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_EXECUTION_SOURCES) engine/src/animation_resource.cpp engine/tools/step_animation_execution.cpp -o $@
+build/step_animation_execution: $(ANIMATION_EXECUTION_SOURCES) engine/src/animation_resource.cpp engine/src/fixed_data_resource.cpp $(ANIMATION_EXECUTION_HEADERS) engine/tools/step_animation_execution.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_EXECUTION_SOURCES) engine/src/animation_resource.cpp engine/src/fixed_data_resource.cpp engine/tools/step_animation_execution.cpp -o $@
 build/animation_execution_test: $(ANIMATION_EXECUTION_SOURCES) $(ANIMATION_EXECUTION_HEADERS) engine/tests/animation_execution_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(ANIMATION_EXECUTION_SOURCES) engine/tests/animation_execution_test.cpp -o $@

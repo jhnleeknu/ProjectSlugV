@@ -1,5 +1,7 @@
 # Animation 전체 상태 실행의 첫 연결
 
+이 문서는 최초4opcode 연결의 기록이다. 이후0c/14와 MS5D 확장 및 최신 회귀 결과는 [control 실행 문서](animation-control-execution.md)를 따른다. 아래 최초 검증 해시는 당시 구현의 증거다.
+
 [초기 실행 계약](animation-execution-initial-contract.md)과 [draw 전체 상태 계약](animation-draw-full-contract.md)의 원본49fc6을 새 API로 연결한다. canonical BE ROM SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이며 아래 fixed CPU 주소는 ROM 파일 오프셋과 같다. 이번 새 full-state 경로는 **00/04/08/28 네 opcode**다. 전체17opcode 목표 중 나머지13개와 callback/sound/banked 동작은 미완료로 유지하며, 기존 RAM/carry API의 구현과 지원 범위를 제거하지 않는다.
 
 ```cpp

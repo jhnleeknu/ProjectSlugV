@@ -51,6 +51,110 @@ void failure(std::vector<std::uint8_t> ram,const std::vector<ms5::AnimationResou
         assert(!error.empty()&&ram==before&&same(state,saved)&&carry==(input!=0));
         assert(ports.size()==1&&ports[0].size==1&&ports[0].address==0x300001&&ports[0].value==0x55);}
 }
+void data_failure(std::vector<std::uint8_t> ram,const std::vector<ms5::AnimationResource>& scripts,
+    const std::vector<ms5::FixedDataResource>& windows,ms5::AnimationExecutionState state) {
+    const std::vector<std::uint8_t> before=ram;const ms5::AnimationExecutionState saved=state;
+    for(unsigned int input=0;input<2;++input){bool carry=input!=0;std::vector<ms5::VideoPortWrite> ports=old_ports();std::string error;
+        assert(!ms5::step_animation_execution(ram,scripts,windows,state,carry,ports,error));
+        assert(!error.empty()&&ram==before&&same(state,saved)&&carry==(input!=0));
+        assert(ports.size()==1&&ports[0].size==1&&ports[0].address==0x300001&&ports[0].value==0x55);}
+}
+std::vector<ms5::FixedDataResource> control_data() {
+    std::vector<ms5::FixedDataResource> windows(1);windows[0].source_cpu_address=windows[0].source_rom_offset=0x4276c;
+    windows[0].data.resize(65536,0);
+    put(windows[0].data,0,2,0x8000);put(windows[0].data,65534,2,0x7fff);
+    put(windows[0].data,0x4a76c - 0x4276c,2,0xfffe);put(windows[0].data,0x4a76e - 0x4276c,2,1);
+    put(windows[0].data,0x4a88c - 0x4276c,2,0x8026);put(windows[0].data,0x4a76a - 0x4276c,2,0x7e);
+    put(windows[0].data,0x4a574 - 0x4276c,4,0x2b3e8);put(windows[0].data,0x4a578 - 0x4276c,4,0x2b3fa);
+    return windows;
+}
+int signed_word(unsigned int value) {return value<0x8000?static_cast<int>(value):static_cast<int>(value)-65536;}
+std::vector<std::uint8_t> control_ram(std::uint32_t pointer=0x50000) {
+    std::vector<std::uint8_t> ram=fixture();put(ram,0x8026,4,pointer);put(ram,0x802a,2,0);put(ram,0x802c,2,0x100);ram[0x8017]=0;return ram;
+}
+void field_branches() {
+    const unsigned int selectors[]={0,1,0x90,0x3fff,0x4000,0x7fff,0x8000,0xffff};
+    const unsigned int values[]={0,1,0x80,0xff};const std::vector<ms5::FixedDataResource> windows=control_data();
+    for(unsigned int n=0;n<8;++n)for(unsigned int d=0;d<4;++d)for(unsigned int f=0;f<4;++f){
+        std::vector<std::uint8_t> ram=control_ram();ms5::AnimationExecutionState state=initial(),want=state;state.a6=want.a6=0x108000;
+        const unsigned int table=static_cast<unsigned int>(0x4a76c+signed_word((selectors[n]*2)&65535));
+        const unsigned int offset=get(windows[0].data,table-0x4276c);const unsigned int field=static_cast<unsigned int>(0x108000+signed_word(offset));
+        put(ram,field-0x100000,1,values[f]);std::vector<std::uint8_t> bytes(0x21,0);
+        bytes[0]=0x0c;bytes[1]=values[d];put(bytes,2,2,selectors[n]);put(bytes,4,4,0x50020);bytes[0x20]=0x28;
+        const bool branch=(values[d]!=0)==(values[f]!=0);
+        want.sprite.registers.d[0]=(want.sprite.registers.d[0]&0xffff0000U)|(offset&0xff00U)|(values[f]?255U:0U);
+        want.sprite.registers.d[1]=(want.sprite.registers.d[1]&0xffffff00U)|(branch&&values[d]?255U:0U);
+        want.sprite.registers.d[6]=branch?0x50020:0x50000;want.sprite.registers.d[7]=branch?0xffffffffU:0;
+        want.sprite.registers.a[0]=0x108026;want.sprite.registers.a[1]=branch?0x50021:0x5000a;want.sprite.registers.a[2]=0x4a76c;
+        bool carry=!branch;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,script(bytes),windows,state,carry,ports,error));
+        assert(carry==branch&&same(state,want)&&get(ram,0x8026,4)==(branch?0x50020:0x50008));ports_are(ports,2);
+    }
+    // Branch pointer storage changes the RAM bytes fetched as the next opcode.
+    std::vector<std::uint8_t> ram=control_ram(0x105000);ms5::AnimationExecutionState state=initial();state.a6=0x108000;
+    put(ram,0x5000,1,0x0c);put(ram,0x5001,1,0);put(ram,0x5002,2,1);put(ram,0x5004,4,0x108026);ram[0x8001]=0;
+    bool carry=true;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),windows,state,carry,ports,error));
+    assert(!carry&&get(ram,0x8026,4)==0x108026&&state.sprite.registers.d[1]==0xabcd1210&&get(ram,0x802a)==0xf00);
+}
+void control_callbacks() {
+    const unsigned int indices[]={0,1,0x7f,0x80,0xff};
+    for(unsigned int which=0;which<2;++which)for(unsigned int i=0;i<5;++i)for(unsigned int profile=0;profile<5;++profile){
+        std::vector<std::uint8_t> ram=control_ram();ms5::AnimationExecutionState state=initial(),want=state;
+        state.a6=want.a6=0x108000;state.a5=want.a5=0x108002;const unsigned int index_at=0x807c+which;
+        ram[index_at]=indices[i];unsigned int source=profile>=2?0x108076+(profile-2)*2:0;
+        if(profile>=2)put(ram,source-0x100000,4,0xa1b2c3d4);
+        const unsigned int live=ram[index_at];const unsigned int operand=profile==0?0x106000:profile==1?0x60000:source-live*4;
+        std::vector<ms5::FixedDataResource> windows=control_data();unsigned int value=0;
+        if(profile==0){source=operand+live*4;value=0x81230000|(live<<8)|which;put(ram,source-0x100000,4,value);}
+        else if(profile==1){ms5::FixedDataResource data;data.source_cpu_address=data.source_rom_offset=operand;data.data.resize(1024,0);
+            value=0x76540000|(live<<8)|which;put(data.data,live*4,4,value);windows.push_back(data);}
+        else value=get(ram,source-0x100000,4);
+        std::vector<std::uint8_t> bytes(8,0);bytes[0]=0x14;bytes[1]=0x1d+which;put(bytes,2,4,operand);
+        want.sprite.registers.d[0]=live*4;want.sprite.registers.d[1]&=0xffffff00U;
+        want.sprite.registers.d[6]=0x50000;want.sprite.registers.d[7]=0;
+        want.sprite.registers.a[0]=0x108026;want.sprite.registers.a[1]=0x50008;
+        bool carry=true;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,script(bytes),windows,state,carry,ports,error));
+        assert(!carry&&same(state,want)&&get(ram,0x8078,4)==value&&get(ram,0x8026,4)==0x50006);ports_are(ports,4);
+    }
+    // Callback destination aliases live bank shadow: restore follows the
+    // LONG store and overwrites its highWORD, rather than restoring earlier.
+    std::vector<std::uint8_t> ram=fixture();ms5::AnimationExecutionState state=initial();state.a6=0x101000;state.a5=0x109068;
+    put(ram,0x1026,4,0x50000);put(ram,0x102a,2,0);ram[0x1017]=0;ram[0x107c]=0;put(ram,0x6000,4,0xabcd5678);
+    std::vector<std::uint8_t> bytes(8,0);bytes[0]=0x14;bytes[1]=0x1d;put(bytes,2,4,0x106000);
+    bool carry=true;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,script(bytes),control_data(),state,carry,ports,error));
+    assert(!carry&&get(ram,0x1078,4)==0x00005678&&get(ram,0x1026,4)==0x50006);ports_are(ports,4);
+}
+void control_errors() {
+    std::vector<std::uint8_t> ram=control_ram();ms5::AnimationExecutionState state=initial();state.a6=0x108000;
+    std::vector<std::uint8_t> bytes(10,0);bytes[0]=0x0c;bytes[1]=1;put(bytes,2,2,0);put(bytes,4,4,0x50008);
+    std::vector<ms5::FixedDataResource> windows=control_data(),bad=windows;
+    data_failure(ram,script(bytes),std::vector<ms5::FixedDataResource>(),state);
+    bad.push_back(windows[0]);data_failure(ram,script(bytes),bad,state);
+    bad=windows;bad[0].source_cpu_address=bad[0].source_rom_offset=0x4a76c;bad[0].data.assign(1,0);data_failure(ram,script(bytes),bad,state);
+    bad=windows;ms5::FixedDataResource overlap;overlap.source_cpu_address=overlap.source_rom_offset=0x4a76d;overlap.data.assign(1,0);bad.push_back(overlap);data_failure(ram,script(bytes),bad,state);
+    bad=windows;bad[0].source_rom_offset++;data_failure(ram,script(bytes),bad,state);
+    std::vector<std::uint8_t> truncated=bytes;truncated.resize(7);data_failure(ram,script(truncated),windows,state);
+    // Negative raw field offset falls belowRAM only when it is actually read.
+    state.a6=0x100000;put(ram,0x26,4,0x50000);put(ram,0x2a,2,0);ram[0x17]=0;
+    data_failure(ram,script(bytes),windows,state);
+    state=initial();state.a6=0x108000;ram=control_ram();bytes.assign(8,0);bytes[0]=0x14;bytes[1]=0x1d;put(bytes,2,4,0x106000);put(ram,0x6000,4,0x12345678);ram[0x807c]=0;
+    // Callback destination/bank/PVC effects roll back when the following opcode is missing.
+    truncated=bytes;truncated.resize(6);data_failure(ram,script(truncated),windows,state);
+    bad=windows;put(bad[0].data,0x4a574 - 0x4276c,4,0x2b3fa);data_failure(ram,script(bytes),bad,state);
+    bytes[1]=0x1f;bad=windows;put(bad[0].data,0x4a57c - 0x4276c,4,0x2b3e8);data_failure(ram,script(bytes),bad,state);
+    bytes[1]=0x1d;put(bytes,2,4,0x106001);data_failure(ram,script(bytes),windows,state);
+    put(bytes,2,4,0xffffffff);data_failure(ram,script(bytes),windows,state);
+    put(bytes,2,4,0x60000);data_failure(ram,script(bytes),windows,state);
+    ms5::FixedDataResource partial;partial.source_cpu_address=partial.source_rom_offset=0x60000;partial.data.assign(3,0);bad=windows;bad.push_back(partial);data_failure(ram,script(bytes),bad,state);
+    // Odd window base does not invalidate aligned reached table reads.
+    bytes.assign(10,0);bytes[0]=0x0c;put(bytes,2,2,0);put(bytes,4,4,0x50008);
+    windows[0].source_cpu_address=windows[0].source_rom_offset=0x4276b;windows[0].data.insert(windows[0].data.begin(),0x55);
+    bool carry=true;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,script(bytes),windows,state,carry,ports,error));assert(!carry);
+}
 void early_and_waits() {
     std::vector<std::uint8_t> ram=fixture(0);ms5::AnimationExecutionState s=initial(),want=s;std::string error;
     // Null pointer does not reach the otherwise invalid A5+5742 span.
@@ -174,4 +278,4 @@ void errors() {
     ram.resize(65535);failure(ram,script(bytes),initial());
 }
 }
-int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();std::cout<<"animation_execution_test passed\n";return 0;}
+int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();std::cout<<"animation_execution_test passed\n";return 0;}

@@ -7,6 +7,7 @@ void word(std::uint32_t& r,std::uint32_t value) {r=(r&0xffff0000U)|(value&65535U
 void swap(std::uint32_t& r) {r=(r<<16)|(r>>16);}
 bool negative_word(std::uint32_t value) {return (value&0x8000U)!=0;}
 std::uint32_t extend_word(std::uint32_t value) {return (value&0x8000U)?(value|0xffff0000U):(value&65535U);}
+int signed_word(std::uint32_t value) {return (value&0x8000U)?static_cast<int>(value&65535U)-65536:static_cast<int>(value&65535U);}
 bool valid(const AnimationExecutionState& s) {
     if(s.phase==0)return !s.sprite.waiting && s.saved_a0==0 && s.saved_a1==0 && s.saved_bank==0;
     return s.phase==1 && s.sprite.waiting;
@@ -50,6 +51,24 @@ bool next(const std::vector<std::uint8_t>& ram,const std::vector<AnimationResour
     SceneMapTransferState& r,unsigned int size,std::uint32_t& value,std::string& error) {
     if(!read_script(ram,scripts,r.a[1],size,value,error))return false;
     r.a[1]+=size;return true;
+}
+bool read_data(const std::vector<std::uint8_t>& ram,const std::vector<FixedDataResource>& windows,
+    std::int64_t address,unsigned int size,std::uint32_t& value,std::string& error) {
+    if(address<0 || address+size>0x100000000LL || (size>1 && (address&1))) {
+        error="unaligned or overflowing animation data read";return false;
+    }
+    if(address>=0x100000 && address<0x110000)return read_ram(ram,static_cast<std::uint32_t>(address),0,size,value,error);
+    const std::vector<std::uint8_t>* data=NULL;std::size_t at=0;unsigned int matches=0;
+    for(std::size_t i=0;i<windows.size();++i) {
+        const FixedDataResource& w=windows[i];const std::uint32_t start=w.source_cpu_address;
+        if(start>=0x100000 || w.source_rom_offset!=start || w.data.empty() || w.data.size()>0x100000-start)continue;
+        const std::int64_t end=static_cast<std::int64_t>(start)+w.data.size();
+        if(address<end && address+size>start) {
+            ++matches;if(address>=start && address+size<=end) {data=&w.data;at=static_cast<std::size_t>(address-start);}
+        }
+    }
+    if(matches!=1 || data==NULL) {error="missing, ambiguous or partial fixed animation data read";return false;}
+    value=0;for(unsigned int i=0;i<size;++i)value=(value<<8)|(*data)[at+i];return true;
 }
 void pvc(std::vector<VideoPortWrite>& ports,std::uint32_t value) {
     VideoPortWrite p;p.size=2;p.address=0x2ffff2;p.value=value&65535U;ports.push_back(p);
@@ -125,7 +144,45 @@ bool draw(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& s
     if(s.sprite.waiting) {s.phase=1;return true;}
     return draw_return(ram,s,ports,error);
 }
+bool field_branch(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& scripts,
+    const std::vector<FixedDataResource>& windows,AnimationExecutionState& s,std::string& error) {
+    SceneMapTransferState& r=s.sprite.registers;std::uint32_t value=0;
+    if(!next(ram,scripts,r,1,value,error))return false;byte(r.d[1],value?255U:0U);
+    if(!next(ram,scripts,r,2,value,error))return false;word(r.d[0],value);word(r.d[0],r.d[0]*2U);
+    r.a[2]=0x4a76c;
+    if(!read_data(ram,windows,static_cast<std::int64_t>(r.a[2])+signed_word(r.d[0]),2,value,error))return false;
+    word(r.d[0],value);
+    if(!next(ram,scripts,r,4,value,error))return false;r.d[7]=value;
+    if(!read_ram(ram,s.a6,signed_word(r.d[0]),1,value,error))return false;
+    byte(r.d[0],value?255U:0U);
+    if((r.d[0]&255U)==(r.d[1]&255U))r.a[1]=r.d[7];
+    r.d[6]=r.a[1];return write_ram(ram,r.a[0],0,4,r.d[6],error);
+}
+bool callback(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& scripts,
+    const std::vector<FixedDataResource>& windows,AnimationExecutionState& s,
+    std::vector<VideoPortWrite>& ports,std::string& error) {
+    SceneMapTransferState& r=s.sprite.registers;std::uint32_t value=0;
+    s.saved_a0=r.a[0];r.d[0]=0;
+    if(!next(ram,scripts,r,1,value,error))return false;r.d[0]=value;const unsigned int selector=value;
+    word(r.d[0],r.d[0]*2U);word(r.d[0],r.d[0]*2U);r.a[0]=0x4a500;
+    if(!read_data(ram,windows,static_cast<std::int64_t>(r.a[0])+signed_word(r.d[0]),4,value,error))return false;r.d[7]=value;
+    if(!next(ram,scripts,r,4,value,error))return false;r.a[0]=value;
+    s.saved_a1=r.a[1];r.a[1]=r.d[7];
+    if(!read_ram(ram,s.a5,-0x7ff0,2,value,error))return false;s.saved_bank=static_cast<std::uint16_t>(value);
+    if(!zero_bank(ram,s,ports,error))return false;
+    if((selector!=0x1d && selector!=0x1e) || r.a[1]!=(selector==0x1d?0x2b3e8U:0x2b3faU)) {
+        error="unsupported animation callback selector or table target";return false;
+    }
+    r.d[0]=0;
+    if(!read_ram(ram,s.a6,selector==0x1d?0x7c:0x7d,1,value,error))return false;r.d[0]=value;
+    word(r.d[0],r.d[0]*2U);word(r.d[0],r.d[0]*2U);
+    if(!read_data(ram,windows,static_cast<std::int64_t>(r.a[0])+signed_word(r.d[0]),4,value,error))return false;
+    if(!write_ram(ram,s.a6,0x78,4,value,error))return false;
+    if(!draw_return(ram,s,ports,error))return false;
+    r.d[6]=r.a[1];return write_ram(ram,r.a[0],0,4,r.d[6],error);
+}
 bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& scripts,
+    const std::vector<FixedDataResource>& windows,
     AnimationExecutionState& s,bool& carry,std::vector<VideoPortWrite>& ports,std::string& error) {
     SceneMapTransferState& r=s.sprite.registers;std::uint32_t value=0;
     if(s.phase==1) {
@@ -146,6 +203,8 @@ bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& sc
     for(unsigned int commands=0;commands<10000;++commands) {
         r.d[7]=0;if(!next(ram,scripts,r,1,value,error))return false;r.d[7]=value;
         if(value==4) {if(!draw(ram,scripts,s,ports,error))return false;if(s.sprite.waiting)return true;continue;}
+        if(value==0x0c) {if(!field_branch(ram,scripts,windows,s,error))return false;continue;}
+        if(value==0x14) {if(!callback(ram,scripts,windows,s,ports,error))return false;continue;}
         if(value==8) {
             ++r.a[1];if(!read_script(ram,scripts,r.a[1],4,value,error))return false;r.d[7]=value;r.a[1]=value;
             r.d[6]=r.a[1];if(!write_ram(ram,r.a[0],0,4,r.d[6],error))return false;continue;
@@ -158,7 +217,7 @@ bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& sc
             }
             if(!write_ram(ram,r.a[0],4,1,0,error))return false;r.d[7]=0xffffffffU;return epilogue(ram,s,carry,ports,error);
         }
-        if(value!=0) {error="animation opcode outside initial00/04/08/28 support";return false;}
+        if(value!=0) {error="unsupported animation opcode";return false;}
         r.d[7]=0;if(!read_ram(ram,s.a5,0x5742,1,value,error))return false;
         if(!write_ram(ram,s.a5,0x5742,1,value+1U,error))return false;
         if(!next(ram,scripts,r,1,value,error))return false;byte(r.d[1],value);
@@ -195,11 +254,16 @@ bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& sc
 bool step_animation_execution(std::vector<std::uint8_t>& ram,
     const std::vector<AnimationResource>& scripts,AnimationExecutionState& state,
     bool& carry,std::vector<VideoPortWrite>& ports,std::string& error) {
+    return step_animation_execution(ram,scripts,std::vector<FixedDataResource>(),state,carry,ports,error);
+}
+bool step_animation_execution(std::vector<std::uint8_t>& ram,
+    const std::vector<AnimationResource>& scripts,const std::vector<FixedDataResource>& windows,
+    AnimationExecutionState& state,bool& carry,std::vector<VideoPortWrite>& ports,std::string& error) {
     if(ram.size()!=65536 || !valid(state)) {error="invalid animation RAM or continuation";return false;}
     try {
         std::vector<std::uint8_t> candidate=ram;AnimationExecutionState next_state=state;
         bool result=carry;std::vector<VideoPortWrite> output;
-        if(!run(candidate,scripts,next_state,result,output,error))return false;
+        if(!run(candidate,scripts,windows,next_state,result,output,error))return false;
         ram.swap(candidate);state=next_state;carry=result;ports.swap(output);error.clear();return true;
     } catch(const std::bad_alloc&) {error="cannot allocate animation execution transaction";return false;}
 }

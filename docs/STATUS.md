@@ -1626,3 +1626,12 @@
 - 원본178조건(0c128+14의1d/1e50),PVC912회,carrytrue80/false98을 확보했다. 메인이178개 전부 재실행하고 독립Sol이대표19개 재실행·입력6/산출물712개hash를 감사했다. Native SHA `0590de05828d8639340843f06a33417aa32e0370196512bf5a4d17e97165a885`. 범위밖2조건은 미실행 제외다.
 - sourceverified MS5D64KiB와known8operand1308byte를 새패커로 보존했다. 실제재생성 일치, 합성패커10개 및 전체Python225테스트통과. Manifest SHA `5a525496309a42ef3deba162bdffe47e6df276c8b6d2d6a8a172407ced331191`. 이번단위에는새C++지원·소비검증이없다. 리뷰0206.
 - animation-control-full-contract.md가후속구현계약이다.1f의중첩soundstack/metadata는animation-callback-continuation.md에정적근거와제안을구분했다. 전체14→1f대기native증거는다음작업이다.0c/14새C++연결·10indexed draw·나머지opcode·상위callback·자연scheduler/IRQ·직접플레이·전체Goal은계속미완료다.
+
+## 2026-10-08 — animation 0c/14의 C++·MS5D 연결
+
+- Baseline `f074b49`, branch `codex/animation-control-execution`. Sol6.1/medium 세 작업자가 core/unit, CLI/Make/문서, 원본비교를 담당했고 메인이 원본 의미·실제diff·검증기·최종해시를 리뷰했다. 기존API를 유지하며 MS5D windows overload와 mixedMS5A/MS5D CLI를 추가했다.
+- 0c의signedWORDselector/부분register/livefield와14의1d·1e callback/liveLONG/bank/PVC/MOVEM.W/포인터저장을 연결했다.14의1f와기타callback은미지원이다. 전체17opcode 중00/04/08/0c/28과14의일부를지원하며14전체완료를주장하지않는다.
+- 원본178조건/실제CLI178조건에서전체RAM15regs/carry/PVC912회일치. 실제MS5D조회→원본48980MS5A의혼합2조건도36/40ports일치. 오류48조건통과. Control SHA `01bf8c488c626b1f80346ba97dbdc9175357a0b269747281b2760e9ee8ea11d8`,입력31/산출물1447개hash일치.
+- 기존4opcode90조건/98단계·8실제출력재개·추가15·오류157회귀통과,새SHA `ee6d4284ca590eada918161a6944b2b110c875ddd86854dede1fa087e51d0ade`. `make all test` exit0 Python225/C++145/경고0,core normal/UBSan통과. 리뷰0207와animation-control-execution.md.
+- 다음1f의원본19조건/27단계·대기8·재개8·PVC152회도확보했다. 실제nestedstack과source/gate/bank/operand변경후prefix미재실행을관측했다. SHA `87a075a297e63924b0da880eaa22ea3c1b90e635a949880f8b0426c0320801a3`;독립10단계재실행·stack리뷰·114참조hash검사통과. 1f C++상태확장은다음작업이다.
+- 나머지opcode·indexed draw·상위활성화callback·자연scheduler/IRQ·직접플레이·전체Goal은계속미완료다. 기존목표와완료기준을유지한다.

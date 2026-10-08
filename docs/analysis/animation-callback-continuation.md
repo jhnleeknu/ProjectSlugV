@@ -4,7 +4,7 @@
 
 기준 commit은 `c8595e0`이다. canonical BE 프로그램은 `extracted/program/maincpu.decrypted.be.bin`, 8,388,608 bytes, SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. 아래 고정영역 CPU 주소=ROM 파일 오프셋이다. `load_verified_program`으로 원본 해시를 확인하고 `4a408..4a46b`, `4a57c`, `47672..476bb`, `ca70..ca75`, sound의 stack 명령을 메모리에서 읽었다. ROM·소스·기존 artifact를 수정하거나 빌드하지 않았다.
 
-이 문서의 원본 명령·table 값은 정적 사실이다. **opcode14→callback1f→sound wait 전체 경로는 아직 새 native 실행으로 입증하지 않았다.** 중첩 stack 위치는 아래 실제 명령과 검증된 단독47672 stack의 합성 추론이며, 다음 구현 전 전체 원본 실행으로 확인해야 한다. 다른 callback의 의미는 이 분석에서 확정하지 않는다.
+이 문서의 원본 명령·table 값은 정적 사실이다. **초기 분석 당시에는 opcode14→callback1f→sound wait 전체 경로의 native 증거가 없었다. 아래 마지막 절의 후속19조건/27단계 관측으로 canonical fixture의 중첩 stack은 확인했다.** 중첩 stack 위치는 아래 실제 명령과 검증된 단독47672 stack의 합성 추론이며, 다음 구현 전 전체 원본 실행으로 확인해야 한다. 다른 callback의 의미는 이 분석에서 확정하지 않는다.
 
 기존 구성요소 근거는 다음과 같다.
 
@@ -106,3 +106,13 @@ A6는 callback 완료 시 object+7e/+12의 live destination이며 기다리는 �
 필수 새 native 증거는 전체 unpatched49fc6에서14/1f를 실제 통과한 반환·high hold/release·low hold/release·high→low 두 단계 wait다. 같은 CPU/CCR/A7를 유지하며 위 S 상대 stack을 직접 캡처하고, 현재 callback의 source/object/gates/outer shadow와 live RAM script의 operand를 wait 밖에서 바꾸어 prefix 무재실행과 완료 후 live source 읽기를 구분해야 한다. outer A0/A1/bank 복원,4a460의 signed WORD 복원,4a276 pointer 저장, 이후 script의 live fetch도 비교한다. fixed dispatch table/ROM script는 poisoning 대상으로 수정하지 않으며 원본 불변을 유지한다. 기존단독277/291 결과를 새 whole14 oracle로 합성하지 않는다.
 
 메인 결정이 필요한 사항은 phase2 metadata 이름·CLI 인자 확장, 선택한 wide MS5D의 실제 연결·검증, first1f fixture의 coherent script/object/sound seed, unsupported callback의 오류 범위다. 다른14 callback,3c callback,opcode30 자체의 continuation·전체17 opcode·자연IRQ/scheduler·물리stack mirror/전체CCR는 별도 미완료 범위로 유지한다.
+
+## 후속 원본 관측: 19조건/27단계
+
+`tools/observe_animation_sound_callback.py`는 원본49fc6부터 합성 live RAM script `14/1f`와 후속00을 실행했다. 프로그램 코드는 수정하지 않았고 SR은 초기설정과 최종RTS후 carry 확인에만 접근했다. 같은 CPU를 유지한 high/low 및 high→low 대기3연쇄를 포함한다. canonical A5=108000/A6=102000만 이 관측의 대상이다.
+
+최종 관측 SHA256은 `87a075a297e63924b0da880eaa22ea3c1b90e635a949880f8b0426c0320801a3`다.19조건/27단계 중 대기8·RTS완료19(carryfalse19), 재개8, orderedPVC152회다. 실제 stack에서 읽은 innerA0=10095c, outerA0=102026, outerA1=106006, savedbank0을 검사했다. highSP=STACK-28와 lowSP=STACK-22 및 실제return3c00/4768e/4a43e가 앞선 합성 배치와 일치한다. hook에서 expected register나stack을 주입하지 않았다.
+
+대기 중 sourceWORD를1234, object+7e를12, gate를1, livebank를beef, RAM operand를deadbeef로 바꿨다. hold에는 쓰기가 없고 ready는 prefix에 재진입하지 않았다. 현재callback은 원래캡처를 이어가며 완료부는 바뀐 source를읽는다. 실제47672가 operand A0를 덮으므로 초기12345678/변경deadbeef를 dereference하지 않는 것도 관찰했다. 복귀의MOVEM.W 부호확장과outerA0/A1 복원을 실제경계에서검사했다.
+
+독립Sol은10단계를메모리에서재실행하여RAM/15regs/PVC/pending/전체trace를대조했다. 다른Sol은원본stack명령과현재입력6/단계산출물108개hash를검토했다. 메인도현재114개참조hash를확인했다. 이관측은새C++phase2 구현이아니다. 다음구현은nestedmetadata보존·리소스없는hold·innerlookup/outer복귀후nextscript실패의전체rollback을검증해야한다. 비canonicalA5/A6,source/queue/bankalias의전체조합과자연scheduler는별도미완료다.

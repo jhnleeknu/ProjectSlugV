@@ -128,7 +128,7 @@ def negatives(root,folder,exe,resources,native):
         reject('missing-script',rr=[])
         for opcode in (0x0c,0x10,0x14,0x18,0x40,0x44,0xff):
             data=bytearray(ram);data[0x2026:0x202a]=(0x106000).to_bytes(4,'big');data[0x6000]=opcode
-            reject('unsupported-opcode-'+hex(opcode),payload=bytes(data),rr=[])
+            reject(('opcode-without-data-' if opcode in (0x0c,0x14) else 'unsupported-opcode-')+hex(opcode),payload=bytes(data),rr=[])
         # A jump loop must fail the command budget transactionally.
         data=bytearray(ram);data[0x2026:0x202a]=(0x106000).to_bytes(4,'big');data[0x6000:0x6006]=bytes.fromhex('080000106000')
         reject('live-jump-command-budget',payload=bytes(data),rr=[])
@@ -170,7 +170,7 @@ def main():
         'engine/src/animation_execution.cpp','engine/include/ms5/animation_execution.h','engine/tools/step_animation_execution.cpp',
         'engine/src/sprite_submit_execution.cpp','engine/include/ms5/sprite_submit_execution.h','engine/include/ms5/sprite_producer.h',
         'engine/include/ms5/scene_map_transfer.h','engine/include/ms5/video_port.h','engine/include/ms5/fixed_data_resource.h',
-        'engine/src/animation_resource.cpp','engine/include/ms5/animation_resource.h','Makefile','build/step_animation_execution',
+        'engine/src/animation_resource.cpp','engine/src/fixed_data_resource.cpp','engine/include/ms5/animation_resource.h','Makefile','build/step_animation_execution',
         'docs/analysis/animation-execution-initial-contract.md','docs/analysis/animation-draw-full-contract.md']
     names.extend(str((runtime/name).relative_to(root)) for name in packed)
     inputs={name:digest(root/name) for name in names};inp,out,ports=(folder/x for x in ('input.bin','cpp.bin','cpp.ports.bin'));rows=[];resumes=0
@@ -201,7 +201,7 @@ def main():
         results=rows,live_RAM_supplements=extra,negative_cases=rejected,full_RAM_15_registers_pending_carry_ports_equal=True,
         scope='RealMS5A scripts48980/489c2 with98originalreexecutedphases and8resumes usingonlypreviousactualCPPoutputs pluslistedhostwrites. '
         'Additional liveRAMdata scripts execute originalROM code unchanged and coverduration0/sentinel/controlpalette/liveentryclear. '
-        'Checkederrors not nativeTRAPcompletion. Only00/04/08/28 supported here; other13opcodes remain. '
+        'Checkederrors not nativeTRAPcompletion. This regression covers00/04/08/28; new0c/14 paths are verified separately. '
         'No physicalPVC/bankeddata/arbitrarycallback/naturalIRQ/scheduler/wholegame equivalence claim.')
     report.write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(dict(cases=90,phases=98,resumes=resumes,live_RAM_cases=len(extra),negative_cases=len(rejected),sha256=digest(report))))

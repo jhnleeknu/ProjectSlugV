@@ -158,7 +158,7 @@ bool parse_integer(const std::string& text, std::uint32_t maximum, std::uint32_t
 
 int main(int argc, char** argv) {
     if (argc < 24) {
-        std::cerr << "usage: step_animation_execution D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 PHASE SAVED_A0 SAVED_A1 SAVED_BANK WAITING INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [SCRIPT_MS5A ...]\n";
+        std::cerr << "usage: step_animation_execution D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 PHASE SAVED_A0 SAVED_A1 SAVED_BANK WAITING INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [RESOURCE_MS5A_OR_MS5D ...]\n";
         return 2;
     }
     ms5::AnimationExecutionState state;
@@ -204,27 +204,40 @@ int main(int argc, char** argv) {
     input.seekg(0); std::vector<std::uint8_t> ram(65536);
     if (!input.read(reinterpret_cast<char*>(&ram[0]),65536)) { std::cerr << "cannot read RAM\n"; return 1; }
     input.close();
-    std::vector<ms5::AnimationResource> scripts; std::string error;
+    std::vector<ms5::AnimationResource> scripts;
+    std::vector<ms5::FixedDataResource> windows; std::string error;
     for (int i = 24; i < argc; ++i) {
         const std::string path(argv[i]); std::string resolved; struct stat identity;
-        if (!canonical_path(path,resolved)) { std::cerr << "cannot resolve script path\n"; return 1; }
+        if (!canonical_path(path,resolved)) { std::cerr << "cannot resolve resource path\n"; return 1; }
         if (stat(path.c_str(),&identity) != 0 || !S_ISREG(identity.st_mode)) {
-            std::cerr << "scripts must be regular files\n"; return 1;
+            std::cerr << "resources must be regular files\n"; return 1;
         }
         bool duplicate = false;
         for (std::size_t j = 0; j < paths.size(); ++j) {
             if (canonical[j] == resolved || same_inode(path,paths[j])) {
                 if (j >= 3) { duplicate = true; break; }
-                std::cerr << "scripts must be distinct from RAM and outputs\n"; return 1;
+                std::cerr << "resources must be distinct from RAM and outputs\n"; return 1;
             }
         }
         if (duplicate) continue;
-        ms5::AnimationResource script;
-        if (!ms5::load_animation_resource(path,script,error)) { std::cerr << error << '\n'; return 1; }
-        scripts.push_back(script); paths.push_back(path); canonical.push_back(resolved); identities.push_back(identity);
+        char magic[4];
+        std::ifstream resource_input(path.c_str(),std::ios::binary);
+        if (!resource_input.read(magic,4)) { std::cerr << "cannot read resource magic\n"; return 1; }
+        resource_input.close();
+        const std::string format(magic,4);
+        if (format == "MS5A") {
+            ms5::AnimationResource script;
+            if (!ms5::load_animation_resource(path,script,error)) { std::cerr << error << '\n'; return 1; }
+            scripts.push_back(script);
+        } else if (format == "MS5D") {
+            ms5::FixedDataResource window;
+            if (!ms5::load_fixed_data_resource(path,window,error)) { std::cerr << error << '\n'; return 1; }
+            windows.push_back(window);
+        } else { std::cerr << "unknown animation resource magic\n"; return 1; }
+        paths.push_back(path); canonical.push_back(resolved); identities.push_back(identity);
     }
     bool carry = false; std::vector<ms5::VideoPortWrite> ports;
-    if (!ms5::step_animation_execution(ram,scripts,state,carry,ports,error)) { std::cerr << error << '\n'; return 1; }
+    if (!ms5::step_animation_execution(ram,scripts,windows,state,carry,ports,error)) { std::cerr << error << '\n'; return 1; }
     std::vector<std::uint8_t> packed; packed.reserve(ports.size()*9U);
     for (std::size_t i = 0; i < ports.size(); ++i) {
         packed.push_back(ports[i].size);
