@@ -1618,3 +1618,11 @@
 - 원본90조건/98단계, 이전 실제 C++ 출력 기반8재개, PVC3280개가 일치했다. 추가 live RAM 원본 실행15조건과 오류157조건도 통과했다. 검증 SHA `60a5594afb637884eaf51d61cf5ff5ddd9f6af32869ea6a9775ec7b627160082`; 입력22/산출물670개 해시 일치.
 - `make all test` exit0, Python215/C++145/경고0, core normal/UBSan 통과. 리뷰0205와 animation-execution.md에 실제 범위·명령·제약을 기록했다.
 - 전체 진행률은 분모 미확정으로 백분율 미산정이다. 자연 scheduler/IRQ·직접 플레이·전체 활성화 callback·전체 스테이지/적/보스와 전체 Goal은 계속 미완료다. 다음 handler0c/14의 원본 경계 조사에 착수하며 기존 범위·완료 기준을 유지한다.
+
+## 2026-10-08 — animation 0c/14 원본·데이터 계약 확정
+
+- Baseline `c8595e0`, branch `codex/animation-control-analysis`. 메인은 원본 동작과 전체 상태 계약을 확정하고 Sol6.1/medium 세 작업자는 native 관측, resource 범위/패커, 중첩 sound continuation 조사·독립 감사를 담당했다. 복잡한 의미 결정은 메인이 검토했다.
+- 0c의 WORD×2 signed wrap은 기존290byte 범위를 넘어 raw64KiB `[4276c,5276c)`를 읽을 수 있다. 이 창에는14dispatch와1flookup도 포함된다.14/1d·1e의 live index/LONG읽기·쓰기와 외부bank/PVC/MOVEM.W/A0A1 복원을 전체 계약으로 기록했다.
+- 원본178조건(0c128+14의1d/1e50),PVC912회,carrytrue80/false98을 확보했다. 메인이178개 전부 재실행하고 독립Sol이대표19개 재실행·입력6/산출물712개hash를 감사했다. Native SHA `0590de05828d8639340843f06a33417aa32e0370196512bf5a4d17e97165a885`. 범위밖2조건은 미실행 제외다.
+- sourceverified MS5D64KiB와known8operand1308byte를 새패커로 보존했다. 실제재생성 일치, 합성패커10개 및 전체Python225테스트통과. Manifest SHA `5a525496309a42ef3deba162bdffe47e6df276c8b6d2d6a8a172407ced331191`. 이번단위에는새C++지원·소비검증이없다. 리뷰0206.
+- animation-control-full-contract.md가후속구현계약이다.1f의중첩soundstack/metadata는animation-callback-continuation.md에정적근거와제안을구분했다. 전체14→1f대기native증거는다음작업이다.0c/14새C++연결·10indexed draw·나머지opcode·상위callback·자연scheduler/IRQ·직접플레이·전체Goal은계속미완료다.
