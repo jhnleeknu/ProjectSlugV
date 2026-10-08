@@ -1541,3 +1541,12 @@
 
 - `tools/observe_stage_hud_counter.py`가원본4e286 전체비대기128조건을RTS까지실행한다. 실제8cda104회/35f0216회/3af8 6회와1,112ports를기록했다. 모든16개lookup WORD주소4e272..4e290을읽고index10..15는코드바이트임을원본관찰로확인했다.
 - 메인이observer를읽고128조건전체를별도CPU로재실행하여RAM15regs/ports/trace/metadata일치를확인했다. reportSHA `2afe1658360f5c3a41fde648544d95cccc6ac645d341b962a83b0caad9291227`. sound는head0/tail0→tail2의비대기enqueue만검증했으며,실제대기재개/외부read경로/C++전체HUD비교는다음작업이다.
+
+## 2026-10-08 — HUD counter 4e286와 sound 대기 연결
+
+- Baseline `90406bc`, branch `codex/stage-hud-counter`. Sol6.1/medium 세 작업자가 구현·runtime packer/CLI·원본 비교를 분담했고 메인이 원본 계약, core, 검증기와 실제 변경을 리뷰했다. Opus5.5/high 독립 검토에서 actionable bug는 없었고 low BYTE phase2 재개 후 lookup 실패의 rollback 단위검증을 추가했다.
+- 4e286의 counter/shape, full sound-word continuation, palette blend, 두 block draw를 전체15레지스터로 연결했다. 실제32byte raw lookup을 기존 MS5D/C++ loader로 소비한다. 비BCD index10..15의 코드바이트도 원본처럼 읽는다. 사운드 경로만 기존 callee 제약에 따라 A5=108000이 필요하며 비사운드 live A5 alias는 보존한다.
+- 원본 observer의 decimal slot12 offset을120에서c0로 수정했다. 이전 기록의 native SHA `2afe1658...`를 대체하는 현재128조건 SHA는 `b87af2a6a5a5e2506072e241b8c003aa9ff889cd6acd430880a23c06d17d95d5`다. 원본 프로그램은 수정하지 않았다.
+- 실제 CLI296조건(기존128+추가168)의64KiB RAM/15regs/pending/read count/21key JSON/2,732 ordered ports가 원본과 일치했다. 추가 증거는 동일 CPU의 대기·유지·해제9단계, 조건부 외부 읽기3개, 상위BYTE00..99 전체154개 및 live palette alias2개다. 오류187조건도 통과했다. 모든 WORD 조합·자연 IRQ·실제 오디오 소비를 검증한 것은 아니다.
+- 최종 full make는 Python196/C++139/경고0. 이후 phase2 테스트 보강은 단위/격리 UBSan으로 재검증했다. 현재 입력24개/native 입력7개/native 산출물1,185개 해시를 대조했다. report SHA `f6bc9947607e214476a861926f22b8ba1308bb893a92bfc86e4020360e076abf`; 리뷰0198과 stage-hud-counter-execution.md에 재현 명령·제약을 기록했다.
+- 다음은4843c의 SUBQ/SBCD와4847c의 원본 carry 분기 및 animation full caller 연결이다. 47c6c 전체·직접 플레이·자연 scheduler/IRQ·전체 Goal은 여전히 미완료다. 기존 완료 기준과 진행 기록을 유지한다.

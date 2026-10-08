@@ -47,9 +47,9 @@ def fixture(case):
     ram=bytearray(hashlib.shake_256(b'stage-hud-counter-'+bytes([case['profile']])).digest(65536))
     writes=[(0xdd1f,1,case['flag']),(0xdd20,1,case['counter']),
         (0x12,1,0),(0x4d7e,1,0),(0xf001,1,0),(0x4d8a,2,0),(0x4d8c,2,0),
-        (0x4d92+0x120+8,2,case['reference']),(0x4d92+0x120+0xa,2,case['current']),
-        (0x4d92+0x120+0xc,2,case['target']),(0x4d92+0x120+0xe,1,case['weight']),
-        (0x4d92+0x120+0xf,1,0x25)]
+        (0x4d92+12*16+8,2,case['reference']),(0x4d92+12*16+0xa,2,case['current']),
+        (0x4d92+12*16+0xc,2,case['target']),(0x4d92+12*16+0xe,1,case['weight']),
+        (0x4d92+12*16+0xf,1,0x25)]
     case['host_writes']=[dict(address=BASE+at,size=size,value=value) for at,size,value in writes]
     for at,size,value in writes:ram[at:at+size]=value.to_bytes(size,'big')
     return bytes(ram)
