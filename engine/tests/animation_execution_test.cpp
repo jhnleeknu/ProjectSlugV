@@ -731,5 +731,139 @@ void direct_sound_metadata() {
     sound_failure(ram,short_script,std::vector<ms5::FixedDataResource>(),initial());
 }
 
+std::vector<std::uint8_t> word_callback_script(unsigned int selector,unsigned int lookup=0,std::uint32_t operand=0x106000) {
+    std::vector<std::uint8_t> bytes(11);bytes[0]=0x3c;bytes[1]=0xff;put(bytes,2,2,selector);put(bytes,4,2,lookup);put(bytes,6,4,operand);bytes[10]=0x28;return bytes;
 }
-int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();sound_callbacks();sound_waits();sound_metadata();indexed_selection();indexed_draws();indexed_waits();indexed_errors();field_writes();relative_fields();field_errors();direct_sound_calls();direct_sound_waits();direct_sound_metadata();std::cout<<"animation_execution_test passed\n";return 0;}
+std::vector<ms5::FixedDataResource> word_callback_data(unsigned int selector,unsigned int lookup,std::uint32_t target,unsigned int value) {
+    // Supply only the two actually reached lookup spans. First WORDselector
+    // wraps at4x; the second wraps at2x. No ROM payload is embedded here.
+    std::vector<ms5::FixedDataResource> windows(2);
+    windows[0].source_cpu_address=windows[0].source_rom_offset=static_cast<unsigned int>(0x4a500+signed_word((selector*4)&65535));
+    windows[0].data.resize(4);put(windows[0].data,0,4,target);
+    windows[1].source_cpu_address=windows[1].source_rom_offset=static_cast<unsigned int>(0x4a76c+signed_word((lookup*2)&65535));
+    windows[1].data.resize(2);put(windows[1].data,0,2,value);return windows;
+}
+void word_callbacks() {
+    const unsigned int selectors[]={0,0x1d,0x401d,0x801d,0xc01d,0x1fff,0x2000,0x3fff,0xffff};
+    const unsigned int lookups[]={0,0x3fff,0x4000,0x7fff,0x8000,0xffff};
+    for(unsigned int s=0;s<9;++s)for(unsigned int k=0;k<6;++k)for(unsigned int callee=0;callee<2;++callee) {
+        const unsigned int index=(s+k)%3==0?255:(s+k)%3==1?1:0;
+        const unsigned int value=k%3==0?0:k%3==1?0x8001:0xffff;
+        const unsigned int target=callee?0x2b3fa:0x2b3e8;
+        std::vector<std::uint8_t> ram=fixture();ram[0x207c+callee]=index;put(ram,0x6000+index*4,4,0x81234567);
+        std::vector<std::uint8_t> expected=ram;put(expected,0x2078,4,0x81234567);field_expected_ram(expected,0x5000a);
+        ms5::AnimationExecutionState state=initial(),want=state;
+        want.sprite.registers.d[0]=index*4;want.sprite.registers.d[1]=0xabcd0000U|value;
+        want.sprite.registers.d[6]=0x5000a;want.sprite.registers.d[7]=0xffffffffU;
+        want.sprite.registers.a[0]=0x102026;want.sprite.registers.a[1]=0x5000b;
+        bool carry=false;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,script(word_callback_script(selectors[s],lookups[k])),word_callback_data(selectors[s],lookups[k],target,value),state,carry,ports,error));
+        assert(carry&&same(state,want)&&ram==expected);
+        assert(state.sprite.registers.a[2]==0x76540002U); // Original3c LEAs both useA0; initial nonzeroA2 survives.
+        ports_are(ports,4);
+    }
+    // Missing padding is allowed: onlyopcode, WORDselectors andLONGoperand
+    // are provided. The callback reads a live operand that aliases its output.
+    std::vector<std::uint8_t> bytes=word_callback_script(0x801d,0xffff,0x102074);
+    std::vector<ms5::AnimationResource> scripts=script(std::vector<std::uint8_t>(1,0x3c));
+    scripts.push_back(script(std::vector<std::uint8_t>(bytes.begin()+2,bytes.end()),0x50002)[0]);
+    std::vector<std::uint8_t> ram=fixture();ram[0x207c]=1;put(ram,0x2078,4,0xdeadbeef);ms5::AnimationExecutionState state=initial();
+    bool carry=false;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,scripts,word_callback_data(0x801d,0xffff,0x2b3e8,0x9234),state,carry,ports,error));
+    assert(carry&&get(ram,0x2078,4)==0xdeadbeef&&state.sprite.registers.d[1]==0xabcd9234U);
+    // Live fixed operand windows are also consumed at the original address.
+    std::vector<ms5::FixedDataResource> windows=word_callback_data(0x2000,0,0x2b3fa,0x55aa);
+    ms5::FixedDataResource operand;operand.source_cpu_address=operand.source_rom_offset=0x60000;operand.data.resize(4);put(operand.data,0,4,0xfedcba98);windows.push_back(operand);
+    ram=fixture();ram[0x207d]=0;state=initial();
+    assert(ms5::step_animation_execution(ram,script(word_callback_script(0x2000,0,0x60000)),windows,state,carry,ports,error));
+    assert(carry&&get(ram,0x2078,4)==0xfedcba98&&state.sprite.registers.d[1]==0xabcd55aaU);
+}
+std::vector<ms5::FixedDataResource> word_sound_data() {
+    std::vector<ms5::FixedDataResource> windows=word_callback_data(0x401f,0xffff,0x47672,0x9234);
+    ms5::FixedDataResource raw;raw.source_cpu_address=raw.source_rom_offset=0x4411e;raw.data.resize(256);
+    for(unsigned int i=0;i<128;++i)put(raw.data,i*2,2,i?0x1234+i:0);windows.push_back(raw);return windows;
+}
+void word_callback_sound() {
+    const std::vector<ms5::FixedDataResource> windows=word_sound_data();
+    for(unsigned int target=1;target<=2;++target) {
+        std::vector<std::uint8_t> ram=fixture(0x106000);std::vector<std::uint8_t> bytes=word_callback_script(0x401f,0xffff,0x92348000);
+        for(unsigned int i=0;i<bytes.size();++i)ram[0x6000+i]=bytes[i];
+        put(ram,0x95c,2,0x5a01);ram[0x207e]=0;put(ram,0x4d8c,2,6);put(ram,0x4d74,2,target);
+        put(ram,0x4d82,2,0x0455);put(ram,0x4d84,2,0x0566);put(ram,0x4d86,2,0x0677);
+        ms5::AnimationExecutionState state=initial();bool carry=target==1;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),windows,state,0,reads,carry,ports,error));
+        assert(state.phase==2&&state.saved_a1==0x10600a&&state.callback_saved_a0==0x10095c&&state.callback_saved_low==0x55&&reads==0);
+        assert(state.sprite.registers.a[2]==0x76540002U);
+        assert((state.sprite.registers.d[0]&0xffff0000U)==0x92340000U); // Full operand→D0 before inner lowWORD command.
+        put(ram,0x6002,2,0xffff);put(ram,0x6004,2,0x4000);put(ram,0x6006,4,0xdeadbeef);put(ram,0x95c,2,0x1234);ram[0x4d7e]=1;
+        const ms5::AnimationExecutionState captured=state;const std::vector<std::uint8_t> held=ram;
+        assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,255,reads,carry,ports,error));
+        assert(same(state,captured)&&ram==held&&ports.empty()&&reads==0&&carry==(target==1));
+        failure(ram,std::vector<ms5::AnimationResource>(),state);
+        if(target==1) {
+            put(ram,0x4d74,2,2);
+            assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,255,reads,carry,ports,error));
+            assert(state.phase==2&&state.callback_sound_phase==2&&state.callback_saved_low==0x55&&state.saved_a1==0x10600a&&ports.empty()&&reads==0);
+        }
+        put(ram,0x4d74,2,0xffff);sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state);
+        assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),windows,state,255,reads,carry,ports,error));
+        assert(carry&&reads==0&&state.phase==0&&state.sprite.registers.d[0]==0x1a55&&state.sprite.registers.a[1]==0x10600b);ports_are(ports,2);
+    }
+    // No-sound47672 retains full operand highWORD until signedWORD restore.
+    std::vector<std::uint8_t> ram=fixture();put(ram,0x95c,2,0x8001);ram[0x207e]=0x80;ms5::AnimationExecutionState state=initial();
+    bool carry=false;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,script(word_callback_script(0x401f,0xffff,0x9234ff00)),windows,state,0,reads,carry,ports,error));
+    assert(carry&&state.sprite.registers.d[0]==0xffffff80U&&reads==0);
+    data_failure(fixture(),script(word_callback_script(0x401f,0xffff)),windows,initial());
+}
+void word_callback_errors() {
+    std::vector<std::uint8_t> ram=fixture();ms5::AnimationExecutionState state=initial();
+    std::vector<ms5::AnimationResource> scripts=script(word_callback_script(0x2000,0xffff));
+    std::vector<ms5::FixedDataResource> windows=word_callback_data(0x2000,0xffff,0x2b3e8,0x8001);
+    data_failure(ram,scripts,std::vector<ms5::FixedDataResource>(),state);
+    std::vector<ms5::FixedDataResource> bad=windows;bad.erase(bad.begin()+1);data_failure(ram,scripts,bad,state);
+    bad=windows;bad[0].data.resize(3);data_failure(ram,scripts,bad,state);
+    bad=windows;bad[1].data.resize(1);data_failure(ram,scripts,bad,state);
+    bad=windows;bad.push_back(windows[0]);data_failure(ram,scripts,bad,state);
+    bad=windows;put(bad[0].data,0,4,0x2b3e9);data_failure(ram,scripts,bad,state);
+    std::vector<ms5::AnimationResource> short_script=scripts;short_script[0].data.resize(9);data_failure(ram,short_script,windows,state);
+    short_script=scripts;short_script[0].data.resize(10);data_failure(ram,short_script,windows,state); // Callback RAMwrite/PVC complete before missing nextfetch.
+    ram[0x207c]=0;put(ram,0x2026,4,0x50001);data_failure(ram,script(word_callback_script(0x2000,0xffff),0x50001),windows,state);
+    // Even when sound would overwriteD1, the second lookup is mandatory.
+    ram=fixture();put(ram,0x95c,2,0x5a01);ram[0x207e]=0;bad=word_sound_data();bad.erase(bad.begin()+1);
+    sound_failure(ram,script(word_callback_script(0x401f,0xffff)),bad,state);
+    // Existing14 still rejects arbitraryselector aliases of a supportedtarget.
+    std::vector<std::uint8_t> old(7);old[0]=0x14;old[1]=0;put(old,2,4,0x106000);old[6]=0x28;
+    data_failure(ram,script(old),word_callback_data(0,0,0x2b3e8,0),state);
+}
+
+void word_callback_rts() {
+    const unsigned int selectors[]={3,0x4003,0x8003,0xc003,0x2000};
+    const std::uint32_t operands[]={0,0x92340001U,0x12347fffU,0xabcd8000U,0x9234ffffU};
+    for(unsigned int i=0;i<5;++i) {
+        std::vector<std::uint8_t> ram=fixture();ms5::AnimationExecutionState state=initial(),want=state;
+        const unsigned int value=i*0x1234;std::vector<ms5::FixedDataResource> windows=word_callback_data(selectors[i],0xffff,0x3679e,value);
+        const unsigned int low=operands[i]&65535;
+        want.sprite.registers.d[0]=low<0x8000?low:low|0xffff0000U;want.sprite.registers.d[1]=0xabcd0000U|value;
+        want.sprite.registers.d[6]=0x5000a;want.sprite.registers.d[7]=0xffffffffU;
+        want.sprite.registers.a[0]=0x102026;want.sprite.registers.a[1]=0x5000b;
+        bool carry=false;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,script(word_callback_script(selectors[i],0xffff,operands[i])),windows,state,carry,ports,error));
+        assert(carry&&same(state,want)&&get(ram,0x2026,4)==0x5000a);
+        assert(state.sprite.registers.a[2]==0x76540002U);ports_are(ports,4);
+    }
+    // Actual14 selector03 uses the same real RTS target but has no second
+    // lookup and does not MOVE.L operand intoD0. Only its reachedLONG is needed.
+    std::vector<std::uint8_t> bytes(7);bytes[0]=0x14;bytes[1]=3;put(bytes,2,4,0xffffffff);bytes[6]=0x28;
+    std::vector<ms5::FixedDataResource> windows=word_callback_data(3,0,0x3679e,0);windows.resize(1);
+    std::vector<std::uint8_t> ram=fixture();ms5::AnimationExecutionState state=initial(),want=state;
+    want.sprite.registers.d[0]=12;want.sprite.registers.d[6]=0x50006;want.sprite.registers.d[7]=0xffffffffU;
+    want.sprite.registers.a[0]=0x102026;want.sprite.registers.a[1]=0x50007;
+    bool carry=false;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,script(bytes),windows,state,carry,ports,error));assert(carry&&same(state,want));ports_are(ports,4);
+    bytes[1]=4;data_failure(fixture(),script(bytes),word_callback_data(4,0,0x3679e,0),initial()); //14alias remains unsupported.
+    bytes=word_callback_script(3);windows=word_callback_data(3,0,0x3679f,0);data_failure(fixture(),script(bytes),windows,initial()); // Nearbytarget is not the verifiedRTS.
+}
+
+}
+int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();sound_callbacks();sound_waits();sound_metadata();indexed_selection();indexed_draws();indexed_waits();indexed_errors();field_writes();relative_fields();field_errors();direct_sound_calls();direct_sound_waits();direct_sound_metadata();word_callbacks();word_callback_sound();word_callback_errors();word_callback_rts();std::cout<<"animation_execution_test passed\n";return 0;}

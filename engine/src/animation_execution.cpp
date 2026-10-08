@@ -276,27 +276,39 @@ bool callback_return(std::vector<std::uint8_t>& ram,AnimationExecutionState& s,
 }
 bool callback(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& scripts,
     const std::vector<FixedDataResource>& windows,AnimationExecutionState& s,
-    bool allow_sound,std::uint8_t external_status,std::uint32_t& external_reads,
+    bool word_selector,bool allow_sound,std::uint8_t external_status,std::uint32_t& external_reads,
     std::vector<VideoPortWrite>& ports,std::string& error) {
     SceneMapTransferState& r=s.sprite.registers;std::uint32_t value=0;
-    s.saved_a0=r.a[0];r.d[0]=0;
-    if(!next(ram,scripts,r,1,value,error))return false;r.d[0]=value;const unsigned int selector=value;
+    s.saved_a0=r.a[0];
+    if(word_selector) {
+        if(!script_address(r.a[1],1,r.a[1],error))return false;
+        if(!next(ram,scripts,r,2,value,error))return false;word(r.d[0],value);
+    } else {
+        r.d[0]=0;if(!next(ram,scripts,r,1,value,error))return false;r.d[0]=value;
+    }
+    const unsigned int selector=value;
     word(r.d[0],r.d[0]*2U);word(r.d[0],r.d[0]*2U);r.a[0]=0x4a500;
     if(!read_data(ram,windows,static_cast<std::int64_t>(r.a[0])+signed_word(r.d[0]),4,value,error))return false;r.d[7]=value;
+    if(word_selector) {
+        if(!next(ram,scripts,r,2,value,error))return false;word(r.d[0],value);word(r.d[0],r.d[0]*2U);r.a[0]=0x4a76c;
+        if(!read_data(ram,windows,static_cast<std::int64_t>(r.a[0])+signed_word(r.d[0]),2,value,error))return false;word(r.d[1],value);
+    }
     if(!next(ram,scripts,r,4,value,error))return false;r.a[0]=value;
-    s.saved_a1=r.a[1];r.a[1]=r.d[7];
+    s.saved_a1=r.a[1];r.a[1]=r.d[7];if(word_selector)r.d[0]=r.a[0];
     if(!read_ram(ram,s.a5,-0x7ff0,2,value,error))return false;s.saved_bank=static_cast<std::uint16_t>(value);
     if(!zero_bank(ram,s,ports,error))return false;
-    if(selector==0x1f && r.a[1]==0x47672U) {
+    if((word_selector || selector==3) && r.a[1]==0x3679eU)return callback_return(ram,s,ports,error);
+    if((word_selector || selector==0x1f) && r.a[1]==0x47672U) {
         if(!allow_sound) {error="animation sound callback requires external-input overload";return false;}
         if(!sound_callback(ram,windows,s,external_status,external_reads,error))return false;
         return s.phase==2 || callback_return(ram,s,ports,error);
     }
-    if((selector!=0x1d && selector!=0x1e) || r.a[1]!=(selector==0x1d?0x2b3e8U:0x2b3faU)) {
+    if(word_selector ? (r.a[1]!=0x2b3e8U && r.a[1]!=0x2b3faU) :
+        ((selector!=0x1d && selector!=0x1e) || r.a[1]!=(selector==0x1d?0x2b3e8U:0x2b3faU))) {
         error="unsupported animation callback selector or table target";return false;
     }
     r.d[0]=0;
-    if(!read_ram(ram,s.a6,selector==0x1d?0x7c:0x7d,1,value,error))return false;r.d[0]=value;
+    if(!read_ram(ram,s.a6,r.a[1]==0x2b3e8U?0x7c:0x7d,1,value,error))return false;r.d[0]=value;
     word(r.d[0],r.d[0]*2U);word(r.d[0],r.d[0]*2U);
     if(!read_data(ram,windows,static_cast<std::int64_t>(r.a[0])+signed_word(r.d[0]),4,value,error))return false;
     if(!write_ram(ram,s.a6,0x78,4,value,error))return false;
@@ -338,7 +350,7 @@ bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& sc
         if(value==4) {if(!draw(ram,scripts,s,ports,error))return false;if(s.sprite.waiting)return true;continue;}
         if(value==0x0c) {if(!field_branch(ram,scripts,windows,s,error))return false;continue;}
         if(value==0x10) {if(!indexed_draw(ram,scripts,windows,s,ports,error))return false;if(s.sprite.waiting)return true;continue;}
-        if(value==0x14) {if(!callback(ram,scripts,windows,s,allow_sound,external_status,external_reads,ports,error))return false;if(s.phase==2)return true;continue;}
+        if(value==0x14 || value==0x3c) {if(!callback(ram,scripts,windows,s,value==0x3c,allow_sound,external_status,external_reads,ports,error))return false;if(s.phase==2)return true;continue;}
         if(value==8) {
             ++r.a[1];if(!read_script(ram,scripts,r.a[1],4,value,error))return false;r.d[7]=value;r.a[1]=value;
             r.d[6]=r.a[1];if(!write_ram(ram,r.a[0],0,4,r.d[6],error))return false;continue;

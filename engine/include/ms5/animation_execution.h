@@ -21,8 +21,9 @@ struct AnimationExecutionState {
         callback_sound_phase(0), callback_saved_low(0), callback_waiting(false) {}
 };
 // Full49fc6 register/PVC/pending execution for opcodes00/04/08/28, plus0c
-// indexed10, field18/1c/20/24/34/38/2c and14 selectors1d/1e with reached
-// MS5D data windows. Remaining3c/40 opcodes,
+// indexed10, field18/1c/20/24/34/38/2c and14 selectors03/1d/1e with reached
+// MS5D data windows. 3c WORD selectors support actual targets3679e/2b3e8/2b3fa
+// and47672 (external-input overload only). Remaining40 opcode,
 // other callbacks and banked scripts remain
 // checked unsupported paths. Fixed MS5A windows are unique and complete;
 // RAM script fetches use current RAM. Only reached sprite submit/resume

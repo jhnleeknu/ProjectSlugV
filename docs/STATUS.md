@@ -1691,3 +1691,17 @@
 - 공식 검증기는 원본207조건/255단계를 재실행했고, 실제 C++의 RAM·15레지스터·metadata·carry·PVC·외부읽기가 모두 일치했다. 48회 재개에 직전 실제 C++ 출력만 사용했다. 오류·파일 보존41조건 통과. 최종 report SHA256 `72669c031841d8c019df09addc9469848aeb3b390286ad3fdf8004a69c92851f`; 입력30개/산출물2049항목, 고유2077개 참조 해시를 메인이 확인했다.
 - Sol 독립 원본 감사도207조건/255단계,1028개 고유 참조 해시, guard control2개를 확인했다. 메인은 실제 diff·원본 명령·검증기와 보고서를 읽고 수용했다. 검증기에 빠졌던 오류 검사용 리소스 복사 원본의 해시를 추가하고 재실행했다. C++ 동작 결함은 발견되지 않았다.
 - 리뷰0212와 실행문서를 갱신했다. 검증 완료 명령은17종 중14종(약82%)이며14는일부callback만지원한다. 전체게임완료율로환산하지않는다. 다음은3c WORD-selector callback 규약·40 banked lookup·나머지14 callback과 상위 활성화 흐름이다. 자연 scheduler/IRQ·직접 플레이·전체 스테이지·전체 미사용 리소스 의미 분석과 Goal 전체는 계속 미완료다.
+
+
+## 2026-10-08 — WORD callback3c 및 실제 RTS 연결
+
+- 이전 Goal turn은 직접sound30을 `cc5750b`에 통합한 progress다. 이번 baseline은cc5750b, branch `codex/animation-word-callback`이다. 메인이목표파일/현행AGENTS/GOAL을다시읽고전체범위·완료기준을유지했다.
+- 3c의두WORDselector wrap/signedlookup, D1.high보존, operandLONG→D0/A0,실제target호출과bank/PVC/MOVEM.W/outer복귀를기존API에연결했다. 지원target은2b3e8/2b3fa/47672 및원본4e75인3679e다.14에는selector03 RTS를추가했다. 새phase/CLI형식은없고soundpending은phase2를재사용한다. 다른3c/14 callback은checked미지원이며3c전체완료를주장하지않는다.
+- 메인리뷰에서LEA4a76c의대상A0를A2로옮긴P1을발견했다. 구현·잘못된unit기대값을수정하고nonzeroA2보존을검사했다. prefix[42500,4276c)크기도624→620BYTE로정정했다. 실제범위는유지했다.
+- Sol6.1/medium 세작업자가core/unit,inventory/검증기,RTS원본/독립리뷰·감사를분담했고Sonnet5.5/medium이패커·검사,Opus5.5/high가세callback독립원본관측을맡았다. 최대외부포함5/내부3준수. Claude실제모델은modelUsage로확인했고effort는요청값이외독립확인필드없음을유지한다.
+- WORD domain 전체131072주소계산의inventory와원본tablehash를검증했다. 각지원target은한slot과4alias만있다. raw값일치와자연사용/함수전체지원은구분한다. inventorySHA `29fa8bab81d5b62fc442f4bab5f6fddae5543d43fbe10a796e913521394106ce`.
+- MS5D v1kind1로prefix620BYTE와경계operand[0,400)/[ffc00,100000)각1024BYTE를추가했다. C++loader소비,원본bytes/CRC/header/비중복창검증을완료했다. 원본[0,80)는canonicalcartridgeROMview이며BIOS/cartvector장치선택검증이아니다. manifestSHA `a40315a2bf9e76dcda685a797dbc3c70701874bbd03ed2933cd2d546672b807c`. 기존widecontrol이4411elookup을포함하므로중복narrowlookup은성공실행에추가하지않는다.
+- RTS원본438조건/438단계/3504PVC(nativeSHA `b6064ba9908ac25b3d137cadf2dc3914e8df539edee104671b05c5760d8488dd`),다른세callback122조건/138단계/984PVC/3외부읽기(nativeSHA `22e757ea1e727cfed50eaf3ad593b0cf6d2d9115c0beadf3a864220531c3495d`). 대기6연쇄/16재개,liveoperand/terminalalias와반환carry양쪽포함. 별도unsupported5는callee실행전중단,oddtarget1은미실행이다. 독립Sol감사에서전체재실행·572artifact/8inputhash·guard2일치.
+- 공식원본576성공단계재실행후soundCLI576단계/ordinaryCLI515단계가전체RAM15regs/state/carry/PVC/읽기까지일치했다. 직전실제C++출력16재개,리소스없는pending10호출,오류·파일보존383조건,합성MS5Apadding유무2조건통과. reportSHA `c7d47dd00019aeec066cf13ac5b563990e6377cb31a745f5e0be59b7bc70b055`. 메인이입력56/산출물6196항목의고유6243참조hash를검사했다.
+- 수정뒤make all test Python241/C++145/경고0,패커추가검사후최종Python discover243/통과. normal/UBSan도통과했다. 기존6회귀모두통과하고메인이모든현재hash를검사했다: execution `c1c697b87e473dcd21b70a4e8955b21715bc84f7c36cd646c2deb12305e13189`,control `c0052fd6401928b5e278231698acbb994d7b8dc20818f6348c8ccb52100ccd78`,sound `5c22a5a70202f4d0e1b5a9445a2d999cf7ed94a0a74295c63199789f8e3ab1e1`,indexed `779eca392ecf0aa4804c58258011f51c5fac766b84650fe3136263dbf9ffad0d`,field `1ba94321aafb3a5b8d71f5ffa2b7eeda6914b165ea89f74ed286d1c9d20561a0`,directsound `6e31e2e93a7a447f1f34dae2ec55e2ccd0a46a6fff266a7c85ee31ea3253c050`.
+- 리뷰0213/실행문서갱신. 전체17명령중14종과14/3c의일부callback지원상태이며전체복원율로환산하지않는다. 다음40은RAMbankshadow와실제physicalbank를구분하고대기전후currentbank를보존하는계약이필요하다. 기존kind2 상한2ffff0과hardwarePVCoverlay2fe000차이도조사대상이다. `animation-banked-lookup-design.md`에근거를남겼다. 다른callback·자연상위활성화/scheduler/IRQ·직접플레이·전체스테이지·미사용전체의미·전체Goal은계속미완료/active다.
