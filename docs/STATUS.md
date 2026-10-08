@@ -1452,3 +1452,10 @@
 - 현재 소스·CLI 해시가 검증 기록 provenance와 일치함을 재확인했다. 전체 make test 기록은 Python182/C++128/경고0이다. verification SHA256 `90428c4bf9aacb97adb28b37b7d95aaf019427e1086bd3bca96e991aab041408`.
 - Opus 5.5/high의 독립 리뷰를 완료했다. 메인이 head 상위 byte 비교 누락 검증을 10단계 추가하고 헤더 의존성을 수정한 뒤 전체 테스트와 원본 비교를 다시 통과했다. 리뷰0187에서 수용했다. 작업자 모델/effort와 전체 최대5개 규칙은 갱신된 AGENTS.md/docs/GOAL.md 및 등록 Goal에 반영되어 있다.
 - `docs/analysis/sound-byte-execution.md`에 완료 범위와 사용법, `docs/analysis/stage-sound-frame-contract.md`에 메인이 원본 재확인한3af8/3c44/2efa6 후속 계약을 기록했다. 후자는 정적 계약 초안이며 구현·동적 검증 완료가 아니다. 전체480bc/자연scheduler/직접플레이는 미완료다.
+
+## 2026-10-08 — 전체 sound cancel 3c44
+
+- Baseline `91bc086`, branch `codex/sound-cancel-execution`. Sol6.1/medium이 core/header/unit을 구현했고 메인이 전체diff와 원본 계약을 검토하여 CLI/Makefile/원본 비교를 연결했다. 큐 삭제의 signed 초기 주소/live tail, 세 제출의 저장 WORD/phase/대기 상태를 보존한다.
+- pinnedMusashi 원본과 실제CLI645단계의 전체RAM/14register/pending이 일치했다. 각 명령byte256값, 모든 정상head/tail조합, signed/alias,10동일CPU 체인(한체인은 세 단계 연속대기),4조건분기 양쪽,CLI오류7조건을 확인했다. 원본쓰기순서/고정ROM/A5/A7/저장WORD도 검사했다.
+- 전체make all test exit0: Python182/C++129/경고0. 검증 SHA256 `ba58107375f806997f837dce4d302a761c39f2be427e7b9b74fe39f920a67919`. 상세분석 sound-cancel-execution.md, 메인리뷰0188. 원격없는로컬통합이다.
+- 다음은3af8의 전체레지스터·overflow두byte제출과2efa6의 상태전환 연결이다. 전체480bc/자연scheduler/직접플레이 및전체Goal은 미완료다.

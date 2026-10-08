@@ -360,3 +360,7 @@ The API preserves all RAM/registers on failure. It does not clamp bitmap address
 ## 전체 사운드 byte 제출
 
 `build/execute_sound_byte D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 WAITING INPUT_RAM OUTPUT_RAM`은 원본 0x3ac8 및 0x3aea 대기 재개를 실행한다. RAM은 65536바이트이며 출력 JSON의 레지스터/waiting과 출력 RAM을 다음 재개에 사용한다. 캡처한 A0/D1을 유지하며 live head만 다시 비교한다. 실제 소리 재생은 별도다. 계약과 원본 564단계 비교는 [분석 문서](../docs/analysis/sound-byte-execution.md)를 참조한다.
+
+## 사운드 취소 명령
+
+`build/execute_sound_cancel D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 WAITING PHASE SAVED_WORD INPUT_RAM OUTPUT_RAM`은 원본3c44의 큐 삭제와 세 byte 제출을 실행한다. 신규 phase0/waiting0, 재개는 출력 phase/saved_word/waiting/레지스터/RAM을 전달한다. [동작 및 검증](../docs/analysis/sound-cancel-execution.md)에645단계 원본 비교와 지원 범위를 기록했다.
