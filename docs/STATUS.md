@@ -1521,3 +1521,11 @@
 - 원본104조건의47c6c직전 상태를확보하고메인이별도CPU로재실행하여fullRAM/15regs/trace가일치함을확인했다. 761RAM쓰기/6,576ports,5조건분기양쪽관측. A6=1009c6의helper-parent alias8조건은4e254의clear후47c48이변경된값을읽는순서를증명한다.
 - 관찰도구는정적명령artifact도재생성하도록보완하고재실행했다. 최종SHA256 `d27d39fa7129934db20f0a7735056822e2b27f30a54e474e0609bb3e347c51ce`. 리뷰0195, 계약stage-activation-prefix-contract.md, API/animationinventory두문서에기존full/partial/missing지원과미확인리소스를구분했다. 제품코드변경과새C++비교는없다.
 - 다음은47c04효과와8cda전체레지스터API를연결하고4e286의soundwait/palette/block출력,47c6c의애니메이션·carry/BCD분기로확장한다. 이중8cda의RAM효과는기존API가있지만레지스터출력은미완료다. 49fc6도기존RAM/carry부분구현을전체callback에그대로사용할수없다. 전체Goal과완료기준은그대로유지하며직접플레이는아직미완료다.
+
+
+## 2026-10-08 — stage 활성화 초기화 구간 C++ 연결
+
+- Baseline4707ac3, branchcodex/stage-activation-prefix. Sol6.1/medium 세작업자가구현·CLI·원본비교를분담했고메인이원본/실제diff/검증을리뷰했다. 47c04→47c6c직전효과를전체RAM15regs/ports로연결한다. arbitraryA5 실제주소검사,helper-parent alias의live읽기,늦은오류transaction보존을포함한다. 이경계가원본RTS나전체callback완료라는뜻은아니다.
+- 원본104+shiftedA5원본2+리소스없는분기5=111CLI비교가일치했다. orderedports6,576개와오류149조건통과. 전체make Python189/C++137/경고0. 단위fixture주소문제를수정하고UBSan통과; ASan성공은주장하지않는다. 현재입력15/native입력7/산출물425개해시일치. reportSHA `8d201ba3822457b69673b5ebab5ea663fadeb81889c5aa59d1ff5730617e56ae`,리뷰0196.
+- 후속8cda 전체레지스터 원본관찰480조건/600RAM쓰기/5분기양쪽을준비했다. 메인이dirtyflag fixture상관을보완후재실행했으며최종SHA `aaddf6efc6fd19e61d5d2af783db3f3a5cc159a6a7cb339ac886e15dbe298222`. C++fullblend구현·비교는아직이다.
+- 다음4e286은sound대기와8cda/두35f0출력을연결해야한다. 비BCD입력은4e272의20byte명목표뒤코드바이트까지읽으므로필요rawspan은32byte임을정적계약stage-hud-counter-contract.md에기록했다. 이를source검증한MS5D로보존하고원본실행으로확인할계획이다. 전체47c6c/직접플레이/자연scheduler/IRQ/전체Goal은미완료이며active다.
