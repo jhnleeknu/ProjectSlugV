@@ -165,9 +165,13 @@ descriptor는BE필드의16byte헤더(title:u32,min_width:u8,min_height:u8,callba
 
 ### MS5D v1 kind2 — 뱅크 ROM 데이터 창
 
-kind1의 고정 첫1MiB 계약은 유지한다. kind2는 같은32-byte header에서kind만2이며 CPUbase와ROMoffset을 따로 해석한다. Version1,CRC32,reserved0,정확한파일길이 규칙은kind1과같다. CPUbase는200000이상2ffff0미만이며payload는비영이고끝exclusive가2ffff0을넘지않는다.2ffff0부터의PVC register overlay는ROM payload에포함하지않는다.
+kind1의 고정 첫1MiB 계약은 유지한다. kind2는 같은32-byte header에서kind만2이며 CPUbase와ROMoffset을 따로 해석한다. Version1,CRC32,reserved0,정확한파일길이 규칙은kind1과같다. CPUbase는200000이상2ffff0미만이며payload는비영이고끝exclusive가2ffff0을넘지않는다. 이는 기존 v1 컨테이너의 상한이다. 실제 MS5 PVC cart RAM overlay는2fe000부터 시작하므로 소비기는2fe000..2fffff를 장치 상태로 읽어야 하며, 이 주소에 대응하는 raw ROM 리소스가 있다고 CPU ROM으로 읽어서는 안 된다.
 
 매핑은 `position = CPUbase - 200000`, `bank_base = ROMoffset - position`이다. ROMoffset은position이상이고bank_base는100000이상700000이하의100000배수여야한다. ROMoffset+payloadsize는canonical8MiB를넘지않는다. 이는정렬된1MiB bank 창의주소표현이며모든PVC bank offset을지원한다는뜻이아니다. `load_fixed_data_resource`는kind1만, `load_banked_data_resource`는kind2만받는다. 공통FixedDataResource의source CPU/ROM필드로매핑을보존한다.
+
+새 `program_bus`는 현재 선택된 bank로 physical offset을 계산한 뒤 kind2 리소스의 physical span을 조회한다. 추출 당시 CPUbase가 현재 CPU 주소와 같을 필요는 없다. WORD마다 유일한 완전한 창을 요구하고, LONG은 두 WORD 창을 각각 사용할 수 있다. 현재 PVC/vector 상태는 별도 명시적인 입력이다. 자세한 계약은 `analysis/animation-program-bus-contract.md`에 있다.
+
+`extracted/runtime/animation_banked_reads/`는 원본 isolated40 관측에서 실제 읽힌 구간을 보존한 v1 리소스37개다. 각 stable ID는kind/CPU주소/physical주소를 포함하고 manifest는 원본 hash, 실제 읽기 PC/조건과 생성 도구를 연결한다. 이 추출기는 실제 overlay 아래2fe000까지만 ROM 구간으로 수집한다. 기존 v1 kind2가 각 physical1MiB 끝16BYTE를 표현하지 못하는 한계는 그대로이며, 전체 ROM을 위한 명시적인 kind/version 확장이 필요하다. 이번 리소스 연결은 기존 v1 검증 범위를 변경하지 않는다.
 
 Scene opcode04의palette root/lookup/binding은ROM bank200000을사용하므로이경우CPU와ROMoffset이수치상같다. 이를고정ROM으로잘못분류하지않으며manifest에도bank_base=200000을남긴다. 실제bank선택의word2ffff2=1000,word2ffff0=0은scene command의순서있는hardware writes로별도보존한다. Rawbinding은6-byte records와마지막BE16ffff이며구조는기존main startup팔레트등록표와같다. Palette색상자체의전송및후속frame표시는이데이터창규격에포함하지않는다.
 

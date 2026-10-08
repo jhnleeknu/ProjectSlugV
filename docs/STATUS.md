@@ -1734,3 +1734,13 @@
 - P1 backing수명문제를독립GC실험으로확인했다. Hook순환참조가CPU해제를지연하는동안외부backing만해제될수있어메인이CPU자체에owner를보관하도록수정했다. 실제수정본에서CPU/backing이함께유지·회수되고27probe도재통과했다. 리뷰0215와animation-banked-handler-observation.md에기록했다.
 - SR backend문제도분리했다. CMP/MOVEQ/ADDQ의host SR읽기는값이부정확할뿐아니라후속CPU flag를바꿀수있다. 새probe_m68k_sr_read.py의7그룹×4전략28조건으로재현한다. 기존9animation보고서3085phase의완료2813건은ASR2811/ORI CCR2종료이며별도원본exit28조건에서CPU/hostcarry일치했다. 메인도trace집계와28exitprobe를재실행했고이감사범위의기존finalcarry오류는발견하지않았다. 일반CCR/다른scene관측기로확대하지않는다.
 - 전체게임복원율은분모미확정으로미산정이다. 애니메이션명령집계17중14종(약82%)+14/3c일부를유지한다. 다음은기존MS5D v1을소비하는bank/bus reader와whole-callstack상태연결이며미확인PVC/vector/24bit버스조건을완료로취급하지않는다. 전체Goal active/범위/완료기준을유지한다.
+
+## 2026-10-08 — animation40 조회 본체와 C++ program bus 연결
+
+- Baseline bfb1d7e, branch codex/animation-program-bus. 이전원본관측커밋을progress로승계했다. Sol6.1/medium3명이core/unit,MS5D패커·원본비교기,CLI/계약감사를분담했고메인은복잡한주소/장치의미와실제source·diff·검증을리뷰했다. 이후교차독립리뷰를완료했다.
+- 새program_bus는32bit논리주소와24bitbus를구분하고RAM16mirror,WORD단위LONG경계,명시적인vector128/PVC8192입력을처리한다. kind2는추출당시CPUbinding이아닌현재physicalspan으로재사용한다. 실제PVC일반식은byte단위base도가능하여정렬을강제하지않고ROM밖주소를wrap하지않는다. isolatedlookup은원본4a382..4a3ac의13레지스터·RAM효과를구현하며4a276전에끝난다.
+- 패커의MS5D37개(fixed14/banked23),payload170BYTE를기존C++loader로검증했다. 독립검사에서336ROMreadunit의정확한union과390provenancehash,15합성검사,37정상/37wrong-kind보존검사가통과했다. ManifestSHA366b8f89dc46705fc765ca2b331c69b206b9633fc80f0b7c8fb9fdb3a484cb82. RAM/PVC는ROM리소스로추출하지않았다.
+- 원본95조건을다시실행한뒤실제CLI의73완료조건이13register/full64KiBRAM에일치했다. 19guard는CLI오류/출력보존,high32bit3조건은관측범위차이로미비교다. 추가negative22조건과별도CLI34호출(7성공/27거절)도통과했다. 중복JSONkey거부보강후최종reportSHAc84d8cd8989040831acd12503c40171a5325ad0d1e070ca36de4874cfca701cb. 입력16/산출물779참조의고유793hash를메인과작업자가확인했다.
+- `make all test` exit0,Python243/C++test실행146/경고0. Core별도normal/UBSan통과. 실제core/CLI/verifier/packer독립리뷰후수용했다. 기존full49fc6실행기코드·ABI를변경하지않았고기존일곱verifier전체를재실행했다고주장하지않는다. 리뷰0216과animation-program-bus-contract.md에계약·한계를기록했다.
+- 남은규격문제: v1kind2가physical1MiB끝16BYTE씩(bank1..7총112BYTE)을표현하지못한다. currentbank202100/CPU2fdef0→physical2ffff0은유효하나리소스표현은막힌다. bytes를삭제·padding하지않고명시적인physical-ROMkind/version확장이필요하다. resource-format.md에서실제PVCoverlay2fe000과기존컨테이너상한2ffff0도구분했다.
+- 다음은전체physicalROM표현규격확장및whole49fc6의callerA7/frame쓰기를공유RAM에연결하는작업이다. 원본stackalias를RAM검사mask로숨기지않는다. isolated40성공을whole40완료로집계하지않으며17명령중14종+14/3c일부,자연실행/전체스테이지/적/보스/미사용전체의미미완료와전체Goal active를유지한다.
