@@ -1722,3 +1722,15 @@
 - 기존7회귀exit0,고유24461참조hash를메인과Sol이확인했다. 현재각SHA는리뷰0214에기록했다. `make all test` Python243/C++실행145/경고0,core별도normal/UBSan통과. CLI별도33호출도통과했다. 메인과독립Sol의실제source리뷰후단위를수용했다.
 - 후속40조사에서메인은실제MVS/AES RAM mirror100000..1fffff를확인했다. 음수firstoffset은RAMmirror16381종, RAM→bank mixedLONG1종, whollybank16386종으로분류한다. scratchstack1feffc의기존독립매핑을이영역의원본증거로재사용할수없음을설계문서에기록했다. 하드웨어영역과현재API지원제한을구분한다.
 - 리뷰0214와animation-bank-state-execution.md에재현·근거·제약을정리했다. 다음은40의실제banked읽기·RAMmirror/버스경계·리소스선택및원본관측연결이다. opcode완료수는17중14종+14/3c일부로유지하며새40완료를주장하지않는다. 자연상위활성화/scheduler/IRQ·직접플레이·전체스테이지/적/보스·미사용전체의미·전체Goal은미완료/active다.
+
+## 2026-10-08 — animation40 bus 읽기 분석 진행
+
+- 이전 단위e40334b의bank상태구현·검증통합은progress다. 현재branch codex/animation-banked-read-analysis에서기존전체Goal/완료기준을승계했다.
+- 메인이원본4a382..4a3ac명령순서와24비트bus/32비트register구분을검토했다. Sol6.1/medium 세작업자는backendprobe,실제script참조조사,MS5D선택/stack통합감사를분담했다. Opus5.5/high의isolated원본handler관측이완료됐고메인리뷰·소유권수정·독립재검증을거쳐아래제한된범위로수용했다.
+- 합성Unicorn2.1.4/M68000 probe27조건이메인·독립Sol재실행에통과했다. 16RAMmirror공유backing·stackalias·LONG내부mirror/mixed경계·32bitindexedwrap을확인했다. backend가시험한highaddress읽기에자동24bitmask를하지않고LONG을단일size4hook으로보고함을확인했다. 이를물리buscycle/원본40성공으로취급하지않는다. backingowner를CPU객체에도보관하도록보강후재실행SHA95c90360d8256c5d6d33808740db74848a4a4b258544bb9f4b6858e904a0dba1.
+- 실제script5개및확장initializer조사에서신뢰할40stream은아직확보하지못했다. raw후보3개는caller연결미확정/odd읽기등으로채택하지않았다. 이는40미사용증거가아니다. bank2/3/4/5의실제2단계ROM값은합성관측입력근거로별도구분했다.
+- MS5D기존kind1/kind2metadata로bus영역과activebank선택을표현할수있으며새format은필요없다. odd-startresource를일괄배제하면loader계약보다좁아진다는점도확인했다. PVC/vector상태와whole-callstackalias는별도해결필요다. 실제기존trace에서40firsteff0이deadstack S-8을읽을수있음을확인하여RAMmask만으로동등성을주장하지않도록animation-bus-read-design.md에기록했다.
+- 새원본handler95조건(73완료/22guard·제외),각freshCPU2회,380payload와8guard-disabled대조군을확보했다. 메인수정후전체재실행및입력5/산출물380해시검사통과,별도Sol도최종95조건전체register/RAM/trace/bytes와hash를재확인했다. SourceSHA66a156cd73be2a10cfb91413396a8fa9379f6ee09cea48c17f3d561d3e9daed3, reportSHAa6b075d468e015c8fde64129abf6003964bd1f1669ef8c6538545cc0aa3d39a5. CPU/ROM4a382..4a3ac를수정없이실행하고4a276전중단하며자연script/whole49fc6/C++40증거가아니다.
+- P1 backing수명문제를독립GC실험으로확인했다. Hook순환참조가CPU해제를지연하는동안외부backing만해제될수있어메인이CPU자체에owner를보관하도록수정했다. 실제수정본에서CPU/backing이함께유지·회수되고27probe도재통과했다. 리뷰0215와animation-banked-handler-observation.md에기록했다.
+- SR backend문제도분리했다. CMP/MOVEQ/ADDQ의host SR읽기는값이부정확할뿐아니라후속CPU flag를바꿀수있다. 새probe_m68k_sr_read.py의7그룹×4전략28조건으로재현한다. 기존9animation보고서3085phase의완료2813건은ASR2811/ORI CCR2종료이며별도원본exit28조건에서CPU/hostcarry일치했다. 메인도trace집계와28exitprobe를재실행했고이감사범위의기존finalcarry오류는발견하지않았다. 일반CCR/다른scene관측기로확대하지않는다.
+- 전체게임복원율은분모미확정으로미산정이다. 애니메이션명령집계17중14종(약82%)+14/3c일부를유지한다. 다음은기존MS5D v1을소비하는bank/bus reader와whole-callstack상태연결이며미확인PVC/vector/24bit버스조건을완료로취급하지않는다. 전체Goal active/범위/완료기준을유지한다.
