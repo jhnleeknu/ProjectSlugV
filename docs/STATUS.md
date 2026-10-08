@@ -1484,3 +1484,10 @@
 - 최종make all test Python182/C++133/경고0. body reportSHA `6b0ad56cdf7300916f8274e55c78f613dca4dba3f92dbaa47cf3750671356454`, nativeSHA `1f65100f1fedc36b4999543c720814dc6f9eb4bf634f3af3439aa68d70e31207`. FIFO 수정 후 기존frame도96/148/casealias를재검증했고 reportSHA는 `47645dd39e0df8241cb504cd637a99cdc751544b4ac47c9e1227d8d5705f53b5`로갱신했다. 리뷰0191, docs/analysis/stage-entry-body-execution.md에재현명령과한계를기록했다.
 - 초기화의spritequeue reset때문에 이noIRQ body fixture에서buffer/cue대기는관찰되지않았다. 기존480bc의대기증거와분리하며일반도달불가로단정하지않는다. 비교stack은게임RAM64KiB밖의oracle영역이며물리mirror/stack동등성은주장하지않는다.
 - 다음은47af0 gate/dispatch와47c04 이후스테이지활성화연결이다. docs/analysis/stage-post-entry-contract.md에메인이확인한72f0 carry,actualrecord dispatch분포,callee와미해결범위를기록했다. 자연scheduler/IRQ·직접플레이·전체게임Goal은아직미완료이며active다.
+
+## 2026-10-08 — palette effect 8c16 전체 레지스터
+
+- Baseline d94a832, branch codex/palette-effect-execution. Sol6.1/medium 세 작업자가 구현·CLI·원본 비교를 분담하고 메인이 전체 원본 의미와diff·결과를 리뷰했다. 기존RAM전용 API를 전체레지스터 caller에 오용하지 않도록 별도execute_palette_effect를 추가했다.
+- 원본Musashi883조건과실제CLI의전체RAM/15register/JSON이일치했다. signedclamp의MOVEQ highword효과,WORDshift/wrap,모든duration256값,allzero324조건의steps/D3high보존,nonzero559조건의DIVS몫·나머지,임의A5→108000을확인했다. 도달가능8분기양쪽,오류104조건(FIFO2종포함)을통과했다.
+- make all test Python182/C++134/경고0,별도UBSan단위검증통과. reportSHA `4db8fcbafa31fd053b35afb3d2a8beef86183d018a9234f7aab4e74397aaadac`,메인리뷰0192,실행문서palette-effect-execution.md. 새리소스가필요없는RAM/register동작이다.
+- 다음ca9e/caf0 전체레지스터연결에서기존API가반환하지않는D2/D6/D7/A4를반영해야한다. 메인이screen-reset-full-contract.md를작성했고Sol에원본관찰을위임했다. 47af0의특수dispatch28은c364→BIOS c00468 호출이있으며이를임의stub으로완료처리하지않는다. 현재workspace에서확인된zip은mslug5.zip뿐이다. 다른독립분석은계속가능하며전체Goal은active다.
