@@ -11,23 +11,25 @@ bool step_animation_execution(std::vector<std::uint8_t>& ram,
     std::vector<VideoPortWrite>& ports, std::string& error);
 ```
 
-15레지스터의저장은기존 `sprite.registers`의13개와a5/a6가유일한기준이다. 별도callee register배열을영속상태로추가하지않는다. phase0은fresh/완료,phase1은직접04 sprite대기,phase2는14/1f sound대기다. 기존outer saved_a0/saved_a1/saved_bank는interpreter A0·다음script A1·bank를보존한다. 추가callback_saved_a0는inner47672 source A0이며outer A0와다르다. callback_sound_phase는1=high/2=low,callback_saved_low는BYTE,callback_waiting은sound대기를나타낸다. phase2에서sprite.waiting은false다. 비활성metadata와phase별조합은core가검사한다.
+15레지스터의저장은기존 `sprite.registers`의13개와a5/a6가유일한기준이다. 별도callee register배열을영속상태로추가하지않는다. phase0은fresh/완료,phase1은직접04 sprite대기,phase2는14/1f sound대기,phase3은indexed sprite대기다. 기존outer saved_a0/saved_a1/saved_bank는interpreter A0·다음script A1·bank를보존한다. 추가callback_saved_a0는inner47672 source A0이며outer A0와다르다. callback_sound_phase는1=high/2=low,callback_saved_low는BYTE,callback_waiting은sound대기를나타낸다. phase2에서sprite.waiting은false다. 비활성metadata와phase별조합은core가검사한다.
 
 ## 새 CLI와 호환성
 
 ```text
 build/step_animation_sound_execution \
   D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 \
-  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING \
+  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END \
   CALLBACK_SAVED_A0 CALLBACK_SOUND_PHASE CALLBACK_SAVED_LOW CALLBACK_WAITING EXTERNAL \
   INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [RESOURCE_MS5A_OR_MS5D ...]
 ```
 
-숫자25개,최소argc29다. INPUT_RAM/OUTPUT_RAM/OUTPUT_PORTS는argv26/27/28,resource는argv29이후다. register와saved pointer는uint32,phase0..2,bank0..65535,sound phase0..2,low/external0..255,두waiting0..1을strict10진수/0x16진수로검사한다. carry입력숫자는없으며API초기bool은false다.
+현재숫자26개,최소argc30다. INPUT_RAM/OUTPUT_RAM/OUTPUT_PORTS는argv27/28/29,resource는argv30이후다. SAVED_LIST_END는argv21이며callback4개는argv22..25,EXTERNAL은argv26이다. register와saved pointer는uint32,phase0..3,bank0..65535,sound phase0..3,low/external0..255,두waiting0..1을strict10진수/0x16진수로검사한다. carry입력숫자는없으며API초기bool은false다.
 
-stdout은정확히26key다. 기존15레지스터와phase/saved_a0/saved_a1/saved_bank/waiting/carry에callback_saved_a0/callback_sound_phase/callback_saved_low/callback_waiting/external_reads를추가한다. waiting은sprite.waiting만표시하며callback_waiting과합치지않는다. 두waiting은boolean,carry는phase!=0이면null,완료면boolean이다. ports파일은이번호출의순서있는9바이트 `>BII` 기록이다. 오류에는JSON을출력하지않는다.
+stdout은정확히27key다. 기존15레지스터와phase/saved_a0/saved_a1/saved_bank/waiting/saved_list_end/carry에callback_saved_a0/callback_sound_phase/callback_saved_low/callback_waiting/external_reads를추가한다. waiting은sprite.waiting만표시하며callback_waiting과합치지않는다. 두waiting은boolean,carry는phase!=0이면null,완료면boolean이다. ports파일은이번호출의순서있는9바이트 `>BII` 기록이다. 오류에는JSON을출력하지않는다.
 
-기존 `step_animation_execution` CLI의20숫자/21key schema는변경하지않는다. 기존API overload도기존범위를유지하며1f/phase2를거절한다. 새로운외부상태인자가있는호출형에서만이번범위를사용한다.
+일반 `step_animation_execution` CLI도이번indexed확장에서21숫자/22key로변경한다. 두CLI의공유21숫자는SPRITE_WAITING뒤SAVED_LIST_END를갖는다. 이전명령은이자리에0을삽입해야한다. 기존API overload도opcode10/phase3을추가하되1f/phase2는계속거절한다. 새로운외부상태인자가있는호출형에서만이번범위를사용한다.
+
+phase0/1/2는saved_list_end=0을요구한다. phase3은sprite.waiting=true,callback metadata비활성이며saved_list_end가selecteddraw후복귀할list주소다. waiting은phase1/3에서true,callback_waiting은phase2에서true다.
 
 ## 실행·재개와 실패 경계
 
@@ -46,6 +48,8 @@ resource는실제4바이트magic MS5A/MS5D로기존loader를선택하며다른ma
 RAM은정확히65536바이트이며RAM과모든resource를ifstream전에stat/S_ISREG로검사하여FIFO를거절한다. 모든입력과출력의canonical/inode alias를검사한다. core성공후두출력을O_NONBLOCK으로truncate없이예약하고fstat로일반파일·서로다른inode·모든입력의저장/현재inode와의비중복을확인한뒤에만쓴다. 검사실패는기존파일을보존하고새placeholder는같은예약identity일때만제거한다. 실제case alias도inode로검출한다. write/close실패는검사하지만쓰기시작후두파일의원자교체/rollback은보장하지않는다.
 
 ## 재현과 검증 상태
+
+아래22case/30phase와기존회귀의해시는saved_list_end추가전25숫자/26key schema의완료기록이다. 현재26숫자/27key 및phase3의새검증은 [indexed 실행 문서](animation-indexed-execution.md)에따로기록한다.
 
 ```sh
 .venv/bin/python tools/pack_animation_control.py
@@ -74,3 +78,7 @@ corelink는animation_execution.cpp,sprite_submit_execution.cpp,object_sound_look
 전체 `make -j4 all test`는exit0이며 `artifacts/animation_sound_execution/make-all-test.log`에서Python225개,C++test실행145개,컴파일경고0건을확인했다. core작업자의격리normal/UBSan unit검증도통과했다. 재현도구에는추가audit-only같은인자를붙이지않는다. 관측·검증명령은ignored artifact를재생성하며ROM은수정하지않는다.
 
 전체17opcode,다른callback,bankedscript/data,전체CCR/A7stack/cycles,물리mirror/IRQ/scheduler,composition group/palette binding,자연게임도달성과직접플레이는별도미완료범위다.
+
+## saved_list_end 추가 후 현행 schema 회귀
+
+현재26숫자/27key schema로 `tools/verify_animation_sound_execution.py`를재실행한보고서 `artifacts/animation_sound_execution/verification.json` SHA256은 `645a5de6b056cd8571488f78968a9fbb4cd429a11f5dbd5628bfa1835937cdfe`이다. 22case/30phase,이전실제C++출력재개8회,negative73건이통과했다. 입력28개와native/C++artifact247개entry의현재hash를모두대조했다. 위baf581...는이전schema의완료기록이며이새해시가현행schema회귀기록이다. 일반CLI/외부입력없는overload의1f/phase2거절은유지한다. 새indexed phase3검증은별도로기록한다.

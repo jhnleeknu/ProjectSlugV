@@ -12,9 +12,10 @@ int signed_word(std::uint32_t value) {return (value&0x8000U)?static_cast<int>(va
 bool valid(const AnimationExecutionState& s) {
     const bool inactive=s.callback_saved_a0==0 && s.callback_sound_phase==0 &&
         s.callback_saved_low==0 && !s.callback_waiting;
-    if(s.phase==0)return inactive && !s.sprite.waiting && s.saved_a0==0 && s.saved_a1==0 && s.saved_bank==0;
-    if(s.phase==1)return inactive && s.sprite.waiting;
-    return s.phase==2 && !s.sprite.waiting && s.callback_waiting &&
+    if(s.phase==0)return s.saved_list_end==0 && inactive && !s.sprite.waiting && s.saved_a0==0 && s.saved_a1==0 && s.saved_bank==0;
+    if(s.phase==1)return s.saved_list_end==0 && inactive && s.sprite.waiting;
+    if(s.phase==3)return inactive && s.sprite.waiting;
+    return s.phase==2 && s.saved_list_end==0 && !s.sprite.waiting && s.callback_waiting &&
         (s.callback_sound_phase==1 || s.callback_sound_phase==2);
 }
 bool ram_span(std::uint32_t base,int displacement,unsigned int size,std::size_t& at,std::string& error) {
@@ -163,6 +164,35 @@ bool field_branch(std::vector<std::uint8_t>& ram,const std::vector<AnimationReso
     if((r.d[0]&255U)==(r.d[1]&255U))r.a[1]=r.d[7];
     r.d[6]=r.a[1];return write_ram(ram,r.a[0],0,4,r.d[6],error);
 }
+bool script_address(std::uint32_t base,int displacement,std::uint32_t& address,std::string& error) {
+    const std::int64_t sum=static_cast<std::int64_t>(base)+displacement;
+    if(sum<0 || sum>0xffffffffLL) {error="indexed animation script address overflows";return false;}
+    address=static_cast<std::uint32_t>(sum);return true;
+}
+bool indexed_draw(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& scripts,
+    const std::vector<FixedDataResource>& windows,AnimationExecutionState& s,
+    std::vector<VideoPortWrite>& ports,std::string& error) {
+    SceneMapTransferState& r=s.sprite.registers;std::uint32_t value=0,end=0,selected=0;
+    r.d[0]=0;
+    if(!next(ram,scripts,r,1,value,error))return false;r.d[0]=value;word(r.d[0],r.d[0]*2U);
+    r.a[2]=0x4a76c;
+    if(!read_data(ram,windows,static_cast<std::int64_t>(r.a[2])+signed_word(r.d[0]),2,value,error))return false;
+    word(r.d[0],value);
+    if(!next(ram,scripts,r,2,value,error))return false;word(r.d[1],value);
+    if(!script_address(r.a[1],signed_word(r.d[1]),end,error))return false;
+    if(!read_ram(ram,s.a6,signed_word(r.d[0]),1,value,error))return false;
+    byte(r.d[0],value);word(r.d[0],r.d[0]<<3);
+    if((r.d[0]&65535U)<(r.d[1]&65535U)) {
+        if(!script_address(r.a[1],signed_word(r.d[0]),selected,error))return false;
+        if(!read_script(ram,scripts,selected,1,value,error))return false;
+        if(value!=4) {error="indexed animation selected opcode is not04";return false;}
+        if(!script_address(selected,1,r.a[1],error))return false;
+        if(!draw(ram,scripts,s,ports,error))return false;
+        if(s.sprite.waiting) {s.phase=3;s.saved_list_end=end;return true;}
+    }
+    // Original4a270 restores only the PEA cursor, bypassing4a276.
+    r.a[1]=end;return true;
+}
 bool sound_callback(std::vector<std::uint8_t>& ram,const std::vector<FixedDataResource>& windows,
     AnimationExecutionState& s,std::uint8_t external_status,std::uint32_t& external_reads,std::string& error) {
     ObjectSoundLookupState inner;inner.sound.byte.registers=s.sprite.registers;inner.a5=s.a5;inner.a6=s.a6;
@@ -221,11 +251,13 @@ bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& sc
         if(!sound_callback(ram,windows,s,external_status,external_reads,error))return false;
         if(s.phase==2)return true;
         if(!callback_return(ram,s,ports,error))return false;
-    } else if(s.phase==1) {
+    } else if(s.phase==1 || s.phase==3) {
+        const bool indexed=s.phase==3;const std::uint32_t end=s.saved_list_end;
         if(s.a5!=0x108000) {error="animation sprite resume requires canonical A5=108000";return false;}
         SpriteSubmitStatus status=SpriteWaiting;if(!execute_sprite_submit(ram,s.sprite,status,error))return false;
         if(s.sprite.waiting)return true;
         if(!draw_return(ram,s,ports,error))return false;
+        if(indexed) {r.a[1]=end;s.saved_list_end=0;}
     } else {
         const std::uint64_t pointer=static_cast<std::uint64_t>(s.a6)+0x26;
         if(pointer>0xffffffffU) {error="animation object pointer overflows";return false;}r.a[0]=static_cast<std::uint32_t>(pointer);
@@ -240,6 +272,7 @@ bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& sc
         r.d[7]=0;if(!next(ram,scripts,r,1,value,error))return false;r.d[7]=value;
         if(value==4) {if(!draw(ram,scripts,s,ports,error))return false;if(s.sprite.waiting)return true;continue;}
         if(value==0x0c) {if(!field_branch(ram,scripts,windows,s,error))return false;continue;}
+        if(value==0x10) {if(!indexed_draw(ram,scripts,windows,s,ports,error))return false;if(s.sprite.waiting)return true;continue;}
         if(value==0x14) {if(!callback(ram,scripts,windows,s,allow_sound,external_status,external_reads,ports,error))return false;if(s.phase==2)return true;continue;}
         if(value==8) {
             ++r.a[1];if(!read_script(ram,scripts,r.a[1],4,value,error))return false;r.d[7]=value;r.a[1]=value;

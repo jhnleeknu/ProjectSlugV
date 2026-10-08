@@ -10,15 +10,15 @@ from observe_activation_animation_scripts import (Observer,cases,fixture,load_ve
     oracle_provenance,KEYS,BASE,SOURCE_SHA256)
 
 NATIVE_SHA='18d25c677ab35698a7662142ce730422c67abcb2df58e7eea8592e141d5e39e6'
-FIELDS=tuple(KEYS)+('phase','saved_a0','saved_a1','saved_bank','waiting')
+FIELDS=tuple(KEYS)+('phase','saved_a0','saved_a1','saved_bank','waiting','saved_list_end')
 OUTPUT=set(FIELDS)|{'carry'}
 def sha(data):return hashlib.sha256(data).hexdigest()
 def digest(path):return sha(path.read_bytes())
-def initial(regs):return dict(regs,phase=0,saved_a0=0,saved_a1=0,saved_bank=0,waiting=False)
+def initial(regs):return dict(regs,phase=0,saved_a0=0,saved_a1=0,saved_bank=0,waiting=False,saved_list_end=0)
 def expected(info):
     pending=info['pending']
     return dict(info['result'],phase=int(info['waiting']),waiting=info['waiting'],carry=info['carry'],
-        saved_a0=pending.get('saved_a0',0),saved_a1=pending.get('saved_a1',0),saved_bank=pending.get('saved_bank',0))
+        saved_a0=pending.get('saved_a0',0),saved_a1=pending.get('saved_a1',0),saved_bank=pending.get('saved_bank',0),saved_list_end=0)
 def apply_changes(ram,changes):
     data=bytearray(ram)
     for change in changes:
@@ -36,7 +36,9 @@ def parse(text):
     r=json.loads(text,object_pairs_hook=unique)
     assert type(r) is dict and set(r)==OUTPUT and type(r['waiting']) is bool
     assert all(type(v) is int and 0<=v<=0xffffffff for k,v in r.items() if k not in ('waiting','carry'))
-    assert r['phase'] in (0,1) and r['saved_bank']<=65535 and r['waiting']==bool(r['phase'])
+    assert r['phase'] in (0,1,3) and r['saved_bank']<=65535 and r['waiting']==(r['phase'] in (1,3))
+    assert r['saved_list_end']==0 if r['phase']!=3 else True
+    if r['phase']==0:assert all(r[k]==0 for k in ('saved_a0','saved_a1','saved_bank'))
     assert r['carry'] is None if r['waiting'] else type(r['carry']) is bool
     return r
 
@@ -120,15 +122,16 @@ def negatives(root,folder,exe,resources,native):
             rows.append(dict(label=label,files_preserved=True,error=p.stderr.strip()))
         for key in FIELDS:
             for bad in ('-1','4294967296','0x','1x',''):reject('parser-'+key+'-'+repr(bad),st=dict(state,**{key:bad}))
-        for key,bad in (('phase',2),('saved_bank',65536),('waiting',2)):reject('range-'+key,st=dict(state,**{key:bad}))
-        for patch in ({'phase':1},{'waiting':True},{'saved_a0':1},{'saved_a1':1},{'saved_bank':1}):reject('inconsistent-state-'+str(patch),st=dict(state,**patch))
+        for key,bad in (('phase',4),('saved_bank',65536),('waiting',2)):reject('range-'+key,st=dict(state,**{key:bad}))
+        reject('old-overload-rejects-sound-phase2',st=dict(state,phase=2))
+        for patch in ({'phase':1},{'waiting':True},{'saved_a0':1},{'saved_a1':1},{'saved_bank':1},{'saved_list_end':1}):reject('inconsistent-state-'+str(patch),st=dict(state,**patch))
         for size in (0,65535,65537):reject('RAM-size-'+str(size),payload=bytes(size))
         for a6 in (0,0xffffffff,0x102001,0x10ffda):reject('object-span-'+hex(a6),st=dict(state,a6=a6))
         for a5 in (0,0xffffffff,0x108001):reject('bank-span-'+hex(a5),st=dict(state,a5=a5))
         reject('missing-script',rr=[])
         for opcode in (0x0c,0x10,0x14,0x18,0x40,0x44,0xff):
             data=bytearray(ram);data[0x2026:0x202a]=(0x106000).to_bytes(4,'big');data[0x6000]=opcode
-            reject(('opcode-without-data-' if opcode in (0x0c,0x14) else 'unsupported-opcode-')+hex(opcode),payload=bytes(data),rr=[])
+            reject(('opcode-without-data-' if opcode in (0x0c,0x10,0x14) else 'unsupported-opcode-')+hex(opcode),payload=bytes(data),rr=[])
         # A jump loop must fail the command budget transactionally.
         data=bytearray(ram);data[0x2026:0x202a]=(0x106000).to_bytes(4,'big');data[0x6000:0x6006]=bytes.fromhex('080000106000')
         reject('live-jump-command-budget',payload=bytes(data),rr=[])

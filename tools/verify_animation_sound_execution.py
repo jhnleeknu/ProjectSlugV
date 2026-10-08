@@ -23,7 +23,7 @@ def digest(path):
 
 
 def initial(registers):
-    return dict(registers,phase=0,saved_a0=0,saved_a1=0,saved_bank=0,waiting=False,
+    return dict(registers,phase=0,saved_a0=0,saved_a1=0,saved_bank=0,waiting=False,saved_list_end=0,
         callback_saved_a0=0,callback_sound_phase=0,callback_saved_low=0,callback_waiting=False)
 
 
@@ -58,11 +58,15 @@ def parse(text):
     for key,value in result.items():
         if key not in ('waiting','callback_waiting','carry'):
             assert type(value) is int and 0<=value<=0xffffffff,key
-    assert result['phase'] in (0,1,2) and result['saved_bank']<=65535
+    assert result['phase'] in (0,1,2,3) and result['saved_bank']<=65535
     assert result['callback_sound_phase'] in (0,1,2) and result['callback_saved_low']<=255
     assert result['carry'] is None if result['phase'] else type(result['carry']) is bool
-    assert result['waiting']==(result['phase']==1)
+    assert result['waiting']==(result['phase'] in (1,3))
     assert result['callback_waiting']==(result['phase']==2)
+    assert result['saved_list_end']==0 if result['phase']!=3 else True
+    if result['phase']!=2:
+        assert all(result[k]==0 for k in ('callback_saved_a0','callback_sound_phase','callback_saved_low'))
+    if result['phase']==0:assert all(result[k]==0 for k in ('saved_a0','saved_a1','saved_bank'))
     return result
 
 
@@ -136,10 +140,10 @@ def negatives(root,folder,program,exe,resources,native):
             for value in ('-1','4294967296','0x','1x'):
                 reject('parser-'+key+'-'+value,st=dict(state,**{key:value}))
         for value in (-1,256,'0x','1x'):reject('parser-external-'+str(value),external=value)
-        for key,value in (('phase',3),('callback_sound_phase',3),('callback_saved_low',256),('callback_waiting',2)):
+        for key,value in (('phase',4),('callback_sound_phase',3),('callback_saved_low',256),('callback_waiting',2)):
             reject('range-'+key,st=dict(state,**{key:value}))
         for changes in ({'phase':2},{'callback_saved_a0':1},{'callback_sound_phase':1},
-                {'callback_saved_low':1},{'callback_waiting':True}):
+                {'callback_saved_low':1},{'callback_waiting':True},{'saved_list_end':1}):
             reject('inactive-metadata-'+str(changes),st=dict(state,**changes))
         for changes in ({'waiting':True},{'callback_sound_phase':0},{'callback_waiting':False},{'phase':0},{'phase':1}):
             reject('pending-metadata-'+str(changes),st=dict(pending,**changes),payload=pending_ram,rr=[])

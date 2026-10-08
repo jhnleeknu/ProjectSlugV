@@ -1,6 +1,6 @@
 # Animation 전체 상태 실행의 첫 연결
 
-이 문서는 최초4opcode 연결의 기록이다. 이후0c/14와 MS5D 확장 및 최신 회귀 결과는 [control 실행 문서](animation-control-execution.md)를 따른다. 아래 최초 검증 해시는 당시 구현의 증거다.
+이 문서는 최초4opcode 연결의 기록이다. 이후0c/14와 MS5D 확장 및 최신 회귀 결과는 [control 실행 문서](animation-control-execution.md)를 따른다. 아래 최초 검증 해시는 당시 구현의 증거다. 현재CLI schema는아래에갱신했으며opcode10/phase3 확장은 [indexed 실행 문서](animation-indexed-execution.md)를따른다. 최초20숫자/21key 검증기록은현행21숫자/22key의검증결과와구분한다.
 
 [초기 실행 계약](animation-execution-initial-contract.md)과 [draw 전체 상태 계약](animation-draw-full-contract.md)의 원본49fc6을 새 API로 연결한다. canonical BE ROM SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이며 아래 fixed CPU 주소는 ROM 파일 오프셋과 같다. 이번 새 full-state 경로는 **00/04/08/28 네 opcode**다. 전체17opcode 목표 중 나머지13개와 callback/sound/banked 동작은 미완료로 유지하며, 기존 RAM/carry API의 구현과 지원 범위를 제거하지 않는다.
 
@@ -20,18 +20,20 @@ bool step_animation_execution(std::vector<std::uint8_t>& ram,
 
 RAM은 CPU100000..10ffff의 정확히65536바이트다. `sprite.registers`의 D[8]/A[5]가 D0..D7/A0..A4의 유일한 상태이며 별도 A5/A6를 함께 전달한다. phase0은 fresh/완료이며 waiting=false와 저장필드0을 요구한다. phase1은 직접 opcode04의 cd58 captured wait이며 waiting=true와 saved A0/A1/bank를 유지한다. 오류는 RAM·15레지스터·metadata·carry·기존 ports를 보존한다. 성공한 wait는 그 시점까지 효과를 commit하며 API carry 입력을 보존한다. RTS 완료에서만 실제 반환 carry를 설정한다. 성공 ports는 이번 호출의 ordered writes로 교체한다.
 
-## CLI
+## 현재 CLI
 
 ```text
 build/step_animation_execution \
   D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 \
-  PHASE SAVED_A0 SAVED_A1 SAVED_BANK WAITING \
-  INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [SCRIPT_MS5A ...]
+  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END \
+  INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [RESOURCE_MS5A_OR_MS5D ...]
 ```
 
-숫자는20개, argc는 최소24다. RAM input/output/port output은 argv21/22/23, scripts는 argv24 이후다. ENTRY/carry 입력은 없다. register와 saved pointer는 unsigned32bit, PHASE0..1, SAVED_BANK0..65535, WAITING0..1을 받는다. 숫자는10진수 또는 `0x`/`0X`16진수이며 부호·공백·빈 숫자·후행 문자·overflow를 거부한다. core가 metadata의 조합을 검사한다.
+숫자는21개, argc는 최소25다. RAM input/output/port output은 argv22/23/24, resource는 argv25 이후다. ENTRY/carry 입력은 없다. register와 saved pointer는 unsigned32bit, PHASE0/1/3(2거절), SAVED_BANK0..65535, SPRITE_WAITING0..1, SAVED_LIST_END unsigned32bit을 받는다. 숫자는10진수 또는 `0x`/`0X`16진수이며 부호·공백·빈 숫자·후행 문자·overflow를 거부한다. core가 metadata의 조합을 검사한다.
 
-성공 stdout은 정확히21개 key의 한 줄 JSON이다. `d0..d7`, `a0..a6`, `phase`, `saved_a0`, `saved_a1`, `saved_bank`는 숫자, `waiting`은 boolean이다. `carry`는 phase1 대기 시null, phase0 완료 시boolean이다. CLI 내부 API carry 초기값은false이며 대기의 보존된 bool을 반환CCR처럼 표시하지 않는다. OUTPUT_RAM은65536바이트, OUTPUT_PORTS는 ordered9바이트 `>BII`(size BYTE, address/value BE32)다. 오류는 stderr와 실패 종료 코드로 보고하며 성공 JSON을 출력하지 않는다.
+성공 stdout은 정확히22개 key의 한 줄 JSON이다. `d0..d7`, `a0..a6`, `phase`, `saved_a0`, `saved_a1`, `saved_bank`, `saved_list_end`는 숫자, `waiting`은 boolean이다. `carry`는 phase1/3 대기 시null, phase0 완료 시boolean이다. CLI 내부 API carry 초기값은false이며 대기의 보존된 bool을 반환CCR처럼 표시하지 않는다. OUTPUT_RAM은65536바이트, OUTPUT_PORTS는 ordered9바이트 `>BII`(size BYTE, address/value BE32)다. 오류는 stderr와 실패 종료 코드로 보고하며 성공 JSON을 출력하지 않는다.
+
+phase3은indexed sprite대기이며waiting=true,callback metadata비활성이다. phase0/1/2에서는saved_list_end=0이며phase3의saved_list_end는draw saved_a1과별개의복귀주소다. 이전schema 명령에는SPRITE_WAITING뒤0을삽입해야하고이전pending JSON은saved_list_end=0을명시하여이전직접04대기상태로전달해야한다.
 
 ## 실제 순서와 continuation
 
@@ -78,3 +80,7 @@ make build/step_animation_execution build/animation_execution_test
 보고서의 구현·도구·resource 입력22개와 native/C++ artifact670개의 현재 SHA256을 대조했으며 모두 일치했다. 비교 CLI 바이너리 SHA256은 `3661de51195a29a01a13d5e38040d18d735bffcd5817bf60b60aaf1d407d7541`이다. CLI 단독 C++11 경고 옵션 빌드는 exit0/경고0으로 완료했다. core의 별도 normal/UBSan 단위 실행도 통과했다. 전체 `make all test`도 exit0으로 완료했다. `artifacts/animation_execution/make-all-test.log`에는 Python215 tests, C++ 실행145개와 경고0개가 기록되어 있다.
 
 A7/stack·CCR전체·cycles, 나머지13opcode와 indexed/sound/callback resume, banked script/data, 임의 callback, 물리mirror, 자연IRQ/scheduler, composition group/palette 바인딩, 화면 전체·직접 플레이와 전체 복원 완료는 이 첫 연결의 증거 범위 밖이다. 이 범위 밖 항목도 전체 GOAL에서 제외하지 않는다.
+
+## saved_list_end 추가 후 현행 schema 회귀
+
+현재21숫자/22key schema로 `tools/verify_animation_execution.py`를재실행한보고서 `artifacts/animation_execution/verification.json` SHA256은 `77a5ecbd0092e4dcb33d27976b1668d190ef76b15967f428773f978dfb1f9fc0`이다. primary90case/98phase,이전실제C++출력재개8회,별도liveRAM15건,negative164건이통과했다. 입력29개와native/C++artifact670개의현재hash를모두대조했다. 위최초검증해시를대체하는현행schema회귀기록이며새opcode10검증과는별도다.

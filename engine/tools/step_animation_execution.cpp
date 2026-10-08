@@ -157,8 +157,8 @@ bool parse_integer(const std::string& text, std::uint32_t maximum, std::uint32_t
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 24) {
-        std::cerr << "usage: step_animation_execution D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 PHASE SAVED_A0 SAVED_A1 SAVED_BANK WAITING INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [RESOURCE_MS5A_OR_MS5D ...]\n";
+    if (argc < 25) {
+        std::cerr << "usage: step_animation_execution D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [RESOURCE_MS5A_OR_MS5D ...]\n";
         return 2;
     }
     ms5::AnimationExecutionState state;
@@ -172,18 +172,20 @@ int main(int argc, char** argv) {
         else if (i == 13) state.a5 = value;
         else state.a6 = value;
     }
-    const std::uint32_t maximum[] = {1U,0xffffffffU,0xffffffffU,65535U,1U};
-    std::uint32_t values[5];
-    for (unsigned int i = 0; i < 5; ++i) {
+    const std::uint32_t maximum[] = {3U,0xffffffffU,0xffffffffU,65535U,1U,0xffffffffU};
+    std::uint32_t values[6];
+    for (unsigned int i = 0; i < 6; ++i) {
         if (!parse_integer(argv[16+i],maximum[i],values[i])) {
             std::cerr << "invalid continuation at argument " << 16+i << '\n'; return 1;
         }
     }
+    if (values[0] == 2U) { std::cerr << "sound callback phase requires external-input CLI\n"; return 1; }
+    state.saved_list_end = values[5];
     state.phase = values[0]; state.saved_a0 = values[1]; state.saved_a1 = values[2];
     state.saved_bank = static_cast<std::uint16_t>(values[3]); state.sprite.waiting = values[4] != 0;
     std::vector<std::string> paths, canonical;
     std::vector<struct stat> identities;
-    for (int i = 21; i < 24; ++i) {
+    for (int i = 22; i < 25; ++i) {
         paths.push_back(argv[i]); std::string resolved;
         if (!canonical_path(paths.back(),resolved)) { std::cerr << "cannot resolve path\n"; return 1; }
         for (std::size_t j = 0; j < canonical.size(); ++j) {
@@ -192,7 +194,7 @@ int main(int argc, char** argv) {
             }
         }
         struct stat identity = {};
-        if (i == 21 && (stat(paths.back().c_str(),&identity) != 0 || !S_ISREG(identity.st_mode))) {
+        if (i == 22 && (stat(paths.back().c_str(),&identity) != 0 || !S_ISREG(identity.st_mode))) {
             std::cerr << "input RAM must be a regular file\n"; return 1;
         }
         canonical.push_back(resolved); identities.push_back(identity);
@@ -206,7 +208,7 @@ int main(int argc, char** argv) {
     input.close();
     std::vector<ms5::AnimationResource> scripts;
     std::vector<ms5::FixedDataResource> windows; std::string error;
-    for (int i = 24; i < argc; ++i) {
+    for (int i = 25; i < argc; ++i) {
         const std::string path(argv[i]); std::string resolved; struct stat identity;
         if (!canonical_path(path,resolved)) { std::cerr << "cannot resolve resource path\n"; return 1; }
         if (stat(path.c_str(),&identity) != 0 || !S_ISREG(identity.st_mode)) {
@@ -251,8 +253,9 @@ int main(int argc, char** argv) {
     std::cout << ",\"a5\":" << state.a5 << ",\"a6\":" << state.a6
               << ",\"phase\":" << state.phase << ",\"saved_a0\":" << state.saved_a0
               << ",\"saved_a1\":" << state.saved_a1 << ",\"saved_bank\":" << state.saved_bank
-              << ",\"waiting\":" << (state.sprite.waiting ? "true" : "false") << ",\"carry\":";
-    if (state.phase == 1) std::cout << "null";
+              << ",\"waiting\":" << (state.sprite.waiting ? "true" : "false")
+              << ",\"saved_list_end\":" << state.saved_list_end << ",\"carry\":";
+    if (state.phase != 0) std::cout << "null";
     else std::cout << (carry ? "true" : "false");
     std::cout << "}\n"; return 0;
 }

@@ -19,7 +19,7 @@ bool same(const ms5::AnimationExecutionState& a,const ms5::AnimationExecutionSta
     for(unsigned int i=0;i<8;++i)if(a.sprite.registers.d[i]!=b.sprite.registers.d[i])return false;
     for(unsigned int i=0;i<5;++i)if(a.sprite.registers.a[i]!=b.sprite.registers.a[i])return false;
     return a.a5==b.a5 && a.a6==b.a6 && a.phase==b.phase && a.saved_a0==b.saved_a0 &&
-        a.saved_a1==b.saved_a1 && a.saved_bank==b.saved_bank && a.sprite.waiting==b.sprite.waiting &&
+        a.saved_a1==b.saved_a1 && a.saved_bank==b.saved_bank && a.saved_list_end==b.saved_list_end && a.sprite.waiting==b.sprite.waiting &&
         a.callback_saved_a0==b.callback_saved_a0 && a.callback_sound_phase==b.callback_sound_phase &&
         a.callback_saved_low==b.callback_saved_low && a.callback_waiting==b.callback_waiting;
 }
@@ -271,8 +271,8 @@ void errors() {
     bool carry=true;std::vector<ms5::VideoPortWrite> ports;std::string error;
     assert(ms5::step_animation_execution(ram,scripts,s,carry,ports,error));
     ram=fixture(0x50001);failure(ram,script(bytes,0x50001),initial());
-    const unsigned int unsupported[]={0x0c,0x10,0x14,0x18,0x1c,0x20,0x24,0x2c,0x30,0x34,0x38,0x3c,0x40,1,0x44};
-    ram=fixture();for(unsigned int i=0;i<15;++i)failure(ram,script(std::vector<std::uint8_t>(1,unsupported[i])),initial());
+    const unsigned int unsupported_or_missing_data[]={0x0c,0x10,0x14,0x18,0x1c,0x20,0x24,0x2c,0x30,0x34,0x38,0x3c,0x40,1,0x44};
+    ram=fixture();for(unsigned int i=0;i<15;++i)failure(ram,script(std::vector<std::uint8_t>(1,unsupported_or_missing_data[i])),initial());
     bytes.assign(6,0);bytes[0]=8;put(bytes,2,4,0x50000);failure(ram,script(bytes),initial()); // cap is an error, never an empty success.
     s=initial();s.phase=2;failure(ram,script(bytes),s);s=initial();s.saved_a0=1;failure(ram,script(bytes),s);
     s=initial();s.saved_a1=1;failure(ram,script(bytes),s);s=initial();s.saved_bank=1;failure(ram,script(bytes),s);
@@ -412,5 +412,129 @@ void sound_metadata() {
     bad=state;bad.phase=3;sound_failure(ram,scripts,windows,bad);
 }
 
+std::vector<ms5::FixedDataResource> indexed_data(unsigned int field=0x7d) {
+    std::vector<ms5::FixedDataResource> windows=control_data();put(windows[0].data,0x4a7a8-0x4276c,2,field);return windows;
 }
-int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();sound_callbacks();sound_waits();sound_metadata();std::cout<<"animation_execution_test passed\n";return 0;}
+std::vector<std::uint8_t> indexed_script(unsigned int length=16) {
+    std::vector<std::uint8_t> bytes(4);bytes[0]=0x10;bytes[1]=0x1e;put(bytes,2,2,length);
+    append(bytes,draw(0,0,0,0x12345));append(bytes,draw(0x40,1,2,0x54321));bytes.push_back(0x28);return bytes;
+}
+void indexed_selection() {
+    const unsigned int fields[]={0x7d,0xfffe,0x017d,0x8004,0x6000};
+    const unsigned int indices[]={0,1,2,0xff};
+    for(unsigned int f=0;f<5;++f)for(unsigned int i=0;i<4;++i) {
+        // Use shifted object for signed field offsets, including high-byte
+        // retention and WORD shift wrap. Length0 still reads that live field.
+        std::vector<std::uint8_t> ram=control_ram();ms5::AnimationExecutionState state=initial(),want=state;
+        state.a6=want.a6=0x108000;const unsigned int at=0x8000+signed_word(fields[f]);ram[at]=indices[i];
+        std::vector<std::uint8_t> bytes(5);bytes[0]=0x10;bytes[1]=0x1e;bytes[4]=0x28;
+        want.sprite.registers.d[0]=(((fields[f]&0xff00)|indices[i])<<3)&65535;
+        want.sprite.registers.d[1]&=0xffff0000U;want.sprite.registers.d[7]=0xffffffffU;
+        want.sprite.registers.a[0]=0x108026;want.sprite.registers.a[1]=0x50005;want.sprite.registers.a[2]=0x4a76c;
+        bool carry=false;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,script(bytes),indexed_data(fields[f]),state,carry,ports,error));
+        assert(carry&&same(state,want)&&get(ram,0x8026,4)==0x50000);ports_are(ports,2);
+    }
+    // Unsigned boundary skips the selected opcode entirely, even if invalid.
+    for(unsigned int index=2;index<256;++index) {
+        std::vector<std::uint8_t> ram=fixture();ram[0x207d]=index;ms5::AnimationExecutionState state=initial();
+        std::vector<std::uint8_t> bytes=indexed_script();bytes[4]=0x7f;
+        bool carry=false;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,script(bytes),indexed_data(),state,carry,ports,error));
+        assert(carry&&state.sprite.registers.d[0]==index*8&&state.sprite.registers.d[6]==0xabcd1206U&&get(ram,0x2026,4)==0x50000);
+    }
+}
+void indexed_draws() {
+    for(unsigned int index=0;index<2;++index)for(unsigned int profile=0;profile<5;++profile) {
+        std::vector<std::uint8_t> ram=fixture();ram[0x207d]=index;
+        std::vector<std::uint8_t> bytes=indexed_script();
+        if(profile==1)put(ram,0x2012,4,0x12340040);
+        if(profile==2)put(ram,0x2042,2,0x8000);
+        if(profile==3)put(bytes,4+index*8+4,4,0x7ff800);
+        if(profile==4){ram[0x2061]=8;ram[0xf]=1;}
+        std::vector<std::uint8_t> direct(bytes.begin()+4+index*8,bytes.begin()+12+index*8);direct.push_back(0x28);
+        std::vector<std::uint8_t> reference=ram;ms5::AnimationExecutionState state=initial(),want=state;
+        bool carry=false,want_carry=false;std::vector<ms5::VideoPortWrite> ports,expected;std::string error;
+        assert(ms5::step_animation_execution(reference,script(direct),want,want_carry,expected,error));
+        assert(ms5::step_animation_execution(ram,script(bytes),indexed_data(),state,carry,ports,error));
+        want.sprite.registers.a[1]=0x50015;want.sprite.registers.a[2]=0x4a76c;
+        if(profile==3||profile==4)want.sprite.registers.d[1]=(want.sprite.registers.d[1]&0xffff0000U)|16U;
+        assert(carry&&want_carry&&same(state,want)&&ram==reference&&get(ram,0x2026,4)==0x50000);
+        assert(ports.size()==expected.size());
+        for(unsigned int n=0;n<ports.size();++n)assert(ports[n].size==expected[n].size&&ports[n].address==expected[n].address&&ports[n].value==expected[n].value);
+    }
+    // Declared length7 allows a complete8-byte record. Its last ID byte is
+    // also the terminal00 byte, so no index+8<=length restriction is valid.
+    std::vector<std::uint8_t> ram=fixture();ram[0x207d]=0;std::vector<std::uint8_t> bytes=indexed_script(7);
+    bytes.resize(13);bytes[11]=bytes[12]=0;ms5::AnimationExecutionState state=initial();bool carry=true;
+    std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,script(bytes),indexed_data(),state,carry,ports,error));
+    assert(!carry&&state.sprite.registers.a[1]==0x5000d&&get(ram,0x2026,4)==0x50000);
+    // Signed negative list end is separate from the unsigned comparison.
+    ram=fixture(0x105800);ram[0x207d]=0;bytes=indexed_script(0xfff0);
+    for(unsigned int i=0;i<bytes.size();++i)ram[0x5800+i]=bytes[i];ram[0x57f4]=0x28;state=initial();
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),indexed_data(),state,carry,ports,error));
+    assert(carry&&state.sprite.registers.a[1]==0x1057f5&&get(ram,0x2026,4)==0x105800);
+    // The selection comparison is unsigned, but the selected address is signed:
+    // offset8000 < length8001 selects list_base-8000, not list_base+8000.
+    ram=fixture(0x107ffc);put(ram,0x7ffc,1,0x10);put(ram,0x7ffd,1,0x1e);put(ram,0x7ffe,2,0x8001);
+    std::vector<std::uint8_t> selected=draw(0,0,0,0x123450);for(unsigned int i=0;i<selected.size();++i)ram[i]=selected[i];
+    ram[0x307d]=0;state=initial();
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),indexed_data(0x107d),state,carry,ports,error));
+    assert(!carry&&state.sprite.registers.a[1]==0x100003&&get(ram,0x2026,4)==0x107ffc);
+}
+ms5::AnimationExecutionState indexed_wait(std::vector<std::uint8_t>& ram,bool deferred) {
+    ram=fixture(0x105800);ram[0x207d]=0;put(ram,0x8d34,2,2);put(ram,0x8d36,2,4);
+    if(deferred)put(ram,0x2012,4,0x12340040);
+    const std::vector<std::uint8_t> bytes=indexed_script();for(unsigned int i=0;i<bytes.size();++i)ram[0x5800+i]=bytes[i];
+    ms5::AnimationExecutionState state=initial();bool carry=true;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),indexed_data(),state,carry,ports,error));
+    assert(carry&&state.phase==3&&state.sprite.waiting&&state.saved_list_end==0x105814&&state.saved_a1==0x10580c);
+    assert(state.saved_a0==0x102026&&state.saved_bank==0);ports_are(ports,2);return state;
+}
+void indexed_waits() {
+    for(unsigned int deferred=0;deferred<2;++deferred)for(unsigned int api=0;api<3;++api) {
+        std::vector<std::uint8_t> ram;ms5::AnimationExecutionState state=indexed_wait(ram,deferred!=0);
+        ram[0x207d]=255;ram[0x5800]=ram[0x5804]=0x7f;put(ram,0x5802,2,0xfff0);
+        put(ram,0x2042,2,0x8000);put(ram,0x2046,2,0);ram[0x2053]=0xfc;put(ram,0x10,2,0xbeef);
+        const std::vector<std::uint8_t> held=ram;const ms5::AnimationExecutionState captured=state;
+        bool carry=api==1;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports=old_ports();std::string error;
+        if(api==0)assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),state,carry,ports,error));
+        if(api==1)assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,carry,ports,error));
+        if(api==2)assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,255,reads,carry,ports,error));
+        assert(ram==held&&same(state,captured)&&carry==(api==1)&&ports.empty());if(api==2)assert(reads==0);
+        ms5::AnimationExecutionState bad=state;bad.a6=0xffffffff;
+        assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),bad,carry,ports,error));assert(bad.a6==0xffffffff);
+        ms5::AnimationExecutionState unused=captured;unused.a6=0xffffffff;assert(same(bad,unused));
+        put(ram,0x8d34,2,4);bad=state;bad.saved_list_end=0x50000;
+        failure(ram,std::vector<ms5::AnimationResource>(),bad);data_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+        sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+        bad=state;bad.sprite.registers.a[1]=0x110000;failure(ram,std::vector<ms5::AnimationResource>(),bad);
+        bad=state;bad.a5=0x108002;failure(ram,std::vector<ms5::AnimationResource>(),bad);
+        if(api==0)assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),state,carry,ports,error));
+        if(api==1)assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,carry,ports,error));
+        if(api==2)assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,0,reads,carry,ports,error));
+        assert(carry&&state.phase==0&&!state.sprite.waiting&&state.saved_list_end==0&&state.saved_a0==0&&state.saved_a1==0);
+        assert(state.sprite.registers.a[1]==0x105815&&state.sprite.registers.d[6]==2&&get(ram,0x2026,4)==0x105800);
+        assert(get(ram,0x7f40,4)==0x8123ffc0&&get(ram,0x914e)==(deferred?2:0));ports_are(ports,2);if(api==2)assert(reads==0);
+    }
+}
+void indexed_errors() {
+    std::vector<std::uint8_t> ram=fixture();ram[0x207d]=0;ms5::AnimationExecutionState state=initial();
+    std::vector<std::uint8_t> bytes=indexed_script();std::vector<ms5::FixedDataResource> windows=indexed_data();
+    data_failure(ram,script(bytes),std::vector<ms5::FixedDataResource>(),state);
+    std::vector<ms5::FixedDataResource> bad=windows;bad.push_back(windows[0]);data_failure(ram,script(bytes),bad,state);
+    bytes[4]=0x7f;data_failure(ram,script(bytes),windows,state);bytes=indexed_script();bytes.resize(11);data_failure(ram,script(bytes),windows,state);
+    bytes=indexed_script();put(ram,0x8b36,2,1);data_failure(ram,script(bytes),windows,state); // Late callee failure after PVC.
+    ram=fixture();state.saved_list_end=1;data_failure(ram,script(bytes),windows,state);
+    state=initial();state.phase=1;state.sprite.waiting=true;state.saved_list_end=1;data_failure(ram,script(bytes),windows,state);
+    state=sound_wait(ram,1);state.saved_list_end=1;sound_failure(ram,script(bytes),windows,state);
+    state=indexed_wait(ram,false);state.sprite.waiting=false;data_failure(ram,script(bytes),windows,state);
+    state=indexed_wait(ram,false);state.callback_saved_low=1;data_failure(ram,script(bytes),windows,state);
+    state=indexed_wait(ram,false);state.saved_list_end=0;bool carry=false;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),state,carry,ports,error)); // Zero cursor is not prevalidated while held.
+    assert(state.phase==3&&state.saved_list_end==0&&!carry&&ports.empty());
+}
+
+}
+int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();sound_callbacks();sound_waits();sound_metadata();indexed_selection();indexed_draws();indexed_waits();indexed_errors();std::cout<<"animation_execution_test passed\n";return 0;}

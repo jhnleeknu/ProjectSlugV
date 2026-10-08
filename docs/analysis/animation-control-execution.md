@@ -19,15 +19,17 @@ bool step_animation_execution(std::vector<std::uint8_t>& ram,
 ```text
 build/step_animation_execution \
   D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 \
-  PHASE SAVED_A0 SAVED_A1 SAVED_BANK WAITING \
+  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END \
   INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [RESOURCE_MS5A_OR_MS5D ...]
 ```
 
-숫자20개, 최소argc24, INPUT_RAM/OUTPUT_RAM/OUTPUT_PORTS는argv21/22/23, resource는argv24 이후다. 레지스터와saved pointer는unsigned32bit, phase0..1, bank0..65535, waiting0..1의 strict10진수/0x16진수 파서를 유지한다. 출력은 정확히21key다:15레지스터와 `phase`, `saved_a0`, `saved_a1`, `saved_bank`, `waiting` boolean, `carry`(pending null/완료boolean). ENTRY나carry입력은 없다. 출력포트의 ordered9바이트 `>BII` 형식도 동일하다.
+현재숫자21개,최소argc25,INPUT_RAM/OUTPUT_RAM/OUTPUT_PORTS는argv22/23/24,resource는argv25이후다. 레지스터와saved pointer는unsigned32bit, phase0/1/3(2거절),bank0..65535,waiting0..1,saved_list_end uint32의 strict10진수/0x16진수 파서를 유지한다. 출력은 정확히22key다:15레지스터와 `phase`, `saved_a0`, `saved_a1`, `saved_bank`, `saved_list_end`, `waiting` boolean, `carry`(pending null/완료boolean). ENTRY나carry입력은 없다. 출력포트의 ordered9바이트 `>BII` 형식도 동일하다.
 
 각 resource의 **실제 첫4바이트**가MS5A이면 기존 `load_animation_resource`, MS5D이면 `load_fixed_data_resource`를 사용한다. 확장자나 인자 위치로종류를 추정하지 않는다.4바이트를 읽을 수 없거나 다른magic이면 실패한다. fixed kind1/version/CRC/length/reserved 검증은 각 기존loader를 따른다. 공급한 파일은 미사용경로에서도 검증하며, resource0개는 실제fixedfetch가 도달하지 않는 null/liveRAM/pending경로에서 허용한다. 이후fixed조회가 도달하면 필요한 창을 제공해야 한다.
 
 same canonical path/inode resource alias는 종류에 관계없이 한 번만 로드한다. 서로 다른 파일로 공급된 overlap은 actualread에서unique/complete 정책을 따른다. MS5A는 명령fetch, MS5D는조회data이며 RAM주소는 항상 현재RAM에서읽는다. 같은raw주소를 가진 script와data의provenance를 임의로 섞지 않는다.
+
+phase3의indexed sprite대기와saved_list_end는 [indexed 실행 문서](animation-indexed-execution.md)를따른다. phase0/1/2에서는saved_list_end=0이다. 현재일반CLI는외부sound상태를받지않으므로phase2를거절한다.
 
 ## 0c: WORD selector와 live branch
 
@@ -60,6 +62,8 @@ RAM과모든MS5A/MS5D는열기전에stat/S_ISREG로일반파일을검사하여FI
 
 ## 재현과 검증 상태
 
+아래178건/control mixed2건및회귀해시는saved_list_end추가전20숫자/21key schema의완료기록이다. 현재21숫자/22key와phase3 연결의새검증은 [indexed 실행 문서](animation-indexed-execution.md)에따로기록한다. 기존resource형식은변경하지않았다.
+
 ```sh
 .venv/bin/python tools/pack_animation_control.py
 .venv/bin/python tools/pack_activation_animation.py
@@ -82,3 +86,7 @@ Makefile의기존CLI에fixed_data_resource.cpp를추가하고runtime-resources�
 기존00/04/08/28회귀의현재보고서 `artifacts/animation_execution/verification.json` SHA256은 `ee6d4284ca590eada918161a6944b2b110c875ddd86854dede1fa087e51d0ade`다. primary90case/98phase와이전실제C++출력을이용한재개8건,별도liveRAM원본코드15건,negative157건이통과했다. 이는이번primary178건에합산하지않는다. 전체 `make -j4 all test`는exit0이며 `artifacts/animation_control_execution/make-all-test.log`에서Python225개,C++test실행145개,컴파일경고0건을확인했다. core작업자의격리normal/UBSan unit검증도통과했다.
 
 나머지opcode,1d/1e외callback/대기,bankeddata,전체CCR/A7stack/cycles,물리mirror,자연IRQ/scheduler,composition/palettebinding,직접플레이와전체GOAL완료는이번확장의증거범위밖이며목표에서제외하지않는다.
+
+## saved_list_end 추가 후 현행 schema 회귀
+
+현재21숫자/22key schema로 `tools/verify_animation_control_execution.py`를재실행한보고서 `artifacts/animation_control_execution/verification.json` SHA256은 `4d03a72e673cc3ca6967d40d4c96527745bac0769915db78a05048c53c1907f5`이다. primary178건,별도mixed2건,negative48건이통과했다. 입력37개와native/C++artifact1447개의현재hash를모두대조했다. 위01bf8c...는이전schema의완료기록이며이새해시가현행schema회귀기록이다. 새opcode10검증은별도로기록한다.

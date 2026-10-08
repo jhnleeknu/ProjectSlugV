@@ -1653,3 +1653,14 @@
 - 실제고정script65f56..662c2의30조건30RTS/PVC300개도 독립전체재실행·129참조hash검사통과. SHA `7f50c9d4ddf4023e47dd22abc6849cbd6322bd4916f2e620a04a2ca78b61fd37`. 도달한list는65f64/6605a두곳이며known8전체·자연도달성을증명하지않는다.
 - 기존wideMS5D에fullBYTE선택table512BYTE가있고기존MS5A876BYTE가known8list를보존한다. 새리소스형식은필요없다. 이번단위에는C++구현변경이없다. 리뷰0209와animation-indexed-full-contract.md가후속구현근거다.
 - 다음은10/phase3 C++·기존두CLI·세회귀검증기의상태규격연결과실제원본비교다. 다른opcode/callback·상위활성화·자연scheduler/IRQ·직접플레이·전체Goal은미완료다. 전체복원률은확정된분모가없어퍼센트로추정하지않는다.
+
+## 2026-10-08 — animation10 C++ 선택 그리기·대기 재개 연결
+
+- Baseline `9169360`, branch `codex/animation-indexed-execution`. 메인은 원본 선택/복귀 의미와 통합 리뷰를 담당했고 Sol6.1/medium 세 작업자가 core/unit, 두CLI/문서, 원본비교를 병렬 담당했다. 구현 담당자는 마지막에 검증기를 독립 리뷰했다. 기존 전체 목표와 완료 기준은 유지한다.
+- 세 API에10을 연결하고phase3/saved_list_end를 추가했다. 대기 때 선택 prefix를 반복하지 않고captured sprite를 마친 뒤별도list end로복귀한다. 복귀에서D6/상태pointer를임의갱신하지않는다. 실제MS5A876BYTE와wideMS5D를소비하며새리소스형식은만들지않았다.
+- 일반CLI는21숫자/22JSON,soundCLI는26숫자/27JSON으로명시적으로변경했다. SPRITE_WAITING뒤SAVED_LIST_END를삽입한다. 기존positional명령자동호환을주장하지않는다. 세기존verifier와현재사용문서도함께갱신했다.
+- 원본846조건854단계의전체RAM15regs/metadata/carry/PVC3564개가일치했다. 실제고정script30조건/PVC300개,실제table을사용한negative signed 선택추가6조건/PVC48개도일치했다. 일반CLI의8재개는직전실제C++출력을사용한다. soundCLI에도네대기연쇄12단계8재개/PVC32개를확인했으며callbackmetadata/external_reads는0이다. hold는리소스없이성공한다.
+- 새오류60조건과파일보존검사통과. 검증fixture에서잘못된negative selector91을실제negative96으로바꾸고,selectorac의목록앞주소가RAM밖이던추가fixture를header10e000으로옮겼다. 두문제는검증입력의오류였으며C++불일치는발견되지않았다.
+- 새report SHA `3f45b555bf6e5c391f1adfd97adf27e2b747e2307718883d42046086629a4e15`;입력34/산출물7174항목,고유7206참조hash를메인과독립Sol이확인했다. 기존회귀90/98+15추가164오류,control178+2혼합48오류,sound22/30 73오류통과. 해당현재SHA는각각 `77a5ecbd0092e4dcb33d27976b1668d190ef76b15967f428773f978dfb1f9fc0`, `4d03a72e673cc3ca6967d40d4c96527745bac0769915db78a05048c53c1907f5`, `645a5de6b056cd8571488f78968a9fbb4cd429a11f5dbd5628bfa1835937cdfe`다.
+- `make all test` exit0:Python225/C++145/경고0. 확장unit의normal/UBSan도통과했다. 리뷰0210과animation-indexed-execution.md에재현·제약을기록한다.
+- 애니메이션17명령중00/04/08/0c/10/28의6종과14의1d/1e/1f경로를연결했다. 이는전체게임완료율이아니다. 다음은남은필드쓰기·감소·설정명령들의원본효과와상위흐름연결이다. 다른opcode/callback·상위활성화·자연scheduler/IRQ·직접플레이·전체스테이지·전체Goal은계속미완료다.
