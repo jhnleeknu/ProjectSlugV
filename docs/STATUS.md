@@ -1550,3 +1550,12 @@
 - 실제 CLI296조건(기존128+추가168)의64KiB RAM/15regs/pending/read count/21key JSON/2,732 ordered ports가 원본과 일치했다. 추가 증거는 동일 CPU의 대기·유지·해제9단계, 조건부 외부 읽기3개, 상위BYTE00..99 전체154개 및 live palette alias2개다. 오류187조건도 통과했다. 모든 WORD 조합·자연 IRQ·실제 오디오 소비를 검증한 것은 아니다.
 - 최종 full make는 Python196/C++139/경고0. 이후 phase2 테스트 보강은 단위/격리 UBSan으로 재검증했다. 현재 입력24개/native 입력7개/native 산출물1,185개 해시를 대조했다. report SHA `f6bc9947607e214476a861926f22b8ba1308bb893a92bfc86e4020360e076abf`; 리뷰0198과 stage-hud-counter-execution.md에 재현 명령·제약을 기록했다.
 - 다음은4843c의 SUBQ/SBCD와4847c의 원본 carry 분기 및 animation full caller 연결이다. 47c6c 전체·직접 플레이·자연 scheduler/IRQ·전체 Goal은 여전히 미완료다. 기존 완료 기준과 진행 기록을 유지한다.
+
+## 2026-10-08 — stage counter 4843c와 비BCD oracle 교정
+
+- Baseline `fb5e823`, branch `codex/stage-counter`. Sol6.1/medium 세 작업자가 구현·CLI/문서·원본 비교를 분담했고 메인이 복잡한 BCD 의미와 oracle 차이를 조사하고 실제 변경을 리뷰했다. 원본 SUBQ.B2→source0 SBCD, gate SEQ 효과, 상위24bit 보존/전체D0D1 clear, 실제 A5-relative BYTE 접근을 C++11로 연결했다.
+- 처음 사용한 Musashi는 비BCD 값에서 Unicorn과 달랐다. 고정 revision의 외부 hardware-tested Flamewing 기준을 독립 빌드하고 원본512조건의 BYTE/C/X를 비교한 결과 Unicorn0/Musashi301 차이를 확인했다. C++ 잠정 보정을 수정하고 acceptance oracle을 Unicorn으로 전환했다. 이전 Musashi 전체WORD 자료는 진단용으로 별도 보존한다. 외부 실기 보고를 이 프로젝트의 직접 물리측정으로 주장하지 않는다.
+- 원본65,536 WORD와109상세조건을 확보하고 실제 C++ API65,536개/CLI621개에서 전체64KiB RAM·15regs 일치를 확인했다. 오류·파일 보존116조건, gate 세 분기 양쪽, 실제BYTE 쓰기131,072회와 clamp2회를 검증했다. 개발용 batch는 실제 native 출력과 비교하며 BCD 알고리즘을 기대값으로 복사하지 않는다.
+- 전체make Python196/C++140/경고0 및 격리UBSan 통과. 메인이 현재 입력/산출물/외부 기준 해시를 대조했다. Verification SHA `2c9836dea6930615c4cd392af1f12fa880b38ace9fe57b96955c577df49368a4`, native `aea00334404fbac5a894eedaa9049b639145e19f41f840bad29141900886f5b0`, BCD 교차검증 `bf692382e2f4905834e6cfc806944c4633d23d9989879a1b0adcf471c75d294e`. 리뷰0199, 실행 문서 stage-counter-execution.md.
+- 다음4847c readiness의 실제 원본214조건과19개분기 양쪽·전체RAM15regs/carry 관측도 확보했다. 별도 Sol이6조건을 메모리에서 재실행하고 artifact hash를 감사했다. 원본 SHA `45ad59018ae534c4059d6348dc835e09d37d9d08dbc3554e2562c7cfe90a4844`; 계약 stage-readiness-contract.md. 이 callee chain의 C++ 연결이 다음 작업이다.
+- 이 단위는 새 데이터 리소스가 필요없는 RAM 연산이다. 자연scheduler/IRQ·직접플레이·전체47c6c와 전체 게임 Goal은 계속 미완료다. 기존 범위·완료 기준을 유지한다.
