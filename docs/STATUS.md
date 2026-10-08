@@ -1382,3 +1382,16 @@
 - 원본3,229조건에서64KiB RAM·14register가일치했다. 두player각255lookup index와3BYTE선택profile,두JSR(A1)각19target을실제로확인했다.48오류조건/3resource생략조건과세sequence12호출중9회이전출력승계도통과했다.17조건분기중TRAP하나를제외한16개는양쪽목적지를관찰했다.
 - 메인이 전체source/unit/CLI/목록·관측·검증도구를리뷰했다. Fixture WORD주소+1e를원본의+20으로수정하고모든원본/CLI비교를다시실행했다. 최종3229저장RAM·입력승계·branch·dynamic19target집합·현재provenance를직접대조했다. 전체make Python182/C++121/경고0. 리뷰0180과stage-input-loop.md에재현/한계를기록했다.
 - Native SHA256 `0b1b93471c22c27a0cd7623c62cfe9976f62478416e32a5a3b8ad35579e2dd2e`, verification `184414fd1ae985ad9eae7bc2b60580acfa8fea1452bc1fd003e33cd0542be7d6`. 다음은상위480bc의4aa88/b4a2a/4701e/e8a48/2efa6연결이다. 알려진입력경로를넘어전체unknowncallback/자연scheduler/직접플레이가완료됐다는뜻은아니다. 전체goal은active다.
+
+## 2026-10-08 — Cue 제어·할당 wrapper
+
+- e89fa/e8a1c/e8ad0/e8af4 및2986을 C++ API/CLI로 복원했다. 원본의 unsigned gate/12byte stride, 좌표WORD wrap, 할당 실패 후에도 실행되는 원래A6 속성복사를 보존한다. 기본cue/stream22payload bytes는 MS5Dv1kind1로 추출하고 실제 C++ loader로 소비한다.
+- 원본555조건의64KiB RAM·14register와 일치했다.2986 성공69/실패89의후속복사158회, allocator가 먼저 바꾼 source byte12조건,8조건분기의양쪽을확인했다. 오류155조건과3sequence12호출(9prioroutput소비)도검증했다. Sequence별host변경을명시하며자연스테이지실행으로주장하지않는다.
+- 메인이 전체source/CLI/unit/도구를읽고 branch 집계 대조를 추가한뒤555저장RAM/입력승계/register/provenance를 직접재검토했다. 실제CLI대조도다시실행해동일hash를확인했다. 전체make Python182/C++122/경고0. 리뷰0181 및stage-cue-frame.md에근거와한계를기록했다.
+- Native SHA256 `b820dff0be27fbc038c563473840fc6bb3652788c57bf200c7248d0c1a06da52`, verification `3607ca69a390b0d133ece913f9ac5956ed99f221d1aa22e597d0bdd29c7d2e20`. 전체e8a48/480bc/직접플레이는후속이고전체goal은active다.
+
+### 다음 분석 인수인계
+
+- branch `codex/stage-cue-frame`에서cd58전체register/대기재개후속작업을진행중이다. 메인계약은stage-cue-frame.md마지막cd58절에있다. 캡처D4를유지하고cda4에서재개하며callback/clip/D6/D4를재실행하지않는다.
+- 신규sprite_submit_execution header/core/unit은별도미통합작업이다. 구현에이전트단위검증후메인review와독립원본비교가남았다. inventory에이전트가별도CLI/관측/비교도구를작성중이다. 기존cuecontrol통합에이파일들을섞지않는다.
+- e8a48 전체연결에는catalog cue8byte windows, e8a0c의indexedraw조회창,scene43e08연결이추가로필요하다. Inventory5창147명령/0gap, DATA3영역, catalog59record와42nonnullroot prefix를보존했다. cd52지정raw참조0건은다른callback불가능의증명이아니다.

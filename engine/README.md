@@ -315,3 +315,11 @@ build/step_stage_input_loop ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 INPU
 ```
 
 기본mask는 `extracted/runtime/stage_input/default_masks.ms5d`, active조회는 `extracted/runtime/player_record_lookup.ms5d`를 사용한다.64KiB RAM·14register 입출력과지원제한은 `docs/analysis/stage-input-loop.md`를 따른다. 미지원 callback은필요한경로에서오류를반환한다.
+
+### Cue selection/progression and allocation wrapper
+
+`build/step_stage_cue_control ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 CARRY INPUT_RAM OUTPUT_RAM [MS5D_OR_DIRECTORY ...]` executes original entries e89fa/e8a1c/e8ad0/e8af4/2986. Numeric arguments accept decimal or `0x` notation. CARRY is0/1 and is the allocation result only for2986; other entries preserve this separate API value. It is not a full CCR interface. All64KiB RAM and thirteen mutable registers publish only on success; A6 is preserved.
+
+Regenerate default cue/stream resources with `.venv/bin/python tools/pack_stage_cue_control.py`. The two MS5D v1 kind1 files in `extracted/runtime/stage_cue_control` contain8 and14 payload bytes. They are actual runtime resources read through the C++ loader. Progression compares unsigned phase with the next gate at+12, and does not invent a stop forffff. Reads beyond supplied windows are unsupported and fail transactionally. The2986 wrapper copies originalA6+6a even after allocation failure, using its live value after allocation writes.
+
+Reproduce evidence with `.venv/bin/python tools/inventory_stage_cue_frame.py`, `.venv/bin/python tools/observe_stage_cue_control.py`, and `.venv/bin/python tools/verify_stage_cue_control.py`. The555 original-call comparisons include full RAM/14registers and158 allocator-wrapper calls;155 rejection checks protect inputs and existing outputs. See `docs/analysis/stage-cue-frame.md` for source mapping and limitations. Full e8a48, sprite queue wait/resume, and the complete480bc frame remain separate work.
