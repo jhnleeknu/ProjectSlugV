@@ -226,3 +226,13 @@ build/initialize_stage_events D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 INPUT
 ```
 
 15register와64KiB RAM,ordered9byteports를입출력한다. Fixed자료는MS5D파일또는directory로전달한다. Nullstream이나RAMstream만쓰면리소스인자를생략할수있다. Nullstream은watchdog만쓰며비영stream은선택후bankreset포트를추가한다. Callbacke9150은저장만하며아직이CLI에서실행하지않는다. 상세범위와재현검증은 `docs/analysis/stage-event-initialization.md`에기록한다.
+
+## 장면 이동 경로의 경계 계산
+
+`ms5::step_scene_motion_bounds`는198ee 위치/폭조회,19978 제안좌표제한,19d98 경계누적,19d08 두시간의가시경계를지원한다. 기존37개motion MS5D를사용하며198ee는기존19938의bias계산과구분된다.
+
+```text
+build/step_scene_motion_bounds ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_RAM OUTPUT_RAM [MOTION_MS5D]
+```
+
+ENTRY는0x198ee/0x19978/0x19d98/0x19d08이다. 64KiB RAM과12register를입출력하고포트명령은없다. Nonnullcursor에는해당exactmotion자료가필요하다. 이API는전체frame루프를실행하지않으며원본연산·합성자료구분·재현검증은 `docs/analysis/scene-motion-bounds.md`를따른다.

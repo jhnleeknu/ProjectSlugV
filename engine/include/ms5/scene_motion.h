@@ -17,5 +17,11 @@ bool evaluate_scene_motion(std::vector<std::uint8_t>& ram,
 bool resolve_scene_motion_time(std::vector<std::uint8_t>& ram,
     const FixedDataResource* path, SceneCommandState& state, std::string& error);
 
+// Native198ee extent projection,19978 N-only LONG clamp,19d98 signed WORD
+// bounds extension and19d08 two-time camera bounds. Same exact path contract
+// and selection budgets as19938; null cursor ignores path. Failure preserves
+// whole64KiB RAM and twelve public registers. CCR/timing are excluded.
+bool step_scene_motion_bounds(std::vector<std::uint8_t>& ram, std::uint32_t entry,
+    const FixedDataResource* path, SceneCommandState& state, std::string& error);
 }
 #endif

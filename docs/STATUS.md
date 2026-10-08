@@ -1312,3 +1312,11 @@
 - 원본2,443조건/orderedports7,275개에서전체RAM·15register가C++와일치했다. 모든612gate의실제native방문을확인했다. 오류120조건에서입력/기존출력보존,2CLIsequence6호출중4의출력승계를확인했다. Verification SHA256 `27e2a119c5b7774f2f4f7f05d3b522c0ea50f22dd013a29b85198e3abfa89f6c`,native `cae0353feda387d994ded125aa4585d633dc589e8dbc9a87d98c46a5244fdb88`.
 - 전체make Python182/C++113/경고0. 메인이core/CLI/unit/packer/observer/verifier전체와현재95resources·2443저장결과를검토했다. Cachedinventory근거검사를재생성동일검사로보강했고directoryCLI도별도로원본과대조했다. 리뷰0172·stage-event-initialization.md·공통규격/README에재현과한계를기록했다.
 - 다음은47a94후반e8a1c/48398및480bc연결이다. 480bc는1a73c frame경로등다수callee를실행하므로추가분석이필요하다. e9150 callback실행,자연frame·직접플레이·전체goal은미완료이며goal은active다.
+
+## 2026-10-08 — 장면 경로 폭·좌표 제한·가시 경계
+
+- Frame1a73c가필요로하는198ee/19978/19d98/19d08을C++ API/CLI로복원했다. 기존37motion MS5D를사용하고bias전위치계산만기존19938과공유한다. 메인이N-only LONG비교와signed WORD비교,전체EXG,WORD스택복원,마지막ADD만의포화를분석·리뷰했다.
+- 원본3,606조건/오류117조건이통과했다. Canonical880/null206/합성주소정규화2,504/실제CLI승계16호출을구분한다. 네진입모두36type을실제로관찰하고CMPoverflow40조건·포화6조건에는branch/register근거를검사했다. 4승계sequence의12호출은직전CLI출력을소비한다.
+- Verification SHA256 `d867cf922bba3631da01ee66a160ae9098e1d2af7677e521cf2209dd4acdc20f`,native `f32ba07b37962d31b86feb720d25c8c72754feef529eb7d9e82193a24077d528`. 메인이전체core/CLI/unit/observer/verifier와3,606저장RAM/결과·37resources/원본hash를확인했다. 리뷰0173·scene-motion-bounds.md에재생성/합성자료/지원한계를기록했다.
+- 기존19938 12,170/오류69,19802 2,664/오류69 회귀와전체make Python182/C++114/경고0을확인했다. 최종build의세CLI hash도각report와동일하다. Frame10창548행목록과37motion108record+4WORD가모두0인사실을기록했다. 이목록밖미사용자료의값이나도달성을추론하지않는다.
+- 다음은19832/192c4의두좌표경로선택,19a40/19ac8/19b96의좌표진행,1a2b4조건등을연결하여전체1a73c frame을복원하는작업이다. 자연frame·직접플레이화면·전체게임goal은아직미완료이며active다.
