@@ -178,7 +178,7 @@ def extra_negatives(root, exe, fx, vectors, resources):
         reject('resource-output-alias-copy', windows=resources+[duplicate], output_alias='resource')
         raw = field.read_bytes()
         bad = work/'bad.ms5d'
-        data = bytearray(raw);struct.pack_into('<I', data, 8, 3);bad.write_bytes(data)
+        data = bytearray(raw);struct.pack_into('<I', data, 8, 99);bad.write_bytes(data)
         reject('malformed-resource-kind', windows=[bad])
         data = bytearray(raw);data[-1] ^= 1;bad.write_bytes(data)
         reject('resource-CRC', windows=[bad])
@@ -218,7 +218,8 @@ def main():
     native, fixtures, artifacts = native_audit(root, program, source)
     resources, manifest, resource_hashes = resources_audit(root, program);artifacts.update(resource_hashes)
     names = cpp_dependencies(root, {'engine/tools/execute_animation_banked_lookup.cpp',
-        'engine/src/animation_banked_lookup.cpp', 'engine/src/program_bus.cpp', 'engine/src/fixed_data_resource.cpp'})
+        'engine/src/animation_banked_lookup.cpp', 'engine/src/program_bus.cpp',
+        'engine/src/physical_rom_resource.cpp', 'engine/src/fixed_data_resource.cpp'})
     names.add('Makefile')
     for module in tuple(sys.modules.values()):
         filename = getattr(module, '__file__', None)

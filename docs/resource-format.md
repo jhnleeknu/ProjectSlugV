@@ -171,9 +171,19 @@ kind1의 고정 첫1MiB 계약은 유지한다. kind2는 같은32-byte header에
 
 새 `program_bus`는 현재 선택된 bank로 physical offset을 계산한 뒤 kind2 리소스의 physical span을 조회한다. 추출 당시 CPUbase가 현재 CPU 주소와 같을 필요는 없다. WORD마다 유일한 완전한 창을 요구하고, LONG은 두 WORD 창을 각각 사용할 수 있다. 현재 PVC/vector 상태는 별도 명시적인 입력이다. 자세한 계약은 `analysis/animation-program-bus-contract.md`에 있다.
 
-`extracted/runtime/animation_banked_reads/`는 원본 isolated40 관측에서 실제 읽힌 구간을 보존한 v1 리소스37개다. 각 stable ID는kind/CPU주소/physical주소를 포함하고 manifest는 원본 hash, 실제 읽기 PC/조건과 생성 도구를 연결한다. 이 추출기는 실제 overlay 아래2fe000까지만 ROM 구간으로 수집한다. 기존 v1 kind2가 각 physical1MiB 끝16BYTE를 표현하지 못하는 한계는 그대로이며, 전체 ROM을 위한 명시적인 kind/version 확장이 필요하다. 이번 리소스 연결은 기존 v1 검증 범위를 변경하지 않는다.
+`extracted/runtime/animation_banked_reads/`는 원본 isolated40 관측에서 실제 읽힌 구간을 보존한 v1 리소스37개다. 각 stable ID는kind/CPU주소/physical주소를 포함하고 manifest는 원본 hash, 실제 읽기 PC/조건과 생성 도구를 연결한다. 이 추출기는 실제 overlay 아래2fe000까지만 ROM 구간으로 수집한다. 기존 v1 kind2가 각 physical1MiB 끝16BYTE를 표현하지 못하는 한계는 그대로이며, 아래kind3이 전체 physical ROM 표현을 추가한다. 기존 kind1/2 검증 범위는 변경하지 않는다.
 
 Scene opcode04의palette root/lookup/binding은ROM bank200000을사용하므로이경우CPU와ROMoffset이수치상같다. 이를고정ROM으로잘못분류하지않으며manifest에도bank_base=200000을남긴다. 실제bank선택의word2ffff2=1000,word2ffff0=0은scene command의순서있는hardware writes로별도보존한다. Rawbinding은6-byte records와마지막BE16ffff이며구조는기존main startup팔레트등록표와같다. Palette색상자체의전송및후속frame표시는이데이터창규격에포함하지않는다.
+
+### MS5D v1 kind3 — physical 프로그램 ROM 창
+
+동일한32BYTE header에서version1/kind3,CPU필드ffffffff,physical ROM offset,payload size,CRC32,reserved0을 사용한다. CPU필드는 binding 없음의 sentinel이며 실제 CPU주소로 해석하지 않는다. Payload는1..100000BYTE, physical 시작은0..7fffff, 끝exclusive는800000 이하다. 정렬 제한이 없고 파일 길이는정확히32+payloadsize다. Payload는 canonical program bytes 그대로다.
+
+별도 `PhysicalRomResource`와 `load_physical_rom_resource`가 이 의미를 보존한다. 기존 FixedDataResource/kind1·2 loader에 새 kind를 혼입하지 않는다. Loader는header·범위·CRC·정확길이를 검사하고 실패 시 기존 객체를 보존한다. 기존 loader는kind3을, 새 loader는kind1/2를 거절한다.
+
+`pack_physical_program.py`는8MiB 전체를 `extracted/runtime/program_rom/program_rom_%06x.ms5d`의8개1MiB창으로 보존한다. Stable ID는 `physical-program:%08x`이며 숫자는physical시작offset이다. Manifest는 원본 전체hash,CPU binding 없음,각physical범위·CRC·payload/container hash와 exact coverage를 기록한다. 코드·데이터·미사용·미확인 bytes를 모두 보존하며 의미 분석 완료로 취급하지 않는다.
+
+`ProgramBusState.physical_rom`은 해당 창 목록을 빌려 읽는다. Bus가 선택한fixed/banked ROM의physical주소를 조회하며vector/PVC/기타장치 매핑을 덮어쓰지 않는다. Kind3은byte별 유일한coverage를 요구하므로WORD가 인접한비중첩청크를 연결할 수 있다. 이는홀수physical bank base의 청크 경계에도 필요하다. 같은unit에legacy kind1/2와kind3이 겹치면 모호한입력으로 거절하며,legacy WORD의완전한창 요구는 그대로다. 상세계약은 `analysis/physical-program-resource-contract.md`에 기록한다.
 
 
 ### MS5D 장면 경로와 primary tilemap

@@ -1,4 +1,5 @@
 #include "ms5/animation_banked_lookup.h"
+#include "ms5/physical_rom_resource.h"
 
 #include <cstdlib>
 #include <cerrno>
@@ -213,6 +214,7 @@ int main(int argc, char** argv) {
     }
     const std::size_t first_resource = paths.size();
     std::vector<ms5::FixedDataResource> windows;
+    std::vector<ms5::PhysicalRomResource> physical_rom;
     for (int i = 20; i < argc; ++i) {
         const std::string path(argv[i]); std::string resolved; struct stat identity;
         if (!canonical_path(path,resolved)) { std::cerr << "cannot resolve resource path\n"; return 1; }
@@ -244,10 +246,17 @@ int main(int argc, char** argv) {
         bool loaded = false;
         if (kind == 1) loaded = ms5::load_fixed_data_resource(path,window,error);
         else if (kind == 2) loaded = ms5::load_banked_data_resource(path,window,error);
+        else if (kind == 3) {
+            ms5::PhysicalRomResource physical;
+            loaded = ms5::load_physical_rom_resource(path,physical,error);
+            if (loaded) physical_rom.push_back(physical);
+        }
         else { std::cerr << "unsupported MS5D resource kind\n"; return 1; }
         if (!loaded) { std::cerr << error << '\n'; return 1; }
-        windows.push_back(window); paths.push_back(path); canonical.push_back(resolved); identities.push_back(identity);
+        if (kind == 1 || kind == 2) windows.push_back(window);
+        paths.push_back(path); canonical.push_back(resolved); identities.push_back(identity);
     }
+    if (!physical_rom.empty()) bus.physical_rom = &physical_rom;
     if (!ms5::execute_animation_banked_lookup(ram,windows,bus,registers,a6,error) ||
         !save_output(paths,identities,ram,error)) { std::cerr << error << '\n'; return 1; }
     std::cout << "{";

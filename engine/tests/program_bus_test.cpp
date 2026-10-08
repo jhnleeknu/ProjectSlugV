@@ -139,5 +139,64 @@ void lookups() {
     bus.pvc=NULL;lookup_failure(ram,w,bus,regs(),0x100400); // Late secondLONG device failure.
     put(ram,0x6002,2,0);bus.bank_base=0x800000;lookup_failure(ram,w,bus,regs(),0x100400);
 }
+
+ms5::PhysicalRomResource physical(std::uint32_t at,unsigned int size,std::uint32_t value=0) {
+    ms5::PhysicalRomResource w;w.source_rom_offset=at;w.data.resize(size);if(size<=4)put(w.data,0,size,value);return w;
 }
-int main() {bus_regions();resource_units();writes();lookups();std::cout<<"program_bus_test passed\n";}
+void physical_storage() {
+    Bytes ram(65536);Windows legacy;ms5::ProgramBusState bus;assert(bus.physical_rom==NULL);
+    std::vector<ms5::PhysicalRomResource> raw;
+    // Eight maximum-size chunks include every physical byte, even tails not
+    // expressible by legacykind2 windows. Values here are synthetic, not ROM.
+    for(unsigned int bank=0;bank<8;++bank) {
+        raw.push_back(physical(bank*0x100000,0x100000));
+        for(unsigned int i=0;i<16;++i)raw.back().data[0xffff0+i]=static_cast<std::uint8_t>(bank*16+i);
+    }
+    bus.physical_rom=&raw;
+    for(unsigned int bank=1;bank<8;++bank) {
+        bus.bank_base=bank*0x100000+0x2000;
+        for(unsigned int i=0;i<16;++i)assert(read(ram,legacy,bus,0x2fdff0+i,1)==bank*16+i);
+    }
+    // An even busWORD can have odd physical start and straddle chunk boundary.
+    raw[1].data[0xfffff]=0xab;raw[2].data[0]=0xcd;bus.bank_base=0x1fffff;
+    assert(read(ram,legacy,bus,0x200000,2)==0xabcd);
+    bus.bank_base=0x7fffff;reject(ram,legacy,bus,0x200000,2);
+    assert(read(ram,legacy,bus,0x200000,1)==127); // Last physical byte, no ROM wrap.
+    bus.bank_base=0x800000;reject(ram,legacy,bus,0x200000,1);
+    raw.clear();raw.push_back(physical(0x100,1,0x12));raw.push_back(physical(0x101,1,0x34));
+    assert(read(ram,legacy,bus,0x100,2)==0x1234); // Typedkind3 may join individual bytes.
+    raw.push_back(raw[1]);reject(ram,legacy,bus,0x100,2);raw.pop_back();
+    raw[1].source_rom_offset=0x102;reject(ram,legacy,bus,0x100,2);raw[1].source_rom_offset=0x101;
+    raw.push_back(physical(0x101,2,0x3456));reject(ram,legacy,bus,0x100,2);raw.pop_back();
+    raw.push_back(physical(0x800000,1,0xff));raw.push_back(physical(0,0));
+    raw.push_back(physical(0x100,0x100001)); // Invalid metadata ignored despite reached overlap.
+    assert(read(ram,legacy,bus,0x100,2)==0x1234);
+    legacy.push_back(window(0x100,0x100,2,0x1234));reject(ram,legacy,bus,0x100,2); // Equal bytes still ambiguous.
+    legacy[0].data.resize(1);reject(ram,legacy,bus,0x100,2); // No legacy/kind3 stitching.
+    raw[0].source_rom_offset=0x104;reject(ram,legacy,bus,0x100,2); // Partial legacy + physical secondBYTE is not allowed.
+    legacy.clear();raw.clear();raw.push_back(physical(0x100,2,0x5678));
+    legacy.push_back(window(0x100,0x101,2,0xffff)); // Invalid legacy is ignored.
+    assert(read(ram,legacy,bus,0x100,2)==0x5678);
+    // A LONG failure on its second WORD still preserves the public output.
+    reject(ram,legacy,bus,0x100,4);
+    // Device windows win over physical storage, including missing views.
+    raw.clear();raw.push_back(physical(0,128));raw.push_back(physical(0x2fe000,2,0xaaaa));
+    reject(ram,legacy,bus,0,2);reject(ram,legacy,bus,0x2fe000,2);
+    Bytes vectors(128);put(vectors,0,2,0xbbbb);bus.vectors=&vectors;
+    Bytes pvc(8192);put(pvc,0,2,0xcccc);bus.pvc=&pvc;
+    assert(read(ram,legacy,bus,0,2)==0xbbbb&&read(ram,legacy,bus,0x2fe000,2)==0xcccc);
+    // Isolated lookup consumes onlykind3: first physicalWORD starts odd and
+    // crosses an adjacent storage boundary; register publication stays exact.
+    raw.clear();legacy.clear();raw.push_back(physical(0x4a76c,2,0xfffe));
+    raw.push_back(physical(0x1fffff,1,0));raw.push_back(physical(0x200000,3,0x104000));
+    bus.bank_base=0x1ffffb;ram[0x6001]=0;put(ram,0x6002,2,0);put(ram,0x6004,2,0);put(ram,0x4000,4,0x89abcdef);
+    ms5::SceneMapTransferState state=regs(),want=state;want.d[0]=0xfffe;want.d[7]=0x89abcdef;want.a[1]=0x106006;want.a[2]=0x104000;
+    std::string error;assert(ms5::execute_animation_banked_lookup(ram,legacy,bus,state,0x100402,error));
+    assert(same(state,want)&&read(ram,Windows(),bus,0x100400,4)==0x89abcdef);
+    raw[2].data.resize(2);lookup_failure(ram,legacy,bus,regs(),0x100402); // Gap after first physicalWORD.
+    bus.physical_rom=NULL;assert(read(ram,legacy,bus,0x100000,2)==0);
+    assert(read(ram,legacy,bus,0,2)==0xbbbb);reject(ram,legacy,bus,0x100,2);
+}
+
+}
+int main() {bus_regions();resource_units();writes();lookups();physical_storage();std::cout<<"program_bus_test passed\n";}

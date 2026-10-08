@@ -1744,3 +1744,14 @@
 - `make all test` exit0,Python243/C++test실행146/경고0. Core별도normal/UBSan통과. 실제core/CLI/verifier/packer독립리뷰후수용했다. 기존full49fc6실행기코드·ABI를변경하지않았고기존일곱verifier전체를재실행했다고주장하지않는다. 리뷰0216과animation-program-bus-contract.md에계약·한계를기록했다.
 - 남은규격문제: v1kind2가physical1MiB끝16BYTE씩(bank1..7총112BYTE)을표현하지못한다. currentbank202100/CPU2fdef0→physical2ffff0은유효하나리소스표현은막힌다. bytes를삭제·padding하지않고명시적인physical-ROMkind/version확장이필요하다. resource-format.md에서실제PVCoverlay2fe000과기존컨테이너상한2ffff0도구분했다.
 - 다음은전체physicalROM표현규격확장및whole49fc6의callerA7/frame쓰기를공유RAM에연결하는작업이다. 원본stackalias를RAM검사mask로숨기지않는다. isolated40성공을whole40완료로집계하지않으며17명령중14종+14/3c일부,자연실행/전체스테이지/적/보스/미사용전체의미미완료와전체Goal active를유지한다.
+
+## 2026-10-08 — 전체 프로그램 kind3 리소스 통합과 역할 재개
+
+- Baseline48465d6, branch codex/physical-program-resources. 사용자 요청에 따라 진행률을 보고하고 메인은 원본 의미 분석·설계·리뷰·통합 역할을 재개했다. 전체게임복원율은 분모 미확정으로 산정하지 않는다. 애니메이션17명령 중14종(약82%)과14/3c 일부 callback 지원을 유지한다. 기존 Goal은 active이며 전체 범위·완료 기준·진행 이력을 유지한다.
+- MS5D v1 kind3 physical program 형식과 C++ typed loader를 추가했다. 기존 kind1/2 계약은 유지하며 CPU binding은 sentinel ffffffff로 구분한다. 1MiB 파일8개, payload8,388,608BYTE를 원본 그대로 보존한다. 기존 kind2의112BYTE 표현 공백을 해소했다. Manifest SHA798d042a6c6bcf8f5f880608b1fdb5f02b7694d3dada9e0c7832d6b3b1824482.
+- kind3는 BYTE마다 유일한 physical coverage를 요구하여 홀수 bank base에서 WORD가 파일 경계를 넘어도 읽는다. 누락·중복·legacy overlap을 거부하고 vector/PVC는 명시적 장치 view를 요구한다. 원본·추출물은 Git에 넣지 않는다.
+- `make all test` exit0: Python257/C++실행147/경고0. Core·loader normal/UBSan 통과. 독립 패커 재생성·C++전체 payload 대조와 기존 loader16회 거절/보존 확인. C++ public bus 전체8MiB 읽기, 경계241건(홀수 physical WORD/LONG39건), 거절15건, 장치우선3건을 확인했다.
+- 원본95 재실행 후 kind3-only C++73조건의13register/전체RAM 일치, guard19조건과 추가오류11조건 출력보존을 확인했다. 기존 high32 guard3건은 원래 보고서 안에서 미비교로 유지한다. 별도 native adapter는 실제 원본을3조건 각2회 실행하여2완료/1masked-device guard를 확보했다. Raw32 register/hook과24bit bus를 구분하며 readonly cart-vector alias를 명시했다. Native SHA0350a9da19b7b7e13b5ec82bb84dede2092b54d44b2aa6153d083e55df29bac9. 독립 Sol3조건 재실행/404고유hash 통과.
+- 새 verifier는 위 별도3조건을 재실행하여 actualCLI2완료의13register/전체RAM 일치와1guard 출력보존도 확인했다. 최종 report SHAe87f9980061f929187d2d1e6fae3402087fd66c97292f924fd1a8baa9ee4b401. 메인과 독립 Sol이 입력25/산출물783참조의 고유803hash를 확인했다. Legacy37리소스 경로도73/19/3보류+추가22오류를 통과했고 메인이795고유hash를 확인했다. Report SHAc8f53f1f729fbd34f3aa007fbbd18c58b587917bee319c1607cb6f44c3d0ba67.
+- Sol6.1/medium 세 작업자가 core·패커·CLI/원본관측/검증기를 분담하고 교차 리뷰했다. 메인은 실제 source/diff·주소 의미·검증 결과를 검토했다. 이 단위는 독립 작업3개로 충분하여 외부 작업자를 추가하지 않았다. 최종 리뷰0217. Backend 자동24bit mask, 하드웨어 실측, BIOS vector 선택, 일반MMIO/CCR, 자연script/whole40 검증을 주장하지 않는다.
+- 다음은 whole49fc6의 caller A7와 frame 쓰기·실제 pop 읽기를 coherent RAM에 연결하는 작업이다. 메인은 원본49fc6/4a10c/4a22c/4a2da/4a30c/4a408의 stack 순서를 검토했고 Sol에 후속 stack 접근 목록을 배정했다. 단순 metadata 복원이나 stack diff mask로 alias 문제를 숨기지 않는다. 자연실행·직접플레이·전체스테이지/적/보스·전체미사용자료 의미와 전체Goal은 계속 미완료다.
