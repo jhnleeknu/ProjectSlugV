@@ -1,5 +1,7 @@
 # Animation machine caller 정적 inventory
 
+후속 readiness의 공유 stack·실제 carry 분기 연결은 `animation-machine-readiness-execution.md`를 따른다. `93b5b40` 이후47d20→47d3e→4847c→47d42를 연결했다. 아래 수치와 지원 경계는 각 이전 단위의 기록이며 최신 구현 상태와 구분한다.
+
 현재 carry 확장은 `animation-machine-carry-execution.md`를 따른다. `ed42971` 이후 Unknown/Clear/Set 상태와 실제 BCC·BCS caller를 추가했다. 아래 이전 단위의 검증 수치·해시는 당시 기록이며, 최신 회귀 해시는 carry 문서에 별도로 기록한다.
 
 기준 `ff25485` 이후 작업이다. 아래 구현 상태와 입력 pin은 이 baseline을 읽은 시점의 기록이며, 같은 단위에서 추가한 caller/initializer 연결은 `animation-machine-callers-execution.md`를 따른다. `AGENTS.md`/`docs/GOAL.md`를 읽고 canonical BE 프로그램을 `load_verified_program`으로 검증했다. 원본은 `extracted/program/maincpu.decrypted.be.bin`, 8,388,608바이트, SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. 이 문서에서 검토한 호출 명령은 모두 **fixed CPU 주소=ROM 파일 offset<100000**이다. 물리 ROM의 나머지 부분을 CPU 주소와 동일시하지 않는다. ROM·기존 source/artifact·runtime resource를 변경하거나 빌드하지 않았다.

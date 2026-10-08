@@ -187,7 +187,7 @@ def caller_boundary_failures(exe, folder, records, resources):
         assert ports == struct.pack('>BII', 1, 0xdeadbeef, 0x87)
         assert result['bank_base'] == fx['bank_base']
         assert result['external_reads'] == 0x12345678 and result['status'] == 1
-        rows.append(dict(entry=entry, unmodeled_caller_return=expected_return,
+        rows.append(dict(entry=entry, original_caller_return=expected_return,
                          stop=expected_return + 2, error=error,
                          all_API_outputs_preserved=True))
     return rows

@@ -1,5 +1,7 @@
 # 4847c stage readiness 인터페이스
 
+후속 readiness의 공유 stack·실제 carry 분기 연결은 `animation-machine-readiness-execution.md`를 따른다. `93b5b40` 이후47d20→47d3e→4847c→47d42를 연결했다. 아래 수치와 지원 경계는 각 이전 단위의 기록이며 최신 구현 상태와 구분한다.
+
 원본 의미는 [확정 계약](stage-readiness-contract.md)을 따른다. canonical BE SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이며 아래 fixed CPU 주소와 ROM 파일 오프셋은 같다. 이 API는 `4847c`에서 실제 호출하는 `1bdde`/`289e`/`4dee2`/`4e166`을 연결한 전체15레지스터·반환 carry 효과를 제공한다. `47c6c` callback 또는 자연 stage 실행 전체를 뜻하지 않는다.
 
 ```cpp

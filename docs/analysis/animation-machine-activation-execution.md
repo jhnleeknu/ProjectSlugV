@@ -1,5 +1,7 @@
 # 상위 stage 활성화의 공유 stack 실행 검증
 
+후속 readiness의 공유 stack·실제 carry 분기 연결은 `animation-machine-readiness-execution.md`를 따른다. `93b5b40` 이후47d20→47d3e→4847c→47d42를 연결했다. 아래 수치와 지원 경계는 각 이전 단위의 기록이며 최신 구현 상태와 구분한다.
+
 Baseline `6c90612`. [확정 계약](animation-machine-activation-contract.md)에 따라 원본 `16ea4`, `16ed2`와 실제 `47cae` 진입부터 `47d20` 경계까지를 공개 animation-machine API와 대조했다. 입력은 통제된 합성 fixture이며 자연 scheduler에서의 도달을 입증하지 않는다.
 
 Canonical BE 프로그램은 `extracted/program/maincpu.decrypted.be.bin`, 8MiB, SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이다. 이 문서의 fixed CPU 주소는 같은 파일 offset이다. 원본 파일의 내용과 수정 시각은 실행 전후 보존됐다. C++ harness는 원본 파일을 직접 읽지 않고 기존 MS5D v1 kind3 여덟 개를 실제 loader와 program bus로 읽는다.

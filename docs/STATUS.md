@@ -1811,3 +1811,15 @@
 - Native SHA `9244bfafbf4fe921ccbb8d293e5b713fa16f4fdc35b38246d851c7726fac8e61`, C++ verification SHA `de726ac51b78c06d33925d287298c71162984f7f334aa8579893b3bdc283433b`. 계약·재현·범위는 `animation-machine-activation-contract.md`, `animation-machine-activation-execution.md`, 리뷰0222를 따른다.
 - 다음은 앞선47c6c의 HUD/BCD 및 후속47d20/47d3e readiness·frame을 공유stack으로 연결하는 일이다. 자연scheduler/IRQ/timing·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료이며 Goal active다.
 - 최종 기존 회귀도 machine94fixture/131단계·37재개/9오류, caller59/91·32재개/6오류, carry60/160·100재개/10오류 및 zero-step3조건을 통과했다. 메인이 네 보고서 합집합6795개 해시를 확인했다. 갱신된 회귀 SHA는 리뷰0222와 실행 문서에 기록했다.
+
+## 2026-10-08 — Readiness 공유 stack과 실제 상위 분기 연결
+
+- Baseline `93b5b40`, branch `codex/animation-machine-readiness`. 이전 활성화 갈래 커밋을 진척으로 분류하고 목표 파일·현재 Git·원본 명령을 확인했다. 전체 목표와 완료 기준을 유지하며 전체복원율은 아직 산정하지 않는다.
+- 새 C++11 readiness 실행부에4847c/1bdde/289e/4dee2/4e166을 실제 JSR/RTS로 연결했다.47d20 BRA→47d3e JSR→47d42 BCC가 반환 C에 따라47d72/47d46을 선택한다. 기존58곳에 새22곳을 더한80개 block만 C를 보존하고 실제 writer에서 known C를 만든다.4e166은 C를 mask와 혼동하지 않고 Unknown으로 둔다.
+- Actual JSR가 초기 marker270e를 return1bdf4로 덮는 alias에서, 원본이 변경된 marker와 flag61을 읽어 Clear/47d72로 가는 것을 확인했다. Stack 쓰기를 생략하면 다른 반환 C가 되는 조건이다. 전체 RAM·dead stack bytes를 보존해 비교했다.
+- 새 unit589회 API normal/UBSan 통과. `make all test` exit0, Python257/C++154개 실행/경고0. 기존8개 MS5D kind3 실제 loader/bus를 사용하며 ROM·추출물·리소스 규격은 변경하지 않았다.
+- Native68조건 split154/continuous86단계를 각각2회(272 CPU/480단계) 관측했다. 실제 BCC로 Clear40/Set28조건을 확인했고18wait 단계의 C는 미관측이다. C++68조건154단계/실제 이전출력86재개가 전체RAM·16R/PC/C·장치모델·126포트/외부읽기0회와 일치했다. 오류14조건·zero-step3조건 및 별도C++전용 전체47cae 성공 control도 통과했다.
+- Sol6.1/medium3개가 native, core/unit, 비교기·문서화를 분담하고 교차 리뷰했다. 독립native43조건/split104·continuous61단계와 모든18wait 재개,1916참조 해시를 확인했다. 독립core/verifier 리뷰에서도 추가 결함이 없었다. 메인이 실제 source/diff·원본 의미와 native1916/C++2976개 현재 파일 해시를 확인했다. 마지막에는 순차 회귀·문서화만 남아 작업자1개가 담당했다.
+- Native report SHA `a93d54a8b9001073a469795b70e00541ab5c9f09dcee9af9c2aa7b7393157ada`, C++ report SHA `a26fde94977d049b482e83721589adce71f6dfd8c5188a8a413dd072dde477bc`. 계약·재현·제약은 `animation-machine-readiness-contract.md`, `animation-machine-readiness-execution.md`, 리뷰0223에 기록했다.
+- 선행 HUD/BCD와 분기 후47d46/47d72의 stage/frame 연결이 다음 과제다. 자연scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료다. 애니메이션17명령 중14종+14/3c 일부 집계와 Goal active를 유지한다.
+- 최종 기본machine/caller/carry/activation 회귀 모두 통과했다. 낡은 caller 보고서의 미구현 주소 표현을 수정하고 영향받는 네 보고서를 재생성했다. 메인과 독립 리뷰가 최종 해시를 확인했으며, 메인의 다섯 보고서 합집합 감사는9686개 고유 파일 일치다. 최종 SHA와 변경 내역은 리뷰0223에 기록했다.

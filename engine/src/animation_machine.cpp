@@ -24,6 +24,11 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x1dc84:case 0x1dc8a:case 0x210ae:case 0x210b4:
     case 0x47d0a:case 0x47d14:case 0x47d1a:case 0x47f04:
     case 0x47cc0:case 0x47cc6:case 0x47ce6:
+    case 0x47d20:case 0x47d3e:case 0x47d42:
+    case 0x4847e:case 0x48484:case 0x4848a:case 0x48490:case 0x4849c:
+    case 0x484ac:case 0x484b2:case 0x1bdee:case 0x1bdf4:case 0x1bdf8:
+    case 0x1be02:case 0x1be0c:case 0x1be12:case 0x1be32:case 0x1be38:
+    case 0x28ac:case 0x4df0e:case 0x4df18:case 0x4e184:
     case 0x49fea:case 0x4a0e2:case 0x4a124:case 0x4a132:case 0x4a148:
     case 0x3679e:case 0x4a104:case 0x4a108:case 0x4a272:case 0x4a270:
     case 0x4a2ec:case 0x2b3f8:case 0x2b40a:
@@ -134,6 +139,10 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             if ((next.pc>=0x3ac8 && next.pc<0x3c08) || (next.pc>=0x47672 && next.pc<0x476bc) ||
                 (next.pc>=0xca70 && next.pc<0xca76))ok=animation_sound_block(c);
             else if ((next.pc>=0xcd50 && next.pc<0xce02) || next.pc==0x16ea4 || next.pc==0x16ed2)ok=animation_sprite_block(c);
+            else if (next.pc==0x47d20 || next.pc==0x47d3e || next.pc==0x47d42 ||
+                (next.pc>=0x4847c && next.pc<0x484b4) || (next.pc>=0x1bdde && next.pc<0x1be3a) ||
+                (next.pc>=0x289e && next.pc<0x28ae) || (next.pc>=0x4dee2 && next.pc<0x4df1a) ||
+                (next.pc>=0x4e166 && next.pc<0x4e186))ok=animation_readiness_block(c);
             else if ((next.pc>=0x49f8c && next.pc<0x4a46c) || next.pc==0x3679e ||
                 next.pc==0x47cec || next.pc==0x47d0a || next.pc==0x47d10 ||
                 next.pc==0x47d14 || next.pc==0x47d1a || next.pc==0x47f04 ||

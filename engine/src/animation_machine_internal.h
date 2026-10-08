@@ -40,5 +40,6 @@ bool am_error(AnimationMachineContext& c,const char* message);
 bool animation_interpreter_block(AnimationMachineContext& c);
 bool animation_sound_block(AnimationMachineContext& c);
 bool animation_sprite_block(AnimationMachineContext& c);
+bool animation_readiness_block(AnimationMachineContext& c);
 }
 #endif
