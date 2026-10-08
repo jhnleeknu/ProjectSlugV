@@ -245,7 +245,7 @@ ENTRY는0x198ee/0x19978/0x19d98/0x19d08이다. 64KiB RAM과12register를입출�
 build/step_scene_motion_pair ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_RAM OUTPUT_RAM [MOTION_MS5D]
 ```
 
-입출력 RAM은 64 KiB이며 JSON은 12개 레지스터와 boolean `carry`를 포함한다. 리소스는 기존 motion MS5D를 사용한다. `0x19832`의 null cursor만 리소스 없이 실행할 수 있다. 실패하면 API의 RAM·레지스터·carry를 보존한다. 전체 프레임이나 직접 조작하는 게임 실행은 아직 지원하지 않는다. 상세 계약은 `docs/analysis/scene-motion-pair.md`를 따른다.
+입출력 RAM은 64 KiB이며 JSON은 12개 레지스터와 boolean `carry`를 포함한다. 리소스는 기존 motion MS5D를 사용한다. `0x19832`의 null cursor만 리소스 없이 실행할 수 있다. 실패하면 API의 RAM·레지스터·carry를 보존한다. 전체 장면 프레임 연결은 아래 `step_scene_frame`을 사용한다. 직접 조작하는 게임 실행은 아직 지원하지 않는다. 상세 계약은 `docs/analysis/scene-motion-pair.md`를 따른다.
 
 ## 카메라 좌표 진행
 
@@ -255,7 +255,7 @@ build/step_scene_motion_pair ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_RAM
 build/step_scene_camera ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_RAM OUTPUT_RAM [MOTION_MS5D]
 ```
 
-64 KiB RAM과 12레지스터를 입출력한다. 축별 요청 함수는 리소스가 필요 없고, 전체 진행은 비영 motion cursor일 때 해당 리소스가 필요하다. 거절된 이동의 제안 좌표·경로 변경도 원본처럼 남긴다. 상세 연산·원본 비교 범위는 `docs/analysis/scene-camera-progress.md`를 따른다. 전체 프레임·플레이 화면은 후속 작업이다.
+64 KiB RAM과 12레지스터를 입출력한다. 축별 요청 함수는 리소스가 필요 없고, 전체 진행은 비영 motion cursor일 때 해당 리소스가 필요하다. 거절된 이동의 제안 좌표·경로 변경도 원본처럼 남긴다. 상세 연산·원본 비교 범위는 `docs/analysis/scene-camera-progress.md`를 따른다. 전체 장면 프레임 연결은 아래 `step_scene_frame`을 사용한다. 플레이 화면은 후속 작업이다.
 
 ## 장면 진행 조건·설정·흔들림
 
@@ -273,4 +273,15 @@ build/step_scene_frame_control ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_R
 build/execute_scene_placement ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 A6 INPUT_RAM OUTPUT_RAM [RESOURCE_FILE_OR_DIR ...]
 ```
 
-`0x1a442`는 RAM의 현재 cursor에서 조건을 만족하는 record를 최대 하나만 실행하고 다음 record는 읽지 않는다. A6는 부모 오브젝트 주소이며 보존된다. 배치와 motion은 기존 바이너리 리소스를 사용한다. 이 함수들을 전체 `1a73c` 프레임 순서에 연결하는 작업과 직접 플레이 화면은 아직 남아 있다.
+`0x1a442`는 RAM의 현재 cursor에서 조건을 만족하는 record를 최대 하나만 실행하고 다음 record는 읽지 않는다. A6는 부모 오브젝트 주소이며 보존된다. 배치와 motion은 기존 바이너리 리소스를 사용한다. 이 함수들은 아래 전체 `1a73c` 장면 프레임에 연결된다. 직접 플레이 화면은 아직 남아 있다.
+
+
+## 장면 한 프레임 실행
+
+`ms5::step_scene_frame`은 원본 `1a73c`의 조건·script·camera·경계·진행 phase·흔들림·화면 자료 갱신·단일 배치를 순서대로 실행한다. 실행 중 바뀌는 cursor에서 기존 MS5D 리소스를 다시 선택한다.
+
+```text
+build/step_scene_frame D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 INPUT_RAM OUTPUT_RAM OUTPUT_PORTS TABLES [RESOURCE_FILE_OR_DIR ...]
+```
+
+TABLES는 `extracted/runtime/scene_debug.ms5d`이며 의존 리소스 디렉터리는 `scene_scripts`, `scene_maps`, `scene_secondary`, `scene_placements`다. RAM은64KiB, port 출력은 이벤트당9바이트이며 JSON은14register와 writes 수를 반환한다. API 실패 시 RAM·레지스터·기존 ports를 보존한다. 재현 명령과 비교 범위는 `docs/analysis/scene-frame-execution.md`를 따른다. 상위 스테이지 루프·입력·오브젝트 callback 및 직접 플레이 화면 연결은 진행 중이다.

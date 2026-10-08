@@ -1351,3 +1351,11 @@
 - 기존 placement1,625/오류113과 일반 초기화221/오류111/3,176,113 ordered ports 회귀가 통과했다. 전체make Python182/C++117/경고0. 메인이 최종 저장 RAM·결과 행·현재 원본/리소스/oracle/core/CLI hash를 확인하고 리뷰0176을 수용했다. 원격/PR 없이 로컬 branch/commit으로 관리한다.
 - Frame verification SHA256 `fbe67ae4b00712c0579f6cb991dfdfcfbfaca3d46c6fea22ba3192312f61c2b2`, native `8bff6c9466994aff28d0c338acfd5ed7630349cc6e2cb583b0e586aae3eb810f`. Single verification `e09fa63f51a0a804fa299889b0304d53e0df6e95c1c4e6c9213fbe3843fed633`. 재생성 명령·전체 hash·지원 한계는 scene-frame-control.md와 리뷰0176에 기록했다.
 - 다음은 전체1a73c의 조건→script→설정→camera→bounds→phase→shake→update→단일 배치 연결이다. 리소스는 현재 cursor를 각 호출 직전에 다시 조회하고13register/보존A6/ordered ports를 승계해야 한다. 외부47642의 d68e 생성 원본도 분석 계약에 추가했다. 전체frame·stage callback·직접플레이·전체게임 goal은 계속 미완료이며 active다.
+
+## 2026-10-08 — 장면 프레임 전체 연결
+
+- 원본1a73c의 조건→script→설정→camera→bounds→phase→shake→update→단일 placement와 bank 출력 envelope를 C++11 API/CLI로 연결했다. 각 호출 직전 live cursor에서 기존458개 MS5D 리소스를 선택하며 A3/A6와 포트 순서를 보존한다.
+- 원본594프레임에서 전체64KiB RAM·14register·ordered ports621,663건이 일치했다. 오류149조건과 directory 로더 비교도 통과했다. 여섯 연속 sequence360호출 중354회는 직전 실제 CLI 출력을 호스트 재작성 없이 소비한다. Wait16 이후 canonical 명령, 경로 구간 변화, 한 프레임당 한 배치, 실제 빈 풀 대체 슬롯 쓰기를 확인했다.
+- Setup replay와 debug8/16은 명시된 초기 host 입력으로 구분한다. 조건 false/phase 유지/camera 거절도 관찰했다. 실행 중 SR을 읽지 않는 Unicorn 원본 실행이며 CCR·IRQ·scheduler·상위callback 완료를 주장하지 않는다.
+- 메인이 core/CLI/unit/관측·검증·목록 도구를 리뷰하고 전체 저장RAM·ports·register/입력승계·현재 provenance를 직접 확인했다. 초기 coverage 오해와 negative resource 목록 비교를 수정했다. 전체make Python182/C++118/경고0. 리뷰0177과 scene-frame-execution.md에 재현·해시·한계를 기록했다.
+- Native SHA256 `fc060d8c4d74b43d8bdb424f07d99478da6534f86db1426d4d7e3bd93ddac9f2`, verification `bdbeea5e8caa803f045d574a2fd67d726dc7fed23c829a43dfc50ad1dfc56fad`. 다음은480bc 상위 루프의 입력·오브젝트·사운드 연결이다. 입력 callback 원본 계약은 stage-frame-followup.md에 저장했다. 직접 플레이 화면과 전체게임 goal은 계속 미완료이며 active다.
