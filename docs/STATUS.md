@@ -1861,3 +1861,16 @@
 - Native SHA `026585bc88057054d188978774aa8ce436ca7f97aaa6c2ffd459c5ca1a888bf3`, C++ SHA `12fae62c0c40ffd431435c5a550d935692f07192f05badab23ad1475f42be8e8`. 원본 계약·재현·검증 범위는 animation-machine-exit-contract.md/animation-machine-exit-execution.md와 리뷰0226에 기록한다.
 - 다음은caf0/47fca 이후 화면 초기화 및477ee/47da4/480bc 후속 frame 연결이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료이며 전체 Goal은 active다.
 - 최종 기존 일곱 공식 회귀가 모두 통과했다. 메인은 새 exit를 포함한 여덟 보고서의 현재 고유 파일 합집합23250개를 해시 대조했고, 최종 보고서 SHA와 각 검증 수치를 리뷰0226에 저장했다. 원본·추출물을 제외한 소스·도구·문서만 통합한다.
+
+
+## 2026-10-09 — 화면 초기화와 후속 timer의 실제 스택 연결
+
+- Baseline `c776ed8`, branch `codex/animation-machine-screen`. 직전 종료 콜백 커밋을 진척으로 분류하고 등록된 목표 파일·AGENTS.md·현재 Git을 확인했다. 전체 범위·완료 기준·기존 진행을 유지한다.
+- ca9e의 DBRA loop와5개 tail 쓰기, caf0의 BSRca9e+다섯 JSR35a2, 마지막 BYTE clear/live RTS,47fca caller와47fdc timer를 C++11 공유 RAM/A7 실행기에 연결했다. ca9e 정상773개LONG, caf0 정상2072개포트의 순서를 보존한다. 새12개 C 보존 block을 실제 opcode로 확인했고 다른 새 block은Unknown이다.
+- 직접DBRA 시작ffff의65536회 실행, live A4=RAM/stack 쓰기, caf0의 마지막CLR.B가 outer return000ff000을0000f000으로 바꾸는 경우를 실제 원본으로 확인했다.47fd0에서 timer32를 게시한 뒤 같은 호출에서31이 된다.47fe4 BSR477c2와480bc body는 실행 전 경계다. fresh late callback과 자연 다음 frame 도달성은 구분한다.
+- 원본 정상31조건128split/37continuous와guard3조건을 각각2회 실행해136freshCPU/356단계를 확보했다. 실제 C++31조건128단계·직전 실제 출력97회 재개가 full64KiB RAM/16R/PC·장치/bank·92222포트(비디오92167/워치독55)·외부읽기0회와 일치했다.6wait·오류14조건·zero-step24조건을 통과했다. Native C는 미관측이다.
+- 메인 `make -j4 all test` exit0: Python257/C++158개 실행/경고0. 신규 unit 일반·UBSan 각각66 API 호출 통과. 독립 native 감사는21조건102split/27continuous와모든6wait/3guard·1533참조를 재검사했다. 메인과 독립 감사가 최종 C++2565개 현재 참조 해시도 확인했다. 최종guard와 앞선checkpoint가 같은cb5e일 때 정상snapshot을 누락하지 않도록 terminal phase 기준 비교를 사용했다.
+- Sol6.1/medium3명이 core/unit, native, 비교기/문서를 분담하고 교차 검토했다. 메인은 복잡한 원본 의미·계약·실제diff·전체 테스트·참조 해시·통합을 맡았다. 동결 후 여덟 기존 회귀를3/3/2개로 배정했다. 원본·추출 데이터·리소스 형식을 변경하지 않았고 기존MS5D kind3 여덟 개와 실제C++loader를 사용한다.
+- Native SHA `89e5f3867d416ac611565f46b0f4c0590ee1bb53d7be28a65572c0f018614d9a`, C++ SHA `7fbbe6ec7902e064cca0c8e9471fab787981a8e00f668fb3388781e5c9b5d15d`. 상세 계약·재현은 animation-machine-screen-contract.md/animation-machine-screen-execution.md, 최종 리뷰·회귀는0227에 기록한다.
+- 다음은477c2와47fe4 이후,477ee/47da4 및480bc frame을 실제 stack으로 연결하는 작업이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료다. 애니메이션17중14종+14/3c 일부·전체복원율 미산정·전체 Goal active를 유지한다.
+- 최종 기존 여덟 공식 회귀가 모두 통과했다. 메인은 새screen을 포함한 아홉 보고서의 현재 고유 파일 합집합25717개를 직접 해시 대조했고 독립 감사도 일치했다. 각 최종 SHA와 검증 수치는 리뷰0227에 기록했으며 원본·추출물을 제외한 소스·도구·문서만 통합한다.

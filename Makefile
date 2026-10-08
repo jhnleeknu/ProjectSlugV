@@ -36,6 +36,7 @@ test: build/physical_rom_resource_test build/program_bus_test build/animation_ex
 	./build/animation_machine_hud_test
 	./build/animation_machine_transition_test
 	./build/animation_machine_exit_test
+	./build/animation_machine_screen_test
 	./build/program_stack_test
 	./build/physical_rom_resource_test
 	./build/program_bus_test
@@ -1217,7 +1218,7 @@ test: build/program_stack_test
 build/program_stack_test: engine/src/program_stack.cpp engine/src/program_bus.cpp engine/tests/program_stack_test.cpp engine/include/ms5/program_stack.h $(PROGRAM_BUS_HEADERS) | build
 	$(CXX) $(CXXFLAGS) engine/src/program_stack.cpp engine/src/program_bus.cpp engine/tests/program_stack_test.cpp -o $@
 
-ANIMATION_MACHINE_SOURCES = engine/src/animation_machine.cpp engine/src/animation_machine_interpreter.cpp engine/src/animation_machine_sprite.cpp engine/src/animation_machine_sound.cpp engine/src/animation_machine_readiness.cpp engine/src/animation_machine_hud.cpp engine/src/animation_machine_transition.cpp engine/src/animation_machine_exit.cpp engine/src/palette_effect_execution.cpp engine/src/program_bus.cpp engine/src/program_stack.cpp
+ANIMATION_MACHINE_SOURCES = engine/src/animation_machine.cpp engine/src/animation_machine_interpreter.cpp engine/src/animation_machine_sprite.cpp engine/src/animation_machine_sound.cpp engine/src/animation_machine_readiness.cpp engine/src/animation_machine_hud.cpp engine/src/animation_machine_transition.cpp engine/src/animation_machine_exit.cpp engine/src/animation_machine_screen.cpp engine/src/palette_effect_execution.cpp engine/src/program_bus.cpp engine/src/program_stack.cpp
 ANIMATION_MACHINE_HEADERS = engine/include/ms5/palette_effect_execution.h engine/include/ms5/object_restart_execution.h engine/include/ms5/animation_machine.h engine/src/animation_machine_internal.h engine/include/ms5/program_stack.h $(PROGRAM_BUS_HEADERS)
 test: build/animation_machine_test build/animation_machine_device_test
 build/animation_machine_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_test.cpp | build
@@ -1252,3 +1253,7 @@ build/animation_machine_transition_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATIO
 test: build/animation_machine_exit_test
 build/animation_machine_exit_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_exit_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_exit_test.cpp -o $@
+
+test: build/animation_machine_screen_test
+build/animation_machine_screen_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_screen_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_screen_test.cpp -o $@
