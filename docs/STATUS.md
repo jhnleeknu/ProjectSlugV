@@ -1405,8 +1405,15 @@
 - 메인이전체source/도구와838저장RAM/입력승계/외부변경/PC/A7/branch/provenance를직접대조하고실제CLI검증도다시실행했다. 전체make Python182/C++124/경고0. 리뷰0183, stage-cue-frame.md에재현과제한을기록했다.
 - Native SHA256 `c4e44fc73bf700b34396d1f00d339bd37661f0aa0a193f26eb492067d108f63c`, verification `b2ed87ee0acfde987c12333593ca3593e2c1920b21fafd1677137631bf64d033`. 원격없는로컬통합이며전체goal은active다.
 
+
+## 2026-10-08 — 전체 stage buffer frame 4aa88
+
+- Baseline `4c924b5`, branch `codex/stage-buffer-frame`. 16slot debug/두 sprite 제출/첫째·둘째 대기 재개와 정상16WORD shift,flag 게시,버퍼 toggle/208byte clear를 C++11 API/CLI로 연결했다. 실제 bank2/3과 RAMshadow를 구분하고 호출별 순서 있는 ports를 반환한다.
+- 원본659조건/695단계의 RAM·14register·bank/phase/저장 상태와1,340ports가 일치했다. 독립 Musashi debug-off337조건,14pending chain,19조건분기 양쪽,CLI 오류196조건/API 원자성5조건도 통과했다. 신규리소스 없이 기존 fixed/bank2/bank3 MS5D를 실제 소비했다.
+- 메인이 source와 전체도구를 리뷰했다. Pending index의 상위bit 허용 문제를 수정했고 fresh 둘째만 대기 및 앞 슬롯 ports 이후 대기6조건을 보강했다. 695저장RAM을 원본 쓰기 순서대로 독립 재생하고 현재provenance/branch를 대조했으며 실제CLI 검증 재실행도 동일hash다. 전체make Python182/C++125/경고0, 리뷰0184.
+- Native SHA256 `6b77299d0809fd21439effba2e1edf8a27cd32e7f2287ef25da009693320850c`, verification `3a96ceb91f257dbcd2e1cd94694d73c178f2ad85101d3aa938d5357849d4f197`. 전체goal은 active다.
+
 ### 다음 분석 인수인계
 
-- 현재branch `codex/stage-cue-frame-execution`, baseline `5718c53`. 다음은상위480bc의4aa88버퍼갱신과그debug4b784호출이다. 메인이원본을직접읽은계약을 `docs/analysis/stage-buffer-frame.md`에저장했다. 이문서는분석초안이며아직구현·실행검증완료가아니다.
-- 4aa88은16slotdebug후16WORD shift/ringpointer진행/byteflag게시/두버퍼toggle/208byteclear를한다. Debug4b784는두번cd58을호출하므로첫/둘째대기와slotloop저장값을구분해야한다. 첫sprite후좌표크기WORD는live로읽는다. MMIO2ffff2/2ffff0 write가있으므로nativeoracle의port지원과banked/source범위를확정한뒤구현한다.
-- 에이전트들은모두완료상태다. 다음위임은확정된입력·담당파일·검증기준으로시작한다. 남은상위480bc호출은4aa88/b4a2a/4701e/2efa6이며전체scheduler/직접플레이는아직완료되지않았다.
+- 상위480bc의 남은 주요 호출은 b4a2a/4701e/2efa6이다. 다음은 b4a2a의 두 player 조회/좌표영역 게시 및 b481e 후속을 원본에서 해석한다. 49392/1c028/4d9d6의 반환register·조건과 기존 player lookup 재사용 여부를 확인한다.
+- 전체scheduler·자연적인 스테이지 실행·직접 플레이는 아직 완료하지 않았다. 리소스 8byte 검증 probe를 자연 실행 record나 사용 여부 확정으로 취급하지 않는다.
