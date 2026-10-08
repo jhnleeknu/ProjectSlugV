@@ -92,7 +92,11 @@ void errors(){Bytes ram(65536,0);put(ram,SP,4,STOP);ms5::AnimationMachineState s
  s=state(0x35a2);s.d[0]=0x74ff;s.d[2]=1;s.d[3]=2;reject(ram,s,STOP,"TRAP15");
  s=state(0x35e0);s.a[4]=0x1ffffe;reject(ram,s,STOP,"unsupported animation machine write device"); // First RAM WORD succeeds; next is outside RAM.
  s=state(0x35e0);s.a[4]=0x104001;reject(ram,s,STOP,"alignment");
- s=state(0x35a2);s.d[0]=0;s.d[2]=65535;s.d[3]=0;reject(ram,s,STOP,"budget");
+ // This valid 65535-column, zero-height fill now fits the raised finite budget.
+ s=state(0x35a2);s.d[0]=0;s.d[2]=65535;s.d[3]=0;{const Bytes old=ram;Out o;
+  assert(run(ram,s,STOP,o)&&ram==old&&s.pc==STOP&&s.a[7]==SP+4&&(s.d[0]&65535U)==0xffe0&&(s.d[2]&65535U)==0);
+  assert(o.ports.size()==3&&o.ports[0].address==0x300001&&o.ports[0].value==0&&o.ports[1].address==0x3c0004&&o.ports[1].value==0&&o.ports[2].address==0x3c0000&&o.ports[2].value==0x82000000U);
+ }
  s=state(0x4e216);s.a[5]=0x2075bb;put(ram,0x1fffff,1,0);reject(ram,s,STOP,"program bus ROM");
  s=state(0x47d8a);s.a[5]=0x1fa978;reject(ram,s,STOP,"unsupported animation machine write device"); // First WORD at1ffffe succeeds; second at200000 fails.
  s=state(0x47d92);s.a[7]=0x100002;reject(ram,s,STOP,"RAM");

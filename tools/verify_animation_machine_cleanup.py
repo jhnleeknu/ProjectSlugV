@@ -292,7 +292,7 @@ def negatives(exe, records, resources, program):
            'unsupported animation machine PC', memory=((base['initial_a7'], 4, 0xdeac),))
     reject('sound_callback_publication_overwrites_live_return', {'pc': 0x3dce, 'a5': 0x108000, 'a7': 0x100006},
            'unsupported animation machine PC')
-    reject('map_transfer_JSR_body_unsupported', {'pc': 0x48042}, 'unsupported animation machine PC')
+    reject('post_map_sequence_unsupported', {'pc': 0x4804e}, 'unsupported animation machine PC')
     whole = next(fx for _, fx, _ in records if fx['entry_pc'] == 0x47fe4)
     # Legacy synthetic cleanup lists are not initialized binding bucket lists.
     # Preserve the fixture and check the actual later write guard.

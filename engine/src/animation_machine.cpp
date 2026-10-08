@@ -69,6 +69,13 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xe7bf4:case 0xe7bfa:case 0xe7bfe:case 0xe7c10:case 0xe7c36:case 0xe7c3a:case 0xe7c3e:
     case 0x47ff2:case 0x48012:case 0x4801a:case 0x4801e:case 0x48024:case 0x4802a:
     case 0x48030:case 0x48034:case 0x4803c:case 0x16fac:case 0x16fec:case 0x17010:
+    case 0x16f5a:case 0x16f5e:case 0x16f6e:case 0x16f98:
+    case 0x18424:case 0x18440:case 0x18448:case 0x1844c:case 0x184ce:
+    case 0x18530:case 0x18552:case 0x185a2:case 0x185e8:case 0x185f2:case 0x185f8:
+    case 0x18650:case 0x18654:case 0x18702:case 0x18720:case 0x1873e:case 0x18742:
+    case 0x18746:case 0x1874a:case 0x1874e:case 0x18758:case 0x18760:case 0x18764:
+    case 0x18768:case 0x18772:case 0x18778:case 0x1877c:case 0x18780:case 0x18784:
+    case 0x18788:case 0x18796:case 0x1879a:case 0x48042:case 0x48048:case 0x17018:
     case 0x49fea:case 0x4a0e2:case 0x4a124:case 0x4a132:case 0x4a148:
     case 0x3679e:case 0x4a104:case 0x4a108:case 0x4a272:case 0x4a270:
     case 0x4a2ec:case 0x2b3f8:case 0x2b40a:
@@ -171,7 +178,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
         std::vector<VideoPortWrite> next_ports;
         AnimationMachineContext c(next_ram,windows,resources,next,next_device,next_ports,external_status,error);
         AnimationMachineStatus result=AnimationMachineReturned;bool stopped=false;
-        for (unsigned int steps=0;steps<100000;++steps) {
+        // A legitimate 65536-column WORD loop exceeds the former 100000-block cap.
+        // Keep a finite limit; malformed record walks and huge transfers still fail atomically.
+        for (unsigned int steps=0;steps<1000000;++steps) {
             if (next.pc==stop_pc) {stopped=true;break;}
             if (next.pc&1U)return am_error(c,"unaligned animation machine PC");
             if (!carry_preserving_pc(next.pc))next.carry=AnimationCarryUnknown;
@@ -212,6 +221,10 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xe7bf4 && next.pc<=0xe7c10) || (next.pc>=0xe7c36 && next.pc<=0xe7c3e) ||
                 (next.pc>=0x47ff2 && next.pc<0x48042) || (next.pc>=0x16fac && next.pc<=0x16fec) ||
                 (next.pc>=0x16ff8 && next.pc<=0x17010))ok=animation_palette_bind_block(c);
+            else if ((next.pc>=0x16f0e && next.pc<=0x16f98) || (next.pc>=0x183c6 && next.pc<=0x184ce) ||
+                (next.pc>=0x18530 && next.pc<=0x185f8) || (next.pc>=0x1861a && next.pc<=0x18654) ||
+                (next.pc>=0x18702 && next.pc<=0x1879a) || next.pc==0x48042 || next.pc==0x48048 ||
+                next.pc==0x17012 || next.pc==0x17018)ok=animation_map_transfer_block(c);
             else if ((next.pc>=0x49f8c && next.pc<0x4a46c) || next.pc==0x3679e ||
                 next.pc==0x47cec || next.pc==0x47d0a || next.pc==0x47d10 ||
                 next.pc==0x47d14 || next.pc==0x47d1a || next.pc==0x47f04 ||

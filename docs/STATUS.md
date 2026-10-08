@@ -1914,3 +1914,18 @@
 - Sol6.1/medium3명이 구현·원본 관측·비교기/문서를 담당하고 교차 검토했다. 새 비교 통과 후 기존11개 회귀를4/3/4개로 분담했다. 메인은 복잡한 원본 의미·계약·실제diff·전체빌드·근거·통합을 담당한다. 상세 의미·재현·한계는 animation-machine-palette-bind-contract.md/animation-machine-palette-bind-execution.md와 리뷰0230에 기록한다.
 - Native report SHA `0ce478765207df8625a9a8065fb0f75ce68604b6df7a822bd8ac0d0ec5648afb`, C++ report SHA `fda00cf15928f1b1f34598aabe6b1f036ef3a46b4f4b5950066a9b39489cf5d0`. 다음은1861a/18702/16f0e/183c6의 실제 맵 전송·스택 및477ee/47da4/480bc frame 연결이다. 자연 scheduler·입력·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료이며 전체 Goal은 active다.
 - 최종 기존11개 공식 회귀가 모두 통과했다. 메인은 새 palette binding을 포함한12개 보고서의 현재 고유 파일 합집합35106개 SHA를 직접 확인했고 각 담당자의 감사도 일치했다. 최종 보고서 SHA·검증 근거는 리뷰0230에 기록했다. 소스·도구·규격·분석 문서만 통합한다.
+
+
+## 2026-10-09 — 맵 타일 전송·반복 경계의 실제 스택 통합
+
+- Baseline `6212b39`, branch `codex/animation-machine-map-transfer`. 직전 팔레트 연결 커밋을 진척으로 승계하고 등록된 전체 목표 파일과 현재 Git을 확인했다. 전체 범위·완료 기준·기존 진행을 유지한다. 사용자는 이 단계만 마친 뒤 일시중지를 요청했으므로48042→4804e의 구현·검증·커밋 이후 Goal을 일시중지하고 후속 타이머/frame 기능은 시작하지 않는다.
+- 16f0e 열 제어,183c6 clipping/primary·secondary 전송,18702 반복 경계,1861a refresh 및48042/48048/17012를 실제 RAM/A7 실행기에 연결했다. 기존13R API의 host register 배열 대신 실제MOVEM.W와 live sign-extended pop을 사용한다. 기존 여덟 MS5D kind3와 C++ loader/bus를 그대로 사용한다.
+- 원본47fe8→48042가 실제 준비한 slot348에서20×16 맵을 전송하며320cell/640videoLONG/6PVC 쓰기를 확인했다.47fe8부터 이어 실행한 connected 조건도 통과했다. 현재bank의 CPU주소와 physicalROM offset을 구분하고 bank3 root200004→200008→2a4e10(physical3a4e10)의 실제 읽기를 확인했다. 출력은 instruction port이며 완성 화면·자연scheduler·직접플레이 증거와 구분한다.
+- Native 정상50조건131split/50continuous 및guard5조건을 두 번씩 실행해220freshcaseCPU/382case단계를 확보했다. 원본 준비 실행은 별도로 명시했다. C++50조건131단계·직전 실제 출력81회 재개가 full64KiB RAM/16R/PC/A7·장치/bank·11666포트(video9212/watchdog2292/PVC162)와 일치했다. 실제bank2787/fixed280읽기, 오류18조건·zero-step33조건과source-only C 검사6조건을 확인했다. 대기·외부status읽기·native C 측정은0이다.
+- 실제 shadow write가 저장D5를1로 바꾸는 MOVEM alias, node BSET이 외부 저장D0를8000으로 바꿔ffff8000으로 pop되는 경우, secondary 첫copy가 다음 상대offset을1236으로 바꾸는 live reread와 훼손된 BSR return218742 fault를 검증했다. 원본 fault의 부분효과와 API rollback은 별개다. 새39개 C 보존 block은 원본 opcode 분류이지 일반CCR 측정이 아니다.
+- 정상65536회 DBRA가 옛100000 block 한도를 넘으므로 유한 한도를1000000으로 늘렸다. 전체skip loop는 원본 continuous327689 PC 진입으로 끝났고 C++와 일치했다. 임의 중간회차 stop이나 무제한 내부loop로 우회하지 않는다. 거대한 반복의 budget 실패/전체 rollback도 확인했다.
+- 첫 전체빌드는 기존transition unit의65535열·높이0 정상반복에 대한 옛budget 실패 기대값에서 실패했다. 메인이 fullreturn·D0/D2 WORD·RAM불변·세포트 순서/값을 확인하는 성공 검사로 수정한 뒤 `make -j4 all test`를 재실행해 exit0,Python257개/C++162개,경고0을 확인했다. 신규 unit 일반/UBSan 각각103 API 호출도 통과했다.
+- Sol6.1/medium3명이 core/unit, 원본 관측, 비교기/문서를 담당하고 교차 검토했다. 독립 native27조건73split/27continuous와 모든5guard·1549현재 참조, 별도core39C보존block/298원본명령, 비교기2715현재 참조 감사를 통과했다. 메인은 실제diff·원본 의미·실행 한도·별도초기조건·전체빌드·최종근거·통합을 담당했다. 새 비교 통과 후 기존12개 회귀를4개씩 배정했다.
+- Native report SHA `3cbf2b1b6b49c675f116c8298f09d36feb817ae76173fcab4d03a71b1428abf8`, C++ report SHA `78f2dfb30e4a8710a4044f6be7985f8220632213190af5eff4a28f8beb854844`. 의미·재현·한계는 animation-machine-map-transfer-contract.md/animation-machine-map-transfer-execution.md와 리뷰0231에 기록한다. 후속4804e timer/frame,별도184d2/185fa/18656,자연scheduler·입력·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료다. 부분 애니메이션14/17(약82%)+14/3c 일부와 전체복원율 미산정을 유지한다.
+- 인수인계: 재개 지점은4804e 이후의 palette/timer 연쇄와 frame 연결이다. 이 단계 뒤의 구현은 시작하지 않았다. 일시중지는 사용자 요청이며 전체 Goal 완료 선언이 아니다. 소스·리뷰·재현 명령과 이번 검증 결과를 로컬 커밋으로 보존한 뒤 중지한다.
+- 최종 기존12개 공식 회귀가 모두 통과했다. 메인은 새 map을 포함한13개 보고서의 현재 고유 파일 합집합37744개 SHA를 직접 확인했다. 최종 해시·검증·수정 근거는 리뷰0231에 기록했다. 이 단계의 통합을 마치고 사용자 요청대로 Goal 일시중지로 전환한다.

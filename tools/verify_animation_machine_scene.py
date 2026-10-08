@@ -302,7 +302,7 @@ def negatives(exe, records, resources, program):
            'program bus write requires RAM mirror units')
     reject('odd_descriptor_after_flag_write', {'pc': 0x44012, 'a0': 0x104001,
            'a5': 0x108000}, 'program bus requires even WORD/LONG address')
-    reject('map_transfer_JSR_body_unsupported', {'pc': 0x48042}, 'unsupported animation machine PC')
+    reject('post_map_sequence_unsupported', {'pc': 0x4804e}, 'unsupported animation machine PC')
     whole = next(fx for _, fx, _ in records if fx['entry_pc'] == 0x47fe8)
     # Legacy scene fixtures have no valid palette-list initialization.
     # Continuation now reaches checked palette writes; this is not a map-boundary proof.
