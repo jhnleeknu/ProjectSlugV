@@ -356,3 +356,7 @@ Pass full returned RAM/registers to continue frames. Errors preserve API RAM/reg
 `build/step_stage_spatial_frame ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 BANK INPUT_RAM OUTPUT_RAM [MS5D_OR_DIRECTORY ...]` supports4701e and46f52. It updates timed nodes and spatial/category bitmaps using live RAM counters, signed WORD arithmetic and native DBRA behavior. BANK2/3 selects resource mapping; A6 is preserved by the CLI and unused by the API. Supply fixed/matching-bank MS5D when a node points outside RAM. Each source read needs four WORDs and one category BYTE.
 
 The API preserves all RAM/registers on failure. It does not clamp bitmap addresses to an invented logical array or force the outer loop to eight iterations. Actual checked memory accesses govern supported execution. `tools/inventory_stage_spatial_frame.py` and `tools/verify_stage_spatial_frame.py` reproduce429 original comparisons, including a synthetic265-iteration live-counter case. See `docs/analysis/stage-spatial-frame.md` for exact semantics and limitations.
+
+## 전체 사운드 byte 제출
+
+`build/execute_sound_byte D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 WAITING INPUT_RAM OUTPUT_RAM`은 원본 0x3ac8 및 0x3aea 대기 재개를 실행한다. RAM은 65536바이트이며 출력 JSON의 레지스터/waiting과 출력 RAM을 다음 재개에 사용한다. 캡처한 A0/D1을 유지하며 live head만 다시 비교한다. 실제 소리 재생은 별도다. 계약과 원본 564단계 비교는 [분석 문서](../docs/analysis/sound-byte-execution.md)를 참조한다.

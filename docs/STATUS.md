@@ -1444,3 +1444,11 @@
 
 - 상위480bc의남은직접호출은2efa6 사운드전환이다. 기존3af8 API는D0/D1만반환하므로A0/A1전체상태와3c44의세byte제출및대기재개를복원해야한다. 원본3ac8/3af8/3c44/2efa6은메인이이미읽었다. 아직이후속단위구현은시작하지않았다.
 - 사용량한도로실패한에이전트를살아있는작업으로취급하지않는다. 재개가능여부는다음위임시확인한다. 자동reset쿠폰사용은하지않았다. 자연scheduler/직접플레이/전체게임완료는미완료다.
+
+## 2026-10-08 — 전체 sound byte 제출과 대기 재개
+
+- Baseline `b28848a`, branch `codex/sound-byte-execution`. 3ac8/3aea의 전체 레지스터 계약을 C++11 API/CLI로 구현했다. signed tail 주소와 D1 상위 WORD를 보존하며, 대기 재개 시 캡처된 A0/D1을 사용한다. 실제 RAM 밖 쓰기는 상태를 보존하며 거부한다.
+- 원본 Musashi와 실제 CLI 564단계의 전체 RAM/14레지스터/waiting이 일치했다. 신규 진입 548회, 같은 CPU를 유지한 9체인의 실제 재개 16회다. 두 조건 분기 양쪽, 명령 byte 전체, signed tail과 head/tail alias, CLI 오류 4조건과 API 오류 원자성을 확인했다.
+- 현재 소스·CLI 해시가 검증 기록 provenance와 일치함을 재확인했다. 전체 make test 기록은 Python182/C++128/경고0이다. verification SHA256 `90428c4bf9aacb97adb28b37b7d95aaf019427e1086bd3bca96e991aab041408`.
+- Opus 5.5/high의 독립 리뷰를 완료했다. 메인이 head 상위 byte 비교 누락 검증을 10단계 추가하고 헤더 의존성을 수정한 뒤 전체 테스트와 원본 비교를 다시 통과했다. 리뷰0187에서 수용했다. 작업자 모델/effort와 전체 최대5개 규칙은 갱신된 AGENTS.md/docs/GOAL.md 및 등록 Goal에 반영되어 있다.
+- `docs/analysis/sound-byte-execution.md`에 완료 범위와 사용법, `docs/analysis/stage-sound-frame-contract.md`에 메인이 원본 재확인한3af8/3c44/2efa6 후속 계약을 기록했다. 후자는 정적 계약 초안이며 구현·동적 검증 완료가 아니다. 전체480bc/자연scheduler/직접플레이는 미완료다.
