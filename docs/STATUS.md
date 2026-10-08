@@ -1375,3 +1375,10 @@
 - 원본2,943조건에서 전체64KiB RAM·14register가 일치하고 오류160조건이 통과했다. 실제18entry 집합과38조건분기의 양쪽을 확인했다. 네 sequence32호출 중28회는 호스트 재작성 없이 이전 실제 CLI 출력을 소비한다.16 unused-mask 생략과 directory loader도 확인했다.
 - 메인이 원본계약·core/header/CLI/unit·관측/검증/목록도구를 리뷰하고2,943개 저장RAM/fixture/register/branch와현재 provenance를 직접 대조했다. 전체make Python182/C++120/경고0. 원격 없는 로컬 검증·리뷰0179·stage-input-callbacks.md에 재현/한계를 기록했다.
 - Native SHA256 `2bb75aa89ee636ee8a6afee4df7662def786b02f7a8ee9e3d1b850ff8a41cd0c`, verification `ef931982b559b333ef52a6bd9b9020c78c782568ff874cd9a01a3ef21c97c398`. 다음은49b0c두player loop/47642활동mask와1da60/4d7a6연결이다. 기존플레이어조회resource를 재사용하고A0/A4계약을 보완한다. 직접플레이 및 전체게임goal은 계속 active다.
+
+## 2026-10-08 — 두 플레이어 입력 루프·활동 mask
+
+- 49b0c 두 플레이어 입력,47642활동mask,4d7a6전체주소register반환,1da60교차callback을 C++ API/CLI로 연결했다. 기존19knowncallback과4092-byte lookup/defaultmask MS5D를 사용한다. 첫 player가 바꾼 두 번째 slot을 같은호출에서live로읽으며 unknowncallback은실제로필요할때만오류다.
+- 원본3,229조건에서64KiB RAM·14register가일치했다. 두player각255lookup index와3BYTE선택profile,두JSR(A1)각19target을실제로확인했다.48오류조건/3resource생략조건과세sequence12호출중9회이전출력승계도통과했다.17조건분기중TRAP하나를제외한16개는양쪽목적지를관찰했다.
+- 메인이 전체source/unit/CLI/목록·관측·검증도구를리뷰했다. Fixture WORD주소+1e를원본의+20으로수정하고모든원본/CLI비교를다시실행했다. 최종3229저장RAM·입력승계·branch·dynamic19target집합·현재provenance를직접대조했다. 전체make Python182/C++121/경고0. 리뷰0180과stage-input-loop.md에재현/한계를기록했다.
+- Native SHA256 `0b1b93471c22c27a0cd7623c62cfe9976f62478416e32a5a3b8ad35579e2dd2e`, verification `184414fd1ae985ad9eae7bc2b60580acfa8fea1452bc1fd003e33cd0542be7d6`. 다음은상위480bc의4aa88/b4a2a/4701e/e8a48/2efa6연결이다. 알려진입력경로를넘어전체unknowncallback/자연scheduler/직접플레이가완료됐다는뜻은아니다. 전체goal은active다.

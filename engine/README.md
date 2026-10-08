@@ -305,3 +305,13 @@ build/step_stage_input_callback ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 
 ```
 
 전체RAM·14register를 전달하며 API 오류는 이전 상태를 보존한다. 상위두player입력loop는 후속연결단위다.
+
+## 두 플레이어 입력 루프
+
+`ms5::step_stage_input_loop`은49b0c두player입력,47642활동mask,4d7a6플레이어조회,1da60callback을 실행한다. 현재지원19callback을 실제호출하며 첫player가변경한둘째slot을live로읽는다.
+
+```text
+build/step_stage_input_loop ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 INPUT_RAM OUTPUT_RAM [FIXED_MS5D_OR_DIRECTORY ...]
+```
+
+기본mask는 `extracted/runtime/stage_input/default_masks.ms5d`, active조회는 `extracted/runtime/player_record_lookup.ms5d`를 사용한다.64KiB RAM·14register 입출력과지원제한은 `docs/analysis/stage-input-loop.md`를 따른다. 미지원 callback은필요한경로에서오류를반환한다.
