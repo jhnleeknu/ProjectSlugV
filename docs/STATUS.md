@@ -1491,3 +1491,11 @@
 - 원본Musashi883조건과실제CLI의전체RAM/15register/JSON이일치했다. signedclamp의MOVEQ highword효과,WORDshift/wrap,모든duration256값,allzero324조건의steps/D3high보존,nonzero559조건의DIVS몫·나머지,임의A5→108000을확인했다. 도달가능8분기양쪽,오류104조건(FIFO2종포함)을통과했다.
 - make all test Python182/C++134/경고0,별도UBSan단위검증통과. reportSHA `4db8fcbafa31fd053b35afb3d2a8beef86183d018a9234f7aab4e74397aaadac`,메인리뷰0192,실행문서palette-effect-execution.md. 새리소스가필요없는RAM/register동작이다.
 - 다음ca9e/caf0 전체레지스터연결에서기존API가반환하지않는D2/D6/D7/A4를반영해야한다. 메인이screen-reset-full-contract.md를작성했고Sol에원본관찰을위임했다. 47af0의특수dispatch28은c364→BIOS c00468 호출이있으며이를임의stub으로완료처리하지않는다. 현재workspace에서확인된zip은mslug5.zip뿐이다. 다른독립분석은계속가능하며전체Goal은active다.
+
+
+## 2026-10-08 — ca9e/caf0 화면 초기화 전체 레지스터
+
+- Baseline b24c41f, branch codex/screen-reset-full. Sol6.1/medium 작업자 세 명이 core/unit, CLI/문서, 원본 비교를 분담했고 메인이 실제 diff와 검증 결과를 수용했다. 기존 API와 port 생성 코드를 공유하며 전체15레지스터 상태를 반환한다. caf0의 실제 A5−769a BYTE 목적지와 ca9e 임의A5를 보존한다.
+- 수정 없는 원본32조건의 전체RAM/15register/45,520 orderedports가 실제CLI와 일치했다. 오류134조건 및 FIFO/대소문자 파일별칭 보존도 통과했다. 전체make all test Python182/C++135/경고0. 현재소스/CLI9개, native입력5개, native산출물129개의 해시를 다시 확인했다.
+- Verification SHA256 `eb27509b0fa14a529a230df257fa9aab600b535afead2fb8577c23606bf7a9bf`, native `26f2944f354460b3a9b48768e930003a323aa2491c36ae981b9ce0fcefc6b349`. 메인리뷰0193, 실행문서 screen-reset-full-execution.md. 원격 없는 로컬 통합이다.
+- 다음 stage block draw 477a2/ddf9a/362a/35f0의 원본관찰40조건/2,840ports를 확보했고 별도Sol이 메모리 내 재실행으로 감사했다. 해당 C++구현·실제런타임리소스 연결은 아직 미완료다. 원본관찰과 C++동등성을 구분한다. 자연scheduler/IRQ·직접플레이·전체Goal은 active다.
