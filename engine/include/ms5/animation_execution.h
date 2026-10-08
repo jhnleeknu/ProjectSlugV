@@ -21,7 +21,8 @@ struct AnimationExecutionState {
         callback_sound_phase(0), callback_saved_low(0), callback_waiting(false) {}
 };
 // Full49fc6 register/PVC/pending execution for opcodes00/04/08/28, plus0c
-// indexed10 and14 selectors1d/1e with reached MS5D data windows. Other ten opcodes,
+// indexed10, field18/1c/20/24/34/38/2c and14 selectors1d/1e with reached
+// MS5D data windows. Remaining30/3c/40 opcodes,
 // other callbacks and banked scripts remain
 // checked unsupported paths. Fixed MS5A windows are unique and complete;
 // RAM script fetches use current RAM. Only reached sprite submit/resume

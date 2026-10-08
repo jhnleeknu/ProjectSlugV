@@ -169,6 +169,50 @@ bool script_address(std::uint32_t base,int displacement,std::uint32_t& address,s
     if(sum<0 || sum>0xffffffffLL) {error="indexed animation script address overflows";return false;}
     address=static_cast<std::uint32_t>(sum);return true;
 }
+bool field_command(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& scripts,
+    const std::vector<FixedDataResource>& windows,AnimationExecutionState& s,
+    unsigned int opcode,std::string& error) {
+    SceneMapTransferState& r=s.sprite.registers;std::uint32_t value=0,address=0;
+    if(opcode==0x34 || opcode==0x38) {
+        if(!script_address(r.a[1],1,r.a[1],error))return false;
+        if(opcode==0x34)r.d[0]=0;
+        if(!next(ram,scripts,r,2,value,error))return false;
+        if(!write_ram(ram,s.a6,opcode==0x34?0x70:0x20,2,value,error))return false;
+    } else if(opcode==0x18) {
+        if(!next(ram,scripts,r,1,value,error))return false;byte(r.d[0],value);
+        if(!next(ram,scripts,r,2,value,error))return false;word(r.d[1],value);word(r.d[1],r.d[1]*2U);
+        r.a[2]=0x4a76c;
+        if(!read_data(ram,windows,static_cast<std::int64_t>(r.a[2])+signed_word(r.d[1]),2,value,error))return false;
+        word(r.d[1],value);
+        if(!write_ram(ram,s.a6,signed_word(r.d[1]),1,r.d[0],error))return false;
+    } else {
+        r.d[0]=0;if(!next(ram,scripts,r,1,value,error))return false;r.d[0]=value;word(r.d[0],r.d[0]*2U);
+        r.a[2]=0x4a76c;
+        if(!read_data(ram,windows,static_cast<std::int64_t>(r.a[2])+signed_word(r.d[0]),2,value,error))return false;
+        word(r.d[0],value);
+        if(opcode==0x1c || opcode==0x20) {
+            const unsigned int size=opcode==0x1c?2:4;
+            if(!next(ram,scripts,r,size,value,error))return false;
+            if(size==2)word(r.d[1],value);else r.d[1]=value;
+            if(!write_ram(ram,s.a6,signed_word(r.d[0]),size,r.d[1],error))return false;
+        } else if(opcode==0x24) {
+            if(!read_ram(ram,s.a6,signed_word(r.d[0]),1,value,error))return false;
+            if(!write_ram(ram,s.a6,signed_word(r.d[0]),1,value-1U,error))return false;
+        } else {
+            if(!next(ram,scripts,r,2,value,error))return false;word(r.d[2],value);
+            if(!read_ram(ram,s.a6,signed_word(r.d[0]),1,value,error))return false;
+            byte(r.d[0],value);word(r.d[0],r.d[0]*2U);
+            if((r.d[0]&65535U)<(r.d[2]&65535U)) {
+                if(!script_address(r.a[1],signed_word(r.d[0]),address,error))return false;
+                if(!read_script(ram,scripts,address,2,value,error))return false;
+                if(!script_address(r.a[1],signed_word(value),r.a[1],error))return false;
+            }
+            if(!script_address(r.a[1],signed_word(r.d[2]),r.a[1],error))return false;
+        }
+    }
+    // Original4a276 follows every field command, including relative2c.
+    r.d[6]=r.a[1];return write_ram(ram,r.a[0],0,4,r.d[6],error);
+}
 bool indexed_draw(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& scripts,
     const std::vector<FixedDataResource>& windows,AnimationExecutionState& s,
     std::vector<VideoPortWrite>& ports,std::string& error) {
@@ -277,6 +321,9 @@ bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& sc
         if(value==8) {
             ++r.a[1];if(!read_script(ram,scripts,r.a[1],4,value,error))return false;r.d[7]=value;r.a[1]=value;
             r.d[6]=r.a[1];if(!write_ram(ram,r.a[0],0,4,r.d[6],error))return false;continue;
+        }
+        if(value==0x18 || value==0x1c || value==0x20 || value==0x24 || value==0x34 || value==0x38 || value==0x2c) {
+            if(!field_command(ram,scripts,windows,s,value,error))return false;continue;
         }
         if(value==0x28) {
             if(!read_ram(ram,r.a[0],4,2,value,error))return false;

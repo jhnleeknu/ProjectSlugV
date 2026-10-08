@@ -131,7 +131,7 @@ def negatives(root,folder,exe,resources,native):
         reject('missing-script',rr=[])
         for opcode in (0x0c,0x10,0x14,0x18,0x40,0x44,0xff):
             data=bytearray(ram);data[0x2026:0x202a]=(0x106000).to_bytes(4,'big');data[0x6000]=opcode
-            reject(('opcode-without-data-' if opcode in (0x0c,0x10,0x14) else 'unsupported-opcode-')+hex(opcode),payload=bytes(data),rr=[])
+            reject(('opcode-without-data-' if opcode in (0x0c,0x10,0x14,0x18) else 'unsupported-opcode-')+hex(opcode),payload=bytes(data),rr=[])
         # A jump loop must fail the command budget transactionally.
         data=bytearray(ram);data[0x2026:0x202a]=(0x106000).to_bytes(4,'big');data[0x6000:0x6006]=bytes.fromhex('080000106000')
         reject('live-jump-command-budget',payload=bytes(data),rr=[])

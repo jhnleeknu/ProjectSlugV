@@ -536,5 +536,110 @@ void indexed_errors() {
     assert(state.phase==3&&state.saved_list_end==0&&!carry&&ports.empty());
 }
 
+std::vector<ms5::FixedDataResource> field_data(unsigned int selector,unsigned int offset) {
+    std::vector<ms5::FixedDataResource> windows=control_data();
+    const unsigned int at=static_cast<unsigned int>(0x4a76c+signed_word((selector*2)&65535));
+    put(windows[0].data,at-0x4276c,2,offset);return windows;
 }
-int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();sound_callbacks();sound_waits();sound_metadata();indexed_selection();indexed_draws();indexed_waits();indexed_errors();std::cout<<"animation_execution_test passed\n";return 0;}
+void field_expected_ram(std::vector<std::uint8_t>& ram,unsigned int cursor) {
+    put(ram,0x10,2,0);ram[0xd742]=0;ram[0x2017]=1;put(ram,0x2026,4,cursor);ram[0x202a]=0;
+}
+void field_writes() {
+    const unsigned int selectors[]={0,1,0x90,0x4000,0x7fff,0x8000,0xffff};
+    for(unsigned int i=0;i<7;++i) {
+        std::vector<std::uint8_t> bytes(5);bytes[0]=0x18;bytes[1]=0x80;put(bytes,2,2,selectors[i]);bytes[4]=0x28;
+        std::vector<std::uint8_t> ram=fixture(),expected=ram;expected[0x1ffe]=0x80;field_expected_ram(expected,0x50004);
+        ms5::AnimationExecutionState state=initial(),want=state;
+        want.sprite.registers.d[0]=0xabcd1280U;want.sprite.registers.d[1]=0xabcdfffeU;want.sprite.registers.d[6]=0x50004;want.sprite.registers.d[7]=0xffffffffU;
+        want.sprite.registers.a[0]=0x102026;want.sprite.registers.a[1]=0x50005;want.sprite.registers.a[2]=0x4a76c;
+        bool carry=false;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,script(bytes),field_data(selectors[i],0xfffe),state,carry,ports,error));
+        assert(carry&&same(state,want)&&ram==expected);ports_are(ports,2);
+    }
+    const unsigned int opcodes[]={0x1c,0x20,0x24,0x34,0x38};
+    for(unsigned int i=0;i<5;++i)for(unsigned int alias=0;alias<(i<2?2U:1U);++alias) {
+        const unsigned int opcode=opcodes[i],size=opcode==0x20?4:2;
+        const unsigned int offset=opcode==0x34?0x70:opcode==0x38?0x20:alias?0x26:0x78;
+        std::vector<std::uint8_t> bytes(opcode==0x24?3:2+size+1);bytes[0]=opcode;bytes[1]=i>=3?0xfe:1;
+        if(opcode!=0x24)put(bytes,2,size,opcode==0x20?0x81234567:0x8123);bytes.back()=0x28;
+        const unsigned int cursor=0x50000+bytes.size()-1;
+        std::vector<std::uint8_t> ram=fixture(),expected=ram;ram[0x2078]=expected[0x2078]=0;
+        if(opcode==0x24)expected[0x2078]=255;else put(expected,0x2000+offset,size,opcode==0x20?0x81234567:0x8123);
+        field_expected_ram(expected,cursor);ms5::AnimationExecutionState state=initial(),want=state;
+        if(opcode!=0x38)want.sprite.registers.d[0]=opcode==0x34?0:offset;
+        if(opcode==0x1c)want.sprite.registers.d[1]=0xabcd8123U;
+        if(opcode==0x20)want.sprite.registers.d[1]=0x81234567;
+        want.sprite.registers.d[6]=cursor;want.sprite.registers.d[7]=0xffffffffU;
+        want.sprite.registers.a[0]=0x102026;want.sprite.registers.a[1]=cursor+1;if(i<3)want.sprite.registers.a[2]=0x4a76c;
+        bool carry=false;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,script(bytes),field_data(1,offset),state,carry,ports,error));
+        assert(carry&&same(state,want)&&ram==expected);ports_are(ports,2);
+    }
+    // Padding bytes34/38 are never fetched, so their MS5A span can be absent.
+    for(unsigned int opcode=0x34;opcode<=0x38;opcode+=4) {
+        std::vector<ms5::AnimationResource> scripts=script(std::vector<std::uint8_t>(1,opcode));
+        std::vector<std::uint8_t> tail(3);put(tail,0,2,0x1234);tail[2]=0x28;
+        scripts.push_back(script(tail,0x50002)[0]);
+        std::vector<std::uint8_t> ram=fixture();ms5::AnimationExecutionState state=initial();bool carry=false;
+        std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,scripts,state,carry,ports,error));
+        assert(carry&&get(ram,opcode==0x34?0x2070:0x2020)==0x1234);
+    }
+    // A LONG field write modifies the next live RAM opcode; fetch sees28.
+    std::vector<std::uint8_t> ram=fixture(0x105000);put(ram,0x5000,1,0x20);ram[0x5001]=1;put(ram,0x5002,4,0x28000000);
+    ram[0x5006]=0x7f;ms5::AnimationExecutionState state=initial();bool carry=false;
+    std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),field_data(1,0x3006),state,carry,ports,error));
+    assert(carry&&ram[0x5006]==0x28&&get(ram,0x2026,4)==0x105006&&state.sprite.registers.d[6]==0x105006);
+}
+void relative_fields() {
+    // length1 still reads a full selectedWORD. Zero selected displacement
+    // lands on its low00 byte, which is also the following duration0 opcode.
+    std::vector<std::uint8_t> bytes(7);bytes[0]=0x2c;bytes[1]=1;put(bytes,2,2,1);
+    std::vector<std::uint8_t> ram=fixture();ram[0x207d]=0;ms5::AnimationExecutionState state=initial();bool carry=true;
+    std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,script(bytes),field_data(1,0x7d),state,carry,ports,error));
+    assert(!carry&&get(ram,0x2026,4)==0x50005&&state.sprite.registers.a[1]==0x50007);
+    assert(state.sprite.registers.d[0]==0&&state.sprite.registers.d[2]==0xabcd0001U);
+    // Skipped selection performs no selectedWORD fetch, preserving register
+    // highWORDs and requiring only the final cursor's opcode.
+    const unsigned int fields[]={0x7d,0x017d,0x8004};
+    for(unsigned int i=0;i<3;++i) {
+        ram=control_ram();state=initial();state.a6=0x108000;ram[0x8000+signed_word(fields[i])]=255;
+        bytes.assign(5,0);bytes[0]=0x2c;bytes[1]=1;bytes[4]=0x28;
+        assert(ms5::step_animation_execution(ram,script(bytes),field_data(1,fields[i]),state,carry,ports,error));
+        assert(carry&&state.sprite.registers.d[0]==((((fields[i]&0xff00)|255)<<1)&65535));
+        assert(state.sprite.registers.d[2]==0xabcd0000U&&state.sprite.registers.d[6]==0x50004&&get(ram,0x8026,4)==0x50004);
+    }
+    // Two sequential signed additions: selected-6 then length8 =>base+2.
+    // Put terminal28 inside the list, distinct from base+length.
+    ram=fixture();ram[0x207d]=0;bytes.assign(12,0);bytes[0]=0x2c;bytes[1]=1;put(bytes,2,2,8);put(bytes,4,2,0xfffa);bytes[6]=0x28;
+    state=initial();assert(ms5::step_animation_execution(ram,script(bytes),field_data(1,0x7d),state,carry,ports,error));
+    assert(carry&&get(ram,0x2026,4)==0x50006&&state.sprite.registers.a[1]==0x50007&&state.sprite.registers.d[0]==0);
+    // Both selection and final length use signed addresses after an unsigned
+    // comparison. offset8000 < length8001 reads a backwardWORD.
+    ram=fixture(0x108000);put(ram,0x8000,1,0x2c);ram[0x8001]=1;put(ram,0x8002,2,0x8001);
+    ram[0x607d]=0;put(ram,4,2,2);ram[7]=0x28;state=initial();
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),field_data(1,0x407d),state,carry,ports,error));
+    assert(carry&&get(ram,0x2026,4)==0x100007&&state.sprite.registers.d[0]==0x8000&&state.sprite.registers.d[2]==0xabcd8001U);
+}
+void field_errors() {
+    std::vector<std::uint8_t> bytes(7);bytes[0]=0x20;bytes[1]=1;put(bytes,2,4,0x12345678);bytes[6]=0x28;
+    std::vector<std::uint8_t> ram=fixture();ms5::AnimationExecutionState state=initial();
+    state.a6=0x108000;
+    data_failure(control_ram(),script(bytes),field_data(1,0x7ffe),state); // Aligned LONG at10fffe crosses RAM end after full operand fetch.
+    state=initial();
+    data_failure(ram,script(bytes),field_data(1,0x7d),state); // Odd LONG target.
+    std::vector<ms5::AnimationResource> short_script=script(bytes);short_script[0].data.resize(5);
+    data_failure(ram,short_script,field_data(1,0x78),state);
+    bytes.resize(6);data_failure(ram,script(bytes),field_data(1,0x78),state); // Field write and pointer store precede missing next fetch.
+    bytes.assign(4,0);bytes[0]=0x2c;bytes[1]=1;put(bytes,2,2,1);ram[0x207d]=0;
+    data_failure(ram,script(bytes),field_data(1,0x7d),state); // Actually reached selectedWORD absent.
+    bytes.assign(5,0);bytes[0]=0x2c;bytes[1]=1;bytes[4]=0x28;
+    data_failure(ram,script(bytes),field_data(1,0x8004),state); // length0 must still reach below-RAM field.
+    std::vector<ms5::FixedDataResource> duplicate=field_data(1,0x78);duplicate.push_back(duplicate[0]);
+    bytes.assign(3,0);bytes[0]=0x24;bytes[1]=1;bytes[2]=0x28;data_failure(ram,script(bytes),duplicate,state);
+}
+
+}
+int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();sound_callbacks();sound_waits();sound_metadata();indexed_selection();indexed_draws();indexed_waits();indexed_errors();field_writes();relative_fields();field_errors();std::cout<<"animation_execution_test passed\n";return 0;}

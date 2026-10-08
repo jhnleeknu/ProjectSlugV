@@ -1664,3 +1664,14 @@
 - 새report SHA `3f45b555bf6e5c391f1adfd97adf27e2b747e2307718883d42046086629a4e15`;입력34/산출물7174항목,고유7206참조hash를메인과독립Sol이확인했다. 기존회귀90/98+15추가164오류,control178+2혼합48오류,sound22/30 73오류통과. 해당현재SHA는각각 `77a5ecbd0092e4dcb33d27976b1668d190ef76b15967f428773f978dfb1f9fc0`, `4d03a72e673cc3ca6967d40d4c96527745bac0769915db78a05048c53c1907f5`, `645a5de6b056cd8571488f78968a9fbb4cd429a11f5dbd5628bfa1835937cdfe`다.
 - `make all test` exit0:Python225/C++145/경고0. 확장unit의normal/UBSan도통과했다. 리뷰0210과animation-indexed-execution.md에재현·제약을기록한다.
 - 애니메이션17명령중00/04/08/0c/10/28의6종과14의1d/1e/1f경로를연결했다. 이는전체게임완료율이아니다. 다음은남은필드쓰기·감소·설정명령들의원본효과와상위흐름연결이다. 다른opcode/callback·상위활성화·자연scheduler/IRQ·직접플레이·전체스테이지·전체Goal은계속미완료다.
+
+## 2026-10-08 — animation 필드 변경 7명령과 실제 script 리소스
+
+- Baseline `b5ded33`, branch `codex/animation-field-execution`. 이전 턴은indexed10의실제구현·검증진전이었다. 메인이7명령의partialregister/메모리순서/상대분기계약을확정했고Sol6.1/medium 세작업자가core/unit,원본·CLI비교,리소스·문서를분담했다. 구현·리소스작업자의독립리뷰뒤메인이diff와현재해시를확인했다.
+- 18/1c/20/24/34/38/2c를기존fullstate API에연결했다. WORDselector의두배wrap/signedtable주소,WORD/LONG값폭,메모리BYTE감소,D0차이와padding미읽기,2c의retainedhighBYTE/unsigned비교/선택WORD후두signed주소가산을보존했다. 일곱명령모두4a276의D6/상태pointer쓰기를수행한다. state/CLI/resource형식변경은없다.
+- 원본818성공조건/PVC3272개,요청991개중173개는실제정렬·범위또는제어fixture한계로제외했다. 이는173개전체가원본에서불가능하다는뜻이아니다. nativeSHA `8ce1f6051cd06310e7e3e321f8ad9bbb879714ceee4381e8662883b936f3e508`;독립56조건재실행과8입력/3272파일hash감사통과.
+- actualCLI818조건과전체RAM15regs/metadata/carry/PVC가일치했다. 길이1/index0의합법적인선택WORD·terminal겹침도별도원본/C++1조건/PVC4개로확인했다. 오류·파일보존64조건통과. 새검증SHA `d7f3685c55b9401359b84eff53d10e2e26d3ada6222c2d49e5b885ad2dab6592`;입력33/산출물6644항목,고유6676참조hash를메인과독립Sol이확인했다.
+- 실제caller3d2e2가가리키는script[3e808,3e854)의76BYTE/15명령을기존MS5A로패키징했다. pack_animation_fields.py와9합성tests를추가했다. container108BYTE SHA `806f465a3e2bdeb831fc356350ce3fa18c4b03da6e3dce8a0574d9cc6e0e5bc7`;manifestSHA `9921f6f9e111706ded35fea823163d3f42ff54a0dc0a893aff4d594313374db7`. 메인이재build·공개파일byte일치를확인했다.
+- 이실제script12조건에서MS5A/MS5D/C++loader소비와원본RAM15regs/PVC96개가일치했다. object+b0에35/49가쓰이는양쪽분기를포함한다. object/group/queue는제어입력이며자연groupbinding이나게임도달성을뜻하지않는다. 다음3e854script는이범위에서제외한다.
+- 기존회귀4개모두통과했고메인이현재모든해시를검사했다. executionSHA `27ed7bb20a9c5b77a39533156e240d8d24fa4cf403d2f85e7b557a902e06d93e`,control `8993f94d2dc60984522e8ccdce3a782fa35fb28523b4cb66300fea3edc2b02a7`,sound `5dc8bd9f0d4538e1407b34e55dab7991683674526a0d339e9452c2d105f0a561`,indexed `08ed36f540bfc3e81c655ecab0739102c608c718736e724bcda54b3d3f28b0aa`. 개별조건수는field실행문서에기록한다.
+- `make all test` exit0 Python234/C++145/경고0,확장unit normal/UBSan통과. 리뷰0211. 전체17명령중13종과14의일부callback을연결했다. 다음은30직접sound,3c의추가callback규약,40의banked조회와상위흐름이다. 자연scheduler/IRQ·직접플레이·전체스테이지·미사용리소스의전체의미분석·전체Goal은계속미완료다.
