@@ -292,9 +292,9 @@ def negatives(exe, records, resources, program):
            'unsupported animation machine PC', memory=((base['initial_a7'], 4, 0xdeac),))
     reject('sound_callback_publication_overwrites_live_return', {'pc': 0x3dce, 'a5': 0x108000, 'a7': 0x100006},
            'unsupported animation machine PC')
-    reject('post_cleanup_LEA_body_unsupported', {'pc': 0x47fe8}, 'unsupported animation machine PC')
+    reject('post_scene_JSR_body_unsupported', {'pc': 0x47ff2}, 'unsupported animation machine PC')
     whole = next(fx for _, fx, _ in records if fx['entry_pc'] == 0x47fe4)
-    reject('whole_cleanup_before_unsupported_LEA_successor', {}, 'unsupported animation machine PC', fx=whole)
+    reject('whole_cleanup_and_scene_before_unsupported_JSR_successor', {}, 'unsupported animation machine PC', fx=whole)
     return rows
 
 

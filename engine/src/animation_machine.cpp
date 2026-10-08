@@ -54,6 +54,17 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xc3e6:case 0xc3ec:case 0xc3f2:case 0xc3f8:case 0xc3fa:case 0xc400:
     case 0x4aa2e:case 0xe90d6:case 0x46ef2:case 0x46f26:case 0x46f2c:case 0x8bc0:case 0x3de4:
     case 0x477c2:case 0x477c8:case 0x477d6:case 0x477dc:case 0x477e2:case 0x47fe4:
+    // Scene blocks contain only flag-preserving LEA/MOVEA/MOVEM/PEA,
+    // calls, branches or RTS. Plain MOVE stack stores are intentionally absent.
+    case 0x47fe8:case 0x47fec:case 0x43ffc:case 0x44004:case 0x44008:case 0x4402c:case 0x44030:
+    case 0x44078:case 0x4407e:case 0x44086:case 0x4408e:case 0x44094:
+    case 0x43f5c:case 0x43f60:case 0x43f70:case 0x43f94:case 0x43f9a:case 0x43faa:
+    case 0x43fce:case 0x43fd4:case 0x43fda:case 0x43ff8:case 0x43ffa:
+    case 0x440ec:case 0x4410a:case 0x4411c:case 0x43f3e:case 0x43f44:case 0x43f4a:case 0x43f5a:
+    case 0xccd6:case 0xcd0c:case 0xcd16:case 0xcd1a:case 0xcd46:
+    case 0x1adb0:case 0x1adb6:case 0x1adba:case 0x1adc0:case 0x1adc4:case 0x1adca:case 0x1adce:case 0x1add4:
+    case 0x1adee:case 0x1adf2:case 0x43f3c:case 0x16f9e:case 0x16fa2:case 0x16fa6:case 0x16faa:
+    case 0x182ce:case 0x1724a:case 0x1831a:
     case 0x49fea:case 0x4a0e2:case 0x4a124:case 0x4a132:case 0x4a148:
     case 0x3679e:case 0x4a104:case 0x4a108:case 0x4a272:case 0x4a270:
     case 0x4a2ec:case 0x2b3f8:case 0x2b40a:
@@ -189,6 +200,10 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 next.pc==0x8bbc || next.pc==0x8bc0 || next.pc==0x3dce || next.pc==0x3de4 ||
                 (next.pc>=0x477c2 && next.pc<=0x477e2) || next.pc==0x47fe4)ok=animation_cleanup_block(c);
             else if ((next.pc>=0xca9e && next.pc<=0xcb62) || next.pc==0x47fca || next.pc==0x47fd0 || next.pc==0x47fdc)ok=animation_screen_block(c);
+            else if (next.pc==0x47fe8 || next.pc==0x47fec || (next.pc>=0x43efa && next.pc<=0x4411c) ||
+                (next.pc>=0xccd6 && next.pc<=0xcd48) || (next.pc>=0x1ad9a && next.pc<=0x1adf2) ||
+                (next.pc>=0x16f9a && next.pc<=0x16faa) || (next.pc>=0x1829a && next.pc<=0x1831a) ||
+                next.pc==0x1701a || next.pc==0x17028 || next.pc==0x1704a || next.pc==0x1724a)ok=animation_scene_block(c);
             else if ((next.pc>=0x49f8c && next.pc<0x4a46c) || next.pc==0x3679e ||
                 next.pc==0x47cec || next.pc==0x47d0a || next.pc==0x47d10 ||
                 next.pc==0x47d14 || next.pc==0x47d1a || next.pc==0x47f04 ||

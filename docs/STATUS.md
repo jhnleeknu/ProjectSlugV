@@ -1887,3 +1887,17 @@
 - Native report SHA `12b825b02281f215bc554605dffc30c8d1e28d9921ac3a49cc40081df0e7553a`, C++ report SHA `5f547e6405afd24dff36bbf5f2eb1ae7b61e1b605c6c3b02bd55c838c2ac5988`. 상세 의미·재현·한계는 animation-machine-cleanup-contract.md/animation-machine-cleanup-execution.md와 리뷰0228을 따른다.
 - 다음은47fe8→43ffc의 scene 설정 및477ee/47da4/480bc frame 연결이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용 자료 전체 의미는 미완료다. 애니메이션17중14종(약82%)+14/3c 일부는 부분 지표이며 전체 게임 복원율은 분모 미확정으로 미산정이다. 전체 Goal active를 유지한다.
 - 최종 기존 아홉 공식 회귀가 모두 통과했다. 메인은 새 cleanup을 포함한 열 보고서의 현재 고유 파일 합집합28143개 SHA를 직접 확인했고 독립 감사도 일치했다. 각 최종 보고서 SHA와 검증 근거는 리뷰0228에 저장했다. 원본·추출 데이터를 제외한 소스·도구·규격·문서만 통합한다.
+
+
+## 2026-10-09 — 장면 설정의 실제 스택·뱅크 연결
+
+- Baseline `8db0a9e`, branch `codex/animation-machine-scene`. 직전 정리·해제 커밋을 진척으로 승계하고 등록된 목표 파일과 현재 Git을 확인했다. 전체 범위·완료 기준·기존 진행을 유지한다.
+- 47fe8→43ffc의 descriptor 처리, 실제 A0/PEA/suffix pointer/D7 WORD stack, queue/node/slot/pool 초기화와 PVC2→3→2를 C++11 공유 RAM/A7 실행기에 연결했다.48108 descriptor는 기존 physical kind3에 이미 있으므로 기존 여덟 MS5D와 실제 loader/bus를 재사용한다.47ff2 JSR e7c36은 다음 실행 전 경계다.
+- 원본에서 reset이 저장A0를0으로 만드는 live pop, node slot 또는 history clear가 savedD7 WORD를1→0으로 바꾸는 후속분기, WORDpush가 descriptor operand를 바꾸는 사례를 확인했다. 중간 정상 경계와 나중에 손상된 RTS의 fault를 구분한다. 임의44074 Z-only 진입은 거부하고 실제 flag writer와 묶었다.
+- 새 관측기는 CPU가 소유하는 readonly bank backing을 사용한다. 메인은 별도 재현 가능한 합성 backend probe도 실행해 실제 bank3/2 CPU 데이터 읽기를 확인했다. 본 원본 scene matrix의 bank-data read는0회이므로 두 증거를 합산하지 않는다. 원본 ROM/SR/context/예상 register를 수정해 결과를 맞추지 않는다.
+- 원본 정상79조건225split/79continuous와guard8조건을 각각2회 실행해348freshCPU/640단계를 확보했다. C++79조건225단계·직전 실제 출력146재개가 full64KiB RAM/16R/PC·장치/bank·299922포트(PVC196/video244815/watchdog54911)와 일치했다. 대기·외부읽기·native C 측정0, 오류20조건·zero-step30조건을 통과했다.
+- 메인 `make -j4 all test` exit0: Python257개/C++160개 실행/경고0. 신규 unit 일반·UBSan 각각139 API 호출, 별도 실제kind3 loader검사 포함140회 통과. 새53개 C 보존 block은 원본 명령 분류 수이며139회 unit을 전수53×3 native flag검사로 부르지 않는다. 독립 native41조건88split/41continuous와 모든8guard·2581참조 검사를 통과했고 메인/독립감사가 C++4267개 고유 현재 참조도 확인했다.
+- 메인이 초기 watchdog 전달 오류를 찾아 전용BYTE 포트 기록으로 수정했다. inherited fixture가 WORDpop 입력을 RETURN LONG이라고 표시한 metadata도 실제 값/역할로 정정하고 원본 관측을 다시 생성했다. 상세 의미·재현·제약은 animation-machine-scene-contract.md/animation-machine-scene-execution.md와 리뷰0229를 따른다.
+- Sol6.1/medium3명이 core/unit, 원본 관측, 비교기/문서를 담당한 뒤 교차 검토했다. 메인은 복잡한 의미·계약·실제diff·alias설계·전체빌드·근거 확인·통합을 담당한다. 새 비교 통과 후 기존 열 회귀를 세 작업자에게4/3/3개로 배정했다.
+- Native report SHA `46c0271dbfdc15f93e73bed69c08e62511a122c991e8c30c9e5b7979cd3b0ff3`, C++ report SHA `26c596cb95fd59aba2f5d19a43ab65cd6baebbc8cdfe9aab46e88b09b5a19556`. 다음은47ff2의e7c36/8da2와node설정·timer후속,477ee/47da4/480bc frame의 실제 실행 연결이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용 자료 전체 의미는 미완료다. 애니메이션17중14종+14/3c 일부와 전체복원율 미산정, 전체 Goal active를 유지한다.
+- 최종 기존 열 공식 회귀가 모두 통과했다. 메인이 새 scene을 포함한 열한 보고서의 현재 고유 파일 합집합32326개 SHA를 확인했고 각 담당자의 감사도 통과했다. 각 최종 보고서 SHA와 근거는 리뷰0229에 저장했다. 원본·추출물을 제외한 소스·도구·규격·문서만 통합한다.
