@@ -1578,3 +1578,12 @@
 - 전체make exit0, Python196/C++142/경고0. 최종 단위 보강 뒤 메인의 normal/UBSan 재실행도 exit0으로 통과했다. 입력9/native입력7/native산출물1774개 해시를 대조했다. Verification SHA `4600addebfe6aed363c07387ee9d5e13fa9f4c4ef241199931e33806718fa07a`; 리뷰0201과 stage-activation-small-helpers-execution.md.
 - 다음16ea4 sprite wrapper와47672 sound/lookup wrapper의 원본 계약을 기록했다. 16ea4 원본96조건/112단계/8대기 연쇄를 확보했다. C++ wrapper 구현과 원본 비교는 다음 단위이며,49fc6 전체 animation 및 상위 활성화 흐름 연결도 남아 있다.
 - 자연scheduler/IRQ·직접플레이·전체게임 Goal은 미완료다. 기존 범위·완료 기준·진행 기록을 유지한다.
+
+## 2026-10-08 — object sprite wrapper 16ea4 연결
+
+- Baseline `297bc1c`, branch `codex/object-sprite-wrapper`. Sol6.1/medium 세 작업자가 구현·CLI/문서·원본 비교를 맡았고 메인이 원본·실제 코드·검증기를 리뷰했다. 두 좌표WORD 변환, flag의 LSR→SUBX, 전체15레지스터와 기존sprite submit의대기재개를 연결했다. 재개는 object 전처리를 반복하지 않는다.
+- 원본96조건/112단계와 actual CLI의 전체RAM/15regs/status/waiting이 일치했다.8연쇄의16회재개는 직전 C++ 출력만 이어받았다. 별도A6=0/ffffffff public snapshot의4재개단계 및 오류139조건 통과. source.json/단계별C++RAM을 포함한256파일hash를 직접 대조했다.
+- 전체make exit0, Python196/C++143/경고0, core격리normal/UBSan통과. verification SHA `41f926ba31a51a813b5e9c965767e94c1b1e8d2f6a58e758689d9aab5d9b97a5`; 리뷰0202, 실행문서object-sprite-wrapper-execution.md.
+- 다음47672의 원본277조건/291단계/6같은CPU 연쇄,128개rawWORD주소와live source/queuealias 근거를 확보했다. SHA `42f093ee7d31dbd3e70b986dd7d7edd7fc409eeb543892ff5c3c6d4494e99f5d`. C++ 및256byte MS5D리소스 연결은 아직이다.
+- 후속49fc6 분석에서 세MOVEM.W 복귀 위치의D0/D7 부호확장을 원본75개instruction실행으로 확인하고 animation-full-register-boundaries.md에기록했다. 전체animation실행으로 확대해 주장하지 않는다.
+- 상위활성화callback·자연scheduler/IRQ·직접플레이·전체Goal은 계속미완료다. 기존범위와완료기준을유지한다.
