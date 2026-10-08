@@ -1459,3 +1459,11 @@
 - pinnedMusashi 원본과 실제CLI645단계의 전체RAM/14register/pending이 일치했다. 각 명령byte256값, 모든 정상head/tail조합, signed/alias,10동일CPU 체인(한체인은 세 단계 연속대기),4조건분기 양쪽,CLI오류7조건을 확인했다. 원본쓰기순서/고정ROM/A5/A7/저장WORD도 검사했다.
 - 전체make all test exit0: Python182/C++129/경고0. 검증 SHA256 `ba58107375f806997f837dce4d302a761c39f2be427e7b9b74fe39f920a67919`. 상세분석 sound-cancel-execution.md, 메인리뷰0188. 원격없는로컬통합이다.
 - 다음은3af8의 전체레지스터·overflow두byte제출과2efa6의 상태전환 연결이다. 전체480bc/자연scheduler/직접플레이 및전체Goal은 미완료다.
+
+## 2026-10-08 — 전체 sound word 3af8 및 stage sound frame 2efa6
+
+- Baseline88b79c2, branch codex/sound-word-execution. 사용자 병렬 운영 규칙을 b9b3939에 보존했다. Sol6.1/medium 세 작업자가 구현·CLI·검증·문서를 분담했고 메인이 원본계약/실제diff/결과를 검토했다. Opus5.5/high 독립리뷰도 완료했다.
+- 3af8전체레지스터와overflow두byte제출,2efa6의d491게시와선택된helper재개를 연결했다. 원본WORD2560단계/오류98조건/22분기양쪽/8체인/Musashi12교차; stage2441단계/오류112조건/상위3분기양쪽/다섯pending/19체인을 통과했다. fullRAM14register/stack/조건부외부read/원본불변이 일치한다.
+- Opus 지적에 따라 특수highbyte3 성공 이후 lowbyte오류의rollback과재개주소오류 API검증을 추가했다. 최종 make all test Python182/C++131/경고0. 메인리뷰0189, 상세 sound-word-execution.md/stage-sound-frame.md. WORD reportSHA e8d035a20eaf7a24500ded9945be71a97d8ae59c8e5507622cf0d24319eda0bd; stage5d1d8ecfa01264218f0f367221f25d9375717c2594f302da5a327c0fbe60f2df.
+- 다음 전체480bc 연결을 위한 실제원본smoke 입력을 확보했다. 원본9직접호출 순서/정상반환/4PVCwrite/203RAMwrite를 관찰했으며 C++전체frame비교는 아직이다. docs/analysis/stage-frame-integration-contract.md와stage-frame-fixture-plan.md에호출단계/캡처상태/정확한RAM입력/기존MS5D459개bundle계획/공유필드충돌을 기록했다. 완료된callee를재시작하지않고상위연결을진행한다.
+- 실제 자연scheduler·직접플레이·전체게임Goal은 미완료이며계속active다. 새리소스는이번RAM사운드단위에필요하지않다.

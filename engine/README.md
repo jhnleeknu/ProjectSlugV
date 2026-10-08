@@ -364,3 +364,11 @@ The API preserves all RAM/registers on failure. It does not clamp bitmap address
 ## 사운드 취소 명령
 
 `build/execute_sound_cancel D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 WAITING PHASE SAVED_WORD INPUT_RAM OUTPUT_RAM`은 원본3c44의 큐 삭제와 세 byte 제출을 실행한다. 신규 phase0/waiting0, 재개는 출력 phase/saved_word/waiting/레지스터/RAM을 전달한다. [동작 및 검증](../docs/analysis/sound-cancel-execution.md)에645단계 원본 비교와 지원 범위를 기록했다.
+
+## 사운드 WORD 명령 전체 실행
+
+`build/execute_sound_word D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 WAITING PHASE SAVED_LOW EXTERNAL INPUT_RAM OUTPUT_RAM`은 원본3af8의 gate·중복 이동·큐 추가·overflow byte 제출을 실행한다. 신규 phase0/waiting0, 재개는 출력 상태와 RAM을 전달한다. EXTERNAL은 조건부 d00046 읽기 입력이다. [동작 및 검증](../docs/analysis/sound-word-execution.md)에 원본2560단계 비교, Musashi12단계 교차 확인, 오류98조건과 지원 범위를 기록했다.
+
+## Stage sound frame
+
+`build/step_stage_sound_frame D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 WAITING KIND PHASE SAVED EXTERNAL INPUT_RAM OUTPUT_RAM`은 원본2efa6의 d490/d491 전이와1d28 생산/취소를 실행한다. 신규 kind0/phase0/waiting0이며, kind1은 생산자의 두 제출, kind2는 취소의 세 제출 대기를 재개한다. 재개는 frame flag를 다시 읽거나 게시하지 않는다. [상태 계약 및 검증 범위](../docs/analysis/stage-sound-frame.md)를 참조한다.
