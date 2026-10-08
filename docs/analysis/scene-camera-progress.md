@@ -1,10 +1,10 @@
-# 장면 좌표 진행: 원본 계약 초안
+# 장면 좌표 진행
 
 ## 근거와 상태
 
 원본 SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. 아래 코드 CPU 주소는 fixed 첫 1 MiB에 있어 ROM 파일 오프셋과 같다. `d3xx`는 RAM `100000..10ffff` 안의 오프셋이며 A5=`108000`이다. 근거 목록은 `tools/inventory_scene_frame.py`가 생성하는 `artifacts/scene_frame_disassembly.asm`이다.
 
-메인이 원본 명령과 제어 흐름을 해석한 후속 구현 계약이다. 이 문서는 C++ 구현 완료나 원본 실행 일치를 뜻하지 않는다. 경계값은 실제 게임 도달성 주장 없이 검증할 예정이다.
+메인이 원본 명령과 제어 흐름을 해석하고 C++ API·CLI로 연결했다. 기존 motion MS5D를 사용하며 아래 원본 비교를 통과했다. 경계값 검증을 실제 게임의 자연 도달성 주장으로 확대하지 않는다.
 
 ## 축별 요청량: 19a40 / 19ac8
 
@@ -46,6 +46,25 @@ X는 D1.low=WORDd3c4-WORDd3bc이며 0이면 Y로 진행한다. N이 0이면 D0.l
 
 Y는 D1.low=WORDd3c8-WORDd3c0이며 0이면 확정한다. N이 0이면 D0.low=d3d0-0018, 결과 N이 1이면 거절한다. N이 1이면 D0.low=d3d4-00b8 후 N이 0이면 거절한다. **Y의 후진 검사에는 X의 ADD.W D1,D0가 없다.** 이 비대칭과 모든 N-only 분기를 유지한다.
 
-## 남은 검증
+## 검증
 
-전체 RAM, 공개 레지스터, 원본 callee 순서와 분기를 비교해야 한다. 입력 상위 WORD, WORD 합산 오버플로, ADD.L 뒤 BGE의 V, Y 선행 저장, 강제 속도의 unsigned WORD 확장, 제한 방향의 unsigned 비교, 거절 뒤 구간 변경 유지가 핵심 경계다. 19832의 독립 carry 검증을 마친 뒤 이 단위를 구현한다.
+2,773조건에서 pinned Musashi로 실행한 원본 전체 RAM·12레지스터가 C++와 일치했다. 축별 요청 1,152 / canonical 1,080 / 합성 주소 정규화 465 / null 전체 진행 76이다. Canonical은 37리소스의 108record를 모두 사용하고 합성에서는 36type을 실제 원본 실행에서 관찰했다. Native 합성 자료는 RAM106000, C++는 MS5D60000을 사용하며 출력 A1/RAMd3b4만 정규화한다.
+
+ADD.L의 V=1 관찰은 X385/Y382회로 N xor V 분기와 다음 PC를 검사했다. 그중 standalone axis 335조건은 SR을 실행 중 읽지 않는 Unicorn과도 전체 상태가 일치했다. Y 선행 저장·재조회 후 차이0, unsigned 제한의 다섯 분기 각각 양쪽 목적지, 이전 시간으로의 fallback을 확인했다.
+
+강제 속도 경계에서 D6=fffe0000에 ffff<<8을 더하면 D7=00fdff00으로 감싸지만 원본은 여전히 전진 제한으로 간다. 이 원본 분기와 이후 전체 결과를 확인했다. 전체 진행의 확정 1,164회/거절 457회 중 128회는 거절 전에 실제 cursor가 바뀌었다. 거절 뒤 제안 XY·cursor는 유지하고 현재 XY를 보존하며 두 요청량을0으로 만드는 동작을 검사했다.
+
+오류 102조건에서 입력/기존 출력이 보존된다. 8개의 실제 CLI sequence는 24호출이며 16호출이 직전 RAM·register를 소비한다. 다만 매 호출 bounds·center·margin·speed·old velocity·시간 제한·force·fixed delta·flags·camera WORD를 host가 다시 쓴다. 자연 frame이나 속도 연속 갱신을 검증했다고 주장하지 않는다.
+
+Verification SHA256 `6e98c13f63080f3859d99446d618990d615e2e1c2fb756a818be46b74f0b86c2`, native `94e5b900cb10941cccca10dbf08392218beefb4fda498b6ad8ba72eb61736e65`, CLI `8371c0c02165583693691ae20e33ef0b974b4e97ddc033957cb7243f15445944`. 상세 리뷰는0175다.
+
+## 재현과 범위
+
+```sh
+make
+.venv/bin/python tools/inventory_scene_camera.py
+.venv/bin/python tools/observe_scene_camera.py
+.venv/bin/python tools/verify_scene_camera.py
+```
+
+원본·runtime motion 자료와 기존 pinned Musashi build가 필요하다. 새 환경의 oracle 생성은 `tools/build_musashi_oracle.py`를 사용한다. API는 RAM·register transaction이며 원본 code patch, callee 중간 reset이나 결과 보정은 없다. 19b96은 필요한 시점에 기존 motion API의 exact resource 검사와 한도를 사용한다. RAM motion·범위 밖 record는 명시 지원 밖 오류다. CCR·cycle timing과 전체 1a73c frame, 직접 플레이 화면은 이번 완료 범위가 아니다.

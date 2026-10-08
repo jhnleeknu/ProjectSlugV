@@ -1331,3 +1331,13 @@
 - Verification SHA256 `5cb8f44eff5d7552bba9eed5e146bb3c6b984d1180e1622df5ef4f13c3917853`, primary native `e9aaaf121cdddf157aa8d756d29ee2659a18611ee62f5b6fd426ea17d4ae9408`. 메인이 최종 4,232개 결과·저장 RAM·모든 원본/리소스/oracle/CLI/probe hash를 직접 대조했다. 리뷰0174와 scene-motion-pair.md에 재현·제약을 기록했다.
 - 전체 make Python182/C++115/경고0, 기존 19938의 12,170/오류69, 19802의 2,664/오류69, bounds의 3,606/오류117 회귀를 통과했다. 별도 oracle 빌드의 macOS linker alignment 경고 1개는 metadata에 남겼다. C++ 방어적 반복 cap은 현재 공개 입력으로 도달하지 않아 소진 검증을 주장하지 않는다.
 - 다음은 19a40/19ac8/19b96의 좌표 진행이다. 메인이 Y 선행 저장, X/Y 후진 검사 비대칭, unsigned 제한과 N-only/signed 분기를 분석해 scene-camera-progress.md에 계약을 남겼다. 이후 조건·배치 단일 실행과 전체 1a73c를 연결한다. 자연 frame·직접 플레이·전체 goal은 계속 미완료이며 active다.
+
+
+## 2026-10-08 — 카메라 좌표 진행
+
+- 원본19a40/19ac8의 축별 요청과 전체19b96을 새 C++11 API·CLI로 연결했다. 기존19802/19832/19978과37motion MS5D를 사용한다. Y 선행 저장, X/Y 후진 검사 비대칭, N-only와 signed/unsigned 비교, 강제 속도 zero-extension을 보존한다. 메인이 원본·core/CLI/unit을 리뷰하고 마지막 경계 초기화 쓰기 순서를 원본대로 정리했다.
+- 원본2,773조건/오류102조건을 통과했다. 축별1,152/canonical1,080/합성 주소 정규화465/null 전체진행76이다. 모든108 canonical record와36type을 관찰했다. X385/Y382 ADD V1 분기와 unsigned 제한의 다섯 분기 양쪽 목적지를 검증했다. 축별335조건은 실행 중 SR을 읽지 않는 Unicorn과도 전체RAM·12레지스터가 일치했다.
+- 강제 속도를 더한 LONG이 감싸더라도 전진 제한으로 가는 원본 경로를 확인했다. 이동 거절457회 중128회는 이전에 바뀐 cursor와 제안 XY를 유지하면서 현재 XY를 보존했다. CLI8sequence/24호출 중16이 직전 출력을 소비한다. Host가 제어 필드와 old velocity 등을 매번 설정하므로 자연 frame/velocity 연속성 검증으로 표현하지 않는다.
+- Verification SHA256 `6e98c13f63080f3859d99446d618990d615e2e1c2fb756a818be46b74f0b86c2`, native `94e5b900cb10941cccca10dbf08392218beefb4fda498b6ad8ba72eb61736e65`. 메인이 모든 native 저장 RAM·report 행·현재 원본/리소스/oracle/CLI hash와 분기 근거를 대조했다. 전체make Python182/C++116/경고0과 수정 후 대상unit 재검증이 통과했다. 기존 motion core/binary는 그대로다.
+- Camera 두 코드 창193행과 literal 비대칭 명령6개를 보존했다. 후속 조건 데이터는41script/814명령 중9개 opcode2c의 inline98bytes이며 기존 MS5D 안에 있다. Selector4는8개,8은1개이고 정의된 길이와 정확히 맞는다. 메인이 source/container/catalog 참조 대조 도구와현재hash를 확인했다. 미사용 전체 범위나 조건 실행 완료로 확대하지 않는다.
+- 리뷰0175와 scene-camera-progress.md에 구현·재현·한계를 정리했다. 다음1a2b4 조건,1a526 설정,1a3d6 흔들림,1a442 단일 배치와전체1a73c 계약은 scene-frame-control.md에 저장했다. 전체frame·직접플레이·전체goal은 계속미완료이며 active다.

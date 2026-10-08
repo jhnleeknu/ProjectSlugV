@@ -246,3 +246,13 @@ build/step_scene_motion_pair ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_RAM
 ```
 
 입출력 RAM은 64 KiB이며 JSON은 12개 레지스터와 boolean `carry`를 포함한다. 리소스는 기존 motion MS5D를 사용한다. `0x19832`의 null cursor만 리소스 없이 실행할 수 있다. 실패하면 API의 RAM·레지스터·carry를 보존한다. 전체 프레임이나 직접 조작하는 게임 실행은 아직 지원하지 않는다. 상세 계약은 `docs/analysis/scene-motion-pair.md`를 따른다.
+
+## 카메라 좌표 진행
+
+`ms5::step_scene_camera`는 X 요청량(`0x19a40`), Y 요청량(`0x19ac8`), 전체 좌표 진행(`0x19b96`)을 실행한다. 전체 진행은 기존 motion MS5D로 경로 선택·시간 제한·좌표 제한을 수행한 뒤 원본의 조건에 따라 현재 좌표를 확정하거나 유지한다.
+
+```text
+build/step_scene_camera ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A4 INPUT_RAM OUTPUT_RAM [MOTION_MS5D]
+```
+
+64 KiB RAM과 12레지스터를 입출력한다. 축별 요청 함수는 리소스가 필요 없고, 전체 진행은 비영 motion cursor일 때 해당 리소스가 필요하다. 거절된 이동의 제안 좌표·경로 변경도 원본처럼 남긴다. 상세 연산·원본 비교 범위는 `docs/analysis/scene-camera-progress.md`를 따른다. 전체 프레임·플레이 화면은 후속 작업이다.
