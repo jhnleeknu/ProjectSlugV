@@ -1835,3 +1835,16 @@
 - Sol6.1/medium3명이 core/unit, native, 비교기/문서를 담당한 뒤 교차 검토했다. 독립 원본 감사는60조건132split/74continuous와 모든14wait·3guard 및3154참조를 재검사했다. 별도 core/비교기 검토는12개 실제 C 보존 PC와 최종4990참조를 확인했다. fixture checkpoint와 초기 주소 출처의 두 문제는 동결 전에 수정·재생성했다. 마지막 세 독립 회귀는 세 작업자에게 병렬 배정했고, 메인은 실제 source/diff·감사 기록·결과를 읽고 수용했다.
 - 원본 보고서 SHA `41408a8aa9f6f47468632aca987db6f8fb773660ae2e78b4990a0545ff536a72`, C++ 보고서 SHA `ddfa3e768c229bee082c7321579236670fbef75e14a7da4b846226210c269d91`. 재현 명령·각 회귀 해시는 `animation-machine-hud-execution.md`와 리뷰0224, 원본 의미는 `animation-machine-hud-contract.md`에 기록했다.
 - 다음은47d24의4e216/bee 반환 분기,47d46/47d72 및47eac 후속 body와 stage/frame 연결이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료다. 애니메이션17중14종(약82%)+14/3c 일부라는 기존 집계를 유지하며 전체 게임 복원율은 분모 미확정으로 산정하지 않는다. 전체 Goal은 active다.
+
+
+## 2026-10-08 — 상태·요청 분기와 fill의 실제 스택 통합
+
+- Baseline `915a4c3`, branch `codex/animation-machine-transition`. 직전 HUD 커밋을 진척으로 분류하고 등록된 목표 파일과 현재 Git·원본을 확인했다. 전체 범위와 완료 기준, 기존 진행을 유지한다.
+- 4e216/bee의 실제 C writer와 live RTS,47d24의 JSR/BCC/BCS, 준비 상태 이후 signed flag·pending WORD/timer·사운드 대기,477ac/35a2 화면 채우기를 새 C++11 실행부로 연결했다. 기존8개 MS5D kind3와 C++ loader/bus를 사용한다. 폭·높이0 skip, tile BYTE 유지, watchdog BYTE/video WORD·LONG의 순서를 보존하며 일반 장치/시간 모델로 확대하지 않는다.
+- 메인 리뷰에서35bc가 Z를 소비하는 BEQ인데 D6만으로 임의 진입을 처리할 수 없음을 발견했다. 실제 MOVE.W/SUBQ.W와 분기를 함께 처리하고 direct35bc는 오류로 거부하도록 수정했다. Native는 실제 원본35bc를 실행한다. Source/unit을 다시 동결하고 일반/UBSan 각각500회 API를 통과했다.
+- 실제 caller JSR가 status2를0으로 덮어 두 번째5를 읽고 Set을 반환하는 alias, 요청 BYTE가 RTS LONG과 겹쳐 restore 시00047d34/consume 시00040034가 되는 alias를 원본에서 확인했다. 후자는 guard로 분리하고 C++ checked rollback과 native fault를 혼동하지 않는다. 대기 중 low BYTE·pending/timer/previous 값 변경 후 선행 처리 재실행 없이 실제 PC/A7에서 재개한다.
+- 원본 정상107조건 split224/control121과 guard3개를 각각2회 실행했다(440freshCPU/702실행단계). 최종 C++107조건224단계·실제 이전 출력117재개가 full64KiB RAM·16R/PC·장치/bank·721포트(워치독12/비디오685/PVC24)·외부읽기0회와 일치했다.14대기·세 실제 분기의 known C147회,오류15조건·zero-step24조건을 검증했다.
+- 메인 `make all test` exit0: Python257/C++156개 실행/경고0. 기존 여섯 machine 검증기의 회귀도 모두 통과했다. 일곱 보고서 합집합18695개 현재 파일 해시를 메인이 직접 확인했다. 독립 원본 감사는66조건137split/80continuous와 모든14wait/3guard,2591참조를 확인했다. 독립 core/비교기 검토는 실제16개 보존 PC와4199참조를 검사했다.
+- Sol6.1/medium3명이 core/unit, native, 비교기/문서를 나누고 교차 리뷰했다. 메인은 원본 의미·Z 문제·계약·실제diff·전체 테스트·해시·통합을 담당했다. 비교기의 실제 transition 계약 pin 누락은 수정 후 해당 비교만 재실행했다. 동결된 다른 소스에 의존하는 여섯 회귀는 세 작업자에게 두 개씩 분담했다.
+- Native SHA `edf1f5e7248601d2a708cbc7ebfb8a89c62bfdb5dcef018cb94a2c5fa26aaba4`, C++ report SHA `0da18b6f00f26a2a78a4be8ef256b50a361ff9ccf89d74ea5bd30d673f2a4f2b`. 원본 계약·재현·제약은 animation-machine-transition-contract.md/animation-machine-transition-execution.md, 상세 리뷰와 회귀 해시는 리뷰0225에 기록한다.
+- 다음은47eac 및47f4a/477ee/47da4의 후속 body와480bc frame 연결이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료다. 애니메이션17중14종+14/3c 일부와 전체복원율 미산정, 전체 Goal active를 유지한다.

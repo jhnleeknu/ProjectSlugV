@@ -42,5 +42,6 @@ bool animation_sound_block(AnimationMachineContext& c);
 bool animation_sprite_block(AnimationMachineContext& c);
 bool animation_readiness_block(AnimationMachineContext& c);
 bool animation_hud_block(AnimationMachineContext& c);
+bool animation_transition_block(AnimationMachineContext& c);
 }
 #endif
