@@ -277,7 +277,7 @@ def main():
         'tools/pack_animation_control.py','tools/inspect_activation_animation_scripts.py',
         'tools/observe_activation_animation_scripts.py','tools/pack_activation_animation.py',
         'engine/src/animation_execution.cpp','engine/include/ms5/animation_execution.h',
-        'engine/tools/step_animation_execution.cpp','engine/src/sprite_submit_execution.cpp',
+        'engine/tools/step_animation_execution.cpp','engine/src/object_sound_lookup.cpp','engine/include/ms5/object_sound_lookup.h','engine/src/sound_word_execution.cpp','engine/include/ms5/sound_word_execution.h','engine/src/sound_byte_execution.cpp','engine/include/ms5/sound_byte_execution.h','engine/src/sprite_submit_execution.cpp',
         'engine/include/ms5/sprite_submit_execution.h','engine/include/ms5/sprite_producer.h',
         'engine/include/ms5/scene_map_transfer.h','engine/include/ms5/video_port.h',
         'engine/src/animation_resource.cpp','engine/include/ms5/animation_resource.h',

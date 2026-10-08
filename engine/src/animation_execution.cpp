@@ -1,4 +1,5 @@
 #include "ms5/animation_execution.h"
+#include "ms5/object_sound_lookup.h"
 #include <new>
 namespace ms5 {
 namespace {
@@ -9,8 +10,12 @@ bool negative_word(std::uint32_t value) {return (value&0x8000U)!=0;}
 std::uint32_t extend_word(std::uint32_t value) {return (value&0x8000U)?(value|0xffff0000U):(value&65535U);}
 int signed_word(std::uint32_t value) {return (value&0x8000U)?static_cast<int>(value&65535U)-65536:static_cast<int>(value&65535U);}
 bool valid(const AnimationExecutionState& s) {
-    if(s.phase==0)return !s.sprite.waiting && s.saved_a0==0 && s.saved_a1==0 && s.saved_bank==0;
-    return s.phase==1 && s.sprite.waiting;
+    const bool inactive=s.callback_saved_a0==0 && s.callback_sound_phase==0 &&
+        s.callback_saved_low==0 && !s.callback_waiting;
+    if(s.phase==0)return inactive && !s.sprite.waiting && s.saved_a0==0 && s.saved_a1==0 && s.saved_bank==0;
+    if(s.phase==1)return inactive && s.sprite.waiting;
+    return s.phase==2 && !s.sprite.waiting && s.callback_waiting &&
+        (s.callback_sound_phase==1 || s.callback_sound_phase==2);
 }
 bool ram_span(std::uint32_t base,int displacement,unsigned int size,std::size_t& at,std::string& error) {
     const std::int64_t address=static_cast<std::int64_t>(base)+displacement;
@@ -158,8 +163,29 @@ bool field_branch(std::vector<std::uint8_t>& ram,const std::vector<AnimationReso
     if((r.d[0]&255U)==(r.d[1]&255U))r.a[1]=r.d[7];
     r.d[6]=r.a[1];return write_ram(ram,r.a[0],0,4,r.d[6],error);
 }
+bool sound_callback(std::vector<std::uint8_t>& ram,const std::vector<FixedDataResource>& windows,
+    AnimationExecutionState& s,std::uint8_t external_status,std::uint32_t& external_reads,std::string& error) {
+    ObjectSoundLookupState inner;inner.sound.byte.registers=s.sprite.registers;inner.a5=s.a5;inner.a6=s.a6;
+    if(s.phase==2) {
+        inner.phase=1;inner.saved_a0=s.callback_saved_a0;inner.sound.phase=s.callback_sound_phase;
+        inner.sound.saved_low=s.callback_saved_low;inner.sound.byte.waiting=s.callback_waiting;
+    }
+    std::uint8_t reads=0;
+    if(!execute_object_sound_lookup(ram,windows,inner,external_status,reads,error))return false;
+    external_reads+=reads;s.sprite.registers=inner.sound.byte.registers;s.a5=inner.a5;s.a6=inner.a6;
+    s.callback_saved_a0=inner.saved_a0;s.callback_sound_phase=inner.sound.phase;
+    s.callback_saved_low=inner.sound.saved_low;s.callback_waiting=inner.sound.byte.waiting;
+    s.phase=inner.phase==1?2:0;return true;
+}
+bool callback_return(std::vector<std::uint8_t>& ram,AnimationExecutionState& s,
+    std::vector<VideoPortWrite>& ports,std::string& error) {
+    if(!draw_return(ram,s,ports,error))return false;
+    s.sprite.registers.d[6]=s.sprite.registers.a[1];
+    return write_ram(ram,s.sprite.registers.a[0],0,4,s.sprite.registers.d[6],error);
+}
 bool callback(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& scripts,
     const std::vector<FixedDataResource>& windows,AnimationExecutionState& s,
+    bool allow_sound,std::uint8_t external_status,std::uint32_t& external_reads,
     std::vector<VideoPortWrite>& ports,std::string& error) {
     SceneMapTransferState& r=s.sprite.registers;std::uint32_t value=0;
     s.saved_a0=r.a[0];r.d[0]=0;
@@ -170,6 +196,11 @@ bool callback(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource
     s.saved_a1=r.a[1];r.a[1]=r.d[7];
     if(!read_ram(ram,s.a5,-0x7ff0,2,value,error))return false;s.saved_bank=static_cast<std::uint16_t>(value);
     if(!zero_bank(ram,s,ports,error))return false;
+    if(selector==0x1f && r.a[1]==0x47672U) {
+        if(!allow_sound) {error="animation sound callback requires external-input overload";return false;}
+        if(!sound_callback(ram,windows,s,external_status,external_reads,error))return false;
+        return s.phase==2 || callback_return(ram,s,ports,error);
+    }
     if((selector!=0x1d && selector!=0x1e) || r.a[1]!=(selector==0x1d?0x2b3e8U:0x2b3faU)) {
         error="unsupported animation callback selector or table target";return false;
     }
@@ -178,14 +209,19 @@ bool callback(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource
     word(r.d[0],r.d[0]*2U);word(r.d[0],r.d[0]*2U);
     if(!read_data(ram,windows,static_cast<std::int64_t>(r.a[0])+signed_word(r.d[0]),4,value,error))return false;
     if(!write_ram(ram,s.a6,0x78,4,value,error))return false;
-    if(!draw_return(ram,s,ports,error))return false;
-    r.d[6]=r.a[1];return write_ram(ram,r.a[0],0,4,r.d[6],error);
+    return callback_return(ram,s,ports,error);
 }
 bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& scripts,
     const std::vector<FixedDataResource>& windows,
-    AnimationExecutionState& s,bool& carry,std::vector<VideoPortWrite>& ports,std::string& error) {
+    AnimationExecutionState& s,bool allow_sound,std::uint8_t external_status,std::uint32_t& external_reads,
+    bool& carry,std::vector<VideoPortWrite>& ports,std::string& error) {
     SceneMapTransferState& r=s.sprite.registers;std::uint32_t value=0;
-    if(s.phase==1) {
+    if(s.phase==2) {
+        if(!allow_sound) {error="animation sound resume requires external-input overload";return false;}
+        if(!sound_callback(ram,windows,s,external_status,external_reads,error))return false;
+        if(s.phase==2)return true;
+        if(!callback_return(ram,s,ports,error))return false;
+    } else if(s.phase==1) {
         if(s.a5!=0x108000) {error="animation sprite resume requires canonical A5=108000";return false;}
         SpriteSubmitStatus status=SpriteWaiting;if(!execute_sprite_submit(ram,s.sprite,status,error))return false;
         if(s.sprite.waiting)return true;
@@ -204,7 +240,7 @@ bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& sc
         r.d[7]=0;if(!next(ram,scripts,r,1,value,error))return false;r.d[7]=value;
         if(value==4) {if(!draw(ram,scripts,s,ports,error))return false;if(s.sprite.waiting)return true;continue;}
         if(value==0x0c) {if(!field_branch(ram,scripts,windows,s,error))return false;continue;}
-        if(value==0x14) {if(!callback(ram,scripts,windows,s,ports,error))return false;continue;}
+        if(value==0x14) {if(!callback(ram,scripts,windows,s,allow_sound,external_status,external_reads,ports,error))return false;if(s.phase==2)return true;continue;}
         if(value==8) {
             ++r.a[1];if(!read_script(ram,scripts,r.a[1],4,value,error))return false;r.d[7]=value;r.a[1]=value;
             r.d[6]=r.a[1];if(!write_ram(ram,r.a[0],0,4,r.d[6],error))return false;continue;
@@ -250,6 +286,18 @@ bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& sc
     }
     error="animation exceeded10000-command execution cap";return false;
 }
+bool transaction(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& scripts,
+    const std::vector<FixedDataResource>& windows,AnimationExecutionState& state,bool allow_sound,
+    std::uint8_t external_status,std::uint32_t& external_reads,bool& carry,
+    std::vector<VideoPortWrite>& ports,std::string& error) {
+    if(ram.size()!=65536 || !valid(state)) {error="invalid animation RAM or continuation";return false;}
+    try {
+        std::vector<std::uint8_t> candidate=ram;AnimationExecutionState next_state=state;
+        bool result=carry;std::vector<VideoPortWrite> output;std::uint32_t reads=0;
+        if(!run(candidate,scripts,windows,next_state,allow_sound,external_status,reads,result,output,error))return false;
+        ram.swap(candidate);state=next_state;carry=result;ports.swap(output);external_reads=reads;error.clear();return true;
+    } catch(const std::bad_alloc&) {error="cannot allocate animation execution transaction";return false;}
+}
 }
 bool step_animation_execution(std::vector<std::uint8_t>& ram,
     const std::vector<AnimationResource>& scripts,AnimationExecutionState& state,
@@ -259,12 +307,12 @@ bool step_animation_execution(std::vector<std::uint8_t>& ram,
 bool step_animation_execution(std::vector<std::uint8_t>& ram,
     const std::vector<AnimationResource>& scripts,const std::vector<FixedDataResource>& windows,
     AnimationExecutionState& state,bool& carry,std::vector<VideoPortWrite>& ports,std::string& error) {
-    if(ram.size()!=65536 || !valid(state)) {error="invalid animation RAM or continuation";return false;}
-    try {
-        std::vector<std::uint8_t> candidate=ram;AnimationExecutionState next_state=state;
-        bool result=carry;std::vector<VideoPortWrite> output;
-        if(!run(candidate,scripts,windows,next_state,result,output,error))return false;
-        ram.swap(candidate);state=next_state;carry=result;ports.swap(output);error.clear();return true;
-    } catch(const std::bad_alloc&) {error="cannot allocate animation execution transaction";return false;}
+    std::uint32_t reads=0;return transaction(ram,scripts,windows,state,false,0,reads,carry,ports,error);
+}
+bool step_animation_execution(std::vector<std::uint8_t>& ram,
+    const std::vector<AnimationResource>& scripts,const std::vector<FixedDataResource>& windows,
+    AnimationExecutionState& state,std::uint8_t external_status,std::uint32_t& external_reads,
+    bool& carry,std::vector<VideoPortWrite>& ports,std::string& error) {
+    return transaction(ram,scripts,windows,state,true,external_status,external_reads,carry,ports,error);
 }
 }

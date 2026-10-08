@@ -14,10 +14,12 @@ def cases():
         for mode,external in ((0,0),(1,0),(2,0),(3,0),(3,1),(3,255),(4,0),(5,0)):
             rows.append(dict(a5=0x108000,a6=0x102000,source_word=0x5a01,sound=sound,wait=0,mode=mode,external=external,queue_alias=False))
     for wait in (1,2,3):rows.append(dict(a5=0x108000,a6=0x102000,source_word=0x5a01,sound=True,wait=wait,mode=0,external=0,queue_alias=False))
+    for sound in (False,True):rows.append(dict(a5=0x108000,a6=0xffffe,source_word=0x5a01,sound=sound,wait=0,mode=0,external=0,queue_alias=False))
+    rows.append(dict(a5=0x108000,a6=0x102000,source_word=0x5a01,sound=True,wait=0,mode=0,external=0,queue_alias=True))
     return rows
 def fixture(case,index):
     ram,regs=sound_fixture(case,index);ram=bytearray(ram)
-    for address,size,value in ((0x102026,4,0x106000),(0x10202a,2,0),(0x10202c,2,256),(0x102017,1,0),(0x100010,2,0xbeef)):
+    for address,size,value in ((case['a6']+0x26,4,0x106000),(case['a6']+0x2a,2,0),(case['a6']+0x2c,2,256),(case['a6']+0x17,1,0),(0x100010,2,0xbeef)):
         put(ram,address,size,value)
     ram[0x6000:0x6008]=bytes.fromhex('141f123456780000')
     return bytes(ram),regs
@@ -57,7 +59,7 @@ class Observer:
         c=self.cpu;c.context_restore(self.baseline);c.mem_write(BASE,ram);c.mem_write(STACK_START,b'\x5a'*4100);c.mem_write(STACK,RETURN.to_bytes(4,'big'));c.mem_write(EXTERNAL,bytes([external]))
         c.reg_write(m.UC_M68K_REG_SR,0x2000);c.reg_write(m.UC_M68K_REG_A7,STACK)
         for k,r in zip(KEYS,REGS):c.reg_write(r,regs[k])
-        c.reg_write(m.UC_M68K_REG_PC,ENTRY);self.low=STACK
+        c.reg_write(m.UC_M68K_REG_PC,ENTRY);self.low=STACK;self.outer_a0=regs['a6']+0x26
     def mutate(self,changes):
         for x in changes:self.cpu.mem_write(x['address'],x['value'].to_bytes(x['size'],'big'))
     def run(self):
@@ -75,7 +77,7 @@ class Observer:
             pending=dict(sound_phase=phase,saved_low=c.mem_read(sp+4,1)[0] if phase==1 else result['d0']&255,
                 inner_a0=int.from_bytes(c.mem_read(STACK-18,4),'big'),outer_a0=int.from_bytes(c.mem_read(STACK-4,4),'big'),
                 outer_a1=int.from_bytes(c.mem_read(STACK-8,4),'big'),bank=int.from_bytes(c.mem_read(STACK-10,2),'big'),raw=bytes(c.mem_read(sp,STACK+4-sp)).hex())
-            assert (pending['inner_a0'],pending['outer_a0'],pending['outer_a1'],pending['bank'])==(0x10095c,0x102026,0x106006,0)
+            assert (pending['inner_a0'],pending['outer_a0'],pending['outer_a1'],pending['bank'])==(0x10095c,self.outer_a0,0x106006,0)
         else:assert sp==STACK+4;carry=bool(c.reg_read(m.UC_M68K_REG_SR)&1)
         assert bytes(c.mem_read(0,BASE))==self.program[:BASE] and bytes(c.mem_read(STACK,4))==RETURN.to_bytes(4,'big')
         self.low=min([self.low]+[x['address'] for x in self.writes if x['kind']=='stack']);assert bytes(c.mem_read(STACK_START,self.low-STACK_START))==b'\x5a'*(self.low-STACK_START)
@@ -90,7 +92,7 @@ class Observer:
                 raw=bytes.fromhex(b['stack']);after=next(x for x in self.boundaries if x['pc']==0x4a464)
                 for key,offset in (('d0',0),('d7',2)):
                     v=int.from_bytes(raw[offset:offset+2],'big');assert after['registers'][key]==(v if v<0x8000 else v|0xffff0000)
-            if b['pc']==0x4a468:assert b['registers']['a0']==0x102026 and b['registers']['a1']==0x106006
+            if b['pc']==0x4a468:assert b['registers']['a0']==self.outer_a0 and b['registers']['a1']==0x106006
         return dict(incoming=incoming,result=result,waiting=pc==WAIT,carry=carry,pending=pending,final_pc=pc,final_a7=sp,trace=trace),before,output,b''.join(ports)
 def main():
     root=Path(__file__).resolve().parents[1];program,source=load_verified_program(root);assert sha(program)==SOURCE_SHA256
@@ -106,6 +108,15 @@ def main():
             info.update(phase=label,host_changes=list(changes),files={n:sha(v) for n,v in payloads.items()},input_ram_file=prefix+'_input.bin',ram_file=prefix+'_native.bin',ports_file=prefix+'_ports.bin',trace_file=prefix+'_trace.json',port_count=len(ports)//9)
             phases.append(info);return info,trace
         begin,trace=observe('begin')
+        if case['a6']==0xffffe:
+            writes=trace['ordered_writes']
+            alias=next(j for j,e in enumerate(writes) if e['pc']==0x476b6 and e['address']==0x100010 and e['size']==1)
+            restore=next(j for j,e in enumerate(writes) if e['pc']==0x4a43e and e['address']==0x100010 and e['size']==2)
+            assert alias<restore and writes[alias]['value']==5 and writes[restore]['value']==0
+        if case['queue_alias']:
+            assert any(e['pc']==0x3bcc and e['address']==0x10095c and e['size']==2 and e['value']==0x1ac0 for e in trace['ordered_writes'])
+            assert any(e['pc']==0x47690 and e['address']==0x10095c and e['value']==0x1a for e in trace['reads'])
+            assert trace['pcs'].index(0x3bcc)<trace['pcs'].index(0x47690)
         if case['wait']:
             assert begin['waiting'] and begin['pending']['sound_phase']==(2 if case['wait']==2 else 1)
             changes=[dict(address=0x10095c,size=2,value=0x1234),dict(address=0x10207e,size=1,value=0x12),dict(address=0x104d7e,size=1,value=1),dict(address=0x100010,size=2,value=0xbeef),dict(address=0x106002,size=4,value=0xdeadbeef)]
@@ -114,7 +125,7 @@ def main():
             observer.mutate(changes);ready,trace=observe('high_to_low' if case['wait']==3 else 'ready',changes)
             if case['wait']==3:
                 assert ready['waiting'] and ready['pending']['sound_phase']==2
-                again,trace=observe('low_hold');assert again['waiting'] and not trace['ordered_writes']
+                again,trace=observe('low_hold');assert again['waiting'] and again['result']==ready['result'] and again['pending']==ready['pending'] and not trace['ordered_writes']
                 changes=[dict(address=0x104d74,size=2,value=0xffff)];observer.mutate(changes);ready,trace=observe('ready',changes)
             assert not ready['waiting'] and not any(b['pc'] in (ENTRY,0x4a408,0x47672,0x3af8) for b in trace['boundaries'])
         else:assert not begin['waiting']
@@ -122,6 +133,6 @@ def main():
     assert oracle==oracle_provenance() and sha((root/source['path']).read_bytes())==SOURCE_SHA256
     assert all(sha((root/n).read_bytes())==h for n,h in inputs.items())
     result=dict(source=source,oracle=oracle,inputs=inputs,cases=len(rows),phases=sum(len(r['phases']) for r in rows),results=rows,original_program_modified=False,in_call_SR_read=False,Cpp_comparison_performed=False,
-        scope='Original49fc6 syntheticRAM14/1f scripts; canonicalA5/A6, gate and sameCPU high/low waits. WholeRAM15R/carry/PVC and nestedstack observed; no naturalgameplay/allcallbacks/physicalIRQ claim.')
+        scope='Original49fc6 syntheticRAM14/1f scripts; canonicalA5, representativeA6 includingbankshadowalias, signedqueue-sourcealias, gate and sameCPU high/low waits. WholeRAM15R/carry/PVC and nestedstack observed; no naturalgameplay/allcallbacks/physicalIRQ claim.')
     report.write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(dict(cases=result['cases'],phases=result['phases'],sha256=sha(report.read_bytes()))))
 if __name__=='__main__':main()

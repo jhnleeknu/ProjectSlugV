@@ -2,6 +2,8 @@
 
 ## 기준과 증거 범위
 
+후속 C++ phase2 구현과 최신22조건/30단계 검증은 [sound 실행 문서](animation-sound-execution.md)를 따른다. 이 문서의19조건/27단계 관측은 최초 증거이며 alias 보강 후 보고서로 대체되었다.
+
 기준 commit은 `c8595e0`이다. canonical BE 프로그램은 `extracted/program/maincpu.decrypted.be.bin`, 8,388,608 bytes, SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. 아래 고정영역 CPU 주소=ROM 파일 오프셋이다. `load_verified_program`으로 원본 해시를 확인하고 `4a408..4a46b`, `4a57c`, `47672..476bb`, `ca70..ca75`, sound의 stack 명령을 메모리에서 읽었다. ROM·소스·기존 artifact를 수정하거나 빌드하지 않았다.
 
 이 문서의 원본 명령·table 값은 정적 사실이다. **초기 분석 당시에는 opcode14→callback1f→sound wait 전체 경로의 native 증거가 없었다. 아래 마지막 절의 후속19조건/27단계 관측으로 canonical fixture의 중첩 stack은 확인했다.** 중첩 stack 위치는 아래 실제 명령과 검증된 단독47672 stack의 합성 추론이며, 다음 구현 전 전체 원본 실행으로 확인해야 한다. 다른 callback의 의미는 이 분석에서 확정하지 않는다.

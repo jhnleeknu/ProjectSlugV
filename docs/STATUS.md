@@ -1635,3 +1635,12 @@
 - 기존4opcode90조건/98단계·8실제출력재개·추가15·오류157회귀통과,새SHA `ee6d4284ca590eada918161a6944b2b110c875ddd86854dede1fa087e51d0ade`. `make all test` exit0 Python225/C++145/경고0,core normal/UBSan통과. 리뷰0207와animation-control-execution.md.
 - 다음1f의원본19조건/27단계·대기8·재개8·PVC152회도확보했다. 실제nestedstack과source/gate/bank/operand변경후prefix미재실행을관측했다. SHA `87a075a297e63924b0da880eaa22ea3c1b90e635a949880f8b0426c0320801a3`;독립10단계재실행·stack리뷰·114참조hash검사통과. 1f C++상태확장은다음작업이다.
 - 나머지opcode·indexed draw·상위활성화callback·자연scheduler/IRQ·직접플레이·전체Goal은계속미완료다. 기존목표와완료기준을유지한다.
+
+## 2026-10-08 — animation 14/1f 중첩 sound 연결
+
+- Baseline `6f0ec55`, branch `codex/animation-sound-execution`. Sol6.1/medium 세 작업자가 core/unit, 새CLI/Make/문서, 원본비교를 맡았고 메인은 원본alias증거·API/상태계약·실제diff·검증을 리뷰했다. external-input overload와 step_animation_sound_execution CLI를 추가했으며 기존overload/CLI의 범위는 유지한다.
+- phase2에 outerA0/A1/bank와 innerA0/soundphase/savedlow/waiting을 분리했다. 대기재개는prefix를반복하지않고실제callee를이어간다. 완료후live source조회와outer복원/다음명령을연결하며늦은실패는외부읽기횟수까지rollback한다.
+- 원본alias3조건을보강한22조건/30단계 native SHA `5f8b3d3a71532bd3c99d930ad4e61d9c490cc90036669cd872f9169294043108`이이전87a075...를대체한다. 실제bankshadowBYTE쓰기→WORD복원, signedqueue쓰기→live source읽기를확인했고독립Sol14단계재실행·126입력/산출물hash검사통과.
+- 실제CLI30단계/이전실제출력기반8재개/PVC176개/외부읽기3회가전체RAM15regs/metadata/carry까지일치했다. 오류72조건통과. SHA `baf581cbb12606b3af6ec8bc344793d3ffaf61ec7b53231305396601700d3ae0`,현재274고유참조hash일치. 리뷰0208와animation-sound-execution.md.
+- 전체make Python225/C++145/경고0,normal/UBSan통과. 기존회귀90/98+15추가157오류와control178+2혼합48오류도통과했다. 최신회귀SHA는각각 `be59ad90077a495574387fff762a851fb9b7919e44b46c38edab710f604b8694`, `9150fea35c22643b418821fe01c75ae629463b78c9433bcebb85b0f75fd36714`다.
+- 다음은10 indexed draw와해당list복귀·sprite대기상태다. 다른callback·나머지opcode·자연scheduler/IRQ·직접플레이·전체Goal은미완료다. 기존전체범위·완료기준을유지한다.

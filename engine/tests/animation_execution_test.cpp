@@ -19,7 +19,9 @@ bool same(const ms5::AnimationExecutionState& a,const ms5::AnimationExecutionSta
     for(unsigned int i=0;i<8;++i)if(a.sprite.registers.d[i]!=b.sprite.registers.d[i])return false;
     for(unsigned int i=0;i<5;++i)if(a.sprite.registers.a[i]!=b.sprite.registers.a[i])return false;
     return a.a5==b.a5 && a.a6==b.a6 && a.phase==b.phase && a.saved_a0==b.saved_a0 &&
-        a.saved_a1==b.saved_a1 && a.saved_bank==b.saved_bank && a.sprite.waiting==b.sprite.waiting;
+        a.saved_a1==b.saved_a1 && a.saved_bank==b.saved_bank && a.sprite.waiting==b.sprite.waiting &&
+        a.callback_saved_a0==b.callback_saved_a0 && a.callback_sound_phase==b.callback_sound_phase &&
+        a.callback_saved_low==b.callback_saved_low && a.callback_waiting==b.callback_waiting;
 }
 std::vector<std::uint8_t> fixture(std::uint32_t pointer=0x50000) {
     std::vector<std::uint8_t> ram(65536,0);put(ram,0x2026,4,pointer);put(ram,0x202c,2,0x100);
@@ -277,5 +279,138 @@ void errors() {
     s=initial();s.sprite.waiting=true;failure(ram,script(bytes),s);s=initial();s.phase=1;failure(ram,script(bytes),s);
     ram.resize(65535);failure(ram,script(bytes),initial());
 }
+std::vector<ms5::FixedDataResource> sound_data() {
+    std::vector<ms5::FixedDataResource> windows=control_data();
+    put(windows[0].data,0x4a57c-0x4276c,4,0x47672);
+    for(unsigned int i=0;i<128;++i)put(windows[0].data,0x4411e - 0x4276c+i*2,2,i?0x1234+i:0);
+    return windows;
 }
-int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();std::cout<<"animation_execution_test passed\n";return 0;}
+std::vector<std::uint8_t> sound_script() {
+    std::vector<std::uint8_t> bytes(8,0);bytes[0]=0x14;bytes[1]=0x1f;put(bytes,2,4,0x12345678);return bytes;
+}
+void sound_failure(std::vector<std::uint8_t> ram,const std::vector<ms5::AnimationResource>& scripts,
+    const std::vector<ms5::FixedDataResource>& windows,ms5::AnimationExecutionState state) {
+    const std::vector<std::uint8_t> before=ram;const ms5::AnimationExecutionState saved=state;
+    for(unsigned int input=0;input<2;++input) {
+        bool carry=input!=0;std::uint32_t reads=0x12345678;std::vector<ms5::VideoPortWrite> ports=old_ports();std::string error;
+        assert(!ms5::step_animation_execution(ram,scripts,windows,state,255,reads,carry,ports,error));
+        assert(!error.empty()&&ram==before&&same(state,saved)&&carry==(input!=0)&&reads==0x12345678);
+        assert(ports.size()==1&&ports[0].size==1&&ports[0].address==0x300001&&ports[0].value==0x55);
+    }
+}
+ms5::AnimationExecutionState sound_wait(std::vector<std::uint8_t>& ram,unsigned int target) {
+    ram=fixture(0x106000);const std::vector<std::uint8_t> bytes=sound_script();
+    for(unsigned int i=0;i<bytes.size();++i)ram[0x6000+i]=bytes[i];
+    put(ram,0x95c,2,0x5a01);ram[0x207e]=0;
+    put(ram,0x4d8a,2,0);put(ram,0x4d8c,2,6);put(ram,0x4d74,2,target);put(ram,0x4d76,2,0);
+    put(ram,0x4d82,2,0x0455);put(ram,0x4d84,2,0x0566);put(ram,0x4d86,2,0x0677);
+    ms5::AnimationExecutionState state=initial();bool carry=true;std::uint32_t reads=77;
+    std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),sound_data(),state,0,reads,carry,ports,error));
+    assert(carry&&reads==0&&state.phase==2&&!state.sprite.waiting&&state.callback_waiting);
+    assert(state.saved_a0==0x102026&&state.saved_a1==0x106006&&state.saved_bank==0);
+    assert(state.callback_saved_a0==0x10095c&&state.callback_sound_phase==target&&state.callback_saved_low==0x55);
+    ports_are(ports,2);return state;
+}
+void sound_callbacks() {
+    const std::vector<ms5::FixedDataResource> windows=sound_data();
+    const std::vector<ms5::AnimationResource> scripts=script(sound_script());
+    for(unsigned int kind=0;kind<4;++kind) {
+        std::vector<std::uint8_t> ram=fixture();ms5::AnimationExecutionState state=initial();
+        put(ram,0x95c,2,0x5a01);ram[0x207e]=kind==1?0x5a:0;
+        if(kind==2){ram[0x12]=1;ram[0xfd82]=1;}
+        if(kind==3){state.a5=0x108002;put(ram,0x95e,2,0x5a01);ram[0x207e]=0x5a;}
+        bool carry=true;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,scripts,windows,state,1,reads,carry,ports,error));
+        assert(!carry&&state.phase==0&&state.callback_saved_a0==0&&state.callback_sound_phase==0&&
+            state.callback_saved_low==0&&!state.callback_waiting&&!state.sprite.waiting);
+        assert(reads==(kind==2?1U:0U)&&ram[0x2012]==0x34&&get(ram,0x2026,4)==0x50006);
+        assert(state.sprite.registers.a[0]==0x102026&&state.sprite.registers.a[1]==0x50008);
+        ms5::AnimationExecutionState want=initial();want.a5=state.a5;
+        want.sprite.registers.d[0]=(kind==1||kind==3)?0x5aU:0x1ac0U;
+        want.sprite.registers.d[1]=0xabcd1200U;want.sprite.registers.d[6]=0x50000;want.sprite.registers.d[7]=0;
+        want.sprite.registers.a[0]=0x102026;want.sprite.registers.a[1]=0x50008;assert(same(state,want));
+        ports_are(ports,4);
+        if(kind==0)assert(get(ram,0x4d8c)==2&&get(ram,0x4d82)==0x1ac0);
+        data_failure(fixture(),scripts,windows,initial()); // Previous overload must still reject reached1f.
+    }
+    // Two callbacks each conditionally sample external status. The first output
+    // aliases the source BYTE, so the second comparison legitimately changes.
+    std::vector<std::uint8_t> ram=fixture();ms5::AnimationExecutionState state=initial();state.a6=0x10094a;
+    put(ram,0x970,4,0x50000);put(ram,0x974,2,0);put(ram,0x976,2,0x100);put(ram,0x95c,2,0x5a01);
+    ram[0x9c8]=0;ram[0x12]=1;ram[0xfd82]=1;
+    std::vector<std::uint8_t> bytes=sound_script();bytes.resize(6);append(bytes,sound_script());
+    bool carry=true;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,script(bytes),windows,state,1,reads,carry,ports,error));
+    assert(reads==2&&!carry&&ram[0x95c]==0x34&&ram[0x9c8]==0x34);ports_are(ports,6);
+    // Callback output aliases the bank shadow; outer restoration wins afterward.
+    ram=fixture();state=initial();state.a6=0xffffe;put(ram,0x24,4,0x50000);put(ram,0x28,2,0);
+    put(ram,0x95c,2,0x5a01);ram[0x7c]=0;
+    assert(ms5::step_animation_execution(ram,scripts,windows,state,0,reads,carry,ports,error));
+    assert(get(ram,0x10)==0&&get(ram,0x24,4)==0x50006&&state.sprite.registers.a[0]==0x100024);ports_are(ports,4);
+}
+void sound_waits() {
+    const std::vector<ms5::FixedDataResource> windows=sound_data();
+    for(unsigned int target=1;target<=2;++target)for(unsigned int input=0;input<2;++input) {
+        std::vector<std::uint8_t> ram;ms5::AnimationExecutionState state=sound_wait(ram,target);
+        put(ram,0x95c,2,0x1234);ram[0x207e]=0x12;ram[0x4d7e]=1;put(ram,0x10,2,0xbeef);put(ram,0x6002,4,0xdeadbeef);
+        const ms5::AnimationExecutionState captured=state;const std::vector<std::uint8_t> held=ram;
+        bool carry=input!=0;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports=old_ports();std::string error;
+        assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,255,reads,carry,ports,error));
+        assert(same(state,captured)&&ram==held&&reads==0&&ports.empty()&&carry==(input!=0));
+        ms5::AnimationExecutionState bad=state;bad.a6=0xffffffff;
+        assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad,0,reads,carry,ports,error));
+        assert(bad.a6==0xffffffff&&bad.phase==2); // A6 is unreached while held.
+        data_failure(ram,std::vector<ms5::AnimationResource>(),windows,state);
+        failure(ram,std::vector<ms5::AnimationResource>(),state);
+        put(ram,0x4d74,2,0xffff);
+        sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state);
+        bad=state;bad.saved_a0=0x110000;sound_failure(ram,std::vector<ms5::AnimationResource>(),windows,bad);
+        bad=state;bad.saved_a1=0x110000;sound_failure(ram,std::vector<ms5::AnimationResource>(),windows,bad);
+        bad=state;bad.callback_saved_a0=0x110000;sound_failure(ram,std::vector<ms5::AnimationResource>(),windows,bad);
+        bad=state;bad.a5=0x108002;sound_failure(ram,std::vector<ms5::AnimationResource>(),windows,bad);
+        assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),windows,state,255,reads,carry,ports,error));
+        assert(!carry&&reads==0&&state.phase==0&&state.callback_saved_a0==0&&state.callback_sound_phase==0&&
+            state.callback_saved_low==0&&!state.callback_waiting&&state.saved_a0==0&&state.saved_a1==0&&state.saved_bank==0);
+        ms5::AnimationExecutionState want=initial();want.sprite.registers.d[0]=0x1a55;
+        want.sprite.registers.d[1]=0xabcd1200U;want.sprite.registers.d[6]=0x106000;want.sprite.registers.d[7]=0;
+        want.sprite.registers.a[0]=0x102026;want.sprite.registers.a[1]=0x106008;assert(same(state,want));
+        assert(ram[0x2012]==0x67&&get(ram,0x10)==0&&get(ram,0x2026,4)==0x106006);ports_are(ports,2);
+    }
+    std::vector<std::uint8_t> ram;ms5::AnimationExecutionState state=sound_wait(ram,1);
+    put(ram,0x4d74,2,2);bool carry=false;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,255,reads,carry,ports,error));
+    assert(!carry&&reads==0&&ports.empty()&&state.phase==2&&state.callback_sound_phase==2&&state.callback_saved_low==0x55);
+    // Successful low-byte completion, outer restore and pointer store happen
+    // before this missing fixed next-script fetch; all must roll back.
+    state.saved_a1=0x50006;put(ram,0x4d74,2,0xffff);
+    sound_failure(ram,std::vector<ms5::AnimationResource>(),windows,state);
+    state.saved_a1=0x106006;
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),windows,state,0,reads,carry,ports,error));
+    assert(state.phase==0);
+}
+void sound_metadata() {
+    const std::vector<ms5::FixedDataResource> windows=sound_data();const std::vector<ms5::AnimationResource> scripts=script(sound_script());
+    std::vector<std::uint8_t> ram=fixture();ms5::AnimationExecutionState bad=initial();
+    // External sampling occurs before the missing inner raw lookup. Its count
+    // must roll back together with entry/callback writes and PVC output.
+    put(ram,0x95c,2,0x5a01);ram[0x207e]=0;ram[0x12]=1;ram[0xfd82]=1;
+    std::vector<ms5::FixedDataResource> dispatch(1);dispatch[0].source_cpu_address=dispatch[0].source_rom_offset=0x4a57c;
+    dispatch[0].data.resize(4);put(dispatch[0].data,0,4,0x47672);sound_failure(ram,scripts,dispatch,bad);
+    std::vector<ms5::FixedDataResource> wrong=windows;put(wrong[0].data,0x4a57c-0x4276c,4,0x47674);
+    sound_failure(ram,scripts,wrong,bad);
+    bad.callback_saved_a0=1;sound_failure(ram,scripts,windows,bad);
+    bad=initial();bad.callback_sound_phase=1;sound_failure(ram,scripts,windows,bad);
+    bad=initial();bad.callback_saved_low=1;sound_failure(ram,scripts,windows,bad);
+    bad=initial();bad.callback_waiting=true;sound_failure(ram,scripts,windows,bad);
+    bad=initial();bad.phase=1;bad.sprite.waiting=true;bad.callback_saved_low=1;sound_failure(ram,scripts,windows,bad);
+    ms5::AnimationExecutionState state=sound_wait(ram,1);
+    bad=state;bad.sprite.waiting=true;sound_failure(ram,scripts,windows,bad);
+    bad=state;bad.callback_waiting=false;sound_failure(ram,scripts,windows,bad);
+    bad=state;bad.callback_sound_phase=0;sound_failure(ram,scripts,windows,bad);
+    bad=state;bad.callback_sound_phase=3;sound_failure(ram,scripts,windows,bad);
+    bad=state;bad.phase=3;sound_failure(ram,scripts,windows,bad);
+}
+
+}
+int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();sound_callbacks();sound_waits();sound_metadata();std::cout<<"animation_execution_test passed\n";return 0;}

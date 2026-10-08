@@ -11,15 +11,24 @@ struct AnimationExecutionState {
     unsigned int phase;
     std::uint32_t saved_a0, saved_a1;
     std::uint16_t saved_bank;
+    std::uint32_t callback_saved_a0;
+    unsigned int callback_sound_phase;
+    std::uint8_t callback_saved_low;
+    bool callback_waiting;
     AnimationExecutionState() : a5(0x108000), a6(0), phase(0),
-        saved_a0(0), saved_a1(0), saved_bank(0) {}
+        saved_a0(0), saved_a1(0), saved_bank(0), callback_saved_a0(0),
+        callback_sound_phase(0), callback_saved_low(0), callback_waiting(false) {}
 };
 // Full49fc6 register/PVC/pending execution for opcodes00/04/08/28, plus0c
 // and14 selectors1d/1e with reached MS5D data windows. Other eleven opcodes,
-// callback1f/other callbacks and banked scripts remain
+// other callbacks and banked scripts remain
 // checked unsupported paths. Fixed MS5A windows are unique and complete;
 // RAM script fetches use current RAM. Only reached sprite submit/resume
 // requires A5=108000. phase1 resumes a direct04 draw without its prefix.
+// The external-input overload also supports14/1f through47672; phase2
+// retains its nested sound wait. The older overloads reject1f and phase2.
+// Only reached sound calls/resumes require canonical A5. external_reads
+// reports this invocation and is preserved on failure.
 // Exact64KiB RAM and10000-command cap. Errors preserve RAM/state/carry/ports;
 // successful waits commit effects, preserve incoming carry, and replace ports
 // with this invocation's writes. Completed calls return the native carry.
@@ -29,6 +38,11 @@ bool step_animation_execution(std::vector<std::uint8_t>& ram,
 bool step_animation_execution(std::vector<std::uint8_t>& ram,
     const std::vector<AnimationResource>& scripts,
     const std::vector<FixedDataResource>& windows, AnimationExecutionState& state,
+    bool& carry, std::vector<VideoPortWrite>& ports, std::string& error);
+bool step_animation_execution(std::vector<std::uint8_t>& ram,
+    const std::vector<AnimationResource>& scripts,
+    const std::vector<FixedDataResource>& windows, AnimationExecutionState& state,
+    std::uint8_t external_status, std::uint32_t& external_reads,
     bool& carry, std::vector<VideoPortWrite>& ports, std::string& error);
 }
 #endif

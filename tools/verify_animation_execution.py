@@ -168,7 +168,7 @@ def main():
     resources=[runtime/'animation_048980.ms5a',runtime/'animation_0489c2.ms5a'];exe=root/'build/step_animation_execution'
     names=['tools/verify_animation_execution.py','tools/pack_activation_animation.py','tools/inspect_activation_animation_scripts.py',
         'engine/src/animation_execution.cpp','engine/include/ms5/animation_execution.h','engine/tools/step_animation_execution.cpp',
-        'engine/src/sprite_submit_execution.cpp','engine/include/ms5/sprite_submit_execution.h','engine/include/ms5/sprite_producer.h',
+        'engine/src/object_sound_lookup.cpp','engine/include/ms5/object_sound_lookup.h','engine/src/sound_word_execution.cpp','engine/include/ms5/sound_word_execution.h','engine/src/sound_byte_execution.cpp','engine/include/ms5/sound_byte_execution.h','engine/src/sprite_submit_execution.cpp','engine/include/ms5/sprite_submit_execution.h','engine/include/ms5/sprite_producer.h',
         'engine/include/ms5/scene_map_transfer.h','engine/include/ms5/video_port.h','engine/include/ms5/fixed_data_resource.h',
         'engine/src/animation_resource.cpp','engine/src/fixed_data_resource.cpp','engine/include/ms5/animation_resource.h','Makefile','build/step_animation_execution',
         'docs/analysis/animation-execution-initial-contract.md','docs/analysis/animation-draw-full-contract.md']

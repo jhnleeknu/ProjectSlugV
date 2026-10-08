@@ -1,5 +1,7 @@
 # Animation 조건 분기와 제한된 callback의 전체 상태 연결
 
+후속1f 지원은 별도 external-input overload와 [sound 실행 CLI](animation-sound-execution.md)에 추가되었다. 이 문서의 기존 overload/CLI는 이전 지원 범위를 유지한다. 아래 검증 해시는 당시 연결의 기록이다.
+
 [전체 상태 확장 계약](animation-control-full-contract.md)과 [raw resource 범위](animation-control-resource-spans.md)를 따른다. canonical BE ROM SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. 아래 fixed CPU 주소는 ROM 파일 오프셋과 같다. 기존 전체 상태의00/04/08/28에0c와14(확인된1d/1e callback만)를 추가하는 단위이며, 전체17opcode와 임의callback 완료를 뜻하지 않는다. 기존 RAM/carry API나 기존 호출형을 제거하지 않는다.
 
 ```cpp
