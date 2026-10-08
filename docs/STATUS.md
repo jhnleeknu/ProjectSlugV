@@ -1675,3 +1675,19 @@
 - 이실제script12조건에서MS5A/MS5D/C++loader소비와원본RAM15regs/PVC96개가일치했다. object+b0에35/49가쓰이는양쪽분기를포함한다. object/group/queue는제어입력이며자연groupbinding이나게임도달성을뜻하지않는다. 다음3e854script는이범위에서제외한다.
 - 기존회귀4개모두통과했고메인이현재모든해시를검사했다. executionSHA `27ed7bb20a9c5b77a39533156e240d8d24fa4cf403d2f85e7b557a902e06d93e`,control `8993f94d2dc60984522e8ccdce3a782fa35fb28523b4cb66300fea3edc2b02a7`,sound `5dc8bd9f0d4538e1407b34e55dab7991683674526a0d339e9452c2d105f0a561`,indexed `08ed36f540bfc3e81c655ecab0739102c608c718736e724bcda54b3d3f28b0aa`. 개별조건수는field실행문서에기록한다.
 - `make all test` exit0 Python234/C++145/경고0,확장unit normal/UBSan통과. 리뷰0211. 전체17명령중13종과14의일부callback을연결했다. 다음은30직접sound,3c의추가callback규약,40의banked조회와상위흐름이다. 자연scheduler/IRQ·직접플레이·전체스테이지·미사용리소스의전체의미분석·전체Goal은계속미완료다.
+
+## 2026-10-08 — 진행 보고와 직접 sound 분석·통합 재개
+
+- 전체 복원율은 분석·검증 대상 분모가 확정되지 않아 퍼센트 미산정이다. 완료한 fullstate animation 명령은17종 중13종(약76%)이며14는일부callback만지원한다. 이것을전체게임진행률로환산하지않는다. ROM검증·복호화·전체타일변환과대표런타임리소스/C++loader는확보했으나자연실행통합·전체스테이지/적/보스·미사용자료전체의미는미완료다.
+- Baseline51bdf61, branch codex/animation-direct-sound. 메인은원본30의복귀·대기계약/리뷰/통합을재개했다. 초기Sol세작업자의사용량제한종료뒤Sonnet5.5/medium이부분구현을검토하고CLI/문서를마무리했으며Opus5.5/high가원본관측을작성했다. 이후Sol6.1/medium독립리뷰재실행은성공했고원본자료감사를추가배정했다. Sonnet5.5/medium은공식CLI비교검증기작성중이다. 작업자최대5/내부최대3규칙을유지한다.
+- Claude JSON modelUsage에서실제모델claude-sonnet-5-5/claude-opus-5-5를확인했다. effort는CLI에각각medium/high를명시했지만반환JSON에적용effort확인필드는없다. Opus자체보고의"as applied"표현은독립적인effort확인으로취급하지않는다.
+- 원본207조건/255단계,18대기연쇄,외부읽기17회/PVC828개의관측을확보했다. nativeSHA4ef6c7dd0ea871f98dacf1145e1a57fabdffb3ef587cfe3ec8cf55c7871c9386. high A7=S-18/low S-12,캡처low재사용,A0/A1만복원하며직접sound복귀bank/PVC없음을실제관측했다. 메인임시비교에서직전실제C++출력으로재개하는207조건/255단계전체RAM15regs/metadata/carry/PVC/읽기일치를확인했다. 공식검증과오류검사는아직통합전이다.
+- `make all test` exit0 Python234/C++145,독립Sol UBSan경고0/통과. 기존5회귀모두통과했고메인이참조해시를검사했다: execution699/control1484/sound274/indexed7206/field6676고유파일참조. reportSHA는순서대로b4a9d4b8e27ad09c98783bb0fdd28784bf2020041554cc96e2175393a6ee8433,7d756d7cd05b4bd9e171f4b08ec1b179369c16e7dddf6014a3177e590ac9411e,2d5fe84f14c028a83efcd0b187e58c48f31a0f34939915413fa7af92e2dc8669,b39dd2d1c79102aa4b502d4b721407cca218582e8b16f6e7cf2eb2cea7c460ae,f66f8ad2beeb973ad89d1f6d86a014ae561cae79898640ca1f8181dad9804cc8.
+- 다음 작업은공식검증기·오류검사·독립원본감사를수용한후리뷰0212/실행문서를마무리하는것이다. 30은아직완료명령수에포함하지않았다. Goal active/완료기준유지/토큰예산임의설정없음/쿠폰사용없음.
+
+
+### 직접 sound 통합 검증 완료
+
+- 공식 검증기는 원본207조건/255단계를 재실행했고, 실제 C++의 RAM·15레지스터·metadata·carry·PVC·외부읽기가 모두 일치했다. 48회 재개에 직전 실제 C++ 출력만 사용했다. 오류·파일 보존41조건 통과. 최종 report SHA256 `72669c031841d8c019df09addc9469848aeb3b390286ad3fdf8004a69c92851f`; 입력30개/산출물2049항목, 고유2077개 참조 해시를 메인이 확인했다.
+- Sol 독립 원본 감사도207조건/255단계,1028개 고유 참조 해시, guard control2개를 확인했다. 메인은 실제 diff·원본 명령·검증기와 보고서를 읽고 수용했다. 검증기에 빠졌던 오류 검사용 리소스 복사 원본의 해시를 추가하고 재실행했다. C++ 동작 결함은 발견되지 않았다.
+- 리뷰0212와 실행문서를 갱신했다. 검증 완료 명령은17종 중14종(약82%)이며14는일부callback만지원한다. 전체게임완료율로환산하지않는다. 다음은3c WORD-selector callback 규약·40 banked lookup·나머지14 callback과 상위 활성화 흐름이다. 자연 scheduler/IRQ·직접 플레이·전체 스테이지·전체 미사용 리소스 의미 분석과 Goal 전체는 계속 미완료다.

@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
         else if (i == 13) state.a5 = value;
         else state.a6 = value;
     }
-    const std::uint32_t maximum[] = {3U,0xffffffffU,0xffffffffU,65535U,1U,0xffffffffU,0xffffffffU,2U,255U,1U,255U};
+    const std::uint32_t maximum[] = {4U,0xffffffffU,0xffffffffU,65535U,1U,0xffffffffU,0xffffffffU,2U,255U,1U,255U};
     std::uint32_t values[11];
     for (unsigned int i = 0; i < 11; ++i) {
         if (!parse_integer(argv[16+i],maximum[i],values[i])) {

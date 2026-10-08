@@ -22,14 +22,16 @@ struct AnimationExecutionState {
 };
 // Full49fc6 register/PVC/pending execution for opcodes00/04/08/28, plus0c
 // indexed10, field18/1c/20/24/34/38/2c and14 selectors1d/1e with reached
-// MS5D data windows. Remaining30/3c/40 opcodes,
+// MS5D data windows. Remaining3c/40 opcodes,
 // other callbacks and banked scripts remain
 // checked unsupported paths. Fixed MS5A windows are unique and complete;
 // RAM script fetches use current RAM. Only reached sprite submit/resume
 // requires A5=108000. phase1 resumes a direct04 draw without its prefix.
 // phase3 resumes indexed10 draw and retains its separate saved_list_end.
 // The external-input overload also supports14/1f through47672; phase2
-// retains its nested sound wait. The older overloads reject1f and phase2.
+// retains its nested sound wait. It also supports30/phase4 direct sound,
+// sharing callback sound metadata without a callback_saved_a0. The older
+// overloads reject1f/30 and phases2/4.
 // Only reached sound calls/resumes require canonical A5. external_reads
 // reports this invocation and is preserved on failure.
 // Exact64KiB RAM and10000-command cap. Errors preserve RAM/state/carry/ports;

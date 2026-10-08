@@ -641,5 +641,95 @@ void field_errors() {
     bytes.assign(3,0);bytes[0]=0x24;bytes[1]=1;bytes[2]=0x28;data_failure(ram,script(bytes),duplicate,state);
 }
 
+std::vector<std::uint8_t> direct_sound_script(unsigned int command=0x1ac0) {
+    std::vector<std::uint8_t> bytes(5);bytes[0]=0x30;bytes[1]=0xff;put(bytes,2,2,command);bytes[4]=0x28;return bytes;
 }
-int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();sound_callbacks();sound_waits();sound_metadata();indexed_selection();indexed_draws();indexed_waits();indexed_errors();field_writes();relative_fields();field_errors();std::cout<<"animation_execution_test passed\n";return 0;}
+void direct_sound_calls() {
+    const unsigned int commands[]={0,3,0x20,0x120,0x1ac0,0x8001};
+    for(unsigned int i=0;i<6;++i) {
+        std::vector<std::uint8_t> ram=fixture();ms5::AnimationExecutionState state=initial(),want=state;
+        const std::vector<ms5::AnimationResource> scripts=script(direct_sound_script(commands[i]));
+        want.sprite.registers.d[0]=commands[i];
+        if(commands[i]==0x120)want.sprite.registers.d[1]=0xabcd0100U;
+        if(commands[i]==0x20||commands[i]==0x1ac0)want.sprite.registers.d[1]=0xabcd0002U;
+        want.sprite.registers.d[6]=0x50004;want.sprite.registers.d[7]=0xffffffffU;
+        want.sprite.registers.a[0]=0x102026;want.sprite.registers.a[1]=0x50005;
+        bool carry=false;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,scripts,std::vector<ms5::FixedDataResource>(),state,0,reads,carry,ports,error));
+        assert(carry&&reads==0&&same(state,want)&&get(ram,0x2026,4)==0x50004);ports_are(ports,2);
+        failure(fixture(),scripts,initial());data_failure(fixture(),scripts,std::vector<ms5::FixedDataResource>(),initial());
+    }
+    // Missing padding MS5A bytes do not prevent the actual WORD fetch.
+    std::vector<ms5::AnimationResource> scripts=script(std::vector<std::uint8_t>(1,0x30));
+    std::vector<std::uint8_t> tail(3);put(tail,0,2,0x8001);tail[2]=0x28;scripts.push_back(script(tail,0x50002)[0]);
+    std::vector<std::uint8_t> ram=fixture();ms5::AnimationExecutionState state=initial();bool carry=false;std::uint32_t reads=77;
+    std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,scripts,std::vector<ms5::FixedDataResource>(),state,0,reads,carry,ports,error));
+    assert(carry&&state.sprite.registers.d[0]==0x8001&&reads==0); // No MOVEM.W signextension.
+    // Two direct commands and one1f callback each sample external status.
+    std::vector<std::uint8_t> bytes=direct_sound_script();bytes.resize(4);append(bytes,direct_sound_script());bytes.resize(8);append(bytes,sound_script());
+    ram=fixture();ram[0x12]=1;ram[0xfd82]=1;put(ram,0x95c,2,0x5a01);ram[0x207e]=0;state=initial();
+    assert(ms5::step_animation_execution(ram,script(bytes),sound_data(),state,1,reads,carry,ports,error));
+    assert(reads==3&&!carry&&get(ram,0x4d8c)==0);
+    // Allthree reads and preceding command effects roll back on missing nextfetch.
+    bytes.resize(14);sound_failure(fixture(),script(bytes),sound_data(),initial());
+    std::vector<std::uint8_t> sampled=fixture();sampled[0x12]=1;sampled[0xfd82]=1;put(sampled,0x95c,2,0x5a01);sampled[0x207e]=0;
+    sound_failure(sampled,script(bytes),sound_data(),initial());
+}
+ms5::AnimationExecutionState direct_wait(std::vector<std::uint8_t>& ram,unsigned int target) {
+    ram=fixture(0x106000);const std::vector<std::uint8_t> bytes=direct_sound_script();
+    for(unsigned int i=0;i<bytes.size();++i)ram[0x6000+i]=bytes[i];
+    put(ram,0x4d8a,2,0);put(ram,0x4d8c,2,6);put(ram,0x4d74,2,target);put(ram,0x4d76,2,0);
+    put(ram,0x4d82,2,0x0455);put(ram,0x4d84,2,0x0566);put(ram,0x4d86,2,0x0677);
+    ms5::AnimationExecutionState state=initial();bool carry=true;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,0,reads,carry,ports,error));
+    assert(carry&&reads==0&&state.phase==4&&!state.sprite.waiting&&state.callback_waiting&&state.callback_sound_phase==target);
+    assert(state.saved_a0==0x102026&&state.saved_a1==0x106004&&state.saved_bank==0&&state.saved_list_end==0&&state.callback_saved_a0==0&&state.callback_saved_low==0x55);
+    assert(state.sprite.registers.d[7]==0x30);ports_are(ports,1);return state;
+}
+void direct_sound_waits() {
+    for(unsigned int target=1;target<=2;++target)for(unsigned int input=0;input<2;++input) {
+        std::vector<std::uint8_t> ram;ms5::AnimationExecutionState state=direct_wait(ram,target);
+        put(ram,0x6002,2,0xffff);ram[0x4d7e]=1;ram[0x12]=1;ram[0xfd82]=1;put(ram,0x10,2,0xbeef);
+        const std::vector<std::uint8_t> held=ram;const ms5::AnimationExecutionState captured=state;
+        bool carry=input!=0;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports=old_ports();std::string error;
+        assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,255,reads,carry,ports,error));
+        assert(same(state,captured)&&ram==held&&reads==0&&ports.empty()&&carry==(input!=0));
+        ms5::AnimationExecutionState unused=state;unused.a6=0xffffffff;unused.saved_a0=0xffffffff;unused.saved_a1=0;
+        const ms5::AnimationExecutionState untouched=unused;
+        assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),unused,0,reads,carry,ports,error));
+        assert(same(unused,untouched)&&ram==held&&ports.empty()&&reads==0&&carry==(input!=0));
+        failure(ram,std::vector<ms5::AnimationResource>(),state);data_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state);
+        put(ram,0x4d74,2,0xffff);
+        ms5::AnimationExecutionState bad=state;bad.saved_a0=0x110000;sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+        bad=state;bad.saved_a1=0x50000;sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+        bad=state;bad.a5=0x108002;sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+        assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,255,reads,carry,ports,error));
+        assert(carry&&reads==0&&state.phase==0&&state.saved_a0==0&&state.saved_a1==0&&!state.callback_waiting&&state.callback_sound_phase==0&&state.callback_saved_low==0);
+        assert(state.sprite.registers.d[0]==0x1a55&&state.sprite.registers.d[6]==0x106004&&state.sprite.registers.a[0]==0x102026&&state.sprite.registers.a[1]==0x106005);
+        assert(get(ram,0x2026,4)==0x106004&&get(ram,0x10)==0);ports_are(ports,1); // Only normal terminal epilogue writes PVC.
+    }
+    std::vector<std::uint8_t> ram;ms5::AnimationExecutionState state=direct_wait(ram,1);
+    put(ram,0x4d74,2,2);bool carry=false;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,255,reads,carry,ports,error));
+    assert(!carry&&state.phase==4&&state.callback_sound_phase==2&&state.callback_saved_low==0x55&&ports.empty()&&reads==0);
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,255,reads,carry,ports,error));assert(state.phase==4&&ports.empty());
+    put(ram,0x4d74,2,0xffff);
+    assert(ms5::step_animation_execution(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),state,255,reads,carry,ports,error));assert(state.phase==0);
+}
+void direct_sound_metadata() {
+    std::vector<std::uint8_t> ram;ms5::AnimationExecutionState state=direct_wait(ram,1),bad=state;
+    bad.saved_bank=1;sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+    bad=state;bad.saved_list_end=1;sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+    bad=state;bad.callback_saved_a0=1;sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+    bad=state;bad.callback_sound_phase=0;sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+    bad=state;bad.callback_sound_phase=3;sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+    bad=state;bad.callback_waiting=false;sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+    bad=state;bad.sprite.waiting=true;sound_failure(ram,std::vector<ms5::AnimationResource>(),std::vector<ms5::FixedDataResource>(),bad);
+    ram=fixture();bad=initial();bad.a5=0x108002;sound_failure(ram,script(direct_sound_script(0x8001)),std::vector<ms5::FixedDataResource>(),bad);
+    std::vector<ms5::AnimationResource> short_script=script(direct_sound_script());short_script[0].data.resize(3);
+    sound_failure(ram,short_script,std::vector<ms5::FixedDataResource>(),initial());
+}
+
+}
+int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();sound_callbacks();sound_waits();sound_metadata();indexed_selection();indexed_draws();indexed_waits();indexed_errors();field_writes();relative_fields();field_errors();direct_sound_calls();direct_sound_waits();direct_sound_metadata();std::cout<<"animation_execution_test passed\n";return 0;}

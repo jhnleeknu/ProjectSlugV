@@ -15,7 +15,8 @@ bool valid(const AnimationExecutionState& s) {
     if(s.phase==0)return s.saved_list_end==0 && inactive && !s.sprite.waiting && s.saved_a0==0 && s.saved_a1==0 && s.saved_bank==0;
     if(s.phase==1)return s.saved_list_end==0 && inactive && s.sprite.waiting;
     if(s.phase==3)return inactive && s.sprite.waiting;
-    return s.phase==2 && s.saved_list_end==0 && !s.sprite.waiting && s.callback_waiting &&
+    return (s.phase==2 || (s.phase==4 && s.saved_bank==0 && s.callback_saved_a0==0)) &&
+        s.saved_list_end==0 && !s.sprite.waiting && s.callback_waiting &&
         (s.callback_sound_phase==1 || s.callback_sound_phase==2);
 }
 bool ram_span(std::uint32_t base,int displacement,unsigned int size,std::size_t& at,std::string& error) {
@@ -237,6 +238,22 @@ bool indexed_draw(std::vector<std::uint8_t>& ram,const std::vector<AnimationReso
     // Original4a270 restores only the PEA cursor, bypassing4a276.
     r.a[1]=end;return true;
 }
+bool direct_sound(std::vector<std::uint8_t>& ram,AnimationExecutionState& s,
+    std::uint8_t external_status,std::uint32_t& external_reads,std::string& error) {
+    if(s.a5!=0x108000) {error="direct animation sound requires canonical A5=108000";return false;}
+    SoundWordExecutionState sound;sound.byte.registers=s.sprite.registers;
+    if(s.phase==4) {
+        sound.phase=s.callback_sound_phase;sound.saved_low=s.callback_saved_low;sound.byte.waiting=s.callback_waiting;
+    }
+    std::uint8_t reads=0;if(!execute_sound_word(ram,sound,external_status,reads,error))return false;
+    external_reads+=reads;s.sprite.registers=sound.byte.registers;
+    s.callback_sound_phase=sound.phase;s.callback_saved_low=sound.saved_low;s.callback_waiting=sound.byte.waiting;
+    if(sound.phase!=0) {s.phase=4;return true;}
+    // Original4a2ec restores LONG A0/A1 only; no bank or MOVEM.W path.
+    SceneMapTransferState& r=s.sprite.registers;r.a[0]=s.saved_a0;r.a[1]=s.saved_a1;
+    s.saved_a0=0;s.saved_a1=0;s.phase=0;r.d[6]=r.a[1];
+    return write_ram(ram,r.a[0],0,4,r.d[6],error);
+}
 bool sound_callback(std::vector<std::uint8_t>& ram,const std::vector<FixedDataResource>& windows,
     AnimationExecutionState& s,std::uint8_t external_status,std::uint32_t& external_reads,std::string& error) {
     ObjectSoundLookupState inner;inner.sound.byte.registers=s.sprite.registers;inner.a5=s.a5;inner.a6=s.a6;
@@ -290,7 +307,11 @@ bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& sc
     AnimationExecutionState& s,bool allow_sound,std::uint8_t external_status,std::uint32_t& external_reads,
     bool& carry,std::vector<VideoPortWrite>& ports,std::string& error) {
     SceneMapTransferState& r=s.sprite.registers;std::uint32_t value=0;
-    if(s.phase==2) {
+    if(s.phase==4) {
+        if(!allow_sound) {error="direct animation sound resume requires external-input overload";return false;}
+        if(!direct_sound(ram,s,external_status,external_reads,error))return false;
+        if(s.phase==4)return true;
+    } else if(s.phase==2) {
         if(!allow_sound) {error="animation sound resume requires external-input overload";return false;}
         if(!sound_callback(ram,windows,s,external_status,external_reads,error))return false;
         if(s.phase==2)return true;
@@ -324,6 +345,14 @@ bool run(std::vector<std::uint8_t>& ram,const std::vector<AnimationResource>& sc
         }
         if(value==0x18 || value==0x1c || value==0x20 || value==0x24 || value==0x34 || value==0x38 || value==0x2c) {
             if(!field_command(ram,scripts,windows,s,value,error))return false;continue;
+        }
+        if(value==0x30) {
+            if(!allow_sound) {error="direct animation sound requires external-input overload";return false;}
+            if(!script_address(r.a[1],1,r.a[1],error))return false;r.d[0]=0;
+            if(!next(ram,scripts,r,2,value,error))return false;r.d[0]=value;
+            s.saved_a0=r.a[0];s.saved_a1=r.a[1];
+            if(!direct_sound(ram,s,external_status,external_reads,error))return false;
+            if(s.phase==4)return true;continue;
         }
         if(value==0x28) {
             if(!read_ram(ram,r.a[0],4,2,value,error))return false;
