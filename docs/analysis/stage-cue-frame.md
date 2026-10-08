@@ -1,4 +1,4 @@
-# Stage cue frame e8a48 후속 계약
+# Stage cue frame e8a48 계약·구현 검증
 
 원본 SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. Fixed 첫1MiB CPU=ROM offset, RAM CPU100000..10ffff,A5=108000이다. 아래는 메인이 원본 명령을 읽은 후속 계약이다. 이번 문서만으로 구현·실행 비교 완료를 뜻하지 않는다.
 
@@ -21,7 +21,7 @@ XY를 stack에 보존한 뒤 A0=d5f16,D0.low=0,A1=100bf4로2986을 호출한다.
 
 Debug는 A1=10d38e,A0=LONGde26 후 A0null이면 반환한다. 비영이면 e8af4 다음 D0.low+=WORDd3a2,D1.low+=WORDd3a6를 수행하고 SWAP D0,MOVE.W D1,D0로 packed XY를 만든다. D1=ffffffff,CLR.W D1, unsigned D0.low>=01e0이면 D1.bit1을 켠다. D5=ffffffff,D7=0000ba2b로cd58을 호출하고e8b58에서 반환한다. 기존 sprite producer는 callback과 queue 대기 상태를 가진다. 이를 성공하는 no-op으로 대체하면 안 된다.
 
-전체480bc 연결에는 위 helper 외에도 sprite producer의 전체 register/pending 계약, 원본 cue/stream 및 indexed raw lookup 리소스, 실제 allocator 호출을 검증해야 한다. 현재는 이 후속 분석 계약까지이며 직접 플레이 화면이나 전체 스테이지 프레임 완료를 주장하지 않는다.
+전체480bc 연결에는 위 helper 외에도 sprite producer의 전체 register/pending 계약, 원본 cue/stream 및 indexed raw lookup 리소스, 실제 allocator 호출을 검증해야 한다. 현재 완료 범위는 아래 전체 e8a48 검증 절을 따른다. 직접 플레이 화면이나 전체 스테이지 프레임480bc 완료를 주장하지 않는다.
 
 ## 2986 전체 wrapper 계약
 
@@ -31,7 +31,7 @@ Debug는 A1=10d38e,A0=LONGde26 후 A0null이면 반환한다. 비영이면 e8af4
 
 ## cd58 전체 register와 대기 재개 후속 계약
 
-메인이 inventory의 cd50..ce02 원본 명령을 다시 읽어 확인했다. 기존 `submit_sprite`는 메모리 결과와 status만 제공한다. 아래 register/pending 계약의 구현·원본 실행 검증은 아직 완료하지 않았다.
+메인이 inventory의 cd50..ce02 원본 명령을 다시 읽어 확인했다. 기존 `submit_sprite`는 메모리 결과와 status만 제공한다. 아래 register/pending 계약은 후속 `5718c53`에서 구현·검증했다. 상세 근거는 sprite-submit-execution.md를 따른다.
 
 - cd52는 LONG RAM9152=A0만 쓴다. cd58은 이 LONG을 A0로 읽고 JSR(A0)를 **클리핑 전에** 실행한다. cd50은 RTS다. 지정된 raw 인코딩 검색에서 cd52 참조가0건인 것은 다른 callback이 불가능하다는 증명이 아니다. 후속 구현에서 default cd50만 지원할 경우 다른 callback은 오류로 명시해야 한다.
 - 먼저 D0.low에서0040을 빼고 unsigned0280 이상이면 그대로 반환한다. 통과하면0040을 더해 복원하고 SWAP D0, D0.low+=0160을 수행한다. unsigned0400 이상이면 이 상태로 반환한다. 통과하면0160을 빼고 다시 SWAP한다. 따라서 clipped 반환에도 D0/A0 변화가 있다.
@@ -43,7 +43,7 @@ Debug는 A1=10d38e,A0=LONGde26 후 A0null이면 반환한다. 비영이면 e8af4
 
 기존 typed queue API의 cursor/record invariant와 원본이 계산하는 signed-WORD 유효 RAM 주소를 구분해야 한다. 새로운 일반 register API가 지원할 범위는 문서에 명시하고, 지원 밖 접근을 정상 제출로 바꾸지 않는다. RAM/state/pending 실패 원자성, clip/full 양쪽의 실제 반환 상태, pending 후 consumer 변화에 대한 원본 대조가 필요하다.
 
-## 구현 완료 범위와 재현
+## 선행 cue 제어 단위(ea635cd)의 범위와 재현
 
 이번 단위는 e89fa/e8a1c/e8ad0/e8af4 및2986만 구현했다. `step_stage_cue_control`은13개의 변경 가능한 일반 register와 read-only A6를 운반하고,2986에서만 allocation_carry를 원본 C 결과로 갱신한다. 다른 네 entry에서는 이 별도 API값을 보존하며 전체 native CCR 동일을 주장하지 않는다. 오류는 RAM/state/carry를 모두 보존한다. Fixed kind1 MS5D 또는 live64KiB RAM의 완전한 접근만 지원한다. WORD/LONG은 정렬이 필요하고 BYTE는 홀수도 허용한다. 읽기가 필요한 곳에서 여러 fixed window가 겹치면 모호한 리소스로 거부한다.
 
@@ -71,4 +71,47 @@ make -j2 all test
 - Default resource manifest SHA256: `aa5d59728cf10b841e314f2b838606f23ce44b6a15c83b62462349700de5450c`
 - Inventory JSON SHA256: `d113549ead14d888670f8a41346c8e320fae9b2e1c0918647afc6070743129a7`
 
-Inventory는5개 code창147명령/0gap, 별도DATA3영역, 기존catalog59record의LONG+6와42개nonnullroot의첫8byte만 기록한다. Raw cd52 참조0건으로 callback 폐쇄성을 추론하지 않는다. 전체e8a48과cd58 pending은 후속 작업이며 이 단위로 직접플레이나전체480bc 완료를 주장하지 않는다.
+Inventory는5개 code창147명령/0gap, 별도DATA3영역, 기존catalog59record의LONG+6와42개nonnullroot의첫8byte만 기록한다. Raw cd52 참조0건으로 callback 폐쇄성을 추론하지 않는다. 전체e8a48과cd58 pending은 이 선행 단위의 범위 밖이었다. 후속 완료 범위는 아래 절과 sprite-submit-execution.md를 따른다. 직접플레이나전체480bc 완료는 주장하지 않는다.
+
+
+## 전체 e8a48 구현·검증 완료
+
+`StageCueFrameState`는13개 일반 register와 waiting_for_sprite를 보존한다. `step_stage_cue_frame`은 위의 전체 e8a48 흐름을 실행하고 A6를 보존한다. 생성 요청을 지운 뒤 XY WORD와 index WORD를 원본 순서로 저장·복원하고,2986 성공/실패 모두43e08과두 lookup WORD 복사를 실행한다. A3는12register helper 호출 동안 별도로 보존한다. Debug sprite를 제출하지 않는 경우 입력 debug_status는 보존된다. 오류는 바깥 transaction 전체 RAM/state/status를 보존한다.
+
+Sprite가 대기하면 이미 실행한 할당·좌표·cue 선택 결과를 게시하고 waiting 상태를 반환한다. 다음 호출은cda4만재개하므로새 요청flag나cue pointer를소비하지않는다. Native대기시A7은STACK-4로cd58의e8b58복귀주소를보존하고,최종RTS뒤에는STACK+4다. 원본 CPU를중간reset하지않고이반환경로를검증했다.
+
+### Runtime 리소스
+
+`tools/pack_stage_cue_frame.py`는 source로부터42개catalog cue 첫8byte와e8a0c128byte raw lookup을추출한다.43개MS5D v1 kind1 파일,464payload/1840container bytes이며53개nonnull catalog참조를metadata에보존한다. 기존 default cue/stream두파일은복제하지않고재사용한다. Lookup은첫16byte뒤의코드까지포함하는주소조회창이지32개논리record라는뜻이아니다.
+
+메인이 packer 전체를읽고재생성동일/source/header/CRC를확인했다. 독립오염430조건거부와43+default2창의범위를검토했다. 기존scene resource의187fixed창과이번45fixed창사이중첩0을직접재확인했다. Banked271창은그비교와구분했다. 따라서이두집합의fixed232창은새로운주소모호성을만들지않는다.
+
+### 검증 결과와 한계
+
+원본822조건/838실행구간에서64KiB RAM·14register·waiting/status가실제CLI와일치했다. 모든256tag와32eligible lookup index를실행하고두WORD의값·목적주소를원본write와대조했다. 추출catalog42head를공급했고2986/43e08은143호출(할당성공87/실패56),e8af4는305호출,e8ad0는11호출,cd58은162호출이었다.
+
+초기fixture의debug camera offset이전부0인coverage빈틈을메인이발견해32조건을추가했다. Native e8b2e/e8b32/e8b36의register와live operand를관측하고WORD상위보존·덧셈을대조했다. 비영offset32조건,실제WORD wrap14조건을확인했다. Stream payload가controlbyte와겹치는fixture도마지막host설정순서를명시해실제gate변경을원본그대로검증한다.
+
+8개실제pending chain은같은nativeCPU로begin→hold→ready를이어간다. 중간에request=ff와odd cue pointer를게시해도재개가앞부분을재실행하지않고그값을유지한다. 별도4회전체frame CLI chain은3번직전RAM/14register출력을호스트수정없이소비한다. 오류150조건,리소스생략5조건,디렉터리loader와unused status0..3보존도통과했다.
+
+관측한21조건분기중16개는두목적지를확인했다. 나머지는이호출의고정조건또는지원경계다:28c2의callback은d5f16으로비영,28d6의nullfreehead는지원정상graph밖,43e52의parent는10d38e로비영,43e82의nodeflag는43e08에서0으로지워짐,cdb2의deferredbit6은debug준비에서0이다. 마지막deferred경로는독립sprite단위에서검증했으며이번전체frame에서자연실행됐다고주장하지않는다.
+
+메인이core/header/CLI/unit,packer/관측/비교도구전체를읽고838저장RAM/입력승계/외부변경/PC/A7/register/branch와현재provenance를직접대조했다. 실제CLI검증재실행도동일hash였다. 전체make Python182/C++124/경고0, 로그 `artifacts/stage_cue_frame_build_test.log`.
+
+```sh
+.venv/bin/python tools/inventory_stage_cue_frame.py
+.venv/bin/python tools/pack_stage_cue_control.py
+.venv/bin/python tools/pack_stage_cue_frame.py
+make -j2 all test
+.venv/bin/python tools/observe_stage_cue_frame.py
+.venv/bin/python tools/verify_stage_cue_frame.py
+```
+
+CLI: `build/step_stage_cue_frame D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 WAITING STATUS INPUT_RAM OUTPUT_RAM [MS5D_OR_DIRECTORY ...]`. WAITING은0/1,STATUS는sprite enum0..3이다. 필요시stage_cue_frame과stage_cue_control리소스디렉터리를함께전달한다.
+
+- Native SHA256: `c4e44fc73bf700b34396d1f00d339bd37661f0aa0a193f26eb492067d108f63c`
+- Verification SHA256: `b2ed87ee0acfde987c12333593ca3593e2c1920b21fafd1677137631bf64d033`
+- CLI SHA256: `b97a6a7cf8fcde8ad4e543ead1523ef44d22f823e363fe287d92d45279e97690`
+- New resource manifest SHA256: `7c33c26f7b4f9ae506d529f4bf845bd02917de0d1857ff2372274575e700786c`
+
+임의sprite callback과원본범위밖메모리접근은지원하지않는다. 전체CCR/자연scheduler/IRQ timing/직접플레이및전체480bc완료를주장하지않는다. 다음4aa88경로는stage-buffer-frame.md에메인이원본분석계약만기록했다.

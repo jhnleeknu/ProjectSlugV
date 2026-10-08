@@ -1397,8 +1397,16 @@
 - 메인이 전체source/CLI/unit/관측/비교도구를 읽고736저장RAM/입력승계/외부변경/PC/A7/branch/provenance를 직접대조했다. 실제CLI검증 재실행도동일hash다. 독립읽기전용리뷰에서도문제를발견하지않았다. 전체make Python182/C++123/경고0, 리뷰0182 및sprite-submit-execution.md에근거와한계를기록했다.
 - Native SHA256 `e5ed5e1e0119a1684f40318f708e920553dc1a071a09b9fedb19b4506d651b39`, verification `06ee2a59080d2c5d984a35d5bc2f06a7807ad44c8cff441d391f66e58800844e`. 임의callback/IRQ timing/전체CCR이나자연scheduler완료를주장하지않는다. 전체goal은active다.
 
+## 2026-10-08 — 전체 stage cue frame e8a48
+
+- `5718c53`의sprite대기재개와기존cue/allocator/node를연결했다. 전체e8a48이실제MS5D를읽고할당성공/실패모두좌표·lookup복사를수행한다. 대기후cda4만재개하므로새cue요청을잘못소비하지않는다.
+- Catalog42cue prefix와128byte rawlookup을43MS5D/464payload bytes로추출했다. 기본두파일을재사용한다. 기존scene187fixed와신규45fixed사이중첩0을메인이직접확인했다. Lookup코드바이트를32논리record로단정하지않는다.
+- 원본822조건/838구간의RAM·14register·waiting/status가일치했다. 모든256tag/32조회index,42catalogheads,143allocator/node호출(87성공/56실패),8pending chain과4회무호스트변경전체frame chain을검증했다. 오류150조건통과. Debug비영offset32조건/WORDwrap14조건을메인리뷰후보강했다.
+- 메인이전체source/도구와838저장RAM/입력승계/외부변경/PC/A7/branch/provenance를직접대조하고실제CLI검증도다시실행했다. 전체make Python182/C++124/경고0. 리뷰0183, stage-cue-frame.md에재현과제한을기록했다.
+- Native SHA256 `c4e44fc73bf700b34396d1f00d339bd37661f0aa0a193f26eb492067d108f63c`, verification `b2ed87ee0acfde987c12333593ca3593e2c1920b21fafd1677137631bf64d033`. 원격없는로컬통합이며전체goal은active다.
+
 ### 다음 분석 인수인계
 
-- 다음은 전체e8a48 frame연결이다. helper4개/2986/43e08과cd58대기재개를 재사용한다. Sprite에서대기하면 그앞의할당/좌표/cue진행을 다시실행하지않도록frame상태를보존해야한다. main설계는sprite-submit-execution.md 마지막절에있다.
-- Catalog59record/42nonnullcue root의각8byte와 e8a0c부터128byte indexedraw조회창을runtimeMS5D로추출해야한다. 후자는첫16byte뒤에코드가이어지는source조회창이지32개논리레코드라는증거가아니다. 현재scene script의간접참조e6e9e LONG은0으로기본stream을선택한다. 다른stream불가능의증명은아니다.
-- 독립검증·구현에이전트는현재모두완료상태다. 다음위임은이확정계약에서시작하고원본/추출물은Git에서제외한다. 전체480bc의나머지경로와직접플레이는후속이다.
+- 현재branch `codex/stage-cue-frame-execution`, baseline `5718c53`. 다음은상위480bc의4aa88버퍼갱신과그debug4b784호출이다. 메인이원본을직접읽은계약을 `docs/analysis/stage-buffer-frame.md`에저장했다. 이문서는분석초안이며아직구현·실행검증완료가아니다.
+- 4aa88은16slotdebug후16WORD shift/ringpointer진행/byteflag게시/두버퍼toggle/208byteclear를한다. Debug4b784는두번cd58을호출하므로첫/둘째대기와slotloop저장값을구분해야한다. 첫sprite후좌표크기WORD는live로읽는다. MMIO2ffff2/2ffff0 write가있으므로nativeoracle의port지원과banked/source범위를확정한뒤구현한다.
+- 에이전트들은모두완료상태다. 다음위임은확정된입력·담당파일·검증기준으로시작한다. 남은상위480bc호출은4aa88/b4a2a/4701e/2efa6이며전체scheduler/직접플레이는아직완료되지않았다.
