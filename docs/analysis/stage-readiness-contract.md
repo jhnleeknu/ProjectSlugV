@@ -1,6 +1,6 @@
 # 4847c stage readiness carry 계약
 
-canonical BE SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. fixed CPU 주소=ROM 오프셋. 메인이4847c..484b2,1bdde..1be38,289e..28ac,4dee2..4df18,4e166..4e184를 immutable 원본에서 읽었다. 이 이름은 분석 편의상 붙인 것이다. 구현·native 검증 완료는 아직 아니다.
+canonical BE SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. fixed CPU 주소=ROM 오프셋. 메인이4847c..484b2,1bdde..1be38,289e..28ac,4dee2..4df18,4e166..4e184를 immutable 원본에서 읽었다. 이 이름은 분석 편의상 붙인 것이다. 이 문서는 의미 계약이며 현재 구현·검증 결과는 stage-readiness-execution.md와 검증 보고서를 따른다.
 
 ## 4847c 상위 순서
 

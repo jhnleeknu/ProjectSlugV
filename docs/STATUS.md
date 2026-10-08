@@ -1559,3 +1559,13 @@
 - 전체make Python196/C++140/경고0 및 격리UBSan 통과. 메인이 현재 입력/산출물/외부 기준 해시를 대조했다. Verification SHA `2c9836dea6930615c4cd392af1f12fa880b38ace9fe57b96955c577df49368a4`, native `aea00334404fbac5a894eedaa9049b639145e19f41f840bad29141900886f5b0`, BCD 교차검증 `bf692382e2f4905834e6cfc806944c4633d23d9989879a1b0adcf471c75d294e`. 리뷰0199, 실행 문서 stage-counter-execution.md.
 - 다음4847c readiness의 실제 원본214조건과19개분기 양쪽·전체RAM15regs/carry 관측도 확보했다. 별도 Sol이6조건을 메모리에서 재실행하고 artifact hash를 감사했다. 원본 SHA `45ad59018ae534c4059d6348dc835e09d37d9d08dbc3554e2562c7cfe90a4844`; 계약 stage-readiness-contract.md. 이 callee chain의 C++ 연결이 다음 작업이다.
 - 이 단위는 새 데이터 리소스가 필요없는 RAM 연산이다. 자연scheduler/IRQ·직접플레이·전체47c6c와 전체 게임 Goal은 계속 미완료다. 기존 범위·완료 기준을 유지한다.
+
+## 2026-10-08 — stage readiness 4847c 전체 carry 연결
+
+- Baseline `f49e2da`, branch `codex/stage-readiness`. Sol6.1/medium 세 작업자가 core/unit, CLI/문서, 원본 비교를 분담했고 메인이 실제 원본 의미·변경·검증기를 리뷰했다. 독립 Sol 리뷰에서도 조치가 필요한 문제는 없었다.
+- 4847c의두1bdde/289e/조건부4dee2/4e166을전체15레지스터와carry로연결했다. 첫/두번째player 조기반환,record status3/4/5,최종flag/mask의scratch register효과를유지한다. 실제도달한RAM span만검사하며const RAM과임시state/carry로실패시기존값을보존한다.
+- 원본214조건을CPU에서재실행하고actualCLI와전체64KiB RAM/15regs/carry/16key JSON을대조했다. 19조건분기양쪽,carrytrue86/false128,실제RAMread2,170/JSRstackwrite1,121개를감사했다. 오류·파일보존120조건과실제case alias/FIFO검사통과.
+- 전체make Python196/C++141/경고0 및격리UBSan통과. 최종verification SHA `36dd7de01cbd422685c75b54ac4885ba88970ffe1581968c85b6dd54bbeacd5f`; native `45ad59018ae534c4059d6348dc835e09d37d9d08dbc3554e2562c7cfe90a4844`. 현재입력9/native입력9/native산출물644개hash를대조했다. 리뷰0200,실행문서stage-readiness-execution.md.
+- 다음47c6c 활성화 경로의4e216/bee/16ed2/49f8c를메인이직접읽고stage-activation-small-helpers-contract.md에조건부읽기·carry·signedWORD·livealias·PVC쓰기순서를확정했다. bee..c34 범위에는BIOS호출이없다. 실제원본관측을별도로진행하며fullanimation49fc6/sound47672/sprite16ea4 연결은이후작업이다.
+- 후속네helper의원본441조건과PVC150개관측을확보했다. 메인이관찰코드와입력7/조건산출물1,764개hash를확인했고별도Sol이대표20조건을메모리에서재실행했다. 정상9분기양쪽·signedWORD·flagalias·A6fffea의bank-shadow/state-pointer overlap순서를검증했다. SHA `ed26b6cc85ec93c777f211d1fa1d184eeb965659cbaec281116ed7bb4a28b0cf`. 해당C++연결은다음작업이며TRAP실패/물리PVC동등성은이관측범위밖이다.
+- 자연scheduler/IRQ·직접플레이·전체callback과전체게임Goal은아직미완료다. 기존범위·완료기준을유지한다.
