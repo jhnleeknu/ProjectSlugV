@@ -1,5 +1,10 @@
 # Animation 전체 상태 실행의 첫 연결
 
+## 현재 bank-state CLI schema
+
+[실제 bank 상태 계약](animation-bank-state-contract.md)에 따라 공통 `SAVED_LIST_END` 바로 뒤 argv22에 unsigned32 `CURRENT_BANK_BASE`를 전달한다. 일반 CLI는22숫자/23JSON, RAM/output/ports argv23/24/25 및 resource26+이며, sound CLI는27숫자/28JSON, callback4개 argv23..26, EXTERNAL argv27, RAM/output/ports argv28/29/30 및 resource31+다. 두 출력 JSON은 숫자 `current_bank_base`를 항상 포함한다. 임의 uint32 bank 입력을 허용하며 saved_bank와 구분한다. 이전 schema 자동 추정이나 기본값 보충은 없다. 아래 원본 관측·검증 수치와 해시는 해당 단위 당시의 완료 기록이며, 이 schema 이행의 재검증 결과를 대신하지 않는다.
+
+
 이 문서는 최초4opcode 연결의 기록이다. 이후0c/14와 MS5D 확장 및 최신 회귀 결과는 [control 실행 문서](animation-control-execution.md)를 따른다. 아래 최초 검증 해시는 당시 구현의 증거다. 현재CLI schema는아래에갱신했으며opcode10/phase3 확장은 [indexed 실행 문서](animation-indexed-execution.md)를따른다. 최초20숫자/21key 검증기록은현행21숫자/22key의검증결과와구분한다.
 
 [초기 실행 계약](animation-execution-initial-contract.md)과 [draw 전체 상태 계약](animation-draw-full-contract.md)의 원본49fc6을 새 API로 연결한다. canonical BE ROM SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이며 아래 fixed CPU 주소는 ROM 파일 오프셋과 같다. 이번 새 full-state 경로는 **00/04/08/28 네 opcode**다. 전체17opcode 목표 중 나머지13개와 callback/sound/banked 동작은 미완료로 유지하며, 기존 RAM/carry API의 구현과 지원 범위를 제거하지 않는다.
@@ -25,15 +30,15 @@ RAM은 CPU100000..10ffff의 정확히65536바이트다. `sprite.registers`의 D[
 ```text
 build/step_animation_execution \
   D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 \
-  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END \
+  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END CURRENT_BANK_BASE \
   INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [RESOURCE_MS5A_OR_MS5D ...]
 ```
 
-숫자는21개, argc는 최소25다. RAM input/output/port output은 argv22/23/24, resource는 argv25 이후다. ENTRY/carry 입력은 없다. register와 saved pointer는 unsigned32bit, PHASE0/1/3(2거절), SAVED_BANK0..65535, SPRITE_WAITING0..1, SAVED_LIST_END unsigned32bit을 받는다. 숫자는10진수 또는 `0x`/`0X`16진수이며 부호·공백·빈 숫자·후행 문자·overflow를 거부한다. core가 metadata의 조합을 검사한다.
+숫자는22개, argc는 최소26다. RAM input/output/port output은 argv23/24/25, resource는 argv26 이후다. ENTRY/carry 입력은 없다. register와 saved pointer는 unsigned32bit, PHASE0/1/3(2거절), SAVED_BANK0..65535, SPRITE_WAITING0..1, SAVED_LIST_END와 CURRENT_BANK_BASE는 unsigned32bit을 받는다. 숫자는10진수 또는 `0x`/`0X`16진수이며 부호·공백·빈 숫자·후행 문자·overflow를 거부한다. core가 metadata의 조합을 검사한다.
 
-성공 stdout은 정확히22개 key의 한 줄 JSON이다. `d0..d7`, `a0..a6`, `phase`, `saved_a0`, `saved_a1`, `saved_bank`, `saved_list_end`는 숫자, `waiting`은 boolean이다. `carry`는 phase1/3 대기 시null, phase0 완료 시boolean이다. CLI 내부 API carry 초기값은false이며 대기의 보존된 bool을 반환CCR처럼 표시하지 않는다. OUTPUT_RAM은65536바이트, OUTPUT_PORTS는 ordered9바이트 `>BII`(size BYTE, address/value BE32)다. 오류는 stderr와 실패 종료 코드로 보고하며 성공 JSON을 출력하지 않는다.
+성공 stdout은 정확히23개 key의 한 줄 JSON이다. `d0..d7`, `a0..a6`, `phase`, `saved_a0`, `saved_a1`, `saved_bank`, `saved_list_end`, `current_bank_base`는 숫자, `waiting`은 boolean이다. `carry`는 phase1/3 대기 시null, phase0 완료 시boolean이다. CLI 내부 API carry 초기값은false이며 대기의 보존된 bool을 반환CCR처럼 표시하지 않는다. OUTPUT_RAM은65536바이트, OUTPUT_PORTS는 ordered9바이트 `>BII`(size BYTE, address/value BE32)다. 오류는 stderr와 실패 종료 코드로 보고하며 성공 JSON을 출력하지 않는다.
 
-phase3은indexed sprite대기이며waiting=true,callback metadata비활성이다. phase0/1/2에서는saved_list_end=0이며phase3의saved_list_end는draw saved_a1과별개의복귀주소다. 이전schema 명령에는SPRITE_WAITING뒤0을삽입해야하고이전pending JSON은saved_list_end=0을명시하여이전직접04대기상태로전달해야한다.
+phase3은indexed sprite대기이며waiting=true,callback metadata비활성이다. phase0/1/2에서는saved_list_end=0이며phase3의saved_list_end는draw saved_a1과별개의복귀주소다. saved_list_end가 없던 이전 직접04 명령에는 SPRITE_WAITING 뒤0을 삽입하고, 현재 schema에서는 그 뒤 CURRENT_BANK_BASE도 명시해야 한다. pending 재개는 실제 장치 bank를 별도로 전달하며 RAM shadow에서 추정하지 않는다.
 
 ## 실제 순서와 continuation
 

@@ -1705,3 +1705,20 @@
 - 공식원본576성공단계재실행후soundCLI576단계/ordinaryCLI515단계가전체RAM15regs/state/carry/PVC/읽기까지일치했다. 직전실제C++출력16재개,리소스없는pending10호출,오류·파일보존383조건,합성MS5Apadding유무2조건통과. reportSHA `c7d47dd00019aeec066cf13ac5b563990e6377cb31a745f5e0be59b7bc70b055`. 메인이입력56/산출물6196항목의고유6243참조hash를검사했다.
 - 수정뒤make all test Python241/C++145/경고0,패커추가검사후최종Python discover243/통과. normal/UBSan도통과했다. 기존6회귀모두통과하고메인이모든현재hash를검사했다: execution `c1c697b87e473dcd21b70a4e8955b21715bc84f7c36cd646c2deb12305e13189`,control `c0052fd6401928b5e278231698acbb994d7b8dc20818f6348c8ccb52100ccd78`,sound `5c22a5a70202f4d0e1b5a9445a2d999cf7ed94a0a74295c63199789f8e3ab1e1`,indexed `779eca392ecf0aa4804c58258011f51c5fac766b84650fe3136263dbf9ffad0d`,field `1ba94321aafb3a5b8d71f5ffa2b7eeda6914b165ea89f74ed286d1c9d20561a0`,directsound `6e31e2e93a7a447f1f34dae2ec55e2ccd0a46a6fff266a7c85ee31ea3253c050`.
 - 리뷰0213/실행문서갱신. 전체17명령중14종과14/3c의일부callback지원상태이며전체복원율로환산하지않는다. 다음40은RAMbankshadow와실제physicalbank를구분하고대기전후currentbank를보존하는계약이필요하다. 기존kind2 상한2ffff0과hardwarePVCoverlay2fe000차이도조사대상이다. `animation-banked-lookup-design.md`에근거를남겼다. 다른callback·자연상위활성화/scheduler/IRQ·직접플레이·전체스테이지·미사용전체의미·전체Goal은계속미완료/active다.
+
+## 2026-10-08 — 진행 보고 및 bank 상태 구현 재개
+
+- 최신 통합은35aa5d5이다. animation17명령 중14종(약82%)과14/3c의일부callback 지원이며 전체게임복원율은분모미확정으로미산정이다. 자연scheduler/IRQ·직접플레이·전체스테이지/적/보스·전체미사용자료의미는미완료다. 기존Goal active/전체범위/완료기준을유지한다.
+- branch codex/animation-banked-lookup에서current_bank_base의저장·대기재개계약을구현중이다. Sol6.1/medium 세작업자가core/header/unit,Python검증기7개,두CLI/현재사용문서를각각담당한다. 메인은원본동작추론·계약·리뷰·통합을재개했다. 아직새스키마통합검증이나opcode40완료를주장하지않는다.
+- 메인원본모델리뷰에서초기계약의PVC쌍최종식오류를발견했다. pinned neogeo.cpp1231..1240은각쓰기마다get_bank_base를호출하고prot_pvc.cpp71..76은첫쓰기후ff9&=7fff를적용한다. 따라서ff9=value/ff8=0의쌍완료bank는100000+((value&7fff)<<8)이다. raw포트WORD는그대로유지한다. 계약·세작업자지시를수정했고기존Python PVC모델두번호출로0/1000/7000/8000/f000/ffff의6경계를확인했다. 이는고정모델대조이며물리기판측정이아니다.
+- Sol독립감사는MS5 overlay2fe000..2fffff와runtimeMS5D646개header/CRC/physicalpayload일치를보고했다. kind2 271개중overlay겹침은없다. 기존scene hook의일부bank전환검증을전체PVC부수효과검증으로확대해석하지않는다. 후속40읽기에엄격한overlay경계가필요하며공유기존리소스계약은이번단위에서변경하지않는다.
+
+### 실제 bank 상태 구현·원본 대조 통합 완료
+
+- 메인은 이전 턴의 PVC 쌍 최종식 수정과 구현 착수를 progress로 분류하고 기존 목표를 승계했다. `current_bank_base`를 실제 PVC 쌍 갱신·phase1..4 대기 보존·실패 rollback에 연결했다. 두 CLI와7Python검증기도 공통필드를 함께 이행했다. 일반22numeric/23JSON, sound27numeric/28JSON이며 구 schema 자동 추정은 없다.
+- Sol6.1/medium 세작업자가 core/unit,7검증기/회귀·독립감사,CLI/문서·새검증기를 담당했다. Opus5.5/high는 원본 bank-chain 관측을 작성했고 메인은 원본 의미·실제diff·계약 수정·통합을 맡았다. 외부포함최대4작업자/내부최대3을 지켰다. Opus 실제모델은modelUsage로확인했으며effort는CLI요청외별도반환확인필드가없다.
+- 원본92조건/276단계/68대기연쇄/560PVC/guard3을확보했다. 실제1c01로RAMshadow를쓴뒤14/03 actualRTS를거쳐30대기·28종료를실행하며,14생략비교군도포함한다. 실제ports와pinnedPVC모델로bank를도출한다. 메인과독립Sol이전체원본을재실행했고독립모델대조·1116고유참조hash확인도통과했다. 관측제한문구2개만정정후최종nativeSHA `28060b3d2ea2edcd9048929b34855e8698c13504314c81421bde9764aa7fe777`.
+- 실제soundCLI276단계/직전실제출력184재개/PVC560개/외부읽기0이전체RAM15regs/metadata/carry/bank까지일치했다. resource없는hold·재개와오류5조건도통과했다. 입력43/산출물2220참조의고유2256hash를메인과독립Sol이확인했다. reportSHA `efc034849e741abbaedfc92478a0cafc85dad370f3b632fce1da2c24b0d6ad67`. 새verifier는간접localimport provenance도포함한다.
+- 기존7회귀exit0,고유24461참조hash를메인과Sol이확인했다. 현재각SHA는리뷰0214에기록했다. `make all test` Python243/C++실행145/경고0,core별도normal/UBSan통과. CLI별도33호출도통과했다. 메인과독립Sol의실제source리뷰후단위를수용했다.
+- 후속40조사에서메인은실제MVS/AES RAM mirror100000..1fffff를확인했다. 음수firstoffset은RAMmirror16381종, RAM→bank mixedLONG1종, whollybank16386종으로분류한다. scratchstack1feffc의기존독립매핑을이영역의원본증거로재사용할수없음을설계문서에기록했다. 하드웨어영역과현재API지원제한을구분한다.
+- 리뷰0214와animation-bank-state-execution.md에재현·근거·제약을정리했다. 다음은40의실제banked읽기·RAMmirror/버스경계·리소스선택및원본관측연결이다. opcode완료수는17중14종+14/3c일부로유지하며새40완료를주장하지않는다. 자연상위활성화/scheduler/IRQ·직접플레이·전체스테이지/적/보스·미사용전체의미·전체Goal은미완료/active다.

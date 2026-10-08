@@ -8,7 +8,7 @@ import tempfile
 
 import observe_animation_field_execution as original
 import observe_animation_indexed_execution as draw_native
-from verify_animation_execution import initial,invoke,parse
+from verify_animation_execution import initial,invoke,parse,bank_from_ports,BANK_EXPECTATION
 from verify_animation_control_execution import raw_window
 from pack_animation_control import build as pack_control
 from pack_animation_fields import build as pack_fields,SPEC,CALLER,CALLER_RAW
@@ -17,7 +17,7 @@ NATIVE_SHA='8ce1f6051cd06310e7e3e321f8ad9bbb879714ceee4381e8662883b936f3e508'
 native=original.native
 
 def digest(path):return native.sha(path.read_bytes())
-def expected(info):return dict(initial(info['result']),carry=info['carry'])
+def expected(info,ports):return dict(initial(info['result'],bank_from_ports(0x200000,ports)),carry=info['carry'])
 
 def audit(root,program,source):
     folder=root/'artifacts/animation_field_native';path=folder/'observation.json';report=json.loads(path.read_text())
@@ -64,7 +64,7 @@ def compare(root,folder,exe,report,resources):
         ram=(src/row['input_ram_file']).read_bytes();inp.write_bytes(ram);out.write_bytes(b'old');ports.write_bytes(b'old')
         rr=[] if row['fixture']['opcode'] in (0x34,0x38) else resources
         result=invoke(exe,initial(row['incoming']),inp,out,ports,rr);assert not result.returncode,(index,result.stderr)
-        actual=parse(result.stdout);assert actual==expected(row),(index,actual,expected(row))
+        actual=parse(result.stdout);want=expected(row,(src/row['ports_file']).read_bytes());assert actual==want,(index,actual,want)
         assert out.read_bytes()==(src/row['ram_file']).read_bytes()
         assert ports.read_bytes()==(src/row['ports_file']).read_bytes() and inp.read_bytes()==ram
         stdout.write_text(result.stdout);files={str(p.relative_to(root)):digest(p) for p in (inp,out,ports,stdout)};hashes.update(files)
@@ -75,7 +75,7 @@ def save_supplement(root,folder,exe,label,ram,regs,info,trace,output,ports,resou
     inp,out,pout,stdout=(folder/(label+suffix) for suffix in ('_input.bin','_cpp.bin','_cpp_ports.bin','_state.json'))
     inp.write_bytes(ram);out.write_bytes(b'old');pout.write_bytes(b'old')
     result=invoke(exe,initial(regs),inp,out,pout,resources);assert not result.returncode,(label,result.stderr)
-    actual=parse(result.stdout);assert actual==expected(info),(label,actual,expected(info))
+    actual=parse(result.stdout);assert actual==expected(info,ports),(label,actual,expected(info,ports))
     assert out.read_bytes()==output and pout.read_bytes()==ports and inp.read_bytes()==ram
     stdout.write_text(result.stdout)
     payloads={label+'_native.bin':output,label+'_native_ports.bin':ports,label+'_trace.json':(json.dumps(trace,indent=2)+'\n').encode()}
@@ -215,6 +215,7 @@ def main():
         'engine/src/fixed_data_resource.cpp','engine/include/ms5/fixed_data_resource.h','Makefile','build/step_animation_execution']
     names.extend(manifest['provenance']['inputs']);names.extend(field_manifest['provenance']['inputs'])
     names.extend(str((control/name).relative_to(root)) for name in files);names.extend(str((runtime/name).relative_to(root)) for name in field_files)
+    names.extend(('tools/address_map.py','docs/analysis/animation-bank-state-contract.md'))
     inputs={name:digest(root/name) for name in names}
     primary,cpp_hashes=compare(root,folder,exe,report,resources[:1]);artifacts.update(cpp_hashes)
     one,one_hashes=length_one_supplement(root,folder,program,branches,exe,resources[:1]);artifacts.update(one_hashes)
@@ -222,7 +223,7 @@ def main():
     rejected,case_probe=negatives(root,folder,program,exe,resources,report)
     for name,value in {**inputs,**artifacts}.items():assert digest(root/name)==value,name
     assert native.sha((root/source['path']).read_bytes())==native.SOURCE_SHA256 and native.oracle_provenance()==report['oracle']
-    result=dict(source=source,oracle=report['oracle'],inputs=inputs,native_and_CPP_artifacts=artifacts,native_observation_sha256=NATIVE_SHA,
+    result=dict(bank_expectation=BANK_EXPECTATION,source=source,oracle=report['oracle'],inputs=inputs,native_and_CPP_artifacts=artifacts,native_observation_sha256=NATIVE_SHA,
         primary_cases=len(primary),primary_original_cases_reexecuted=818,primary_ordered_ports=sum(r['port_count'] for r in primary),
         cases_by_opcode=report['cases_by_opcode'],primary_excluded_fixtures=report['excluded_fixtures'],
         length_one_selected_WORD_supplement=one,known_fixed_script_cases=len(known),known_fixed_script_results=known,

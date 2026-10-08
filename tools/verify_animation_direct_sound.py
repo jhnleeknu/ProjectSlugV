@@ -34,9 +34,9 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def expected_state(info, trace):
+def expected_state(info, trace, ports, incoming_bank=0x200000):
     """Native phase -> expected CLI JSON (phase 4 contract; saved_bank/list_end/callback_saved_a0 are 0)."""
-    result = sound.initial(info['result'])
+    result = sound.initial(info['result'],general.bank_from_ports(incoming_bank,ports))
     if info['waiting']:
         pending = info['pending']
         result.update(phase=4, saved_a0=pending['outer_a0'], saved_a1=pending['outer_a1'], saved_bank=0, saved_list_end=0,
@@ -161,7 +161,7 @@ def negatives(root, folder, exe, general_exe, native, native_folder, program):
     fixture_ram, regs, _ = direct.fixture(chain['fixture'], chain['case_index'])
     begin_state = sound.initial(regs)
     begin_ram = (native_folder / begin['input_ram_file']).read_bytes()
-    pending = expected_state(begin, json.loads((native_folder / begin['trace_file']).read_text()))
+    pending = expected_state(begin, json.loads((native_folder / begin['trace_file']).read_text()),(native_folder/begin['ports_file']).read_bytes())
     pending.pop('carry')
     pending.pop('external_reads')
     pending_ram = (native_folder / begin['ram_file']).read_bytes()
@@ -326,6 +326,7 @@ def main():
         'engine/src/fixed_data_resource.cpp', 'engine/include/ms5/fixed_data_resource.h',
         'engine/src/animation_resource.cpp', 'engine/include/ms5/animation_resource.h', 'Makefile',
         'extracted/runtime/animation_control/control_04276c.ms5d']
+    names.extend(('tools/address_map.py','docs/analysis/animation-bank-state-contract.md'))
     inputs = {name: digest(root / name) for name in names}
     inputs[source['path']] = rom_before[0]
     for label, path in (('sound CLI', exe), ('general CLI', general_exe)):
@@ -343,6 +344,7 @@ def main():
         case = row['fixture']
         ram, regs, _ = direct.fixture(case, index)
         state = sound.initial(regs)
+        native_bank = 0x200000
         external = case['external']
         for position, phase in enumerate(row['phases']):
             if position:
@@ -359,7 +361,8 @@ def main():
             assert result.returncode == 0, (index, phase['phase'], result.stderr)
             actual = parse(result.stdout)
             trace = json.loads((native_folder / phase['trace_file']).read_text())
-            want = expected_state(phase, trace)
+            want = expected_state(phase, trace,(native_folder/phase['ports_file']).read_bytes(),native_bank)
+            native_bank = want['current_bank_base']
             assert actual == want, (index, phase['phase'], actual, want)
             output = out.read_bytes()
             assert len(output) == 65536
@@ -393,7 +396,7 @@ def main():
         assert digest(path) == value, name
     rom_after = (digest(rom_path), rom_path.stat().st_mtime_ns)
     assert rom_after == rom_before and direct.oracle_provenance() == native['oracle']
-    result = dict(source=source, oracle=native['oracle'], native_observation_sha256=NATIVE_SHA, inputs=inputs,
+    result = dict(bank_expectation=general.BANK_EXPECTATION,source=source, oracle=native['oracle'], native_observation_sha256=NATIVE_SHA, inputs=inputs,
         resources_passed_to_successful_runs=[], native_and_CPP_artifacts=artifacts, cases=native['cases'],
         phases=tallies['phases'], original_phases_reexecuted=native_counts['phases'],
         previous_actual_CPP_output_resumes=tallies['resumes_from_previous_actual_CPP_output'],
@@ -403,7 +406,7 @@ def main():
         case_insensitive_filesystem=insensitive, ROM_unchanged=True,
         scope='Whole unpatched 49fc6 opcode30 (4a2da->3af8) live-RAM scripts and same-CPU high/low/high->low/sequential waits; '
             'all native phases replayed; C++ runs feed only the previous actual C++ RAM/state plus recorded host changes '
-            '(including the recorded external status byte). Full 64KiB RAM, 15 registers, 27 output fields incl. phase4 '
+            '(including the recorded external status byte). Full 64KiB RAM, 15 registers, 28 output fields incl. phase4 '
             'saved outer A0/A1, callback metadata, carry, ordered PVC ports and external_reads compared.',
         limits='Input A5 restriction is current model support, not an original early-filter claim. Synthetic live-RAM '
             'fixtures only: no MS5A scripts, no resources. CLI file preservation after rejection does not prove source-level '

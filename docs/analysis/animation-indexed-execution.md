@@ -1,5 +1,10 @@
 # Opcode10 indexed draw의 전체 상태 연결
 
+## 현재 bank-state CLI schema
+
+[실제 bank 상태 계약](animation-bank-state-contract.md)에 따라 공통 `SAVED_LIST_END` 바로 뒤 argv22에 unsigned32 `CURRENT_BANK_BASE`를 전달한다. 일반 CLI는22숫자/23JSON, RAM/output/ports argv23/24/25 및 resource26+이며, sound CLI는27숫자/28JSON, callback4개 argv23..26, EXTERNAL argv27, RAM/output/ports argv28/29/30 및 resource31+다. 두 출력 JSON은 숫자 `current_bank_base`를 항상 포함한다. 임의 uint32 bank 입력을 허용하며 saved_bank와 구분한다. 이전 schema 자동 추정이나 기본값 보충은 없다. 아래 원본 관측·검증 수치와 해시는 해당 단위 당시의 완료 기록이며, 이 schema 이행의 재검증 결과를 대신하지 않는다.
+
+
 [확정 계약](animation-indexed-full-contract.md),[resource 범위](animation-indexed-resource-spans.md),[중첩 draw frame](animation-indexed-continuation.md)을따른다. 기준분석commit은9169360이다. canonical BE ROM SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이며fixed CPU주소는ROM파일offset과같다. 이번단위는기존전체상태API의opcode10과phase3을연결한다. 기존00/04/08/28/0c/14의지원과sound전용overload의1f범위를유지하며전체17opcode완료를뜻하지않는다.
 
 ## 상태와 현재 CLI
@@ -9,19 +14,19 @@
 ```text
 build/step_animation_execution \
   D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 \
-  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END \
+  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END CURRENT_BANK_BASE \
   INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [RESOURCE_MS5A_OR_MS5D ...]
 
 build/step_animation_sound_execution \
   D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 \
-  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END \
+  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END CURRENT_BANK_BASE \
   CALLBACK_SAVED_A0 CALLBACK_SOUND_PHASE CALLBACK_SAVED_LOW CALLBACK_WAITING EXTERNAL \
   INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [RESOURCE_MS5A_OR_MS5D ...]
 ```
 
-일반CLI는21숫자/최소argc25,RAM/output/ports argv22/23/24,resource25+다. phase0/1/3을받고2를거절한다. soundCLI는26숫자/최소argc30,RAM/output/ports argv27/28/29,resource30+이며phase0..3을받는다. 공통SAVED_LIST_END는argv21이고sound callback4개/EXTERNAL은argv22..26이다. 새필드는uint32 strict10진수/0x16진수이며기존숫자의폭과range검사는유지한다.
+일반CLI는22숫자/최소argc26,RAM/output/ports argv23/24/25,resource26+다. phase0/1/3을받고2를거절한다. soundCLI는27숫자/최소argc31,RAM/output/ports argv28/29/30,resource31+이며phase0..4를받는다. 공통SAVED_LIST_END는argv21, CURRENT_BANK_BASE는argv22이고 sound callback4개/EXTERNAL은argv23..27이다. 새필드는uint32 strict10진수/0x16진수이며기존숫자의폭과range검사는유지한다.
 
-stdout은일반22key,sound27key다. 기존key에숫자saved_list_end를항상추가한다. waiting은sprite.waiting만표시하며phase1/3에서true,callback_waiting은phase2에서true다. carry는phase!=0에서null,완료에서boolean이며carry입력숫자는없다. orderedports9바이트 `>BII`와65536바이트RAM출력은유지한다. 이전20/25숫자명령에는SPRITE_WAITING뒤SAVED_LIST_END를삽입해야한다. 이전직접04/sound pending JSON은saved_list_end=0을보완해야한다. positional schema자동추정은하지않는다.
+stdout은일반23key,sound28key다. 숫자saved_list_end와current_bank_base를항상포함한다. waiting은sprite.waiting만표시하며phase1/3에서true,callback_waiting은phase2/4에서true다. carry는phase!=0에서null,완료에서boolean이며carry입력숫자는없다. orderedports9바이트 `>BII`와65536바이트RAM출력은유지한다. 이전20/25숫자명령에는 SPRITE_WAITING 뒤 SAVED_LIST_END를 삽입하고, 그 뒤 CURRENT_BANK_BASE도 명시해야 한다. 이전 직접04/sound pending은 saved_list_end=0이며 실제 장치 bank를 별도로 전달한다. positional schema 자동 추정이나 RAM shadow에서의 bank 추정은 하지 않는다.
 
 ## 원본 선택·복귀 순서
 

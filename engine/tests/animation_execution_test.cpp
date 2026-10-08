@@ -19,7 +19,7 @@ bool same(const ms5::AnimationExecutionState& a,const ms5::AnimationExecutionSta
     for(unsigned int i=0;i<8;++i)if(a.sprite.registers.d[i]!=b.sprite.registers.d[i])return false;
     for(unsigned int i=0;i<5;++i)if(a.sprite.registers.a[i]!=b.sprite.registers.a[i])return false;
     return a.a5==b.a5 && a.a6==b.a6 && a.phase==b.phase && a.saved_a0==b.saved_a0 &&
-        a.saved_a1==b.saved_a1 && a.saved_bank==b.saved_bank && a.saved_list_end==b.saved_list_end && a.sprite.waiting==b.sprite.waiting &&
+        a.saved_a1==b.saved_a1 && a.saved_bank==b.saved_bank && a.saved_list_end==b.saved_list_end && a.current_bank_base==b.current_bank_base && a.sprite.waiting==b.sprite.waiting &&
         a.callback_saved_a0==b.callback_saved_a0 && a.callback_sound_phase==b.callback_sound_phase &&
         a.callback_saved_low==b.callback_saved_low && a.callback_waiting==b.callback_waiting;
 }
@@ -865,5 +865,80 @@ void word_callback_rts() {
     bytes=word_callback_script(3);windows=word_callback_data(3,0,0x3679f,0);data_failure(fixture(),script(bytes),windows,initial()); // Nearbytarget is not the verifiedRTS.
 }
 
+
+void actual_bank_state() {
+    const std::vector<ms5::AnimationResource> none;
+    const std::vector<ms5::FixedDataResource> no_data;
+    const std::uint32_t incoming[]={0,0xffffffffU,0x345678U};
+    for(unsigned int i=0;i<3;++i) {
+        std::vector<std::uint8_t> ram=fixture(0);ms5::AnimationExecutionState state=initial();
+        state.current_bank_base=incoming[i];bool carry=false;std::uint32_t reads=77;
+        std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,none,no_data,state,0,reads,carry,ports,error));
+        assert(carry&&reads==0&&state.current_bank_base==0x200000);ports_are(ports,1);
+        state=initial();state.current_bank_base=incoming[i];failure(fixture(),none,state);
+    }
+    // All four continuations accept an unused arbitrary bank and retain it on
+    // resource-free hold, independently of a poisoned RAM bank shadow.
+    for(unsigned int phase=1;phase<=4;++phase)for(unsigned int input=0;input<2;++input) {
+        std::vector<std::uint8_t> ram;ms5::AnimationExecutionState state;
+        if(phase==1)state=begin_wait(ram,script(draw()),false);
+        else if(phase==2)state=sound_wait(ram,1);
+        else if(phase==3)state=indexed_wait(ram,false);
+        else state=direct_wait(ram,1);
+        state.current_bank_base=0xffffffffU;state.a6=0xffffffffU;put(ram,0x10,2,0xbeef);
+        const ms5::AnimationExecutionState captured=state;const std::vector<std::uint8_t> held=ram;
+        bool carry=input!=0;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports=old_ports();std::string error;
+        assert(ms5::step_animation_execution(ram,none,no_data,state,255,reads,carry,ports,error));
+        assert(same(state,captured)&&ram==held&&carry==(input!=0)&&reads==0&&ports.empty());
+    }
+    // Resume a draw into a direct-sound wait: only the draw-return pair writes
+    // PVC. Values8000/f000 keep their raw port bits but lose bit15 in bank state.
+    const unsigned int shadows[]={0,1,7,14,0xffff};
+    for(unsigned int i=0;i<5;++i) {
+        std::vector<std::uint8_t> ram;ms5::AnimationExecutionState state=begin_wait(ram,script(draw()),false);
+        state.current_bank_base=0x76543210;state.saved_bank=static_cast<std::uint16_t>(shadows[i]);
+        state.saved_a1=0x106000;const std::vector<std::uint8_t> bytes=direct_sound_script();
+        for(unsigned int j=0;j<bytes.size();++j)ram[0x6000+j]=bytes[j];
+        put(ram,0x8d34,2,4);put(ram,0x4d8a,2,0);put(ram,0x4d8c,2,6);
+        put(ram,0x4d74,2,1);put(ram,0x4d76,2,0);put(ram,0x4d82,2,0x0455);
+        put(ram,0x4d84,2,0x0566);put(ram,0x4d86,2,0x0677);
+        ms5::AnimationExecutionState bad=state;bad.saved_a1=0x50000;
+        sound_failure(ram,none,no_data,bad); // Late fetch after candidate return pair.
+        bool carry=false;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,none,no_data,state,0,reads,carry,ports,error));
+        const unsigned int raw=((shadows[i]+1U)<<12)&65535U;
+        assert(state.phase==4&&!carry&&reads==0&&get(ram,0x10)==shadows[i]);
+        assert(state.current_bank_base==0x100000U+((raw&0x7fffU)<<8));
+        assert(ports.size()==2&&ports[0].address==0x2ffff2&&ports[0].size==2&&ports[0].value==raw);
+        assert(ports[1].address==0x2ffff0&&ports[1].size==2&&ports[1].value==0);
+    }
+    // Direct sound high -> low -> hold neither emits PVC nor follows shadow.
+    for(unsigned int input=0;input<2;++input) {
+        std::vector<std::uint8_t> ram;ms5::AnimationExecutionState state=direct_wait(ram,1);
+        state.current_bank_base=0x345678;put(ram,0x10,2,0xbeef);put(ram,0x4d74,2,2);
+        bool carry=input!=0;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports;std::string error;
+        assert(ms5::step_animation_execution(ram,none,no_data,state,255,reads,carry,ports,error));
+        assert(state.callback_sound_phase==2&&state.current_bank_base==0x345678&&carry==(input!=0)&&reads==0&&ports.empty());
+        const ms5::AnimationExecutionState captured=state;const std::vector<std::uint8_t> held=ram;
+        assert(ms5::step_animation_execution(ram,none,no_data,state,255,reads,carry,ports,error));
+        assert(same(state,captured)&&ram==held&&ports.empty()&&reads==0);
+        put(ram,0x4d74,2,0xffff);ms5::AnimationExecutionState bad=state;bad.saved_a1=0x50000;
+        sound_failure(ram,none,no_data,bad); // Sound RAM effects precede failed next fetch.
+        assert(ms5::step_animation_execution(ram,none,no_data,state,255,reads,carry,ports,error));
+        assert(state.phase==0&&state.current_bank_base==0x200000&&carry&&reads==0);ports_are(ports,1);
+    }
+    // Complete direct sound and enter another direct-sound wait without any
+    // intervening PVC. A nondefault physical bank and dirty shadow both survive.
+    std::vector<std::uint8_t> ram;ms5::AnimationExecutionState state=direct_wait(ram,1);
+    state.current_bank_base=0x456789;put(ram,0x10,2,0xbeef);
+    ram[0x6004]=0x30;ram[0x6005]=0xff;put(ram,0x6006,2,0x1bc0);ram[0x6008]=0x28;
+    put(ram,0x4d74,2,3);put(ram,0x4d8a,2,0);put(ram,0x4d8c,2,6);
+    bool carry=true;std::uint32_t reads=77;std::vector<ms5::VideoPortWrite> ports;std::string error;
+    assert(ms5::step_animation_execution(ram,none,no_data,state,0,reads,carry,ports,error));
+    assert(state.phase==4&&state.saved_a1==0x106008&&state.callback_sound_phase==1);
+    assert(state.current_bank_base==0x456789&&get(ram,0x10)==0xbeef&&ports.empty()&&reads==0&&carry);
 }
-int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();sound_callbacks();sound_waits();sound_metadata();indexed_selection();indexed_draws();indexed_waits();indexed_errors();field_writes();relative_fields();field_errors();direct_sound_calls();direct_sound_waits();direct_sound_metadata();word_callbacks();word_callback_sound();word_callback_errors();word_callback_rts();std::cout<<"animation_execution_test passed\n";return 0;}
+
+}
+int main(){early_and_waits();ram_scripts_and_jumps();draw_paths();pending();errors();field_branches();control_callbacks();control_errors();sound_callbacks();sound_waits();sound_metadata();indexed_selection();indexed_draws();indexed_waits();indexed_errors();field_writes();relative_fields();field_errors();direct_sound_calls();direct_sound_waits();direct_sound_metadata();word_callbacks();word_callback_sound();word_callback_errors();word_callback_rts();actual_bank_state();std::cout<<"animation_execution_test passed\n";return 0;}

@@ -5,20 +5,45 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import struct
+from address_map import pvc_bank_update
 import tempfile
 from observe_activation_animation_scripts import (Observer,cases,fixture,load_verified_program,
     oracle_provenance,KEYS,BASE,SOURCE_SHA256)
 
 NATIVE_SHA='18d25c677ab35698a7662142ce730422c67abcb2df58e7eea8592e141d5e39e6'
-FIELDS=tuple(KEYS)+('phase','saved_a0','saved_a1','saved_bank','waiting','saved_list_end')
+FIELDS=tuple(KEYS)+('phase','saved_a0','saved_a1','saved_bank','waiting','saved_list_end','current_bank_base')
 OUTPUT=set(FIELDS)|{'carry'}
 def sha(data):return hashlib.sha256(data).hexdigest()
 def digest(path):return sha(path.read_bytes())
-def initial(regs):return dict(regs,phase=0,saved_a0=0,saved_a1=0,saved_bank=0,waiting=False,saved_list_end=0)
-def expected(info):
+BANK_EXPECTATION = 'current_bank_base derived from pinned PVC pair formula and original ordered ports over independently tracked incoming bank; never RAM shadow or C++ result'
+def bank_from_ports(incoming_bank, ports):
+    assert type(incoming_bank) is int and 0<=incoming_bank<=0xffffffff
+    assert len(ports)%18==0, 'animation PVC writes must be complete ordered pairs'
+    bank=incoming_bank;ff8=0
+    for at in range(0,len(ports),18):
+        size,address,value=struct.unpack_from('>BII',ports,at)
+        second=struct.unpack_from('>BII',ports,at+9)
+        assert size==2 and address==0x2ffff2 and value<=65535
+        assert second==(2,0x2ffff0,0)
+        # The first write already invokes get_bank_base and masks stored ff9.
+        # Its transient bank is not the completed pair's selected bank.
+        unused,ff8,ff9=pvc_bank_update(ff8,value)
+        bank,ff8,ff9=pvc_bank_update(0,ff9)
+    return bank
+
+def bank_before_phase(phases, target, folder, incoming_bank=0x200000):
+    bank=incoming_bank
+    for phase in phases:
+        if phase is target:return bank
+        bank=bank_from_ports(bank,(folder/phase['ports_file']).read_bytes())
+    raise AssertionError('phase does not belong to original chain')
+
+def initial(regs,current_bank_base=0x200000):return dict(regs,phase=0,saved_a0=0,saved_a1=0,saved_bank=0,waiting=False,saved_list_end=0,current_bank_base=current_bank_base)
+def expected(info,ports,incoming_bank=0x200000):
     pending=info['pending']
     return dict(info['result'],phase=int(info['waiting']),waiting=info['waiting'],carry=info['carry'],
-        saved_a0=pending.get('saved_a0',0),saved_a1=pending.get('saved_a1',0),saved_bank=pending.get('saved_bank',0),saved_list_end=0)
+        saved_a0=pending.get('saved_a0',0),saved_a1=pending.get('saved_a1',0),saved_bank=pending.get('saved_bank',0),saved_list_end=0,current_bank_base=bank_from_ports(incoming_bank,ports))
 def apply_changes(ram,changes):
     data=bytearray(ram)
     for change in changes:
@@ -98,7 +123,7 @@ def live_ram_supplements(root,folder,program,branches,exe):
         observer.prepare(ram,regs);info,before,native_ram,native_ports=observer.run();assert not info['waiting'] and before==ram
         inp.write_bytes(ram);out.write_bytes(b'old');ports.write_bytes(b'old')
         p=invoke(exe,initial(regs),inp,out,ports,[]);assert not p.returncode,(label,p.stderr)
-        actual=parse(p.stdout);assert actual==expected(info) and out.read_bytes()==native_ram and ports.read_bytes()==native_ports and inp.read_bytes()==ram,label
+        actual=parse(p.stdout);assert actual==expected(info,native_ports) and out.read_bytes()==native_ram and ports.read_bytes()==native_ports and inp.read_bytes()==ram,label
         if label=='entry-clear-live-script':
             assert info['trace']['opcodes'][0]==dict(address=base,value=0)
             assert any(e['address']==base and e['pc']==0x49fee for e in info['trace']['ordered_writes'])
@@ -137,7 +162,7 @@ def negatives(root,folder,exe,resources,native):
         reject('live-jump-command-budget',payload=bytes(data),rr=[])
         data=bytearray(ram);data[0x9152:0x9156]=bytes(4);reject('late-callback',payload=bytes(data))
         pending=next(row for row in native['results'] if row['fixture']['pending'])['phases'][0]
-        pending_ram=(root/'artifacts/activation_animation_scripts'/pending['ram_file']).read_bytes();pending_state=expected(pending);pending_state.pop('carry')
+        pending_ram=(root/'artifacts/activation_animation_scripts'/pending['ram_file']).read_bytes();pending_state=expected(pending,(root/'artifacts/activation_animation_scripts'/pending['ports_file']).read_bytes());pending_state.pop('carry')
         reject('pending-noncanonical-A5',st=dict(pending_state,a5=0x108002),payload=pending_ram,rr=[])
         ready=bytearray(pending_ram);ready[0x8d34:0x8d36]=(pending_state['d4']&65535).to_bytes(2,'big')
         reject('late-resume-missing-next-script',st=pending_state,payload=bytes(ready),rr=[])
@@ -176,9 +201,10 @@ def main():
         'engine/src/animation_resource.cpp','engine/src/fixed_data_resource.cpp','engine/include/ms5/animation_resource.h','Makefile','build/step_animation_execution',
         'docs/analysis/animation-execution-initial-contract.md','docs/analysis/animation-draw-full-contract.md']
     names.extend(str((runtime/name).relative_to(root)) for name in packed)
+    names.extend(('tools/address_map.py','docs/analysis/animation-bank-state-contract.md'))
     inputs={name:digest(root/name) for name in names};inp,out,ports=(folder/x for x in ('input.bin','cpp.bin','cpp.ports.bin'));rows=[];resumes=0
     for index,(case,row) in enumerate(zip(cases(),native['results'])):
-        ram,regs=fixture(case,index);state=initial(regs)
+        ram,regs=fixture(case,index);state=initial(regs);native_bank=0x200000
         for position,phase in enumerate(row['phases']):
             if position:ram=apply_changes(ram,phase['host_changes']);resumes+=1
             assert ram==(root/'artifacts/activation_animation_scripts'/phase['input_ram_file']).read_bytes()
@@ -186,7 +212,9 @@ def main():
             rr=[] if case['script']==0 or phase['phase']=='hold' else resources
             p=invoke(exe,state,inp,out,ports,rr);assert not p.returncode,(index,phase['phase'],p.stderr)
             actual=parse(p.stdout);output=out.read_bytes();written=ports.read_bytes()
-            assert actual==expected(phase),(index,phase['phase'],actual,expected(phase))
+            want=expected(phase,(root/'artifacts/activation_animation_scripts'/phase['ports_file']).read_bytes(),native_bank)
+            assert actual==want,(index,phase['phase'],actual,want)
+            native_bank=want['current_bank_base']
             assert output==(root/'artifacts/activation_animation_scripts'/phase['ram_file']).read_bytes()
             assert written==(root/'artifacts/activation_animation_scripts'/phase['ports_file']).read_bytes() and inp.read_bytes()==ram
             files={}
@@ -199,7 +227,7 @@ def main():
     rejected=negatives(root,folder,exe,resources,native)
     for name,value in {**inputs,**artifacts}.items():assert digest(root/name)==value,name
     assert sha((root/source['path']).read_bytes())==SOURCE_SHA256 and oracle_provenance()==native['oracle']
-    result=dict(source=source,oracle=native['oracle'],inputs=inputs,native_and_CPP_artifacts=artifacts,
+    result=dict(bank_expectation=BANK_EXPECTATION,source=source,oracle=native['oracle'],inputs=inputs,native_and_CPP_artifacts=artifacts,
         cases=90,phases=98,previous_actual_CPP_output_resumes=resumes,primary_ordered_ports=sum(r['port_count'] for r in rows),
         results=rows,live_RAM_supplements=extra,negative_cases=rejected,full_RAM_15_registers_pending_carry_ports_equal=True,
         scope='RealMS5A scripts48980/489c2 with98originalreexecutedphases and8resumes usingonlypreviousactualCPPoutputs pluslistedhostwrites. '

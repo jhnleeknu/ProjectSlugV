@@ -158,8 +158,8 @@ def audit_word(root,program,source):
     return native,folder,hashes
 
 
-def expected(phase,trace):
-    result=sound.expected(phase,trace)
+def expected(phase,trace,ports,incoming_bank=0x200000):
+    result=sound.expected(phase,trace,ports,incoming_bank)
     assert result['external_reads']==phase['external_reads']
     return result
 
@@ -179,7 +179,7 @@ def changes(ram,writes,external):
 def compare(root,folder,native,native_folder,resources,exe,general_exe,label):
     rows=[];hashes={};counts=collections.Counter()
     for row in native['results']:
-        state=sound.initial(row['phases'][0]['incoming'])
+        state=sound.initial(row['phases'][0]['incoming']);native_bank=0x200000
         ram=(native_folder/row['phases'][0]['input_ram_file']).read_bytes()
         external=row['fixture'].get('external',0)
         for position,phase in enumerate(row['phases']):
@@ -188,7 +188,8 @@ def compare(root,folder,native,native_folder,resources,exe,general_exe,label):
                 counts['previous_actual_CPP_output_resumes']+=1
             else:assert not phase['host_changes']
             assert ram==(native_folder/phase['input_ram_file']).read_bytes()
-            trace=json.loads((native_folder/phase['trace_file']).read_text());want=expected(phase,trace)
+            trace=json.loads((native_folder/phase['trace_file']).read_text());want=expected(phase,trace,(native_folder/phase['ports_file']).read_bytes(),native_bank)
+            native_bank=want['current_bank_base']
             prefix='%s_%04d_%s'%(label,row['case_index'],phase['phase'])
             inp,out,ports,st=(folder/(prefix+s) for s in ('_input.bin','_cpp.bin','_ports.bin','_state.json'))
             inp.write_bytes(ram);out.write_bytes(b'old');ports.write_bytes(b'old')
@@ -205,7 +206,7 @@ def compare(root,folder,native,native_folder,resources,exe,general_exe,label):
             if held:counts['resource_free_pending_invocations']+=1
             counts['sound_CLI_phases']+=1;counts['ports']+=len(ports.read_bytes())//9
             counts['external_reads']+=actual['external_reads']
-            # Ordinary CLI supports reached non-sound targets, with its exact22-key schema.
+            # Ordinary CLI supports reached non-sound targets, with its exact23-key schema.
             details=row.get('details',{})
             targets=[c['target'] for c in details['commands']] if 'commands' in details else [details['callback']]
             if 0x47672 not in targets and not position:
@@ -436,6 +437,7 @@ def main():
         if filename:
             path=Path(filename).resolve()
             if root/'tools' in path.parents and path.suffix=='.py':names.append(str(path.relative_to(root)))
+    names.extend(('tools/address_map.py','docs/analysis/animation-bank-state-contract.md'))
     names=sorted(set(names))
     inputs={n:digest(root/n) for n in names}
     for path in resources+[exe,general_exe,rom]:record(root,path,inputs)
@@ -453,7 +455,7 @@ def main():
     for name,value in {**inputs,**artifacts}.items():assert digest(root/name)==value,name
     assert (digest(rom),rom.stat().st_mtime_ns)==rom_before
     assert rts.oracle_provenance()==native['oracle']
-    result=dict(complete=False,scope='RTS only; WORD non-RTS comparison pending',source=source,oracle=native['oracle'],inputs=inputs,
+    result=dict(bank_expectation=ordinary.BANK_EXPECTATION,complete=False,scope='RTS only; WORD non-RTS comparison pending',source=source,oracle=native['oracle'],inputs=inputs,
         native_and_CPP_artifacts=artifacts,native_observation_sha256=RTS_SHA,cases=native['cases'],
         counts=counts,results=rows,negative_cases=rejected,padding_supplement=supplement,ROM_unchanged=True,
         successful_resource_windows=[dict(cpu_start=a,end_exclusive=b) for a,b in spans],

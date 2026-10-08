@@ -1,5 +1,10 @@
 # Animation 조건 분기와 제한된 callback의 전체 상태 연결
 
+## 현재 bank-state CLI schema
+
+[실제 bank 상태 계약](animation-bank-state-contract.md)에 따라 공통 `SAVED_LIST_END` 바로 뒤 argv22에 unsigned32 `CURRENT_BANK_BASE`를 전달한다. 일반 CLI는22숫자/23JSON, RAM/output/ports argv23/24/25 및 resource26+이며, sound CLI는27숫자/28JSON, callback4개 argv23..26, EXTERNAL argv27, RAM/output/ports argv28/29/30 및 resource31+다. 두 출력 JSON은 숫자 `current_bank_base`를 항상 포함한다. 임의 uint32 bank 입력을 허용하며 saved_bank와 구분한다. 이전 schema 자동 추정이나 기본값 보충은 없다. 아래 원본 관측·검증 수치와 해시는 해당 단위 당시의 완료 기록이며, 이 schema 이행의 재검증 결과를 대신하지 않는다.
+
+
 후속1f 지원은 별도 external-input overload와 [sound 실행 CLI](animation-sound-execution.md)에 추가되었다. 이 문서의 기존 overload/CLI는 이전 지원 범위를 유지한다. 아래 검증 해시는 당시 연결의 기록이다.
 
 [전체 상태 확장 계약](animation-control-full-contract.md)과 [raw resource 범위](animation-control-resource-spans.md)를 따른다. canonical BE ROM SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. 아래 fixed CPU 주소는 ROM 파일 오프셋과 같다. 기존 전체 상태의00/04/08/28에0c와14(확인된1d/1e callback만)를 추가하는 단위이며, 전체17opcode와 임의callback 완료를 뜻하지 않는다. 기존 RAM/carry API나 기존 호출형을 제거하지 않는다.
@@ -19,11 +24,11 @@ bool step_animation_execution(std::vector<std::uint8_t>& ram,
 ```text
 build/step_animation_execution \
   D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 \
-  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END \
+  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END CURRENT_BANK_BASE \
   INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [RESOURCE_MS5A_OR_MS5D ...]
 ```
 
-현재숫자21개,최소argc25,INPUT_RAM/OUTPUT_RAM/OUTPUT_PORTS는argv22/23/24,resource는argv25이후다. 레지스터와saved pointer는unsigned32bit, phase0/1/3(2거절),bank0..65535,waiting0..1,saved_list_end uint32의 strict10진수/0x16진수 파서를 유지한다. 출력은 정확히22key다:15레지스터와 `phase`, `saved_a0`, `saved_a1`, `saved_bank`, `saved_list_end`, `waiting` boolean, `carry`(pending null/완료boolean). ENTRY나carry입력은 없다. 출력포트의 ordered9바이트 `>BII` 형식도 동일하다.
+현재 숫자22개, 최소argc26, INPUT_RAM/OUTPUT_RAM/OUTPUT_PORTS는argv23/24/25, resource는argv26이후다. 레지스터와saved pointer는unsigned32bit, phase0/1/3(2거절),bank0..65535,waiting0..1,saved_list_end/current_bank_base uint32의 strict10진수/0x16진수 파서를 유지한다. 출력은 정확히23key다:15레지스터와 `phase`, `saved_a0`, `saved_a1`, `saved_bank`, `saved_list_end`, `current_bank_base`, `waiting` boolean, `carry`(pending null/완료boolean). ENTRY나carry입력은 없다. 출력포트의 ordered9바이트 `>BII` 형식도 동일하다.
 
 각 resource의 **실제 첫4바이트**가MS5A이면 기존 `load_animation_resource`, MS5D이면 `load_fixed_data_resource`를 사용한다. 확장자나 인자 위치로종류를 추정하지 않는다.4바이트를 읽을 수 없거나 다른magic이면 실패한다. fixed kind1/version/CRC/length/reserved 검증은 각 기존loader를 따른다. 공급한 파일은 미사용경로에서도 검증하며, resource0개는 실제fixedfetch가 도달하지 않는 null/liveRAM/pending경로에서 허용한다. 이후fixed조회가 도달하면 필요한 창을 제공해야 한다.
 

@@ -1,5 +1,10 @@
 # Animation14/1f sound callback의 전체 상태 CLI
 
+## 현재 bank-state CLI schema
+
+[실제 bank 상태 계약](animation-bank-state-contract.md)에 따라 공통 `SAVED_LIST_END` 바로 뒤 argv22에 unsigned32 `CURRENT_BANK_BASE`를 전달한다. 일반 CLI는22숫자/23JSON, RAM/output/ports argv23/24/25 및 resource26+이며, sound CLI는27숫자/28JSON, callback4개 argv23..26, EXTERNAL argv27, RAM/output/ports argv28/29/30 및 resource31+다. 두 출력 JSON은 숫자 `current_bank_base`를 항상 포함한다. 임의 uint32 bank 입력을 허용하며 saved_bank와 구분한다. 이전 schema 자동 추정이나 기본값 보충은 없다. 아래 원본 관측·검증 수치와 해시는 해당 단위 당시의 완료 기록이며, 이 schema 이행의 재검증 결과를 대신하지 않는다.
+
+
 [중첩 continuation 근거](animation-callback-continuation.md)와 기존 [control 실행 범위](animation-control-execution.md)를 따른다. canonical BE ROM SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. 여기의 fixed CPU 주소는 ROM 파일 오프셋과 같다. 추가 범위는 opcode14의 selector1f 및 실제 dispatch target47672이며, 임의callback이나전체17opcode 지원을 뜻하지 않는다.
 
 ```cpp
@@ -18,16 +23,16 @@ bool step_animation_execution(std::vector<std::uint8_t>& ram,
 ```text
 build/step_animation_sound_execution \
   D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A5 A6 \
-  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END \
+  PHASE SAVED_A0 SAVED_A1 SAVED_BANK SPRITE_WAITING SAVED_LIST_END CURRENT_BANK_BASE \
   CALLBACK_SAVED_A0 CALLBACK_SOUND_PHASE CALLBACK_SAVED_LOW CALLBACK_WAITING EXTERNAL \
   INPUT_RAM OUTPUT_RAM OUTPUT_PORTS [RESOURCE_MS5A_OR_MS5D ...]
 ```
 
-현재숫자26개,최소argc30다. INPUT_RAM/OUTPUT_RAM/OUTPUT_PORTS는argv27/28/29,resource는argv30이후다. SAVED_LIST_END는argv21이며callback4개는argv22..25,EXTERNAL은argv26이다. register와saved pointer는uint32,phase0..3,bank0..65535,sound phase0..3,low/external0..255,두waiting0..1을strict10진수/0x16진수로검사한다. carry입력숫자는없으며API초기bool은false다.
+현재 숫자27개, 최소argc31이다. INPUT_RAM/OUTPUT_RAM/OUTPUT_PORTS는argv28/29/30, resource는argv31이후다. SAVED_LIST_END는argv21, CURRENT_BANK_BASE는argv22이며 callback4개는argv23..26, EXTERNAL은argv27이다. register와 saved pointer 및 current_bank_base는uint32, phase0..4, saved_bank0..65535, sound phase0..2, low/external0..255, 두 waiting0..1을 strict10진수/0x16진수로 검사한다. carry 입력숫자는 없으며 API 초기bool은false다.
 
-stdout은정확히27key다. 기존15레지스터와phase/saved_a0/saved_a1/saved_bank/waiting/saved_list_end/carry에callback_saved_a0/callback_sound_phase/callback_saved_low/callback_waiting/external_reads를추가한다. waiting은sprite.waiting만표시하며callback_waiting과합치지않는다. 두waiting은boolean,carry는phase!=0이면null,완료면boolean이다. ports파일은이번호출의순서있는9바이트 `>BII` 기록이다. 오류에는JSON을출력하지않는다.
+stdout은정확히28key다. 기존15레지스터와phase/saved_a0/saved_a1/saved_bank/waiting/saved_list_end/current_bank_base/carry에callback_saved_a0/callback_sound_phase/callback_saved_low/callback_waiting/external_reads를추가한다. waiting은sprite.waiting만표시하며callback_waiting과합치지않는다. 두waiting은boolean,carry는phase!=0이면null,완료면boolean이다. ports파일은이번호출의순서있는9바이트 `>BII` 기록이다. 오류에는JSON을출력하지않는다.
 
-일반 `step_animation_execution` CLI도이번indexed확장에서21숫자/22key로변경한다. 두CLI의공유21숫자는SPRITE_WAITING뒤SAVED_LIST_END를갖는다. 이전명령은이자리에0을삽입해야한다. 기존API overload도opcode10/phase3을추가하되1f/phase2는계속거절한다. 새로운외부상태인자가있는호출형에서만이번범위를사용한다.
+일반 `step_animation_execution` CLI는22숫자/23key다. 두CLI의 공유22숫자는SPRITE_WAITING뒤 SAVED_LIST_END와 CURRENT_BANK_BASE를 갖는다. 일반CLI는phase0/1/3만 받고2/4를 거부하며, soundCLI는phase0..4를 받는다. 기존 external-input 없는 API overload는1f/30 및phase2/4를 거부한다.
 
 phase0/1/2는saved_list_end=0을요구한다. phase3은sprite.waiting=true,callback metadata비활성이며saved_list_end가selecteddraw후복귀할list주소다. waiting은phase1/3에서true,callback_waiting은phase2에서true다.
 

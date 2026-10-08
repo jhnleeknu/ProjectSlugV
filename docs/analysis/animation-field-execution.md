@@ -1,5 +1,10 @@
 # Animation 필드 변경과 상대 분기의 전체 상태 실행
 
+## 현재 bank-state CLI schema
+
+[실제 bank 상태 계약](animation-bank-state-contract.md)에 따라 공통 `SAVED_LIST_END` 바로 뒤 argv22에 unsigned32 `CURRENT_BANK_BASE`를 전달한다. 일반 CLI는22숫자/23JSON, RAM/output/ports argv23/24/25 및 resource26+이며, sound CLI는27숫자/28JSON, callback4개 argv23..26, EXTERNAL argv27, RAM/output/ports argv28/29/30 및 resource31+다. 두 출력 JSON은 숫자 `current_bank_base`를 항상 포함한다. 임의 uint32 bank 입력을 허용하며 saved_bank와 구분한다. 이전 schema 자동 추정이나 기본값 보충은 없다. 아래 원본 관측·검증 수치와 해시는 해당 단위 당시의 완료 기록이며, 이 schema 이행의 재검증 결과를 대신하지 않는다.
+
+
 [확정계약](animation-field-full-contract.md)과 [resource 범위](animation-field-resource-spans.md)를따른다. baseline b5ded33,canonical BE ROM SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. fixed CPU주소는ROM파일offset과같다. 이번범위는opcode18/1c/20/24/34/38/2c이며기존전체상태실행의확정효과를확장한다. 아래최종검증은이번7opcode의실제원본/C++비교기록이다. 지원은13opcode의전체상태효과와14의제한된callback경로이며전체17opcode완료를뜻하지않는다.
 
 ## 실행 범위와 상태
@@ -10,7 +15,7 @@
 
 모든명령은4a276의D6=A1,LONG(A0)=D6뒤dispatch한다. statepointer/뒤RAMscript와target의alias순서를보존하고다음fetch는현재RAM을읽는다. 실제도달하는BYTE/WORD/LONG의정렬·span만검사하며선택을생략한WORD나skippedBYTE를미리읽지않는다. length8배수나index+2<=length같은추가제한은없다. 원본의후속00/28timer와최종carry를포함한whole49fc6가검증대상이다.
 
-이번명령은새pending을만들지않는다. 기존phase0/1/2/3와saved_list_end/callbackmetadata,기존세APIoverload와일반21숫자/22JSON·sound26숫자/27JSON schema를유지한다. 일반CLI의phase2/1f거절도유지한다. 에러는RAM·15레지스터·모든metadata·carry·ports및external-input호출형의external_reads를보존한다.
+이번명령은새pending을만들지않는다. 기존phase0/1/2/3와saved_list_end/callbackmetadata,기존세APIoverload를유지한다. 현재 bank-state CLI는일반22숫자/23JSON·sound27숫자/28JSON이며공통argv22 CURRENT_BANK_BASE를추가한다. 당시field단위의21/26숫자schema검증기록과구분한다. 일반CLI의phase2/1f거절도유지한다. 에러는RAM·15레지스터·모든metadata·carry·ports및external-input호출형의external_reads를보존한다.
 
 ## Resource와 파일 보호
 

@@ -9,7 +9,7 @@ import tempfile
 import zlib
 
 import observe_animation_control_commands as original
-from verify_animation_execution import initial, invoke, parse
+from verify_animation_execution import initial, invoke, parse, bank_from_ports, BANK_EXPECTATION
 from pack_animation_control import build as pack_resources
 import observe_activation_animation_scripts as activation
 from pack_activation_animation import build as pack_activation_resources
@@ -21,8 +21,8 @@ def digest(path):
     return original.sha(path.read_bytes())
 
 
-def expected(row):
-    return dict(initial(row['result']), carry=row['carry'])
+def expected(row,ports):
+    return dict(initial(row['result'],bank_from_ports(0x200000,ports)), carry=row['carry'])
 
 
 def audit(root, program, source):
@@ -124,7 +124,7 @@ def mixed_resource_supplements(root, folder, program, exe, resources):
             result=invoke(exe,initial(regs),inp,out,ports,rr)
             assert not result.returncode,(label,result.stderr)
             actual=parse(result.stdout)
-            assert actual==dict(initial(info['result']),carry=info['carry']),label
+            assert actual==dict(initial(info['result'],bank_from_ports(0x200000,native_ports)),carry=info['carry']),label
             assert out.read_bytes()==native_ram and ports.read_bytes()==native_ports and inp.read_bytes()==ram,label
             payloads={prefix+'_native.bin':native_ram,prefix+'_native_ports.bin':native_ports,
                 prefix+'_trace.json':(json.dumps(trace,indent=2)+'\n').encode(),
@@ -289,6 +289,7 @@ def main():
     names.extend(str((runtime/name).relative_to(root)) for name in packed)
     names.extend('extracted/runtime/activation_animation/'+name for name in
         ('animation_048980.ms5a','animation_0489c2.ms5a','lookup_048a12.ms5d','manifest.json'))
+    names.extend(('tools/address_map.py','docs/analysis/animation-bank-state-contract.md'))
     inputs={name:digest(root/name) for name in names}
     rows=[]
     for row in native['results']:
@@ -300,7 +301,8 @@ def main():
         result=invoke(exe,initial(row['incoming']),inp,out,ports,rr)
         assert not result.returncode,(index,result.stderr)
         actual=parse(result.stdout)
-        assert actual==expected(row),(index,actual,expected(row))
+        want=expected(row,(root/'artifacts/animation_control_commands'/row['ports_file']).read_bytes())
+        assert actual==want,(index,actual,want)
         assert out.read_bytes()==(root/'artifacts/animation_control_commands'/row['ram_file']).read_bytes(),index
         assert ports.read_bytes()==(root/'artifacts/animation_control_commands'/row['ports_file']).read_bytes(),index
         assert inp.read_bytes()==ram,index
@@ -315,7 +317,7 @@ def main():
     for name,value in {**inputs,**artifacts}.items():assert digest(root/name)==value,name
     assert original.sha((root/source['path']).read_bytes())==original.SOURCE_SHA256
     assert original.oracle_provenance()==native['oracle']
-    result=dict(source=source,oracle=native['oracle'],inputs=inputs,native_and_CPP_artifacts=artifacts,
+    result=dict(bank_expectation=BANK_EXPECTATION,source=source,oracle=native['oracle'],inputs=inputs,native_and_CPP_artifacts=artifacts,
         native_observation_sha256=NATIVE_SHA,cases=len(rows),cases_by_opcode=native['cases_by_opcode'],
         primary_ordered_ports=sum(row['port_count'] for row in rows),
         returned_carry_counts={str(key):value for key,value in collections.Counter(row['result']['carry'] for row in rows).items()},

@@ -77,13 +77,15 @@ bool read_data(const std::vector<std::uint8_t>& ram,const std::vector<FixedDataR
     if(matches!=1 || data==NULL) {error="missing, ambiguous or partial fixed animation data read";return false;}
     value=0;for(unsigned int i=0;i<size;++i)value=(value<<8)|(*data)[at+i];return true;
 }
-void pvc(std::vector<VideoPortWrite>& ports,std::uint32_t value) {
+void pvc(AnimationExecutionState& s,std::vector<VideoPortWrite>& ports,std::uint32_t value) {
     VideoPortWrite p;p.size=2;p.address=0x2ffff2;p.value=value&65535U;ports.push_back(p);
     p.address=0x2ffff0;p.value=0;ports.push_back(p);
+    // The first device write masks ff9 before the second write completes the pair.
+    s.current_bank_base=0x100000U+((value&0x7fffU)<<8);
 }
 bool zero_bank(std::vector<std::uint8_t>& ram,AnimationExecutionState& s,
     std::vector<VideoPortWrite>& ports,std::string& error) {
-    if(!write_ram(ram,s.a5,-0x7ff0,2,0,error))return false;pvc(ports,0x1000);return true;
+    if(!write_ram(ram,s.a5,-0x7ff0,2,0,error))return false;pvc(s,ports,0x1000);return true;
 }
 bool epilogue(std::vector<std::uint8_t>& ram,AnimationExecutionState& s,bool& carry,
     std::vector<VideoPortWrite>& ports,std::string& error) {
@@ -98,7 +100,7 @@ bool draw_return(std::vector<std::uint8_t>& ram,AnimationExecutionState& s,
     const std::uint32_t d0=r.d[0]&65535U,d7=r.d[7]&65535U;std::uint32_t value=0;
     if(!read_ram(ram,s.a5,-0x7ff0,2,value,error))return false;
     word(r.d[7],value);word(r.d[0],r.d[7]);word(r.d[7],r.d[7]+1U);
-    word(r.d[7],r.d[7]<<8);word(r.d[7],r.d[7]<<4);pvc(ports,r.d[7]);
+    word(r.d[7],r.d[7]<<8);word(r.d[7],r.d[7]<<4);pvc(s,ports,r.d[7]);
     r.d[0]=extend_word(d0);r.d[7]=extend_word(d7);
     r.a[0]=s.saved_a0;r.a[1]=s.saved_a1;
     s.phase=0;s.saved_a0=0;s.saved_a1=0;s.saved_bank=0;return true;

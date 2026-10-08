@@ -1,5 +1,10 @@
 # Animation opcode30 직접 sound 실행
 
+## 현재 bank-state CLI schema
+
+[실제 bank 상태 계약](animation-bank-state-contract.md)에 따라 공통 `SAVED_LIST_END` 바로 뒤 argv22에 unsigned32 `CURRENT_BANK_BASE`를 전달한다. 일반 CLI는22숫자/23JSON, RAM/output/ports argv23/24/25 및 resource26+이며, sound CLI는27숫자/28JSON, callback4개 argv23..26, EXTERNAL argv27, RAM/output/ports argv28/29/30 및 resource31+다. 두 출력 JSON은 숫자 `current_bank_base`를 항상 포함한다. 임의 uint32 bank 입력을 허용하며 saved_bank와 구분한다. 이전 schema 자동 추정이나 기본값 보충은 없다. 아래 원본 관측·검증 수치와 해시는 해당 단위 당시의 완료 기록이며, 이 schema 이행의 재검증 결과를 대신하지 않는다.
+
+
 계약은 `animation-direct-sound-contract.md`를 따른다. 기준 `51bdf61`, canonical BE SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`. 아래 CPU 주소는 ROM 파일 offset과 같다(고정 영역). 구현은 C++11이다. 원본 관측과 C++ 비교의 검증 범위는 아래에 구분한다.
 
 ## 구현된 의미 (소스: `engine/src/animation_execution.cpp`)
@@ -14,7 +19,7 @@
 
 ## CLI
 
-`step_animation_sound_execution`은 숫자 인자 수(26)와 JSON 키(27)를 유지하고 PHASE 최대값만 4로 확장했다. `callback_waiting`은 phase2/4, `waiting`은 phase1/3, carry는 phase!=0에서 null이다. 일반 `step_animation_execution` CLI는 변경하지 않았다(phase0/1/3만).
+직접sound 추가 당시 `step_animation_sound_execution`은26숫자/27JSON을 유지하고 PHASE 최대값만4로 확장했다. 현재 bank-state schema는27숫자/28JSON이며 argv22 CURRENT_BANK_BASE를 추가한다. `callback_waiting`은 phase2/4, `waiting`은 phase1/3, carry는 phase!=0에서 null이다. 일반 `step_animation_execution` CLI는 변경하지 않았다(phase0/1/3만).
 
 ## 단위 시험 (`engine/tests/animation_execution_test.cpp`)
 

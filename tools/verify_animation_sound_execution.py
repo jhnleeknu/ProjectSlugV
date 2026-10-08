@@ -9,7 +9,7 @@ import tempfile
 import zlib
 
 import observe_animation_sound_callback as original
-from verify_animation_execution import FIELDS as OLD_FIELDS, apply_changes
+from verify_animation_execution import FIELDS as OLD_FIELDS, apply_changes, bank_from_ports, bank_before_phase, BANK_EXPECTATION
 from pack_animation_control import build as pack_resources
 
 NATIVE_SHA = '5f8b3d3a71532bd3c99d930ad4e61d9c490cc90036669cd872f9169294043108'
@@ -22,13 +22,13 @@ def digest(path):
     return original.sha(path.read_bytes())
 
 
-def initial(registers):
-    return dict(registers,phase=0,saved_a0=0,saved_a1=0,saved_bank=0,waiting=False,saved_list_end=0,
+def initial(registers,current_bank_base=0x200000):
+    return dict(registers,phase=0,saved_a0=0,saved_a1=0,saved_bank=0,waiting=False,saved_list_end=0,current_bank_base=current_bank_base,
         callback_saved_a0=0,callback_sound_phase=0,callback_saved_low=0,callback_waiting=False)
 
 
-def expected(info, trace):
-    result=initial(info['result'])
+def expected(info, trace, ports, incoming_bank=0x200000):
+    result=initial(info['result'],bank_from_ports(incoming_bank,ports))
     if info['waiting']:
         pending=info['pending']
         result.update(phase=2,saved_a0=pending['outer_a0'],saved_a1=pending['outer_a1'],saved_bank=pending['bank'],
@@ -115,7 +115,7 @@ def negatives(root,folder,program,exe,resources,native):
     chain=next(row for row in native['results'] if row['fixture']['wait']==1)
     held=next(phase for phase in chain['phases'] if phase['phase']=='hold')
     trace=json.loads((native_folder/held['trace_file']).read_text())
-    pending=expected(held,trace);pending.pop('carry');pending.pop('external_reads')
+    pending=expected(held,trace,(native_folder/held['ports_file']).read_bytes(),bank_before_phase(chain['phases'],held,native_folder));pending.pop('carry');pending.pop('external_reads')
     pending_ram=(native_folder/held['ram_file']).read_bytes()
     ready=bytearray(pending_ram);original.put(ready,0x104d74,2,0xffff);ready=bytes(ready)
     final_trace=json.loads((native_folder/chain['phases'][-1]['trace_file']).read_text())
@@ -213,9 +213,10 @@ def main():
         'engine/src/animation_resource.cpp','engine/include/ms5/animation_resource.h','Makefile','build/step_animation_sound_execution']
     names.extend(str((runtime/name).relative_to(root)) for name in packed)
     names.extend(manifest['provenance']['inputs'])
+    names.extend(('tools/address_map.py','docs/analysis/animation-bank-state-contract.md'))
     inputs={name:digest(root/name) for name in names};rows=[];resumes=0
     for row in native['results']:
-        index=row['case_index'];case=row['fixture'];ram,regs=original.fixture(case,index);state=initial(regs)
+        index=row['case_index'];case=row['fixture'];ram,regs=original.fixture(case,index);state=initial(regs);native_bank=0x200000
         for position,phase in enumerate(row['phases']):
             if position:ram=apply_changes(ram,phase['host_changes']);resumes+=1
             assert ram==(root/'artifacts/animation_sound_callback'/phase['input_ram_file']).read_bytes()
@@ -227,7 +228,9 @@ def main():
             assert not result.returncode,(index,phase['phase'],result.stderr)
             actual=parse(result.stdout)
             trace=json.loads((root/'artifacts/animation_sound_callback'/phase['trace_file']).read_text())
-            assert actual==expected(phase,trace),(index,phase['phase'],actual,expected(phase,trace))
+            want=expected(phase,trace,(root/'artifacts/animation_sound_callback'/phase['ports_file']).read_bytes(),native_bank)
+            assert actual==want,(index,phase['phase'],actual,want)
+            native_bank=want['current_bank_base']
             assert out.read_bytes()==(root/'artifacts/animation_sound_callback'/phase['ram_file']).read_bytes()
             assert ports.read_bytes()==(root/'artifacts/animation_sound_callback'/phase['ports_file']).read_bytes()
             assert inp.read_bytes()==ram
@@ -243,7 +246,7 @@ def main():
     for name,value in {**inputs,**artifacts}.items():assert digest(root/name)==value,name
     assert original.sha((root/source['path']).read_bytes())==original.SOURCE_SHA256
     assert original.oracle_provenance()==native['oracle']
-    result=dict(source=source,oracle=native['oracle'],inputs=inputs,native_and_CPP_artifacts=artifacts,
+    result=dict(bank_expectation=BANK_EXPECTATION,source=source,oracle=native['oracle'],inputs=inputs,native_and_CPP_artifacts=artifacts,
         native_observation_sha256=NATIVE_SHA,cases=native['cases'],phases=native['phases'],
         original_phases_reexecuted=len(rows),previous_actual_CPP_output_resumes=resumes,
         primary_ordered_ports=sum(row['port_count'] for row in rows),native_ordered_ports=native_ports,

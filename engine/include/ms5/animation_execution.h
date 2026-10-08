@@ -12,12 +12,14 @@ struct AnimationExecutionState {
     std::uint32_t saved_a0, saved_a1;
     std::uint16_t saved_bank;
     std::uint32_t saved_list_end;
+    // Actual device bank after a complete PVC pair; independent of RAM shadow.
+    std::uint32_t current_bank_base;
     std::uint32_t callback_saved_a0;
     unsigned int callback_sound_phase;
     std::uint8_t callback_saved_low;
     bool callback_waiting;
     AnimationExecutionState() : a5(0x108000), a6(0), phase(0),
-        saved_a0(0), saved_a1(0), saved_bank(0), saved_list_end(0), callback_saved_a0(0),
+        saved_a0(0), saved_a1(0), saved_bank(0), saved_list_end(0), current_bank_base(0x200000), callback_saved_a0(0),
         callback_sound_phase(0), callback_saved_low(0), callback_waiting(false) {}
 };
 // Full49fc6 register/PVC/pending execution for opcodes00/04/08/28, plus0c

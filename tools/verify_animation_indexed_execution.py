@@ -7,7 +7,7 @@ import tempfile
 
 import observe_animation_indexed_execution as original
 import observe_animation_indexed_fixed_scripts as fixed
-from verify_animation_execution import FIELDS, initial, invoke, parse, apply_changes
+from verify_animation_execution import FIELDS, initial, invoke, parse, apply_changes, bank_from_ports, bank_before_phase, BANK_EXPECTATION
 from pack_animation_control import build as pack_control
 from pack_animation_branch import extract, pack
 from verify_animation_sound_execution import initial as sound_initial, invoke as sound_invoke, parse as sound_parse
@@ -16,8 +16,8 @@ from verify_animation_control_execution import raw_window
 NATIVE_SHA='db3247ceba5327719b84882b7d1abe006f0e30c87d28642ed7c2f9a9f75a6508'
 FIXED_SHA='7f50c9d4ddf4023e47dd22abc6849cbd6322bd4916f2e620a04a2ca78b61fd37'
 def digest(path):return original.sha(path.read_bytes())
-def expected(info):
-    result=initial(info['result'])
+def expected(info,ports,incoming_bank=0x200000):
+    result=initial(info['result'],bank_from_ports(incoming_bank,ports))
     if info['waiting']:
         p=info['pending'];result.update(phase=3,waiting=True,saved_a0=p['saved_a0'],saved_a1=p['saved_a1'],
             saved_bank=p['saved_bank'],saved_list_end=p['list_end'])
@@ -79,7 +79,7 @@ def compare(root,folder,program,exe,native,resources,is_fixed=False):
     for row in native['results']:
         index=row['case_index'];case=row['fixture']
         values=fixed.fixture(program,case,index) if is_fixed else original.fixture(program,case,index)
-        ram,regs=values[:2];state=initial(regs)
+        ram,regs=values[:2];state=initial(regs);native_bank=0x200000
         for position,phase in enumerate([row] if is_fixed else row['phases']):
             if position:ram=apply_changes(ram,phase['host_changes']);resumes+=1
             assert ram==(src/phase['input_ram_file']).read_bytes()
@@ -88,7 +88,8 @@ def compare(root,folder,program,exe,native,resources,is_fixed=False):
             inp.write_bytes(ram);out.write_bytes(b'old');ports.write_bytes(b'old')
             rr=[] if label=='hold' else resources
             result=invoke(exe,state,inp,out,ports,rr);assert not result.returncode,(prefix,result.stderr)
-            actual=parse(result.stdout);assert actual==expected(phase),(prefix,actual,expected(phase))
+            actual=parse(result.stdout);want=expected(phase,(src/phase['ports_file']).read_bytes(),native_bank)
+            assert actual==want,(prefix,actual,want);native_bank=want['current_bank_base']
             assert out.read_bytes()==(src/phase['ram_file']).read_bytes()
             assert ports.read_bytes()==(src/phase['ports_file']).read_bytes() and inp.read_bytes()==ram
             state_path.write_text(result.stdout)
@@ -123,7 +124,7 @@ def supplements(root,folder,program,branches,exe,resources):
         prefix='supplement_%02d'%index;inp=folder/(prefix+'_input.bin');out=folder/(prefix+'_cpp.bin');pout=folder/(prefix+'_cpp_ports.bin')
         inp.write_bytes(ram);out.write_bytes(b'old');pout.write_bytes(b'old')
         result=invoke(exe,initial(regs),inp,out,pout,resources);assert not result.returncode,(prefix,result.stderr)
-        actual=parse(result.stdout);assert actual==expected(info)
+        actual=parse(result.stdout);assert actual==expected(info,ports)
         assert out.read_bytes()==output and pout.read_bytes()==ports and inp.read_bytes()==ram
         payloads={prefix+'_native.bin':output,prefix+'_native_ports.bin':ports,prefix+'_trace.json':(json.dumps(trace,indent=2)+'\n').encode(),prefix+'_state.json':result.stdout.encode()}
         for name,content in payloads.items():(folder/name).write_bytes(content)
@@ -137,7 +138,7 @@ def sound_cli_chains(root,folder,program,exe,native,resources):
     src=root/'artifacts/animation_indexed_execution_native'
     for row in native['results']:
         if not row['fixture']['pending']:continue
-        index=row['case_index'];ram,regs,details=original.fixture(program,row['fixture'],index);state=sound_initial(regs)
+        index=row['case_index'];ram,regs,details=original.fixture(program,row['fixture'],index);state=sound_initial(regs);native_bank=0x200000
         for position,phase in enumerate(row['phases']):
             if position:ram=apply_changes(ram,phase['host_changes']);resumes+=1
             assert ram==(src/phase['input_ram_file']).read_bytes()
@@ -147,8 +148,8 @@ def sound_cli_chains(root,folder,program,exe,native,resources):
             rr=[] if phase['phase']=='hold' else resources
             result=sound_invoke(exe,state,0,inp,out,ports,rr);assert not result.returncode,(prefix,result.stderr)
             actual=sound_parse(result.stdout)
-            wanted=dict(expected(phase),callback_saved_a0=0,callback_sound_phase=0,callback_saved_low=0,callback_waiting=False,external_reads=0)
-            assert actual==wanted,(prefix,actual,wanted)
+            wanted=dict(expected(phase,(src/phase['ports_file']).read_bytes(),native_bank),callback_saved_a0=0,callback_sound_phase=0,callback_saved_low=0,callback_waiting=False,external_reads=0)
+            assert actual==wanted,(prefix,actual,wanted);native_bank=wanted['current_bank_base']
             assert out.read_bytes()==(src/phase['ram_file']).read_bytes()
             assert ports.read_bytes()==(src/phase['ports_file']).read_bytes() and inp.read_bytes()==ram
             stdout.write_text(result.stdout)
@@ -161,8 +162,9 @@ def sound_cli_chains(root,folder,program,exe,native,resources):
 
 def negatives(root,folder,program,exe,resources,native):
     ram,regs,details=original.fixture(program,original.cases()[0],0);state=initial(regs);rows=[]
-    held=next(r for r in native['results'] if r['fixture']['pending'])['phases'][1]
-    pending=expected(held);pending.pop('carry')
+    chain=next(r for r in native['results'] if r['fixture']['pending']);held=chain['phases'][1]
+    src=root/'artifacts/animation_indexed_execution_native'
+    pending=expected(held,(src/held['ports_file']).read_bytes(),bank_before_phase(chain['phases'],held,src));pending.pop('carry')
     pending_ram=(root/'artifacts/animation_indexed_execution_native'/held['ram_file']).read_bytes()
     ready=bytearray(pending_ram);original.put(ready,0x8d34,2,pending['d4']&65535);ready=bytes(ready)
     with tempfile.TemporaryDirectory(dir=folder) as temporary:
@@ -237,6 +239,7 @@ def main():
         'engine/include/ms5/scene_map_transfer.h','engine/include/ms5/video_port.h','engine/src/animation_resource.cpp','engine/include/ms5/animation_resource.h',
         'engine/src/fixed_data_resource.cpp','engine/include/ms5/fixed_data_resource.h','Makefile','build/step_animation_execution']
     names.extend(manifest['provenance']['inputs']);names.extend(str((runtime/name).relative_to(root)) for name in packed);names.append(str(ms5a.relative_to(root)))
+    names.extend(('tools/address_map.py','docs/analysis/animation-bank-state-contract.md'))
     inputs={name:digest(root/name) for name in names}
     primary,cpp_hashes=compare(root,folder,program,exe,native,resources[:1]);artifacts.update(cpp_hashes)
     real,cpp_hashes=compare(root,folder,program,exe,fixed_native,resources,True);artifacts.update(cpp_hashes)
@@ -245,7 +248,7 @@ def main():
     rejected,case_probe=negatives(root,folder,program,exe,resources,native)
     for name,value in {**inputs,**artifacts}.items():assert digest(root/name)==value,name
     assert original.sha((root/source['path']).read_bytes())==original.SOURCE_SHA256 and original.oracle_provenance()==native['oracle']
-    result=dict(source=source,oracle=native['oracle'],inputs=inputs,native_and_CPP_artifacts=artifacts,
+    result=dict(bank_expectation=BANK_EXPECTATION,source=source,oracle=native['oracle'],inputs=inputs,native_and_CPP_artifacts=artifacts,
         primary_observation_sha256=NATIVE_SHA,fixed_observation_sha256=FIXED_SHA,
         primary_cases=846,primary_phases=len(primary),previous_actual_CPP_output_resumes=8,
         fixed_script_cases=len(real),signed_selected_address_supplements=extra,sound_CLI_phase3_phases=len(sound_rows),sound_CLI_results=sound_rows,
