@@ -1390,8 +1390,15 @@
 - 메인이 전체source/CLI/unit/도구를읽고 branch 집계 대조를 추가한뒤555저장RAM/입력승계/register/provenance를 직접재검토했다. 실제CLI대조도다시실행해동일hash를확인했다. 전체make Python182/C++122/경고0. 리뷰0181 및stage-cue-frame.md에근거와한계를기록했다.
 - Native SHA256 `b820dff0be27fbc038c563473840fc6bb3652788c57bf200c7248d0c1a06da52`, verification `3607ca69a390b0d133ece913f9ac5956ed99f221d1aa22e597d0bdd29c7d2e20`. 전체e8a48/480bc/직접플레이는후속이고전체goal은active다.
 
+## 2026-10-08 — 스프라이트 제출 전체 register·대기 재개
+
+- Cue 제어 단위는 `ea635cd`로 저장했다. 후속 branch `codex/sprite-submit-execution`에서 cd58의 기본callback, clipping, queue 제출 및cda4대기·재개를 별도 C++ API/CLI로 복원했다. 기존 memory-only API는 유지한다.
+- 원본616조건/736단계의 전체64KiB RAM·14register·waiting/status가 일치했다. 실제 대기60사례를 같은 nativeCPU에서 reset 없이 이어 실행했고 CLI도120번 이전출력을 승계했다. 외부consumer/callback/prepared/producer 변경은 각각 기록한다. 조건분기6개의양쪽, CLI오류31조건, directAPI원자성6조건도통과했다.
+- 메인이 전체source/CLI/unit/관측/비교도구를 읽고736저장RAM/입력승계/외부변경/PC/A7/branch/provenance를 직접대조했다. 실제CLI검증 재실행도동일hash다. 독립읽기전용리뷰에서도문제를발견하지않았다. 전체make Python182/C++123/경고0, 리뷰0182 및sprite-submit-execution.md에근거와한계를기록했다.
+- Native SHA256 `e5ed5e1e0119a1684f40318f708e920553dc1a071a09b9fedb19b4506d651b39`, verification `06ee2a59080d2c5d984a35d5bc2f06a7807ad44c8cff441d391f66e58800844e`. 임의callback/IRQ timing/전체CCR이나자연scheduler완료를주장하지않는다. 전체goal은active다.
+
 ### 다음 분석 인수인계
 
-- branch `codex/stage-cue-frame`에서cd58전체register/대기재개후속작업을진행중이다. 메인계약은stage-cue-frame.md마지막cd58절에있다. 캡처D4를유지하고cda4에서재개하며callback/clip/D6/D4를재실행하지않는다.
-- 신규sprite_submit_execution header/core/unit은별도미통합작업이다. 구현에이전트단위검증후메인review와독립원본비교가남았다. inventory에이전트가별도CLI/관측/비교도구를작성중이다. 기존cuecontrol통합에이파일들을섞지않는다.
-- e8a48 전체연결에는catalog cue8byte windows, e8a0c의indexedraw조회창,scene43e08연결이추가로필요하다. Inventory5창147명령/0gap, DATA3영역, catalog59record와42nonnullroot prefix를보존했다. cd52지정raw참조0건은다른callback불가능의증명이아니다.
+- 다음은 전체e8a48 frame연결이다. helper4개/2986/43e08과cd58대기재개를 재사용한다. Sprite에서대기하면 그앞의할당/좌표/cue진행을 다시실행하지않도록frame상태를보존해야한다. main설계는sprite-submit-execution.md 마지막절에있다.
+- Catalog59record/42nonnullcue root의각8byte와 e8a0c부터128byte indexedraw조회창을runtimeMS5D로추출해야한다. 후자는첫16byte뒤에코드가이어지는source조회창이지32개논리레코드라는증거가아니다. 현재scene script의간접참조e6e9e LONG은0으로기본stream을선택한다. 다른stream불가능의증명은아니다.
+- 독립검증·구현에이전트는현재모두완료상태다. 다음위임은이확정계약에서시작하고원본/추출물은Git에서제외한다. 전체480bc의나머지경로와직접플레이는후속이다.
