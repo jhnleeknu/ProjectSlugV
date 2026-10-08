@@ -1529,3 +1529,15 @@
 - 원본104+shiftedA5원본2+리소스없는분기5=111CLI비교가일치했다. orderedports6,576개와오류149조건통과. 전체make Python189/C++137/경고0. 단위fixture주소문제를수정하고UBSan통과; ASan성공은주장하지않는다. 현재입력15/native입력7/산출물425개해시일치. reportSHA `8d201ba3822457b69673b5ebab5ea663fadeb81889c5aa59d1ff5730617e56ae`,리뷰0196.
 - 후속8cda 전체레지스터 원본관찰480조건/600RAM쓰기/5분기양쪽을준비했다. 메인이dirtyflag fixture상관을보완후재실행했으며최종SHA `aaddf6efc6fd19e61d5d2af783db3f3a5cc159a6a7cb339ac886e15dbe298222`. C++fullblend구현·비교는아직이다.
 - 다음4e286은sound대기와8cda/두35f0출력을연결해야한다. 비BCD입력은4e272의20byte명목표뒤코드바이트까지읽으므로필요rawspan은32byte임을정적계약stage-hud-counter-contract.md에기록했다. 이를source검증한MS5D로보존하고원본실행으로확인할계획이다. 전체47c6c/직접플레이/자연scheduler/IRQ/전체Goal은미완료이며active다.
+
+
+## 2026-10-08 — palette blend 8cda 전체 레지스터 연결
+
+- Baselinee48fc44, branchcodex/palette-blend-execution. Sol6.1/medium 세작업자가구현·CLI·원본비교를분담했고메인이실제diff/원본계약/해시와결과를리뷰했다. 기존RAMsetter를재사용하며D0.low변환,A1/A2,참조WORD에따른D2전체MOVEQ32를반환하고A5를비롯한나머지상태를보존한다.
+- pinnedMusashi480조건의전체RAM/15regs가실제CLI와일치했다. 원본600RAM쓰기/5분기양쪽,오류107조건통과. fullmake Python189/C++138/경고0및격리UBSan통과. 현재입력10/native입력6/산출물961해시를대조했다. reportSHA `63125a881e5dac28dbb7562f8adbb9678ba138af48783fe13b2932c0e1eff07f`,메인리뷰0197.
+- 다음4e286은새fullblend/기존fullsoundword/blockdraw를연결한다. 비BCDlookup이코드바이트까지읽는32bytewindow와soundpending을보존해야한다. 47c6c전체·직접플레이·자연scheduler/IRQ·전체Goal은미완료이며active다.
+
+### 다음 HUD 원본 관찰 확보
+
+- `tools/observe_stage_hud_counter.py`가원본4e286 전체비대기128조건을RTS까지실행한다. 실제8cda104회/35f0216회/3af8 6회와1,112ports를기록했다. 모든16개lookup WORD주소4e272..4e290을읽고index10..15는코드바이트임을원본관찰로확인했다.
+- 메인이observer를읽고128조건전체를별도CPU로재실행하여RAM15regs/ports/trace/metadata일치를확인했다. reportSHA `2afe1658360f5c3a41fde648544d95cccc6ac645d341b962a83b0caad9291227`. sound는head0/tail0→tail2의비대기enqueue만검증했으며,실제대기재개/외부read경로/C++전체HUD비교는다음작업이다.
