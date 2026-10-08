@@ -1499,3 +1499,9 @@
 - 수정 없는 원본32조건의 전체RAM/15register/45,520 orderedports가 실제CLI와 일치했다. 오류134조건 및 FIFO/대소문자 파일별칭 보존도 통과했다. 전체make all test Python182/C++135/경고0. 현재소스/CLI9개, native입력5개, native산출물129개의 해시를 다시 확인했다.
 - Verification SHA256 `eb27509b0fa14a529a230df257fa9aab600b535afead2fb8577c23606bf7a9bf`, native `26f2944f354460b3a9b48768e930003a323aa2491c36ae981b9ce0fcefc6b349`. 메인리뷰0193, 실행문서 screen-reset-full-execution.md. 원격 없는 로컬 통합이다.
 - 다음 stage block draw 477a2/ddf9a/362a/35f0의 원본관찰40조건/2,840ports를 확보했고 별도Sol이 메모리 내 재실행으로 감사했다. 해당 C++구현·실제런타임리소스 연결은 아직 미완료다. 원본관찰과 C++동등성을 구분한다. 자연scheduler/IRQ·직접플레이·전체Goal은 active다.
+
+### Stage block draw 원본 증거 확보
+
+- 화면 초기화는 `4da47a4`에 커밋했다. 다음 브랜치는 `codex/stage-block-draw`다. 원본 관찰 도구의 실제 CPU 실행/쓰기 trace/불변 검사를 메인이 읽고, 별도 Sol6.1/medium이40조건 전체를 메모리에서 재실행하여 기존 산출물과 일치함을 확인했다.
+- 메인은 감사 의견에 따라 loader와 ROM 해시 상수 모듈도 provenance에 추가하고 `.venv/bin/python tools/observe_stage_block_draw.py`를 다시 실행했다. 40조건, 2,840ports, 계약 불일치0. 최종 observation SHA256 `8d40c12dffce8101158a029de56342902e69424ac93f5e75ee63c5c4e2c20fc9`. BYTE tile wrap348회, LONG row increment2640회, WORD coordinate increment552회를 관찰했다. 잘못된 stream/TRAP나 좌표 WORD 증가 wrap을 검증했다고 주장하지 않는다.
+- 다음 구현은 기존 ObjectRestartState/FixedDataResource/VideoPortWrite를 재사용한다. 고정주소 `[0xddfa4,0xddfdc)`의56byte 표를 기존MS5D v1 kind1로 포장하고 C++ loader로 읽는다. payload SHA256 `14bba835b16c565a15364b794befbc8aca3c2575e28443654fbdae61ea36e30c`. API는 477a2/ddf9a/362a/35f0 진입과 전체15register/ports를 연결한다. 빈stream은 미실행helper상태를 보존하고, 실패는 transaction보존으로 처리한다. packer/core/CLI/C++원본비교는 아직 착수 전이다.
