@@ -1513,3 +1513,11 @@
 - 477a2/ddf9a/362a/35f0의 전체15레지스터와 orderedports를 C++11로 복원했다. 기존MS5D v1kind1 실제56byte 명령표와 기존C++loader를 연결했다. liveRAM/sentinel/BYTEtilewrap/WORDoffsetwrap을 보존하며 실패는 상태와ports를 보존한다. 원본zero count wrapping/TRAP는 checked실패이며 정상완료로 처리하지 않는다. 원본표는Git에넣지않고단위테스트는합성자료로교체했다.
 - 원본40조건의 전체RAM/15register/2,840ports가 실제CLI와 일치했다. 오류120조건 및 홀수 시작주소를 포함한 실제표 분할로더 추가조건도 통과했다. 7개packer테스트와재생성동일성, 최종make all test Python189/C++136/경고0, 수정후UBSan통과. 검증 SHA256 `48cb285a61968ae0e55df6d5fdeeb5e90716a1e703e39b8bc9a746ee0f8a55ce`.
 - 메인리뷰0194, 실행문서stage-block-draw-execution.md. 다음은47c04의나머지호출과47af0 gate/dispatch를기존화면초기화·palette·block draw에연결하는단계다. BIOS c00468 경로는임의stub으로완료처리하지않는다. 자연scheduler/IRQ·직접플레이·전체Goal은미완료이며active다.
+
+
+## 2026-10-08 — 상위 stage 활성화 원본 경계·의존성 확인
+
+- Baseline2c45159, branch codex/stage-activation-analysis. Sol6.1/medium 세 작업자가 API목록·animation의존성·nativeprefix를 병렬조사했고 메인이 제어흐름/주요helper 원본을 직접읽고계약을확정했다. 47c04는47c6c로fall-through하므로prefix반환을전체callback완료로취급하지않는다.
+- 원본104조건의47c6c직전 상태를확보하고메인이별도CPU로재실행하여fullRAM/15regs/trace가일치함을확인했다. 761RAM쓰기/6,576ports,5조건분기양쪽관측. A6=1009c6의helper-parent alias8조건은4e254의clear후47c48이변경된값을읽는순서를증명한다.
+- 관찰도구는정적명령artifact도재생성하도록보완하고재실행했다. 최종SHA256 `d27d39fa7129934db20f0a7735056822e2b27f30a54e474e0609bb3e347c51ce`. 리뷰0195, 계약stage-activation-prefix-contract.md, API/animationinventory두문서에기존full/partial/missing지원과미확인리소스를구분했다. 제품코드변경과새C++비교는없다.
+- 다음은47c04효과와8cda전체레지스터API를연결하고4e286의soundwait/palette/block출력,47c6c의애니메이션·carry/BCD분기로확장한다. 이중8cda의RAM효과는기존API가있지만레지스터출력은미완료다. 49fc6도기존RAM/carry부분구현을전체callback에그대로사용할수없다. 전체Goal과완료기준은그대로유지하며직접플레이는아직미완료다.
