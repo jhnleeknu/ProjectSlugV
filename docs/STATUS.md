@@ -1874,3 +1874,16 @@
 - Native SHA `89e5f3867d416ac611565f46b0f4c0590ee1bb53d7be28a65572c0f018614d9a`, C++ SHA `7fbbe6ec7902e064cca0c8e9471fab787981a8e00f668fb3388781e5c9b5d15d`. 상세 계약·재현은 animation-machine-screen-contract.md/animation-machine-screen-execution.md, 최종 리뷰·회귀는0227에 기록한다.
 - 다음은477c2와47fe4 이후,477ee/47da4 및480bc frame을 실제 stack으로 연결하는 작업이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료다. 애니메이션17중14종+14/3c 일부·전체복원율 미산정·전체 Goal active를 유지한다.
 - 최종 기존 여덟 공식 회귀가 모두 통과했다. 메인은 새screen을 포함한 아홉 보고서의 현재 고유 파일 합집합25717개를 직접 해시 대조했고 독립 감사도 일치했다. 각 최종 SHA와 검증 수치는 리뷰0227에 기록했으며 원본·추출물을 제외한 소스·도구·문서만 통합한다.
+
+
+## 2026-10-09 — 오브젝트 정리·해제의 실제 공유 스택 연결
+
+- Baseline `54a69c4`, branch `codex/animation-machine-cleanup`. 진행률 보고 후 메인의 원본 의미 해석·리뷰·통합을 재개했다. 등록된 Goal은 이미 Astra·Sol·Sonnet·Opus 역할/effort와 전체 작업자 최대5개 규칙을 포함하며 active다. 기존 진행·전체 범위·완료 기준을 유지한다.
+- 299c/2782/271c/287e/2a0a의 palette·coordinate 해제, reset·목록 연결과 free-list/count, 네 wrapper 및477c2/47fe4를 실제 RAM/A7 실행기에 연결했다. 기존 여덟 MS5D kind3와 C++ loader/bus를 사용한다.47fe8의 LEA48108/43ffc는 실행 전 경계다.
+- 메인과 독립 리뷰에서 A6 pop/RTS 및2a40 A0 pop/2a42 LONG 쓰기의 중간 checkpoint 도달성 문제를 발견해 분리했다. 첫 공식 시도는 실패로 남기고 수정 후 새 비교를 통과했다. 최종62개 C 보존 block과 실제 checkpoint를 확인했다. saved-A6 alias는 원본이 변경한ffff3400을 live pop하며 RTS 전까지 비교한다. stack-overlap의ff0029ac 반환 fault와 checked API rollback은 구분한다.
+- 원본 정상69조건121split/69continuous,guard3조건 각각3split/3continuous를 두 번씩 실행해288freshCPU/392단계를 확보했다. C++69조건121단계·직전 실제 출력52재개가 full64KiB RAM/16R/PC·장치/bank·63watchdog포트·외부읽기0·대기0과 일치했다. actual branch known C29단계, 오류17조건·zero-step33조건을 확인했다.
+- 최종 메인 `make -j4 all test` exit0: Python257개/C++159개 실행/경고0. 신규 unit 일반·UBSan 각각223 API 호출 통과. 독립 원본 감사57조건109split/57continuous와 모든guard·1458고유 참조, 비교기2520고유 참조 검토를 통과했다. 메인도 native1458개 현재 SHA를 확인했다. 원본 SR읽기·patch·중간 예상값 주입·stack mask는 사용하지 않았다.
+- Sol6.1/medium3명이 core/unit, native, 비교기/문서를 나누고 교차 리뷰했다. 동결 뒤 기존 아홉 회귀를3개씩 분담했다. 메인은 복잡한 의미·계약·실제diff·전체 빌드·최종근거·통합을 담당한다. 완료 작업자 한 명은 다음43ffc 통합을 위한 기존 API/리소스의 읽기 전용 목록화로 전환했다.
+- Native report SHA `12b825b02281f215bc554605dffc30c8d1e28d9921ac3a49cc40081df0e7553a`, C++ report SHA `5f547e6405afd24dff36bbf5f2eb1ae7b61e1b605c6c3b02bd55c838c2ac5988`. 상세 의미·재현·한계는 animation-machine-cleanup-contract.md/animation-machine-cleanup-execution.md와 리뷰0228을 따른다.
+- 다음은47fe8→43ffc의 scene 설정 및477ee/47da4/480bc frame 연결이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용 자료 전체 의미는 미완료다. 애니메이션17중14종(약82%)+14/3c 일부는 부분 지표이며 전체 게임 복원율은 분모 미확정으로 미산정이다. 전체 Goal active를 유지한다.
+- 최종 기존 아홉 공식 회귀가 모두 통과했다. 메인은 새 cleanup을 포함한 열 보고서의 현재 고유 파일 합집합28143개 SHA를 직접 확인했고 독립 감사도 일치했다. 각 최종 보고서 SHA와 검증 근거는 리뷰0228에 저장했다. 원본·추출 데이터를 제외한 소스·도구·규격·문서만 통합한다.

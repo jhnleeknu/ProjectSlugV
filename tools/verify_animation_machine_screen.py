@@ -255,7 +255,7 @@ def negatives(exe, records, resources, program):
            'even WORD/LONG')
     reject('flag_only_BNE_entry_unsupported', {'pc': 0x47fe0},
            'unsupported animation machine PC')
-    reject('unsupported_post_timer_BSR_body', {'pc': 0x47fe4},
+    reject('unsupported_post_cleanup_LEA_boundary', {'pc': 0x47fe8},
            'unsupported animation machine PC')
     whole = next(fx for _, fx, phases in records
                  if fx['entry_pc'] == 0x47fca and not any(p['waiting'] for p in phases))
