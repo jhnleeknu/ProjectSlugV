@@ -1505,3 +1505,11 @@
 - 화면 초기화는 `4da47a4`에 커밋했다. 다음 브랜치는 `codex/stage-block-draw`다. 원본 관찰 도구의 실제 CPU 실행/쓰기 trace/불변 검사를 메인이 읽고, 별도 Sol6.1/medium이40조건 전체를 메모리에서 재실행하여 기존 산출물과 일치함을 확인했다.
 - 메인은 감사 의견에 따라 loader와 ROM 해시 상수 모듈도 provenance에 추가하고 `.venv/bin/python tools/observe_stage_block_draw.py`를 다시 실행했다. 40조건, 2,840ports, 계약 불일치0. 최종 observation SHA256 `8d40c12dffce8101158a029de56342902e69424ac93f5e75ee63c5c4e2c20fc9`. BYTE tile wrap348회, LONG row increment2640회, WORD coordinate increment552회를 관찰했다. 잘못된 stream/TRAP나 좌표 WORD 증가 wrap을 검증했다고 주장하지 않는다.
 - 다음 구현은 기존 ObjectRestartState/FixedDataResource/VideoPortWrite를 재사용한다. 고정주소 `[0xddfa4,0xddfdc)`의56byte 표를 기존MS5D v1 kind1로 포장하고 C++ loader로 읽는다. payload SHA256 `14bba835b16c565a15364b794befbc8aca3c2575e28443654fbdae61ea36e30c`. API는 477a2/ddf9a/362a/35f0 진입과 전체15register/ports를 연결한다. 빈stream은 미실행helper상태를 보존하고, 실패는 transaction보존으로 처리한다. packer/core/CLI/C++원본비교는 아직 착수 전이다.
+
+
+## 2026-10-08 — stage block draw C++와 실제 런타임 데이터 연결
+
+- Baseline cf6f102, branch codex/stage-block-draw. Sol6.1/medium 세 작업자가 core/unit, CLI/Make/문서, packer/test를 담당했고 메인이 실제 원본 명령·diff·검증기를 검토/작성했다. 별도 Sol의 독립 리뷰에서 홀수 시작 raw window를 무시하는 문제를 발견해 수정했다.
+- 477a2/ddf9a/362a/35f0의 전체15레지스터와 orderedports를 C++11로 복원했다. 기존MS5D v1kind1 실제56byte 명령표와 기존C++loader를 연결했다. liveRAM/sentinel/BYTEtilewrap/WORDoffsetwrap을 보존하며 실패는 상태와ports를 보존한다. 원본zero count wrapping/TRAP는 checked실패이며 정상완료로 처리하지 않는다. 원본표는Git에넣지않고단위테스트는합성자료로교체했다.
+- 원본40조건의 전체RAM/15register/2,840ports가 실제CLI와 일치했다. 오류120조건 및 홀수 시작주소를 포함한 실제표 분할로더 추가조건도 통과했다. 7개packer테스트와재생성동일성, 최종make all test Python189/C++136/경고0, 수정후UBSan통과. 검증 SHA256 `48cb285a61968ae0e55df6d5fdeeb5e90716a1e703e39b8bc9a746ee0f8a55ce`.
+- 메인리뷰0194, 실행문서stage-block-draw-execution.md. 다음은47c04의나머지호출과47af0 gate/dispatch를기존화면초기화·palette·block draw에연결하는단계다. BIOS c00468 경로는임의stub으로완료처리하지않는다. 자연scheduler/IRQ·직접플레이·전체Goal은미완료이며active다.
