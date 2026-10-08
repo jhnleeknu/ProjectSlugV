@@ -17,6 +17,28 @@ bool am_read(AnimationMachineContext& c,std::uint32_t address,unsigned int size,
     return read_program_bus(c.ram,c.windows,c.bus,address,size,value,c.error);
 }
 namespace {
+bool carry_preserving_pc(std::uint32_t pc) {
+    // Entire original blocks must preserve C. Shared bus/stack operations do
+    // not imply MOVE flags: MOVEM, PEA, JSR and RTS use those operations too.
+    switch(pc) {
+    case 0x1dc84:case 0x1dc8a:case 0x210ae:case 0x210b4:
+    case 0x47d0a:case 0x47d14:case 0x47d1a:case 0x47f04:
+    case 0x49fea:case 0x4a0e2:case 0x4a124:case 0x4a132:case 0x4a148:
+    case 0x3679e:case 0x4a104:case 0x4a108:case 0x4a272:case 0x4a270:
+    case 0x4a2ec:case 0x2b3f8:case 0x2b40a:
+    case 0xcd50:case 0xcd56:case 0xce00:case 0xcd58:
+    case 0x3ad8:case 0x3ae0:case 0x3b98:case 0x3ba8:case 0x3bca:
+    case 0x3be4:case 0x3bfc:case 0x3c02:case 0xca70:
+    case 0x47672:case 0x47688:case 0x4768e:case 0x476a4:
+    case 0x3ad6:case 0x3af6:case 0x3b06:case 0x3b14:case 0x3b1e:
+    case 0x3b28:case 0x3b3e:case 0x3b5e:case 0x3b6c:case 0x3b80:
+    case 0x3b96:case 0x3bc8:case 0x3be2:case 0x3c06:case 0xca74:
+    case 0x476ba:
+    // BTST/BEQ changes only Z; its known memory test is already modeled.
+    case 0x3b82:return true;
+    default:return false;
+    }
+}
 std::uint32_t pvc_word(const AnimationMachineDevice& device,unsigned int index) {
     return (static_cast<std::uint32_t>(device.pvc[index*2])<<8)|device.pvc[index*2+1];
 }
@@ -94,6 +116,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
     if (ram.size()!=65536 || device.pvc.size()!=8192 || (stop_pc&1U)) {
         error="invalid animation machine RAM/PVC/stop PC";return false;
     }
+    if (state.carry!=AnimationCarryUnknown && state.carry!=AnimationCarryClear && state.carry!=AnimationCarrySet) {
+        error="invalid animation machine carry state";return false;
+    }
     try {
         std::vector<std::uint8_t> next_ram=ram;
         AnimationMachineState next=state;AnimationMachineDevice next_device=device;
@@ -103,6 +128,7 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
         for (unsigned int steps=0;steps<100000;++steps) {
             if (next.pc==stop_pc) {stopped=true;break;}
             if (next.pc&1U)return am_error(c,"unaligned animation machine PC");
+            if (!carry_preserving_pc(next.pc))next.carry=AnimationCarryUnknown;
             bool ok=false;
             if ((next.pc>=0x3ac8 && next.pc<0x3c08) || (next.pc>=0x47672 && next.pc<0x476bc) ||
                 (next.pc>=0xca70 && next.pc<0xca76))ok=animation_sound_block(c);
@@ -110,6 +136,7 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             else if ((next.pc>=0x49f8c && next.pc<0x4a46c) || next.pc==0x3679e ||
                 next.pc==0x47cec || next.pc==0x47d0a || next.pc==0x47d10 ||
                 next.pc==0x47d14 || next.pc==0x47d1a || next.pc==0x47f04 ||
+                next.pc==0x1dc84 || next.pc==0x1dc8a || next.pc==0x210ae || next.pc==0x210b4 ||
                 (next.pc>=0x2b3e8 && next.pc<0x2b40c))ok=animation_interpreter_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;

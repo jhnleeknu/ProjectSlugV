@@ -158,6 +158,13 @@ bool callback(AnimationMachineContext& c,bool wide) {
 bool animation_interpreter_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t v=0;
     switch(r.pc) {
+    case 0x1dc84:return am_call(c,0x49fc6,0x1dc8a);
+    case 0x210ae:return am_call(c,0x49fc6,0x210b4);
+    case 0x1dc8a:case 0x210b4:
+        if(r.carry==AnimationCarryUnknown)return am_error(c,"animation caller requires known carry");
+        if(r.pc==0x1dc8a)r.pc=r.carry==AnimationCarryClear?0x1dccc:0x1dc8e;
+        else r.pc=r.carry==AnimationCarrySet?0x21564:0x210b8;
+        return true;
     case 0x47cec:
         if(!write_offset(c,6,0x42,2,0xa0) || !write_offset(c,6,0x46,2,0x170) ||
             !write_offset(c,6,0x12,1,255) || !write_offset(c,6,0x13,1,255) ||
@@ -174,10 +181,11 @@ bool animation_interpreter_block(AnimationMachineContext& c) {
         if(r.a[5]!=0x108000U)return am_error(c,"unsupported original animation initializer TRAP15");
         if(!am_write(c,r.a[0],4,r.a[1]) || !write_offset(c,0,4,2,0) ||
             !write_offset(c,0,6,2,r.d[0]))return false;
+        r.carry=AnimationCarryClear;
         return am_return(c);
     case 0x49fc6:
         r.a[0]=r.a[6]+0x26U;if(!am_zero_bank(c) || !am_read(c,r.a[0],4,r.d[7]))return false;
-        if(r.d[7]==0)return am_return(c);
+        if(r.d[7]==0) {r.carry=AnimationCarrySet;return am_return(c);}
         r.a[1]=r.d[7];if(!write_offset(c,5,0x5742,1,0) || !read_offset(c,6,0x17,1,v))return false;
         if(v!=0 && v<128)if(!write_offset(c,6,0x17,1,v-1U))return false;
         r.pc=0x49ffe;return true;
@@ -194,7 +202,9 @@ bool animation_interpreter_block(AnimationMachineContext& c) {
         }return true;
     case 0x4a066:return wait_command(c);
     case 0x4a0ca:
-        if(!am_zero_bank(c))return false;am_word(r.d[7],((r.d[7]&65535U)>>1)|(r.d[7]&0x8000U));
+        if(!am_zero_bank(c))return false;
+        r.carry=(r.d[7]&1U)?AnimationCarrySet:AnimationCarryClear;
+        am_word(r.d[7],((r.d[7]&65535U)>>1)|(r.d[7]&0x8000U));
         return am_return(c);
     case 0x49fea:case 0x4a0e2:case 0x4a124:case 0x4a132:case 0x4a148:case 0x3679e:return am_return(c);
     case 0x4a0e4:

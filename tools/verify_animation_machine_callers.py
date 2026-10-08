@@ -154,13 +154,13 @@ def compare_guards(exe, folder, records, resources):
     marker = struct.pack('>BII', 1, 0xdeadbeef, 0x87)
     for i, (selection, fx, phases) in enumerate(records):
         assert len(phases) == 1 and phases[0]['guard']['problem'] == 'unsupported_TRAP'
-        state = dict(fx['regs'], a7=fx['initial_a7'], pc=fx['entry_pc'])
+        state = dict(fx['regs'], a7=fx['initial_a7'], pc=fx['entry_pc'], carry=2)
         actual = common.invoke(exe, folder, 'native_TRAP_checked_API_%03d' % i,
                                fx['ram'], state, fx['pvc'], fx['bank_base'], resources,
                                stop=fx['stop_pc'], external=fx['external'])
         result, ram, pvc, ports, error = actual
         assert not result['ok'] and 'initializer TRAP15' in error
-        assert {k: result[k] for k in common.REGS + ('pc',)} == state
+        assert {k: result[k] for k in common.STATE_KEYS} == state
         assert ram == fx['ram'] and pvc == fx['pvc'] and ports == marker
         assert result['bank_base'] == fx['bank_base']
         assert result['external_reads'] == 0x12345678 and result['status'] == 1
@@ -176,13 +176,13 @@ def caller_boundary_failures(exe, folder, records, resources):
     for entry, expected_return in ((0x47cec, 0x47d20), (0x47f04, 0x47f0a)):
         fx = next(fx for selection, fx, phases in records
                   if fx['entry_pc'] == entry and len(phases) == 1)
-        state = dict(fx['regs'], a7=fx['initial_a7'], pc=entry)
+        state = dict(fx['regs'], a7=fx['initial_a7'], pc=entry, carry=2)
         actual = common.invoke(exe, folder, 'negative_past_caller_%06x' % entry,
                                fx['ram'], state, fx['pvc'], fx['bank_base'], resources,
                                stop=expected_return + 2, external=fx['external'])
         result, ram, pvc, ports, error = actual
         assert not result['ok'] and 'unsupported animation machine PC' in error
-        assert {k: result[k] for k in common.REGS + ('pc',)} == state
+        assert {k: result[k] for k in common.STATE_KEYS} == state
         assert ram == fx['ram'] and pvc == fx['pvc']
         assert ports == struct.pack('>BII', 1, 0xdeadbeef, 0x87)
         assert result['bank_base'] == fx['bank_base']
@@ -229,7 +229,7 @@ def main():
         key = str((ROOT / name).resolve())
         assert key not in canonical or canonical[key] == expected
         canonical[key] = expected
-    report = dict(schema_version=1, source=source, inputs=inputs, artifacts=refs,
+    report = dict(schema_version=1, harness_JSON_keys=22, carry_native_observed=False, source=source, inputs=inputs, artifacts=refs,
                   native_observation_sha256=NATIVE_SHA, native_tool_sha256=NATIVE_TOOL_SHA,
                   native_cases_replayed=len(records), native_phases_replayed=sum(len(x[2]) for x in records),
                   native_guards_replayed=len(guards), actual_CPP=matches,
@@ -239,7 +239,7 @@ def main():
                   compile_command=command, normalized_reference_paths=len(canonical),
                   failure=None, ROM_unchanged=True,
                   limits=['Controlled initializer/actual caller paths, not natural scheduler or gameplay reachability.',
-                          'Full16registers/PC/RAM/status/orderedPVC/externalreads match original. No CCR/carry/timing/hardware claim.',
+                          'Full16registers/PC/RAM/status/orderedPVC/externalreads match original. Carry enum is actual-output forwarded, with APIwaitUnknown and checked-failure preservation; old native has no carry observation. No generalCCR/timing/hardware claim.',
                           'Native initializer TRAP guard stops before the original TRAP instruction after partial writes; API checked failure rolls back all outputs. These are distinct contracts, not native exception equivalence.',
                           'C++ device PVC/bank is independently folded from native writes; raw native PVC lacks side effects and has no PVC reads.',
                           'Resumes use previous actual C++ outputs and only recorded host changes, never injected native expected state.',

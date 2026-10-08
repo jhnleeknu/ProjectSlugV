@@ -1,5 +1,7 @@
 # Animation machine: shared RAM stack 실행 API와 검증 범위
 
+현재 carry 확장은 `animation-machine-carry-execution.md`를 따른다. `ed42971` 이후 Unknown/Clear/Set 상태와 실제 BCC·BCS caller를 추가했다. 아래 이전 단위의 검증 수치·해시는 당시 기록이며, 최신 회귀 해시는 carry 문서에 별도로 기록한다.
+
 기준 통합 commit `e526370` 이후 새 machine 구현의 현재 파일과 검증 보고서를 읽어 작성했다. Canonical BE 프로그램은 `extracted/program/maincpu.decrypted.be.bin`, 8,388,608 bytes, SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이다. 아래 고정 CPU 주소는 같은 ROM 파일 offset이며, banked CPU 주소와 physical ROM offset은 별개다. 원본 ROM을 수정하지 않았고 ROM·추출 데이터는 Git 대상이 아니다.
 
 이 문서는 확정된 shared-stack 실행 경로와 현재 대조 범위를 기록한다. 일반 68000 CPU, 전체 animation의 자연 도달성 또는 게임 완료를 선언하지 않는다. 설계 근거는 `animation-shared-stack-design.md`, 기계적 명령 목록은 `animation-stack-access-inventory.md`를 따른다.

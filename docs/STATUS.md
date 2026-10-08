@@ -1787,3 +1787,15 @@
 - 독립 native 감사19정상+4guard/43단계와 최종617참조 해시 통과. 반환 slot·indexed PEA·saved low BYTE·outer A0 변경 후 실제 pop/publication 근거를 확인했다. 메인은 native617/C++1233고유파일 해시를 직접 검사했다. Native stale report 삭제와 metadata 일치, verifier 입력 해시 capture 순서를 리뷰에서 보강하고 최종 대조를 통과했다.
 - 기존 machine131단계/37재개/9오류 회귀 통과, report SHA `6ebfb4ecb742bc4aa7b023a344e70e432eab9e284c099f194724cd021f622196`, 메인1707고유파일 해시 확인. `make all test` Python257/C++151/경고0/exit0. 리뷰0220과 실행 계약 문서에 근거·제약·재현 명령을 남겼다.
 - 다음은 carry를 실제로 소비하는 caller의 반환 계약,16ea4 등 남은 상위 활성화 callee와47c6c 연속 흐름 연결이다. 현재 연결은47d20/47f0a 직전까지만이며 자연 stage 진입·scheduler/IRQ·직접플레이·전체스테이지/적/보스·전체미사용자료 의미를 완료했다고 주장하지 않는다. 전체 Goal active, 애니메이션17중14종+14/3c일부, 전체게임복원율 미산정을 유지한다.
+
+## 2026-10-08 — 반환 carry와 실제 BCC·BCS caller 연결
+
+- Baseline `ed42971`, branch `codex/animation-machine-carry`. 사용자 요청에 따라 진행률을 보고하고 메인은 원본 해석·계약·리뷰·통합을 재개했다. 전체 복원율은 분모 미확정으로 산정하지 않는다. 애니메이션17명령 중14종(약82%)+14/3c 일부 callback의 기존 집계와 전체 Goal/완료 기준을 유지한다.
+- C++11 machine state에 Unknown/Clear/Set을 추가했다. 실제 writer3곳만 C를 결정하고 확인한55개 block만 보존하며 다른 실행 block은 Unknown으로 만든다. 유효한 zero-step은 보존, invalid enum은 zero-step에서도 거부한다. 일반 CCR 전체를 구현했다고 주장하지 않는다.
+- 실제 `1dc84 → 1dc8a BCC` 및 `210ae → 210b4 BCS`를 공유 stack 실행기에 연결했다. Unknown 분기는 실패한다. 분기 후 body는 이번 범위 밖이다. 초기화 return을 branch로 놓은 조건은 통제된 adapter이며 자연 호출 경로와 구분한다.
+- 새 원본60조건, split160단계+fresh continuous100단계를 각각2회(240 CPU/520단계) 관측했다. SR 읽기·ROM patch·중간 register 주입 없이 실제 분기 방향으로 C를 확인했다. C++60조건160단계/실제출력100회 재개가 전체RAM·16R/PC·carry·장치모델·632포트와 일치했다. Wait40의 Unknown은 API 계약이고 나머지 return60/branch60은 원본 분기 근거다. 오류10조건 및 zero-step3조건 통과.
+- 신규 unit196회 API 검사 및 기존 machine/caller unit 일반·UBSan 통과. 전체 `make all test` exit0, Python257/C++152개 실행/경고0. 기존 machine94 fixture131단계/37재개/9오류와 caller59조건91단계/32재개/6오류 회귀도 통과했다.
+- Sol6.1/medium 세 작업자가 core·unit, native 관측, 비교기·문서화를 분담한 뒤 교차 리뷰했다. 독립된3개 작업에 맞춰 외부 작업자는 추가하지 않았다. 메인이 실제 source/diff와 native1968 및 C++1707/1233/3042 고유 참조 hash를 확인했다(합집합5834). 독립 Sol의 core·parser·최종 보고서 감사도 통과했다.
+- Native report SHA `759ea9af0fd9e9fa58ba44b87be2b48a8b7b6b257aba6b164438f7c3df586d70`, carry C++ SHA `7ec1ea7d43529bb29a430b22fe696e18588f63f7d58338ef9e9e780d0c6f7d6d`. 기존 machine/caller 갱신 report SHA는 각각 `c1771f496f754859aeee314064a68e252e624b0783e97a3cf9fb1e875d466496`, `1b2de20742f09904952f76f7cdf72e25de84c99ef2824b9fea6ede5918c6eee8`이다. 리소스 규격·ROM 원본은 변경하지 않았다.
+- 근거·재현 명령: `docs/analysis/animation-machine-carry-execution.md`, 리뷰0221. 다음은 상위 stage activation의 `16ea4`와 남은 helper/caller 연결이다. 일반 CCR·IRQ/timing·자연 scheduler·직접플레이·전체스테이지/적/보스·미사용 전체 의미는 미완료이며 Goal active다.
+- 최종 독립 native 감사도 대표25조건/split82·continuous57단계와1968개 해시 대조를 통과했다. Guard 방어 코드의 검토와 실제 오류 유발 실행 범위를 구분하여 리뷰0221에 남겼다.

@@ -14,7 +14,7 @@ ms5::AnimationMachineState state(std::uint32_t pc) {
 }
 bool equal(const ms5::AnimationMachineState& a,const ms5::AnimationMachineState& b) {
     for(unsigned int i=0;i<8;++i)if(a.d[i]!=b.d[i]||a.a[i]!=b.a[i])return false;
-    return a.pc==b.pc;
+    return a.pc==b.pc&&a.carry==b.carry;
 }
 bool equal(const std::vector<ms5::VideoPortWrite>& a,const std::vector<ms5::VideoPortWrite>& b) {
     if(a.size()!=b.size())return false;

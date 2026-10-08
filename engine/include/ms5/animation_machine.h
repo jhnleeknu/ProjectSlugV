@@ -3,9 +3,13 @@
 #include "ms5/program_bus.h"
 #include "ms5/video_port.h"
 namespace ms5 {
+enum AnimationCarryState : std::uint32_t {
+    AnimationCarryUnknown=0, AnimationCarryClear=1, AnimationCarrySet=2
+};
 struct AnimationMachineState {
     std::uint32_t d[8], a[8], pc;
-    AnimationMachineState() : pc(0x49fc6) {
+    AnimationCarryState carry;
+    AnimationMachineState() : pc(0x49fc6), carry(AnimationCarryUnknown) {
         for (unsigned int i=0;i<8;++i) {d[i]=0;a[i]=0;}
     }
 };
@@ -21,7 +25,8 @@ enum AnimationMachineStatus { AnimationMachineReturned, AnimationMachineWaiting 
 // by the mutable device candidate during execution. Exact64KiB RAM/8192B PVC.
 // Successful wait/return commits effects. Failure preserves every output.
 // Unsupported code/device paths are checked errors, not fabricated execution.
-// General CCR/timing/interrupt execution is not represented by this state.
+// Only known original C is represented; other CCR/timing/interrupt execution
+// is not represented. Unknown C cannot be consumed by a conditional caller.
 bool run_animation_machine(std::vector<std::uint8_t>& ram,
     const std::vector<FixedDataResource>& windows, const ProgramBusState& resources,
     AnimationMachineState& state, AnimationMachineDevice& device,

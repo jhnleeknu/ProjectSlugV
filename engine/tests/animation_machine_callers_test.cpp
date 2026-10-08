@@ -16,7 +16,7 @@ ms5::AnimationMachineState initial(std::uint32_t pc) {
     s.a[5]=0x108000;s.a[6]=0x102000;s.a[7]=SP;return s;
 }
 bool same(const ms5::AnimationMachineState& a,const ms5::AnimationMachineState& b) {
-    for(unsigned int i=0;i<8;++i)if(a.d[i]!=b.d[i] || a.a[i]!=b.a[i])return false;return a.pc==b.pc;
+    for(unsigned int i=0;i<8;++i)if(a.d[i]!=b.d[i] || a.a[i]!=b.a[i])return false;return a.pc==b.pc&&a.carry==b.carry;
 }
 std::vector<ms5::VideoPortWrite> markers() {
     ms5::VideoPortWrite p;p.size=1;p.address=0xdeadbeef;p.value=0x87;return std::vector<ms5::VideoPortWrite>(1,p);
@@ -51,7 +51,7 @@ void initializer() {
     for(unsigned int i=0;i<6;++i)for(unsigned int j=0;j<3;++j) {
         Bytes ram(65536,0x53);put(ram,SP,4,STOP);ms5::AnimationMachineState s=initial(0x49f8c),want=s;
         s.a[6]=want.a[6]=bases[i];s.a[1]=want.a[1]=pointers[j];s.d[0]=want.d[0]=0xabcd8001;
-        Bytes expected=ram;want.a[0]=s.a[6]+0x26U;want.a[7]+=4;want.pc=STOP;
+        Bytes expected=ram;want.a[0]=s.a[6]+0x26U;want.a[7]+=4;want.pc=STOP;want.carry=ms5::AnimationCarryClear;
         put(expected,s.a[6]+0x18,1,0);put(expected,0x100010,2,0);put(expected,want.a[0],4,s.a[1]);
         put(expected,want.a[0]+4,2,0);put(expected,want.a[0]+6,2,s.d[0]);
         ms5::AnimationMachineDevice device;device.bank_base=0xffffffff;std::vector<ms5::PhysicalRomResource> physical;
@@ -65,7 +65,7 @@ void live_return() {
     for(unsigned int which=0;which<2;++which) {
         Bytes ram(65536,0x53);put(ram,SP,4,0xdeac);ms5::AnimationMachineState s=initial(0x49f8c),want=s;
         s.a[6]=want.a[6]=SP-(which?0x2aU:0x26U);s.a[1]=want.a[1]=STOP;s.d[0]=want.d[0]=0xabcdf000;
-        const std::uint32_t target=which?0xf000:STOP;want.a[0]=s.a[6]+0x26;want.a[7]+=4;want.pc=target;
+        const std::uint32_t target=which?0xf000:STOP;want.a[0]=s.a[6]+0x26;want.a[7]+=4;want.pc=target;want.carry=ms5::AnimationCarryClear;
         ms5::AnimationMachineDevice device;std::vector<ms5::PhysicalRomResource> physical;
         std::vector<ms5::VideoPortWrite> ports;std::uint32_t reads=99;ms5::AnimationMachineStatus status=ms5::AnimationMachineWaiting;std::string error;
         assert(run(ram,s,device,physical,target,reads,status,ports,error));assert(same(s,want)&&get(ram,SP,4)==target);
@@ -80,7 +80,7 @@ void callers() {
         const bool init=i<4;const std::uint32_t stop=i==5?0x47f0a:0x47d20;
         if(i<2)want.a[1]=0x489c2;
         if(i<3)want.d[0]=(want.d[0]&0xffff0000U)|0x100;
-        const std::uint32_t script=want.a[1];want.a[1]=script+1;want.a[0]=want.a[6]+0x26;want.d[7]=0xffffffff;want.pc=stop;
+        const std::uint32_t script=want.a[1];want.a[1]=script+1;want.a[0]=want.a[6]+0x26;want.d[7]=0xffffffff;want.pc=stop;want.carry=ms5::AnimationCarrySet;
         std::vector<ms5::PhysicalRomResource> physical;
         // Synthetic one-command input tests actual fixed-ROM resource consumption.
         ms5::PhysicalRomResource fixed;fixed.source_rom_offset=0x489c2;fixed.data.push_back(0x28);physical.push_back(fixed);

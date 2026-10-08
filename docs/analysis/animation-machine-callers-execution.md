@@ -1,5 +1,7 @@
 # Animation initializer와 실제 stage caller 연결
 
+현재 carry 확장은 `animation-machine-carry-execution.md`를 따른다. `ed42971` 이후 Unknown/Clear/Set 상태와 실제 BCC·BCS caller를 추가했다. 아래 이전 단위의 검증 수치·해시는 당시 기록이며, 최신 회귀 해시는 carry 문서에 별도로 기록한다.
+
 Baseline은 `ff25485`다. Canonical BE 프로그램 SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이며 이 문서의 코드 주소는 fixed CPU 주소와 같은 파일 오프셋이다. 전체 stage callback의 자연 실행은 아직 확인하지 않았다.
 
 ## 구현 계약
@@ -34,7 +36,7 @@ A0가 stack과 겹치면 pointer/timer/speed 쓰기가 return LONG을 바꿀 수
 
 메인이 원본 명령을 확인했다. `47d20`은 `47d3e`로 BRA하고 `4847c`를 호출한다. `4847c`는 진입 MOVEQ로 기존 C를 지우고 끝에서 ORI/ANDI CCR로 반환 C를 결정한다. 따라서 `47d42` BCC는 애니메이션 C를 읽는 분기가 아니다. `47f0a` TST.W도 V/C를 지우므로 그 뒤 BEQ는 새 Z를 읽는다.
 
-이 두 caller 연결에 일반 CCR을 허위로 추가하지 않았다. 다른 caller `1dc84 → 1dc8a BCC`는 애니메이션 C를 직접 읽으므로 일반 반환 carry 지원은 여전히 필요하다. 전체 raw caller 목록과 증거 수준은 `animation-machine-caller-inventory.md`를 따른다. Raw 후보1622개를 모두 분석·실행 완료한 caller로 세지 않는다.
+이 두 caller 연결에 일반 CCR을 허위로 추가하지 않았다. 다른 caller `1dc84 → 1dc8a BCC`는 애니메이션 C를 직접 읽는다. 후속 carry 단위에서 이 경로와 `210ae → 210b4 BCS`를 연결했으며, 일반 CCR 전체는 여전히 지원하지 않는다. 전체 raw caller 목록과 증거 수준은 `animation-machine-caller-inventory.md`를 따른다. Raw 후보1622개를 모두 분석·실행 완료한 caller로 세지 않는다.
 
 `47cec`보다 앞선 `16ea4` 등의 callee와 `47d20`/`47f0a` 뒤 stage body는 이번 실행 경계 밖이다. 원본 명령 주소 전부가 공개 진입/stop 지점인 것은 아니다. 새 경로는 기존과 마찬가지로 확인된 semantic block 단위로 실행한다. 자연 scheduler/IRQ, 전체 stage callback, 직접 플레이 및 모든 animation callback의 구현 완료를 뜻하지 않는다.
 

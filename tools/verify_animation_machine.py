@@ -20,7 +20,8 @@ from address_map import pvc_bank_update
 NATIVE_SHA = '43a6627828fa9047ba1b3a89becc0731c1f19e38aa2f1f2dd8f4f9e098cb94cc'
 EXTENDED_SHA = '5ca26b65cb413860fab9fb5b488023665f2a5ec7dd27a729d6e71734c7262029'
 REGS = tuple('d%d'%i for i in range(8))+tuple('a%d'%i for i in range(8))
-KEYS = set(REGS)|{'pc','bank_base','external_reads','status','ok'}
+STATE_KEYS = REGS+('pc','carry')
+KEYS = set(STATE_KEYS)|{'bank_base','external_reads','status','ok'}
 SOURCES = ('animation_machine.cpp','animation_machine_interpreter.cpp','animation_machine_sprite.cpp',
            'animation_machine_sound.cpp','program_bus.cpp','program_stack.cpp','physical_rom_resource.cpp')
 HARNESS = r'''#include "ms5/animation_machine.h"
@@ -37,14 +38,15 @@ static bool save(const char* p,const std::vector<std::uint8_t>& b) {
 }
 static void u32(std::ofstream& f,std::uint32_t n){for(int i=3;i>=0;--i)f.put(static_cast<char>((n>>(i*8))&255));}
 int main(int argc,char** argv) {
-    if(argc<26)return 2;
+    if(argc<27)return 2;
     ms5::AnimationMachineState s;for(unsigned i=0;i<8;++i)s.d[i]=std::strtoul(argv[1+i],NULL,0);
     for(unsigned i=0;i<8;++i)s.a[i]=std::strtoul(argv[9+i],NULL,0);s.pc=std::strtoul(argv[17],NULL,0);
-    ms5::AnimationMachineDevice device;device.bank_base=std::strtoul(argv[18],NULL,0);
-    const std::uint32_t stop=std::strtoul(argv[19],NULL,0);const std::uint8_t external=std::strtoul(argv[20],NULL,0);
-    std::vector<std::uint8_t> ram=load(argv[21]);device.pvc=load(argv[22]);
+    s.carry=static_cast<ms5::AnimationCarryState>(std::strtoul(argv[18],NULL,0));
+    ms5::AnimationMachineDevice device;device.bank_base=std::strtoul(argv[19],NULL,0);
+    const std::uint32_t stop=std::strtoul(argv[20],NULL,0);const std::uint8_t external=std::strtoul(argv[21],NULL,0);
+    std::vector<std::uint8_t> ram=load(argv[22]);device.pvc=load(argv[23]);
     std::vector<ms5::PhysicalRomResource> physical;std::string error;
-    for(int i=26;i<argc;++i){ms5::PhysicalRomResource r;if(!ms5::load_physical_rom_resource(argv[i],r,error)){std::cerr<<error;return 3;}physical.push_back(r);}
+    for(int i=27;i<argc;++i){ms5::PhysicalRomResource r;if(!ms5::load_physical_rom_resource(argv[i],r,error)){std::cerr<<error;return 3;}physical.push_back(r);}
     std::vector<ms5::FixedDataResource> windows;ms5::ProgramBusState bus;bus.physical_rom=&physical;
     // Explicit cart vector view, owned for this invocation. No sentinel synthesis.
     std::vector<std::uint8_t> vectors;
@@ -54,14 +56,14 @@ int main(int argc,char** argv) {
     std::vector<ms5::VideoPortWrite> ports(1,marker);std::uint32_t reads=0x12345678;
     ms5::AnimationMachineStatus status=ms5::AnimationMachineWaiting;
     bool ok=ms5::run_animation_machine(ram,windows,bus,s,device,stop,external,reads,status,ports,error);
-    if(!save(argv[23],ram)||!save(argv[24],device.pvc))return 4;
-    std::ofstream portfile(argv[25],std::ios::binary);
+    if(!save(argv[24],ram)||!save(argv[25],device.pvc))return 4;
+    std::ofstream portfile(argv[26],std::ios::binary);
     for(std::size_t i=0;i<ports.size();++i){portfile.put(static_cast<char>(ports[i].size));u32(portfile,ports[i].address);u32(portfile,ports[i].value);}portfile.close();if(portfile.fail())return 4;
     if(!ok)std::cerr<<error;
     std::cout<<"{";
     for(unsigned i=0;i<8;++i)std::cout<<(i?",":"")<<"\"d"<<i<<"\":"<<s.d[i];
     for(unsigned i=0;i<8;++i)std::cout<<",\"a"<<i<<"\":"<<s.a[i];
-    std::cout<<",\"pc\":"<<s.pc<<",\"bank_base\":"<<device.bank_base<<",\"external_reads\":"<<reads
+    std::cout<<",\"pc\":"<<s.pc<<",\"carry\":"<<static_cast<unsigned>(s.carry)<<",\"bank_base\":"<<device.bank_base<<",\"external_reads\":"<<reads
         <<",\"status\":"<<static_cast<unsigned>(status)<<",\"ok\":"<<(ok?"true":"false")<<"}\n";
 }
 '''
@@ -175,7 +177,7 @@ def fold_device(pvc,bank,events):
     return bytes(candidate),bank,b''.join(struct.pack('>BII',*p) for p in ports)
 
 
-def parse(text):
+def parse(text,expected_invalid_carry=None):
     def unique(pairs):
         result={}
         for k,v in pairs:assert k not in result;result[k]=v
@@ -184,15 +186,16 @@ def parse(text):
     assert type(row['ok']) is bool
     assert all(type(row[k]) is int and 0<=row[k]<=0xffffffff for k in KEYS-{'ok'})
     assert row['status'] in (0,1)
+    assert row['carry'] in (0,1,2) or (row['ok'] is False and expected_invalid_carry is not None and row['carry']==expected_invalid_carry)
     return row
 
 
 def invoke(exe,folder,label,ram,state,pvc,bank,resources,stop=native.RETURN,external=0):
     paths=[folder/(label+s) for s in ('_input.bin','_pvc_input.bin','_ram.bin','_pvc.bin','_ports.bin')]
     paths[0].write_bytes(ram);paths[1].write_bytes(pvc)
-    args=[str(exe)]+[str(state[k]) for k in REGS]+[str(state['pc']),str(bank),str(stop),str(external)]+list(map(str,paths))+list(map(str,resources))
+    args=[str(exe)]+[str(state[k]) for k in REGS]+[str(state['pc']),str(state['carry']),str(bank),str(stop),str(external)]+list(map(str,paths))+list(map(str,resources))
     run=subprocess.run(args,capture_output=True,text=True,timeout=10);assert run.returncode==0,(label,run.stderr)
-    result=parse(run.stdout)
+    result=parse(run.stdout,expected_invalid_carry=state['carry'] if state['carry'] not in (0,1,2) else None)
     assert paths[0].read_bytes()==ram and paths[1].read_bytes()==pvc
     (folder/(label+'_state.json')).write_text(run.stdout)
     return result,paths[2].read_bytes(),paths[3].read_bytes(),paths[4].read_bytes(),run.stderr
@@ -204,6 +207,7 @@ def check_result(actual,n,pvc,bank,portbytes):
     assert {k:result[k] for k in REGS+('pc',)}==n['outgoing'],{
         k:(n['outgoing'][k],result[k]) for k in REGS+('pc',) if result[k]!=n['outgoing'][k]}
     assert result['status']==(1 if n['outgoing']['pc'] in (native.WAIT,0xcda4) else 0)
+    if result['status']==1:assert result['carry']==0 # API wait contract; old native does not observe C
     reads=sum(e['access']=='read' and e['address']==0xd00046 and e['size']==1 for e in n['events'])
     assert result['external_reads']==reads and result['bank_base']==bank,(reads,result['external_reads'],bank,result['bank_base'])
     assert ram==n['ram_after'],[(i,n['ram_after'][i],ram[i]) for i in range(min(len(ram),len(n['ram_after']))) if ram[i]!=n['ram_after'][i]][:20]
@@ -227,14 +231,14 @@ def dependencies(root):
 
 
 def negatives(exe,folder,fx,resources):
-    state=dict(fx['regs'],a7=native.S,pc=native.ENTRY);rows=[]
+    state=dict(fx['regs'],a7=native.S,pc=native.ENTRY,carry=2);rows=[]
     def reject(label,ram=None,s=None,pvc=None,paths=None,stop=native.RETURN,expected_error=None):
         incoming=fx['ram'] if ram is None else bytes(ram);dev=fx['pvc'] if pvc is None else pvc;registers=state if s is None else s
         a=invoke(exe,folder,'negative_'+label,incoming,registers,dev,fx['bank_base'],resources if paths is None else paths,stop=stop,external=255)
         r,out,device,ports,error=a
         assert not r['ok'] and error.strip()
         if expected_error is not None:assert expected_error in error,(label,error)
-        assert {k:r[k] for k in REGS+('pc',)}==registers and r['bank_base']==fx['bank_base']
+        assert {k:r[k] for k in STATE_KEYS}==registers and r['bank_base']==fx['bank_base']
         assert r['status']==1 and r['external_reads']==0x12345678
         assert out==incoming and device==dev and ports==struct.pack('>BII',1,0xdeadbeef,0x87)
         rows.append(dict(label=label,error=error,all_outputs_preserved=True))
@@ -253,7 +257,7 @@ def compare_extended(exe,folder,records,resources):
     rows=[];resumes=0;external_reads=0;port_count=0
     for i,(selection,fx,phases) in enumerate(records):
         ram=fx['ram'];pvc=fx['pvc'];bank=fx['bank_base']
-        state=dict(fx['regs'],a7=fx['initial_a7'],pc=fx['entry_pc'])
+        state=dict(fx['regs'],a7=fx['initial_a7'],pc=fx['entry_pc'],carry=0)
         expected_pvc=pvc;expected_bank=bank;results=[]
         for j,n in enumerate(phases):
             # A resumed invocation starts from actual preceding machine outputs.
@@ -267,16 +271,16 @@ def compare_extended(exe,folder,records,resources):
                     native.put(changed,change['address'],size,change['value'])
                 ram=bytes(changed);resumes+=1
             else:assert not n['host_changes']
-            assert state==n['incoming'] and ram==n['ram_before'],(i,j,'incoming')
+            assert {k:state[k] for k in REGS+('pc',)}==n['incoming'] and ram==n['ram_before'],(i,j,'incoming')
             expected_pvc,expected_bank,ports=fold_device(expected_pvc,expected_bank,n['events'])
             assert expected_bank==n['modeled_bank']
             actual=invoke(exe,folder,'extended_%03d_%02d'%(i,j),ram,state,pvc,bank,resources,
                           stop=fx['stop_pc'],external=fx['external'])
             check_result(actual,n,expected_pvc,expected_bank,ports)
-            result,ram,pvc,_,_=actual;bank=result['bank_base'];state={k:result[k] for k in REGS+('pc',)}
+            result,ram,pvc,_,_=actual;bank=result['bank_base'];state={k:result[k] for k in STATE_KEYS}
             external_reads+=result['external_reads'];port_count+=len(ports)//9
             results.append(dict(phase=j,label=n['label'],actual_previous_outputs_used=bool(j),
-                status=result['status'],external_reads=result['external_reads'],ports=len(ports)//9,
+                status=result['status'],carry=result['carry'],external_reads=result['external_reads'],ports=len(ports)//9,
                 full_RAM_state_PVC_ports_equal=True))
         rows.append(dict(index=i,selection=selection,phases=results))
     return dict(cases=len(records),phases=sum(len(r['phases']) for r in rows),
@@ -298,11 +302,11 @@ def main():
     matches=[]
     for i,(fx,n) in enumerate(fresh):
         expected_pvc,bank,ports=fold_device(fx['pvc'],fx['bank_base'],n['events'])
-        state=dict(fx['regs'],a7=native.S,pc=native.ENTRY)
+        state=dict(fx['regs'],a7=native.S,pc=native.ENTRY,carry=0)
         actual=invoke(exe,folder,'case_%04d'%i,fx['ram'],state,fx['pvc'],fx['bank_base'],resources)
         check_result(actual,n,expected_pvc,bank,ports)
         matches.append(dict(case_index=i,registers16_PC_equal=True,full_RAM_equal=True,PVC_fold_equal=True,ports_equal=True))
-    fx,phases,evidence=chain;ram=fx['ram'];pvc=fx['pvc'];bank=fx['bank_base'];state=dict(fx['regs'],a7=native.S,pc=native.ENTRY)
+    fx,phases,evidence=chain;ram=fx['ram'];pvc=fx['pvc'];bank=fx['bank_base'];state=dict(fx['regs'],a7=native.S,pc=native.ENTRY,carry=0)
     expected_pvc=pvc;expected_bank=bank;chain_rows=[]
     for i,n in enumerate(phases):
         if i:
@@ -315,8 +319,8 @@ def main():
         expected_pvc,expected_bank,ports=fold_device(expected_pvc,expected_bank,n['events'])
         actual=invoke(exe,folder,'wait_%d'%i,ram,state,pvc,bank,resources)
         check_result(actual,n,expected_pvc,expected_bank,ports)
-        result,ram,pvc,_,_=actual;bank=result['bank_base'];state={k:result[k] for k in REGS+('pc',)}
-        chain_rows.append(dict(phase=i,actual_previous_outputs_used=bool(i),status=result['status'],full_RAM_state_PVC_ports_equal=True))
+        result,ram,pvc,_,_=actual;bank=result['bank_base'];state={k:result[k] for k in STATE_KEYS}
+        chain_rows.append(dict(phase=i,actual_previous_outputs_used=bool(i),status=result['status'],carry=result['carry'],full_RAM_state_PVC_ports_equal=True))
     extended_matches=compare_extended(exe,folder,extended_records,resources)
     negative_rows=negatives(exe,folder,fresh[0][0],resources)
     assert all(digest(root/name)==h for name,h in inputs.items())
@@ -324,7 +328,7 @@ def main():
     assert (digest(rom),rom.stat().st_mtime_ns)==rom_before
     artifacts={str(p.relative_to(root)):digest(p) for p in folder.iterdir() if p.is_file() and p!=report_path}
     refs.update(artifacts)
-    report=dict(schema_version=1,source=source,inputs=inputs,artifacts=refs,native_observation_sha256=NATIVE_SHA,
+    report=dict(schema_version=1,harness_JSON_keys=22,carry_native_observed=False,source=source,inputs=inputs,artifacts=refs,native_observation_sha256=NATIVE_SHA,
         native_replayed_nonwait=8,native_replayed_chain_phases=2,actual_CPP_nonwait_matches=8,actual_CPP_chain_phases=2,
         previous_actual_CPP_resumes=1,matches=matches,chain=chain_rows,
         extended_native_observation_sha256=EXTENDED_SHA,extended=extended_matches,
@@ -332,7 +336,7 @@ def main():
         compile_command=command,failure=None,ROM_unchanged=True,
         limits=['Unpatched whole49fc6 original8controlled prefix/40 cases and1highwait/live-stack-mutation chain form a separate preserved base group.',
             'Additional controlled shared-stack draws, callbacks, fields and sound chains use imported fixtures; not natural reachability or exhaustive all-path support.',
-            'Full16registers/PC/RAM/orderedports compared. No CCR/carry/timing/physicalhardware claim.',
+            'Full16registers/PC/RAM/orderedports compared. Carry enum is forwarded on actual C++ resumes and waitUnknown is API-checked; immutable legacy native evidence does not observe C. No generalCCR/timing/physicalhardware claim.',
             'Original rawPVC fixture lacks read-side effects and has noPVCreads; expected C++ PVC independently folds actual native writes through pinned pvc_bank_update includingff8/ff9 masks.',
             'Generated harness is API test plumbing, not a production CLI/file-protection implementation. Checked API failures test complete output atomicity, not native fault rollback.'])
     report_path.write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(dict(matches=8,chain_phases=2,
