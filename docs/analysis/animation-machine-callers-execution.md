@@ -1,5 +1,7 @@
 # Animation initializer와 실제 stage caller 연결
 
+후속 공유 stack 통합은 `animation-machine-activation-execution.md`를 따른다. `6c90612` 이후16ea4/16ed2와47cae..47d20의 실제 호출·대기 경로를 연결했다. 아래 기존 API·미구현 분류와 검증 수치는 작성 당시 기록이며, 일반 stage 활성화 전체 완료를 뜻하지 않는다.
+
 현재 carry 확장은 `animation-machine-carry-execution.md`를 따른다. `ed42971` 이후 Unknown/Clear/Set 상태와 실제 BCC·BCS caller를 추가했다. 아래 이전 단위의 검증 수치·해시는 당시 기록이며, 최신 회귀 해시는 carry 문서에 별도로 기록한다.
 
 Baseline은 `ff25485`다. Canonical BE 프로그램 SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이며 이 문서의 코드 주소는 fixed CPU 주소와 같은 파일 오프셋이다. 전체 stage callback의 자연 실행은 아직 확인하지 않았다.

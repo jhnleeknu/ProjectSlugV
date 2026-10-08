@@ -31,6 +31,7 @@ test: build/physical_rom_resource_test build/program_bus_test build/animation_ex
 	./build/animation_machine_device_test
 	./build/animation_machine_callers_test
 	./build/animation_machine_carry_test
+	./build/animation_machine_activation_test
 	./build/program_stack_test
 	./build/physical_rom_resource_test
 	./build/program_bus_test
@@ -1227,3 +1228,7 @@ build/animation_machine_callers_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_M
 test: build/animation_machine_carry_test
 build/animation_machine_carry_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_carry_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_carry_test.cpp -o $@
+
+test: build/animation_machine_activation_test
+build/animation_machine_activation_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_activation_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_activation_test.cpp -o $@

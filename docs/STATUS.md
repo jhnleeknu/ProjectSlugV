@@ -1799,3 +1799,15 @@
 - Native report SHA `759ea9af0fd9e9fa58ba44b87be2b48a8b7b6b257aba6b164438f7c3df586d70`, carry C++ SHA `7ec1ea7d43529bb29a430b22fe696e18588f63f7d58338ef9e9e780d0c6f7d6d`. 기존 machine/caller 갱신 report SHA는 각각 `c1771f496f754859aeee314064a68e252e624b0783e97a3cf9fb1e875d466496`, `1b2de20742f09904952f76f7cdf72e25de84c99ef2824b9fea6ede5918c6eee8`이다. 리소스 규격·ROM 원본은 변경하지 않았다.
 - 근거·재현 명령: `docs/analysis/animation-machine-carry-execution.md`, 리뷰0221. 다음은 상위 stage activation의 `16ea4`와 남은 helper/caller 연결이다. 일반 CCR·IRQ/timing·자연 scheduler·직접플레이·전체스테이지/적/보스·미사용 전체 의미는 미완료이며 Goal active다.
 - 최종 독립 native 감사도 대표25조건/split82·continuous57단계와1968개 해시 대조를 통과했다. Guard 방어 코드의 검토와 실제 오류 유발 실행 범위를 구분하여 리뷰0221에 남겼다.
+
+## 2026-10-08 — 상위 activation 출력 갈래 공유 stack 통합
+
+- Baseline `6c90612`, branch `codex/animation-machine-activation`. 이전 carry 구현·검증 커밋을 진척으로 분류하고 목표 파일과 현재 소스를 다시 읽었다. 전체 목표·완료 기준과 애니메이션17명령 중14종+14/3c 일부 집계, 전체복원율 미산정 상태를 유지한다.
+- `16ea4` 좌표 wrapper와 `16ed2` signed 비교 helper, 실제 `47cae..47cec` caller를 연결했다. 같은 RAM/16R/PC/A7에서 좌표 설정→flag→sound→sprite→초기화/animation을 실행하고47d20에서 멈춘다. WORD wrap·LSR X·상위 비트·live source/stack 읽기를 유지하며 tail JMP에 가짜 return을 추가하지 않는다. 세 새 JSR만 C를 보존하고 다른 새 block은 Unknown이다.
+- 신규 unit6672회 API 검사 normal/UBSan 통과. `make all test` exit0, Python257/C++153개 실행, 경고0. 실제 lookup은 기존8개 MS5D kind3를 C++ loader/bus로 읽으며 리소스 규격이나 원본 ROM은 변경하지 않았다.
+- Native52조건74단계(25sprite/11signed/16chain),fresh CPU104회/148단계,22재개를 확보했다. 원본 코드를 바꾸거나 SR을 읽지 않았다. 실제 C++52조건74단계가 full64KiB RAM/16R/PC/status·독립PVC모델/bank·636포트/외부읽기0회와 일치했고 직전 실제출력22회 재개를 확인했다. Native C는 미관측으로 유지한다.
+- Mixed 조건은 같은 CPU에서 sound high/low 대기→wrapper sprite 대기→animation sprite 대기의9단계를 거쳐47d20으로 간다. Object 필드·queue·saved low BYTE 및 live return을 바꾸는 검사가 앞선 전처리 재실행 없이 후속 live 읽기를 확인했다. 오류9조건은 늦은 쓰기/return/lookup 누락까지 전체API출력을 보존했다. Native fault rollback과 구분한다.
+- Sol6.1/medium3개가 core/unit, native, 비교기/문서화를 분담하고 교차 리뷰했다. 메인은 복잡한 원본 계약·실제diff/검증소스·결과를 검토했다. 독립native33조건55단계/22재개·510hash 및 독립core/verifier 검토를 통과했다. 메인이 native510/C++1036 고유파일 해시도 확인했다. 독립 작업3개에 맞춰 외부 작업자는 추가하지 않았다.
+- Native SHA `9244bfafbf4fe921ccbb8d293e5b713fa16f4fdc35b38246d851c7726fac8e61`, C++ verification SHA `de726ac51b78c06d33925d287298c71162984f7f334aa8579893b3bdc283433b`. 계약·재현·범위는 `animation-machine-activation-contract.md`, `animation-machine-activation-execution.md`, 리뷰0222를 따른다.
+- 다음은 앞선47c6c의 HUD/BCD 및 후속47d20/47d3e readiness·frame을 공유stack으로 연결하는 일이다. 자연scheduler/IRQ/timing·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료이며 Goal active다.
+- 최종 기존 회귀도 machine94fixture/131단계·37재개/9오류, caller59/91·32재개/6오류, carry60/160·100재개/10오류 및 zero-step3조건을 통과했다. 메인이 네 보고서 합집합6795개 해시를 확인했다. 갱신된 회귀 SHA는 리뷰0222와 실행 문서에 기록했다.

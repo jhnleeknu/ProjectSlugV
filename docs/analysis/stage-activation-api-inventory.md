@@ -1,5 +1,7 @@
 # 상위 stage 활성화의 API 목록 — 정적 조사, 통합 미완료
 
+후속 공유 stack 통합은 `animation-machine-activation-execution.md`를 따른다. `6c90612` 이후16ea4/16ed2와47cae..47d20의 실제 호출·대기 경로를 연결했다. 아래 기존 API·미구현 분류와 검증 수치는 작성 당시 기록이며, 일반 stage 활성화 전체 완료를 뜻하지 않는다.
+
 canonical decrypted BE source SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`다. 이 문서의 코드·fixed data 주소는 첫1MiB CPU 주소이며 같은 ROM 파일 offset에 대응한다. RAM/MMIO 주소는 파일 offset이 아니다. `AGENTS.md`, `docs/GOAL.md`, `stage-post-entry-contract.md`, `stage-activation-prefix-contract.md` 및 현재 엔진의 공개 header/source를 읽었다.
 
 `tools/disassemble_program.py`의 `load_verified_program`과 패딩·실길이 검사가 있는 `disassemble_range`로 `[47c04,480f2)`를 다시 읽었다. `[47c04,480bc)`에는 JSR/BSR 59개와 JMP 1개, 고유 직접 대상45개가 있다. 아래 표는 그60개 명령을 모두 포함한다. 조건부/무조건 BRA와 callback 주소 저장은 call 수에 포함하지 않는다. `480bc..480f2`의 기존 frame body는 별도 아래에 표시한다. 디코딩 목록과 현재 API 범위 조사이며 새 native 실행, C++ 동등성 또는 전체 활성화 완료를 주장하지 않는다.

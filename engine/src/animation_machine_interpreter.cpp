@@ -165,6 +165,20 @@ bool animation_interpreter_block(AnimationMachineContext& c) {
         if(r.pc==0x1dc8a)r.pc=r.carry==AnimationCarryClear?0x1dccc:0x1dc8e;
         else r.pc=r.carry==AnimationCarrySet?0x21564:0x210b8;
         return true;
+    case 0x47cae:
+        if(!write_offset(c,6,0x42,2,0xa0) || !write_offset(c,6,0x46,2,0x170) ||
+            !write_offset(c,6,0x1e,2,0xffff))return false;
+        r.pc=0x47cc0;return true;
+    case 0x47cc0:return am_call(c,0x16ed2,0x47cc6);
+    case 0x47cc6:return am_call(c,0x47672,0x47cca);
+    case 0x47cca:
+        if(!write_offset(c,6,0x14,1,0x0b))return false;r.d[0]=0;
+        if(!read_offset(c,6,0x7e,1,v))return false;am_byte(r.d[0],v);
+        am_word(r.d[0],r.d[0]+r.d[0]);am_word(r.d[0],r.d[0]+r.d[0]);
+        r.a[0]=0x48a12;
+        if(!am_read(c,am_index(r.a[0],r.d[0]),4,r.d[7]))return false;
+        r.d[0]=0;r.pc=0x47ce6;return true;
+    case 0x47ce6:return am_call(c,0x16ea4,0x47cec);
     case 0x47cec:
         if(!write_offset(c,6,0x42,2,0xa0) || !write_offset(c,6,0x46,2,0x170) ||
             !write_offset(c,6,0x12,1,255) || !write_offset(c,6,0x13,1,255) ||

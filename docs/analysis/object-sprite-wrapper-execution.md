@@ -1,5 +1,7 @@
 # Object sprite wrapper 실행 인터페이스
 
+후속 공유 stack 통합은 `animation-machine-activation-execution.md`를 따른다. `6c90612` 이후16ea4/16ed2와47cae..47d20의 실제 호출·대기 경로를 연결했다. 아래 기존 API·미구현 분류와 검증 수치는 작성 당시 기록이며, 일반 stage 활성화 전체 완료를 뜻하지 않는다.
+
 [원본 계약](stage-object-output-wrappers-contract.md)의 fixed CPU `16ea4..16ecc`와 tail-call `cd58`을 연결한다. canonical BE ROM SHA256은 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`이며 이 fixed CPU 주소는 ROM 파일 오프셋과 같다. 원본 ROM을 변경하거나 callee를 stub으로 대체하지 않는다. 이 범위는 object sprite 제출 wrapper이며 전체 object callback나 stage 활성화 완료를 뜻하지 않는다.
 
 ```cpp

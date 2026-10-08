@@ -11,6 +11,24 @@ bool write_sprite(AnimationMachineContext& c,std::uint32_t displacement,unsigned
 bool animation_sprite_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0;
     switch(r.pc) {
+    case 0x16ea4:
+        r.a[5]=0x108000;r.d[3]=0;
+        if(!am_read(c,r.a[6]+0x53U,1,value))return false;am_byte(r.d[2],value);
+        am_swap(r.d[0]);
+        if(!am_read(c,r.a[6]+0x42U,2,value))return false;am_word(r.d[0],r.d[0]+value);
+        {const std::uint32_t extend=r.d[2]&1U;am_byte(r.d[2],(r.d[2]&255U)>>1);am_word(r.d[0],r.d[0]-extend);}
+        am_swap(r.d[0]);
+        if(!am_read(c,r.a[6]+0x46U,2,value))return false;am_word(r.d[0],r.d[0]+value);
+        {const std::uint32_t extend=r.d[2]&1U;am_byte(r.d[2],(r.d[2]&255U)>>1);am_word(r.d[0],r.d[0]-extend);}
+        if(!am_read(c,r.a[6]+0x12U,4,r.d[1]) || !am_read(c,r.a[6]+0x1eU,2,value))return false;
+        am_word(r.d[5],value);r.pc=0xcd58;return true; // Original tail JMP, with no return-slot push.
+    case 0x16ed2:
+        if(!read_sprite(c,0xd3e,2,value))return false;am_word(r.d[0],value);
+        if(!read_sprite(c,0xd46,2,value))return false;
+        {const bool less=((r.d[0]&65535U)^0x8000U)<(value^0x8000U);
+        if(!am_read(c,r.a[6]+0x15U,1,value))return false;
+        if(!am_write(c,r.a[6]+0x15U,1,less?(value|4U):(value&~4U)))return false;}
+        return am_return(c);
     case 0xcd50:case 0xcd56:case 0xce00:return am_return(c);
     case 0xcd52:
         if(!write_sprite(c,0x1152,4,r.a[0]))return false;return am_return(c);
