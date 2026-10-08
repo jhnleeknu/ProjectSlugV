@@ -1848,3 +1848,16 @@
 - Sol6.1/medium3명이 core/unit, native, 비교기/문서를 나누고 교차 리뷰했다. 메인은 원본 의미·Z 문제·계약·실제diff·전체 테스트·해시·통합을 담당했다. 비교기의 실제 transition 계약 pin 누락은 수정 후 해당 비교만 재실행했다. 동결된 다른 소스에 의존하는 여섯 회귀는 세 작업자에게 두 개씩 분담했다.
 - Native SHA `edf1f5e7248601d2a708cbc7ebfb8a89c62bfdb5dcef018cb94a2c5fa26aaba4`, C++ report SHA `0da18b6f00f26a2a78a4be8ef256b50a361ff9ccf89d74ea5bd30d673f2a4f2b`. 원본 계약·재현·제약은 animation-machine-transition-contract.md/animation-machine-transition-execution.md, 상세 리뷰와 회귀 해시는 리뷰0225에 기록한다.
 - 다음은47eac 및47f4a/477ee/47da4의 후속 body와480bc frame 연결이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료다. 애니메이션17중14종+14/3c 일부와 전체복원율 미산정, 전체 Goal active를 유지한다.
+
+
+## 2026-10-09 — 카운터 종료·후속 콜백의 공유 스택 통합
+
+- Baseline `21d818c`, branch `codex/animation-machine-exit`. 사용자에게 진행률을 보고하고 메인의 원본 해석·리뷰·통합 역할을 재개했다. 등록된 목표와 AGENTS.md/docs/GOAL.md를 확인했으며 기존 범위·완료 기준·진행을 유지한다. 전체 게임 복원율은 분모 미확정으로 미산정이고, 애니메이션17종 중14종(약82%)+14/3c 일부의 기존 집계를 유지한다.
+- 47eac의 실제48980 초기화/애니메이션,1c63c의 두 JSR289e/BCC,47f0a timer·player flag와48398/30f4 raw lookup·47c5a,47f4a의 사운드 연쇄·MOVEM.L D0,47fa8의 palette/flag clear를 C++11 공유 RAM/A7 실행기에 연결했다. 최종47fca의 JSRcaf0는 실행 전 경계다. 기존 MS5D kind3 여덟 개와 실제 loader/bus를 사용하며 원본·리소스 규격은 변경하지 않았다.
+- 실제 JSR가 marker270e를 덮는 경우, 사운드 대기 중 saved LONG8123ab00/89abcdef를 바꾼 뒤47f82가 상위WORD까지 pop하는 경우,8c16 palette 쓰기가 live RTS target을200으로 바꾸는 경우를 원본으로 확인했다. 이전 D0/return을 metadata로 복원하지 않는다. late callback은 fresh fixture이며 자연 다음 frame 도달성으로 확대하지 않는다.
+- 원본 정상90조건252split/112continuous와 guard3조건을 각각2회 실행해372freshCPU/744단계를 확보했다. 실제 C++90조건252단계·이전 실제 출력162회 재개가 full64KiB RAM·16R/PC·장치/bank·190PVC포트·외부읽기0회와 일치했다.22wait·known C44단계, 오류17조건·zero-step21조건을 통과했다. 일반 CCR을 지원한다고 주장하지 않는다.
+- 메인 `make -j4 all test` exit0: Python257/C++157개 실행/경고0. 신규 unit 일반·UBSan 각각419 API 호출 통과. 독립 native 감사는65조건206split/87continuous, 모든22wait/3guard와2874개 참조를 확인했다. 메인과 별도 최종 감사가 C++4650개 현재 고유 참조 해시를 확인했다. 검증기의 예상 오류 문자열 세 곳과 문서 pin 표현은 수정 후 최종 대조를 통과했다.
+- Sol6.1/medium3명이 core/unit, native 관측, 비교기/문서를 분담하고 교차 리뷰했다. 메인은 원본 의미·계약·실제diff·전체 테스트·해시·통합을 맡았다. 동결 뒤 일곱 회귀를 세 작업자에게3/2/2개로 배정했다. 충분한 독립 작업 세 개를 사용하며 숫자를 채우려고 외부 작업을 만들지 않았다.
+- Native SHA `026585bc88057054d188978774aa8ce436ca7f97aaa6c2ffd459c5ca1a888bf3`, C++ SHA `12fae62c0c40ffd431435c5a550d935692f07192f05badab23ad1475f42be8e8`. 원본 계약·재현·검증 범위는 animation-machine-exit-contract.md/animation-machine-exit-execution.md와 리뷰0226에 기록한다.
+- 다음은caf0/47fca 이후 화면 초기화 및477ee/47da4/480bc 후속 frame 연결이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료이며 전체 Goal은 active다.
+- 최종 기존 일곱 공식 회귀가 모두 통과했다. 메인은 새 exit를 포함한 여덟 보고서의 현재 고유 파일 합집합23250개를 해시 대조했고, 최종 보고서 SHA와 각 검증 수치를 리뷰0226에 저장했다. 원본·추출물을 제외한 소스·도구·문서만 통합한다.

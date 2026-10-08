@@ -23,7 +23,7 @@ REGS = tuple('d%d'%i for i in range(8))+tuple('a%d'%i for i in range(8))
 STATE_KEYS = REGS+('pc','carry')
 KEYS = set(STATE_KEYS)|{'bank_base','external_reads','status','ok'}
 SOURCES = ('animation_machine.cpp','animation_machine_interpreter.cpp','animation_machine_sprite.cpp',
-           'animation_machine_sound.cpp','animation_machine_readiness.cpp','animation_machine_hud.cpp','animation_machine_transition.cpp','program_bus.cpp','program_stack.cpp','physical_rom_resource.cpp')
+           'animation_machine_sound.cpp','animation_machine_readiness.cpp','animation_machine_hud.cpp','animation_machine_transition.cpp','animation_machine_exit.cpp','palette_effect_execution.cpp','program_bus.cpp','program_stack.cpp','physical_rom_resource.cpp')
 HARNESS = r'''#include "ms5/animation_machine.h"
 #include "ms5/physical_rom_resource.h"
 #include <fstream>
