@@ -61,9 +61,9 @@ bool same_identity(const struct stat& left, const struct stat& right) {
 }
 
 bool reserve_output(const std::string& path, ReservedOutput& output) {
-    output.fd = open(path.c_str(),O_WRONLY | O_CREAT | O_EXCL,0666);
+    output.fd = open(path.c_str(),O_WRONLY | O_NONBLOCK | O_CREAT | O_EXCL,0666);
     if (output.fd >= 0) output.created = true;
-    else if (errno == EEXIST) output.fd = open(path.c_str(),O_WRONLY);
+    else if (errno == EEXIST) output.fd = open(path.c_str(),O_WRONLY | O_NONBLOCK);
     if (output.fd < 0 || fstat(output.fd,&output.identity) != 0) return false;
     output.identified = true;
     return S_ISREG(output.identity.st_mode);
@@ -247,6 +247,13 @@ int main(int argc, char** argv) {
             }
         }
         canonical.push_back(resolved);
+    }
+    // Reject special inputs before stream construction can block on a FIFO.
+    for (unsigned int i = 0; i < 4; i += 3) {
+        struct stat input_stat;
+        if (stat(paths[i].c_str(),&input_stat) != 0 || !S_ISREG(input_stat.st_mode)) {
+            std::cerr << "RAM and table inputs must be regular files\n"; return 1;
+        }
     }
     std::ifstream input(paths[0].c_str(),std::ios::binary | std::ios::ate);
     if (!input || input.tellg() != static_cast<std::streamoff>(65536)) {

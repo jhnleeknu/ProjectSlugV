@@ -25,6 +25,8 @@ RAM 입력은 CPU `0x100000..0x10ffff`에 대응하는 정확히 65536바이트�
 
 C++ API 오류가 나면 출력 파일을 열지 않는다. API 성공 후에는 두 출력을 truncate 없이 먼저 예약/open한다. 새 파일은 `O_CREAT|O_EXCL`로 만들고 이미 있는 파일은 생성/truncate 없이 연다. 두 descriptor의 `fstat` device/inode가 서로 다르고 모든 입력/리소스의 `stat` identity와도 다름을 확인한 뒤에만 `ftruncate`와 쓰기를 수행한다. 아직 없는 출력 이름 두 개가 대소문자 비구분 파일시스템에서 같은 파일로 해석되는 경우도 실제 inode 비교로 거부한다. 이름을 소문자로 바꾸는 추정 규칙을 사용하지 않는다.
 
+47a94 본문 CLI의 독립 리뷰에서 공통 FIFO 정지 문제를 발견하여 이 CLI도 수정했다. RAM/TABLE 입력은 stream을 열기 전에 `stat`/`S_ISREG`를 확인한다. 두 출력 예약에는 `O_NONBLOCK`을 적용하고 열린 descriptor를 일반 파일로 제한한다. 두 CLI의 FIFO 입력·테이블·두 출력·WINDOW 회귀10조건은5초 timeout 안에 오류 반환했고 기존 파일을 보존했다. 전체16조건 기록은 `artifacts/stage_entry_body_cli_review/smoke.json`이다.
+
 예약/검사 실패 시 기존 파일을 보존하고, 이번 호출이 생성했으며 현재 `lstat` identity가 예약한 inode와 일치하는 placeholder만 제거한다. 검사가 끝난 뒤 RAM, ports를 순차적으로 쓰고 두 descriptor의 close 결과도 검사한다. 이 순차 I/O는 원자적인 두 파일 교체가 아니다. 쓰기 또는 close 단계의 실패에는 이미 truncate/기록한 출력의 rollback을 보장하지 않는다.
 
 ## 상태와 출력
@@ -48,3 +50,5 @@ C++ 호출 실패 시 RAM, state, ports와 external_reads를 모두 보존하는
 최종 원본 비교는 `.venv/bin/python tools/verify_stage_frame.py`로 재현한다. 원본480bc와 실제 CLI96단계의 전체 RAM/14레지스터/bank/pending/순서 있는264 ports/외부 read/JSON이 일치했고 CLI 오류148조건과 실제 case alias 회귀1조건을 통과했다. 원본 실행에 사용하는 CPU의 stack/CCR을 대기 사이에 유지하며 명시된 host 쓰기만 반영한다. 결과는 `artifacts/stage_frame/verification.json`, SHA256 `a6194a8280159525dde8266c1a54a214e0101f86b606c426fc13042946f53567`이다. 메인 검토와 제한은 [리뷰0190](../reviews/0190-stage-frame-execution.md)에 기록했다. 최종 make test는 Python182/C++132/경고0이다.
 
 제어된 fixture의 검증이며 자연적인 scheduler/IRQ/입력 기반 플레이 가능성이나 전체 게임 복원 완료를 주장하지 않는다. 전체 CCR/사이클 및 화면·오디오 동등성도 별도 검증이 필요하다.
+
+FIFO 수정 후 동일 원본 verifier를 다시 실행하여96단계/오류148조건/casealias를 통과했다. 최신 보고서 SHA256은 `47645dd39e0df8241cb504cd637a99cdc751544b4ac47c9e1227d8d5705f53b5`이며 [리뷰0191](../reviews/0191-stage-entry-body.md)에 갱신된 CLI와 provenance 확인을 기록했다. 위 리뷰0190의 해시는 이전 커밋 당시의 기록이다.

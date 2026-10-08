@@ -1475,3 +1475,12 @@
 - 수정하지 않은 원본 실행과 실제 CLI96단계의 전체 RAM/14레지스터/bank/pending/순서 있는264 ports/조건부 외부 read/정확한 JSON이 일치했다. buffer2상태/cue/sound5상태, 동일 CPU 재개, 실제 CLI 출력 연속 입력, 활성 spatial/region/cue allocation을 확인했다. 오류148조건 및 실제 대소문자 비구분 출력 별칭 회귀1조건도 통과했다.
 - 최종 make test Python182/C++132/경고0. 메인이 현재279개 소스·실행파일 및 리소스 해시와 보고서 provenance를 대조했다. Verification SHA256 `a6194a8280159525dde8266c1a54a214e0101f86b606c426fc13042946f53567`, 리뷰0190, 실행 규격 docs/analysis/stage-frame-execution.md. 원격 없는 로컬 통합이다.
 - 다음은47a94 진입 본문에서 scene/cue/event 초기화와480bc를 연속 연결하는 작업이다. 메인이 원본 명령과A5상대주소를 다시 확인했고30ec lookup은 기존 stage_events MS5D에 이미 있음을 확인했다. 후속 계약은 docs/analysis/stage-entry-body-contract.md다. 자연 scheduler/IRQ·직접 플레이·전체 게임 Goal은 아직 미완료다.
+
+## 2026-10-08 — 47a94 초기화 본문과 첫 frame 연결
+
+- Baselinee05fa5c, branch codex/stage-entry-body. Sol6.1/medium 세 작업자가 core/unit, CLI/문서, native관찰/비교를 병렬 수행했고 메인이 원본 의미·실제 변경·결과를 리뷰했다. Opus5.5/high 독립 리뷰에서 발견한 FIFO 정지 문제는 새body와 기존frame CLI를 함께 수정했다.
+- 47a94부터 scene/cue/flags/lookup/event 초기화,47af0 callback 게시,480bc 첫 frame을 C++11로 연결했다. A5=108000,15register adapter와live record 재독출을 유지한다. 대기 재개는 초기화 반복 없이 진행하고 전체 완료phase2는 재호출을 거부한다. 실제 C++ 로더가 기존MS5D620개를 소비하며 새중복리소스형식은 만들지 않았다.
+- 원본2790/3ef2에서 시작한 일관된 pre-entry seed와59actual records를 이용한142조건/152단계의 전체RAM/15regs/bank/pending/read/JSON/1,510,070 orderedports가 실제CLI와 일치했다. lookup8개,null/nonnull event,bank3,원본에서 메인이 확인한live RAM record alias, sound5pending와prefix손상 후sameCPU hold/release를 포함한다. 오류187조건(FIFO5종포함)과별도casealias1조건 통과.
+- 최종make all test Python182/C++133/경고0. body reportSHA `6b0ad56cdf7300916f8274e55c78f613dca4dba3f92dbaa47cf3750671356454`, nativeSHA `1f65100f1fedc36b4999543c720814dc6f9eb4bf634f3af3439aa68d70e31207`. FIFO 수정 후 기존frame도96/148/casealias를재검증했고 reportSHA는 `47645dd39e0df8241cb504cd637a99cdc751544b4ac47c9e1227d8d5705f53b5`로갱신했다. 리뷰0191, docs/analysis/stage-entry-body-execution.md에재현명령과한계를기록했다.
+- 초기화의spritequeue reset때문에 이noIRQ body fixture에서buffer/cue대기는관찰되지않았다. 기존480bc의대기증거와분리하며일반도달불가로단정하지않는다. 비교stack은게임RAM64KiB밖의oracle영역이며물리mirror/stack동등성은주장하지않는다.
+- 다음은47af0 gate/dispatch와47c04 이후스테이지활성화연결이다. docs/analysis/stage-post-entry-contract.md에메인이확인한72f0 carry,actualrecord dispatch분포,callee와미해결범위를기록했다. 자연scheduler/IRQ·직접플레이·전체게임Goal은아직미완료이며active다.
