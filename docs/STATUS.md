@@ -1431,3 +1431,16 @@
 - 남은 상위480bc 주요호출은4701e/2efa6이다. 메인이4701e/46f52원본을직접읽어 `docs/analysis/stage-spatial-frame.md`에계약초안을저장했다. 43e38은기존scene_node를재사용할수있지만A3보존adapter와live RAM경계를검토해야한다. 46fcc원본은D2가아닌D1을비교하며SUB후signed분기는overflow를포함해해석한다. 아직이후속단위구현/검증완료가아니다.
 - 2efa6은RAMd490상태를d491로게시하고0→비영이면3af8command1d28,비영→0이면3c44command1d28을호출한다. 기존sound_word API는D0/D1만반환하므로A0/A1및3c44의세byte제출대기까지연결해야한다. 메인이3ac8..3c08/3c44..3c7c를읽었으나전체계약/구현은후속이다.
 - 에이전트들은완료상태다. 다음위임은새담당파일/입력/규격/검증기준으로시작한다. 자연scheduler·스테이지 직접플레이 및전체게임goal은아직완료되지않았다.
+
+
+## 2026-10-08 — spatial bitmap frame 4701e/46f52
+
+- Baseline `123b595`, branch `codex/stage-spatial-frame`. 4701e 전체와46f52를 C++11 API/CLI로 복원하고43e38 adapter를 연결했다. signedSUB의NxorV,fullLONG EXG,MOVEM부호확장,live카운터/DBRA와실제RAM범위를보존한다.
+- 서브에이전트가 사용량한도로중단되어메인이남은작업을수행했다. 중단전남은core/header를전체리뷰하고CLI/단위검증/원본목록/비교도구를완성했다. 새리소스없이기존MS5D의검증된9byte를실제loader로소비한다.
+- 원본429조건(Musashi427/bankedUnicorn2)의전체RAM·14register·bank와일치했다.20분기중19양쪽,46fde는앞선D1clamp로true도달불가다. 원본RAM쓰기10626건순서재생도일치한다. 실제카운터alias로265회반복하는인위적조건과4회frame chain중3prior출력승계를검증했다. CLI오류8/API오류원자성5조건통과,전체make Python182/C++127/경고0.
+- Verification SHA256 `d715be1cfffdc1367dc16054807825a6d21170b9fddadef5ac0210f29230bb48`,inventory `f3ddcdc81f73553b722d83e2dd807563f983971506a47a9adebbd7707da7ac9d`. 리뷰0186. 전체goal은active다.
+
+### 최신 다음 작업
+
+- 상위480bc의남은직접호출은2efa6 사운드전환이다. 기존3af8 API는D0/D1만반환하므로A0/A1전체상태와3c44의세byte제출및대기재개를복원해야한다. 원본3ac8/3af8/3c44/2efa6은메인이이미읽었다. 아직이후속단위구현은시작하지않았다.
+- 사용량한도로실패한에이전트를살아있는작업으로취급하지않는다. 재개가능여부는다음위임시확인한다. 자동reset쿠폰사용은하지않았다. 자연scheduler/직접플레이/전체게임완료는미완료다.

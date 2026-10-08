@@ -349,3 +349,10 @@ The API preserves RAM/state/prior ports on failure. Only the default cd50 sprite
 `build/step_stage_region_frame ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 BANK CARRY INPUT_RAM OUTPUT_RAM [MS5D_OR_DIRECTORY ...]` supports b4a2a/49392/1c028/4d9d6/b481e. It publishes two player region values, decrements timers and clears six alternating list words, or executes an individual helper. A6 supplies the pointer high word in4d9d6; it is not replaced with a fixed RAM prefix. BANK2/3 selects source mapping and is preserved. CARRY0/1 is updated only by49392; other entries preserve this separate API value.
 
 Pass full returned RAM/registers to continue frames. Errors preserve API RAM/registers/carry. Source reads use supplied fixed or matching banked MS5D windows; helpers may return opaque pointers without dereferencing them. `tools/inventory_stage_region_frame.py`, `tools/observe_stage_region_frame.py`, and `tools/verify_stage_region_frame.py` reproduce801 original comparisons and154 rejection checks. Exact source mapping, sign extension, live aliases and limitations are in `docs/analysis/stage-region-frame.md`.
+
+
+### Spatial bitmap frame
+
+`build/step_stage_spatial_frame ENTRY D0 D1 D2 D3 D4 D5 D6 D7 A0 A1 A2 A3 A4 A6 BANK INPUT_RAM OUTPUT_RAM [MS5D_OR_DIRECTORY ...]` supports4701e and46f52. It updates timed nodes and spatial/category bitmaps using live RAM counters, signed WORD arithmetic and native DBRA behavior. BANK2/3 selects resource mapping; A6 is preserved by the CLI and unused by the API. Supply fixed/matching-bank MS5D when a node points outside RAM. Each source read needs four WORDs and one category BYTE.
+
+The API preserves all RAM/registers on failure. It does not clamp bitmap addresses to an invented logical array or force the outer loop to eight iterations. Actual checked memory accesses govern supported execution. `tools/inventory_stage_spatial_frame.py` and `tools/verify_stage_spatial_frame.py` reproduce429 original comparisons, including a synthetic265-iteration live-counter case. See `docs/analysis/stage-spatial-frame.md` for exact semantics and limitations.
