@@ -46,6 +46,7 @@ bool animation_transition_block(AnimationMachineContext& c);
 bool animation_exit_block(AnimationMachineContext& c);
 bool animation_screen_block(AnimationMachineContext& c);
 bool animation_cleanup_block(AnimationMachineContext& c);
+bool animation_palette_bind_block(AnimationMachineContext& c);
 bool animation_scene_block(AnimationMachineContext& c);
 }
 #endif

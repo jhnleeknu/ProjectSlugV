@@ -302,10 +302,12 @@ def negatives(exe, records, resources, program):
            'program bus write requires RAM mirror units')
     reject('odd_descriptor_after_flag_write', {'pc': 0x44012, 'a0': 0x104001,
            'a5': 0x108000}, 'program bus requires even WORD/LONG address')
-    reject('post_scene_JSR_body_unsupported', {'pc': 0x47ff2}, 'unsupported animation machine PC')
+    reject('map_transfer_JSR_body_unsupported', {'pc': 0x48042}, 'unsupported animation machine PC')
     whole = next(fx for _, fx, _ in records if fx['entry_pc'] == 0x47fe8)
-    reject('whole_scene_before_unsupported_post_scene_JSR', {},
-           'unsupported animation machine PC', fx=whole)
+    # Legacy scene fixtures have no valid palette-list initialization.
+    # Continuation now reaches checked palette writes; this is not a map-boundary proof.
+    reject('legacy_scene_palette_write_guard', {},
+           'unsupported animation machine write device', fx=whole)
     reject('whole_reset_before_missing_ROM_descriptor', {},
            'missing or ambiguous physical program bus ROM byte', fx=whole,
            selected_resources=[path for path in resources if 'program_rom_000000' not in str(path)])

@@ -255,7 +255,7 @@ def negatives(exe, records, resources, program):
            'even WORD/LONG')
     reject('flag_only_BNE_entry_unsupported', {'pc': 0x47fe0},
            'unsupported animation machine PC')
-    reject('unsupported_post_scene_JSR_boundary', {'pc': 0x47ff2},
+    reject('unsupported_map_transfer_JSR_boundary', {'pc': 0x48042},
            'unsupported animation machine PC')
     whole = next(fx for _, fx, phases in records
                  if fx['entry_pc'] == 0x47fca and not any(p['waiting'] for p in phases))

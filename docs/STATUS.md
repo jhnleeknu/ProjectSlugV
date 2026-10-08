@@ -1901,3 +1901,16 @@
 - Sol6.1/medium3명이 core/unit, 원본 관측, 비교기/문서를 담당한 뒤 교차 검토했다. 메인은 복잡한 의미·계약·실제diff·alias설계·전체빌드·근거 확인·통합을 담당한다. 새 비교 통과 후 기존 열 회귀를 세 작업자에게4/3/3개로 배정했다.
 - Native report SHA `46c0271dbfdc15f93e73bed69c08e62511a122c991e8c30c9e5b7979cd3b0ff3`, C++ report SHA `26c596cb95fd59aba2f5d19a43ab65cd6baebbc8cdfe9aab46e88b09b5a19556`. 다음은47ff2의e7c36/8da2와node설정·timer후속,477ee/47da4/480bc frame의 실제 실행 연결이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용 자료 전체 의미는 미완료다. 애니메이션17중14종+14/3c 일부와 전체복원율 미산정, 전체 Goal active를 유지한다.
 - 최종 기존 열 공식 회귀가 모두 통과했다. 메인이 새 scene을 포함한 열한 보고서의 현재 고유 파일 합집합32326개 SHA를 확인했고 각 담당자의 감사도 통과했다. 각 최종 보고서 SHA와 근거는 리뷰0229에 저장했다. 원본·추출물을 제외한 소스·도구·규격·문서만 통합한다.
+
+
+## 2026-10-09 — 팔레트 연결·맵 노드 준비의 실제 스택 통합
+
+- Baseline `5cb6256`, branch `codex/animation-machine-palette-bind`. 진행률을 보고하고 메인의 분석·리뷰·통합 역할을 재개했다. 등록된 목표 파일과 AGENTS.md/docs/GOAL.md를 확인했으며 기존 범위·완료 기준·진행을 유지한다. 전체 게임 복원율은 분모 미확정으로 산정하지 않는다. 애니메이션14/17(약82%)+14/3c 일부는 부분 지표다.
+- 8e82의 고정 팔레트 해제,8da2의 live binding/list splice,e7bf4/e7c36 wrapper,16fac/16ff8 node 준비와47ff2→48042를 실제 RAM/A7 실행기에 연결했다. 기존 여덟 MS5D kind3와 C++ loader/bus를 사용한다. 실제 bank2 root/lookup/binding 읽기를 보존하고480f2 header는 주소만 전달한다.48042의 JSR1861a는 다음 실행 전 경계다.
+- unlink 후 bucket 재읽기, 선행ID 쓰기로 flags operand가 바뀌는 경우, node/binding 쓰기가 실제 RTS target을 바꾸는 경우를 확인했다. 부분 stop과 전체 RTS를 구분하며 원본 fault와 checked API rollback을 혼동하지 않는다. 신규25개 C 보존 block은 원본 명령 분류이고 일반CCR 측정이 아니다.
+- 원본 정상58조건140split/58continuous와guard5조건을 각각2회 실행해252freshCPU/416단계를 확보했다. C++58조건140단계·직전 출력82회 재개가 full64KiB RAM/16R/PC/A7·장치/bank·77포트(watchdog69/PVC8)와 일치했다. 독립 bank 감사24회, 오류21조건·zero-step33조건을 통과했다. 대기·외부status읽기·native C 측정은0이다.
+- 메인 `make -j4 all test` exit0: Python257개/C++161개 실행/경고0. 신규 unit 일반·UBSan 각각65 API 호출, 별도 실제kind3 loader 연결66회 통과. 독립 native29조건73split/29continuous와 모든5guard·1654참조를 재검사했고 별도 core/비교기 리뷰는2855현재 참조와 정수 폭·live 접근 순서를 확인했다.
+- 기존screen/cleanup/scene의 명시적 unsupported 검사를48042로 옮겼다. 역사적 정상stop47ff2는 유지했다. 기존 whole scene/cleanup의 팔레트 입력은 새 binding 초기화 조건이 아니므로 입력을 유지하고 실제 나중 write-device/alignment guard를 확인하도록 수정했다. 이 검사를 맵 경계 도달 증거로 부르지 않는다.
+- Sol6.1/medium3명이 구현·원본 관측·비교기/문서를 담당하고 교차 검토했다. 새 비교 통과 후 기존11개 회귀를4/3/4개로 분담했다. 메인은 복잡한 원본 의미·계약·실제diff·전체빌드·근거·통합을 담당한다. 상세 의미·재현·한계는 animation-machine-palette-bind-contract.md/animation-machine-palette-bind-execution.md와 리뷰0230에 기록한다.
+- Native report SHA `0ce478765207df8625a9a8065fb0f75ce68604b6df7a822bd8ac0d0ec5648afb`, C++ report SHA `fda00cf15928f1b1f34598aabe6b1f036ef3a46b4f4b5950066a9b39489cf5d0`. 다음은1861a/18702/16f0e/183c6의 실제 맵 전송·스택 및477ee/47da4/480bc frame 연결이다. 자연 scheduler·입력·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료이며 전체 Goal은 active다.
+- 최종 기존11개 공식 회귀가 모두 통과했다. 메인은 새 palette binding을 포함한12개 보고서의 현재 고유 파일 합집합35106개 SHA를 직접 확인했고 각 담당자의 감사도 일치했다. 최종 보고서 SHA·검증 근거는 리뷰0230에 기록했다. 소스·도구·규격·분석 문서만 통합한다.
