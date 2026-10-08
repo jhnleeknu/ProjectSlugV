@@ -1609,3 +1609,12 @@
 - 실제48980/489c2를수정없는49fc6/defaultcd50에서90조건/98단계로실행했다. 네같은CPU 대기연쇄에서현재draw의캡처상태완료와후속draw의liveobject재읽기를구분했다. bank/objectpoison 보강후최종SHA `18d25c677ab35698a7662142ce730422c67abcb2df58e7eea8592e141d5e39e6`.
 - 원본RAM쓰기7384/stack10573/PVC3280,90반환carry true46/false44와8대기,27분기중19양쪽을관측했다. 별도Sol이26조건/34단계를재실행했고메인도관찰도구/입력6/산출물392개hash를검토했다. 리뷰0204.
 - animation-full-api-reuse.md에17dispatch와기존부분지원의간극을기록했다. animation-draw-full-contract.md와animation-execution-initial-contract.md는전체register/ports/pending 연결의구현계약이다. 아직새C++검증완료가아니다. 다음은실제MS5A생성과00/04/08/28의전체상태연결,나머지opcode의순차확대다.
+
+## 2026-10-08 — 실제 MS5A와 animation 전체 상태 초기 연결
+
+- Baseline `2110d5e`, branch `codex/animation-execution`. Sol6.1/medium 세 작업자가 core/unit, CLI/Make/문서, packer/test를 분담했고 메인이 원본 의미·실제 diff·통합 검증을 맡았다. 별도 Sol의 검증기/core/CLI 독립 리뷰도 통과했다.
+- 17개 opcode 중00/04/08/28을 전체 RAM/15regs/carry/PVC 및 sprite pending으로 연결했다. 현재 draw는 캡처 상태로 재개하고 후속 draw는 live object를 읽는다. MOVEM.W 부호확장과 live RAM script를 보존한다. 나머지13opcode는 계속 미완료다.
+- 실제48980/489c2의65/80byte script를 MS5A/C++ loader로 소비했다. 별도48a12 raw1024byte MS5D도 생성했으나 이번 API가 읽는다고 주장하지 않는다.489c2의 composition group은 미확정이다.
+- 원본90조건/98단계, 이전 실제 C++ 출력 기반8재개, PVC3280개가 일치했다. 추가 live RAM 원본 실행15조건과 오류157조건도 통과했다. 검증 SHA `60a5594afb637884eaf51d61cf5ff5ddd9f6af32869ea6a9775ec7b627160082`; 입력22/산출물670개 해시 일치.
+- `make all test` exit0, Python215/C++145/경고0, core normal/UBSan 통과. 리뷰0205와 animation-execution.md에 실제 범위·명령·제약을 기록했다.
+- 전체 진행률은 분모 미확정으로 백분율 미산정이다. 자연 scheduler/IRQ·직접 플레이·전체 활성화 callback·전체 스테이지/적/보스와 전체 Goal은 계속 미완료다. 다음 handler0c/14의 원본 경계 조사에 착수하며 기존 범위·완료 기준을 유지한다.
