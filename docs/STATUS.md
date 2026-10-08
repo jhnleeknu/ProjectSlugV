@@ -1596,3 +1596,16 @@
 - 원본277조건/291단계와actualCLI전체RAM/15regs/continuation/external_reads 일치.14재개는직전실제C++출력을이어받고14대기단계는리소스를생략한다.128rawWORD주소전체관측. 오류163조건과API rollback통과. 리뷰에서lateWORDfixture를보강했다.
 - fullmake exit0 Python205/C++144/경고0, 패커9테스트와core normal/UBSan통과. 검증SHA `785bc6249e24f89fc96fa69fabe5365d1cbe2871948a33b07f5e9d58eec2d0b5`; 입력18/산출물1172개해시일치. 리뷰0203과object-sound-lookup-execution.md.
 - 다음은활성화caller의49fc6전체register/ports/pending과실제48980/489c2 scripts 연결이다. 상위callback·자연scheduler/IRQ·직접플레이·전체Goal은미완료이며기존범위와완료기준을유지한다.
+
+## 2026-10-08 — 진행률 보고 후 전체 animation 분석 재개
+
+- 전체 복원율의 분모(전체 코드/데이터 의미 분석 대상과 검증 대상)가 아직 확정되지 않아 신뢰할 수 있는 전체 백분율은 미산정이다. ROM 검증·복호화와 전체 타일 변환은 완료했지만, 리소스 의미 해석·게임 로직·자연 실행 통합·전체 스테이지/적/보스 검증은 미완료다. 테스트 수나 helper 수를 전체 진행률로 환산하지 않는다.
+- 최신 통합 커밋9f14f98과 Python205/C++144 성공 기록을 확인했다. branch codex/animation-full-analysis에서 후속작업을재개했다. 메인은4a10c의전체register/조기반환/LSR·ADDX·SUBX·palette 및sprite복귀의의미계약을작성했다.
+- Sol6.1/medium 세 작업자에게 실제48980/489c2 native실행관측, script/lookup리소스범위, 기존API/17opcode gap목록을 각각배정했다. 원본관측은진행중이며새animation C++통과를주장하지않는다.
+- script정적자료는메인이읽었다.48980은65byte consumed span과별도padding1byte,489c2는80byte다.48a12lookup의fullBYTE domain raw1024byte를확인했다.48980 setup의groupEA는지역근거가있고489c2의livegroup은아직미확인이다. 문서activation-animation-resource-spans.md와도구inspect_activation_animation_scripts.py에근거를남겼다.
+
+### 활성화 animation native 관측 확정
+
+- 실제48980/489c2를수정없는49fc6/defaultcd50에서90조건/98단계로실행했다. 네같은CPU 대기연쇄에서현재draw의캡처상태완료와후속draw의liveobject재읽기를구분했다. bank/objectpoison 보강후최종SHA `18d25c677ab35698a7662142ce730422c67abcb2df58e7eea8592e141d5e39e6`.
+- 원본RAM쓰기7384/stack10573/PVC3280,90반환carry true46/false44와8대기,27분기중19양쪽을관측했다. 별도Sol이26조건/34단계를재실행했고메인도관찰도구/입력6/산출물392개hash를검토했다. 리뷰0204.
+- animation-full-api-reuse.md에17dispatch와기존부분지원의간극을기록했다. animation-draw-full-contract.md와animation-execution-initial-contract.md는전체register/ports/pending 연결의구현계약이다. 아직새C++검증완료가아니다. 다음은실제MS5A생성과00/04/08/28의전체상태연결,나머지opcode의순차확대다.
