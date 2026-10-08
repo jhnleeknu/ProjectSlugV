@@ -1823,3 +1823,15 @@
 - Native report SHA `a93d54a8b9001073a469795b70e00541ab5c9f09dcee9af9c2aa7b7393157ada`, C++ report SHA `a26fde94977d049b482e83721589adce71f6dfd8c5188a8a413dd072dde477bc`. 계약·재현·제약은 `animation-machine-readiness-contract.md`, `animation-machine-readiness-execution.md`, 리뷰0223에 기록했다.
 - 선행 HUD/BCD와 분기 후47d46/47d72의 stage/frame 연결이 다음 과제다. 자연scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료다. 애니메이션17명령 중14종+14/3c 일부 집계와 Goal active를 유지한다.
 - 최종 기본machine/caller/carry/activation 회귀 모두 통과했다. 낡은 caller 보고서의 미구현 주소 표현을 수정하고 영향받는 네 보고서를 재생성했다. 메인과 독립 리뷰가 최종 해시를 확인했으며, 메인의 다섯 보고서 합집합 감사는9686개 고유 파일 일치다. 최종 SHA와 변경 내역은 리뷰0223에 기록했다.
+
+
+## 2026-10-08 — HUD·BCD 및 실제 상위 호출 공유 스택 통합
+
+- Baseline `24d13ff`, branch `codex/animation-machine-hud`. 사용자 요청에 따라 현재 진행률과 역할을 보고하고 원본 의미 분석·리뷰·통합을 재개했다. 등록된 active Goal의 지시 파일과 AGENTS.md/docs/GOAL.md에 Astra·Sol·Sonnet·Opus 역할/effort 및 작업자 최대5개 규칙이 이미 반영되어 있음을 확인했다. 기존 범위·완료 기준·진행을 초기화하지 않았다.
+- 새 C++11 실행부에 HUD4e286, BCD4843c, palette8cda, rectangle35f0과 실제47c6c 상위 caller를 연결했다. 사운드·팔레트·숫자 출력의 WORD 저장, JSR/BSR/RTS와 tail JMP를 공유 RAM/A7로 처리한다. 비디오 LONG/WORD 출력과 PVC WORD 포트를 구분하며 기존8개 MS5D kind3를 실제 loader/bus로 읽는다. ROM·추출물·리소스 형식은 변경하지 않았다.
+- raw 숫자 index10..15는 뒤의 코드 bytes를 읽는 원본 동작을 보존한다. 팔레트/stack alias는 JSR return0004e2f0를00040a0d로 손상시키는 원본 기록을 확보했다. 이를 정상 숫자 복원 증거로 잘못 분류하지 않고 원본 guard와 C++ 전체 rollback으로 구분했다. 대기 중 savedWORD 변경은 실제4e2d4 pop에서 확인했다.
+- 원본 정상124조건 split277/continuous138단계와 guard3개를 각각2회 실행했다(508freshCPU/842실행단계). C++ 정상124조건277단계, 실제 이전 출력153회 재개가 전체RAM·16R/PC·장치/bank·756포트(비디오732/PVC24)·외부읽기0회와 일치했다. 대기14단계와 원본 BCC 기반 known C12회, 오류15조건 및 zero-step9조건을 확인했다. SR 읽기·원본 patch·예상 결과 주입·stack mask를 사용하지 않았다.
+- 메인 `make all test` exit0: Python257/C++155개 실행, 경고0. 신규 unit1283회 API의 일반/UBSan 검사도 통과했다. 기존 기본machine/caller/carry/activation/readiness 검증기 모두 재실행해 통과했다. 최종 여섯 보고서의 고유 파일 합집합14589개 해시를 메인이 확인했다.
+- Sol6.1/medium3명이 core/unit, native, 비교기/문서를 담당한 뒤 교차 검토했다. 독립 원본 감사는60조건132split/74continuous와 모든14wait·3guard 및3154참조를 재검사했다. 별도 core/비교기 검토는12개 실제 C 보존 PC와 최종4990참조를 확인했다. fixture checkpoint와 초기 주소 출처의 두 문제는 동결 전에 수정·재생성했다. 마지막 세 독립 회귀는 세 작업자에게 병렬 배정했고, 메인은 실제 source/diff·감사 기록·결과를 읽고 수용했다.
+- 원본 보고서 SHA `41408a8aa9f6f47468632aca987db6f8fb773660ae2e78b4990a0545ff536a72`, C++ 보고서 SHA `ddfa3e768c229bee082c7321579236670fbef75e14a7da4b846226210c269d91`. 재현 명령·각 회귀 해시는 `animation-machine-hud-execution.md`와 리뷰0224, 원본 의미는 `animation-machine-hud-contract.md`에 기록했다.
+- 다음은47d24의4e216/bee 반환 분기,47d46/47d72 및47eac 후속 body와 stage/frame 연결이다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료다. 애니메이션17중14종(약82%)+14/3c 일부라는 기존 집계를 유지하며 전체 게임 복원율은 분모 미확정으로 산정하지 않는다. 전체 Goal은 active다.
