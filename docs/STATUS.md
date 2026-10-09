@@ -1929,3 +1929,12 @@
 - Native report SHA `3cbf2b1b6b49c675f116c8298f09d36feb817ae76173fcab4d03a71b1428abf8`, C++ report SHA `78f2dfb30e4a8710a4044f6be7985f8220632213190af5eff4a28f8beb854844`. 의미·재현·한계는 animation-machine-map-transfer-contract.md/animation-machine-map-transfer-execution.md와 리뷰0231에 기록한다. 후속4804e timer/frame,별도184d2/185fa/18656,자연scheduler·입력·IRQ/timing·일반CCR·직접플레이·전체스테이지/적/보스·미사용자료 전체 의미는 미완료다. 부분 애니메이션14/17(약82%)+14/3c 일부와 전체복원율 미산정을 유지한다.
 - 인수인계: 재개 지점은4804e 이후의 palette/timer 연쇄와 frame 연결이다. 이 단계 뒤의 구현은 시작하지 않았다. 일시중지는 사용자 요청이며 전체 Goal 완료 선언이 아니다. 소스·리뷰·재현 명령과 이번 검증 결과를 로컬 커밋으로 보존한 뒤 중지한다.
 - 최종 기존12개 공식 회귀가 모두 통과했다. 메인은 새 map을 포함한13개 보고서의 현재 고유 파일 합집합37744개 SHA를 직접 확인했다. 최종 해시·검증·수정 근거는 리뷰0231에 기록했다. 이 단계의 통합을 마치고 사용자 요청대로 Goal 일시중지로 전환한다.
+
+
+## 2026-10-10 — 맵 뒤 페이드·타이머·프레임 재진입과 BIOS 카드 경계
+
+- Baseline `55606fa`, branch `codex/animation-machine-fade-card`. 이번 세션은 Claude Opus 5.5가 메인 분석·리뷰·통합을 맡았다. Codex Astra/Sol은 이 세션에서 호출할 수 없어 위임하지 않았고 Claude 작업자(Opus5.5/high 구현·독립리뷰, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기·문서)로 재배정했다. 기존 범위·완료 기준·진행을 유지한다.
+- 4804e 이후 첫 페이드(8c16)·7a=80 타이머·두 번째 페이드·7a=20 타이머·caf0·c364→BIOS c00468 경계, BIOS 뒤 10fdc6 응답 분기·28ae 자식 할당(live alias·known Set/Clear)·480ac 대기·2a00 자기 제거·104ca4 A7 복원, 디스패처 2ab8..2ac6 재진입을 실제 RAM/A7 실행기에 연결했다(`engine/src/animation_machine_fade_card.cpp`). 리소스 규격·loader/bus는 변경하지 않았다.
+- c00468은 실행하지 않는다. BIOS 재개는 선언된 PC=c37c/A7+=4/BYTE10fdc6/carry Unknown이며 프레임 재진입은 PC=2ab8만 바꾸는 선언 fixture다. 자연 scheduler·BIOS 실행 증거가 아니다.
+- Native 정상25조건 split319/continuous196·guard7(SHA `f53387b7122286eca94c55371a34a09f900489eb9ab2766f9c98e086da7f57fc`). C++ 32조건 split327/continuous196·재개299·ports18389·음성22·zero-step117 일치(SHA `ad6e83ea686fe864319ff6c288710a069f78734765ce61e2781a4666740058c5`). `make -j4 all test` exit0 Python257/C++163/경고0. 기존 13개 공식 회귀 통과. 상세는 계약·`animation-machine-fade-card-execution.md`·리뷰0232.
+- 다음: 자식 c250 callback(페이드→de424→a29c/a2b8/a370 카드 메뉴→부모62=ff→2a00) 연결, 이후 480bc 프레임 helper 묶음. BIOS 내부, 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 스테이지/적/보스·미사용 자료는 미완료이며 전체 Goal은 active다.

@@ -286,7 +286,7 @@ def negatives(exe, records, resources, program):
                          native_exception_rollback_equivalence_claimed=False))
     for pc in (0x8db4, 0x8dda, 0x8e08, 0x8e40):
         reject('Z_only_%06x' % pc, {'pc': pc}, 'unsupported animation palette bind PC')
-    reject('post_map_sequence_unsupported', {'pc': 0x4804e}, 'unsupported animation machine PC')
+    reject('post_map_sequence_unsupported', {'pc': 0xc00468}, 'unsupported animation machine PC')
     reject('first_node_LONG_before_second_bank_write',
            {'pc': 0x16ff8, 'a0': 0x1fffce, 'a1': 0x12345678, 'a2': 0},
            'unsupported animation machine write device')
@@ -313,8 +313,10 @@ def negatives(exe, records, resources, program):
            'unsupported animation machine PC', memory=((0x104000, 2, 0xffff),
            (base['initial_a7'], 4, 0xdeac)))
     whole = next(fx for _, fx, _ in records if fx['entry_pc'] == 0x47ff2)
-    reject('whole_palette_node_map_before_unsupported_sequence', {},
-           'unsupported animation machine PC', fx=whole)
+    # Whole run now proceeds past 4804e (fade_card core); the legacy fixture's next
+    # first checked failure is a write guard (not a claim about the original object layout).
+    reject('whole_palette_node_map_before_fade_body_write_guard', {},
+           'unsupported animation machine write device', fx=whole)
     reject('fixed_palettes_and_PVC_before_missing_bank_lookup', {},
            'missing or ambiguous physical program bus ROM byte', fx=whole,
            selected_resources=[p for p in resources if 'program_rom_200000' not in str(p)])

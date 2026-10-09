@@ -87,6 +87,12 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x3b28:case 0x3b3e:case 0x3b5e:case 0x3b6c:case 0x3b80:
     case 0x3b96:case 0x3bc8:case 0x3be2:case 0x3c06:case 0xca74:
     case 0x476ba:
+    // Fade/card/child/dispatcher blocks: JSR/JMP/BSR/BRA/RTS/LEA/MOVEA only.
+    // 290c/2916 are the RTS after ORI/ANDI CCR, which set known C first.
+    case 0x48058:case 0x4807e:case 0x4809a:case 0x480a0:case 0x480b6:
+    case 0x48072:case 0x48098:case 0x480b4:case 0xc376:case 0xc37c:case 0xc37e:
+    case 0xc39c:case 0xc3b6:case 0xc3be:case 0x28ae:case 0x290c:case 0x2916:
+    case 0x2a00:case 0x2a02:case 0x2a06:case 0x2ab8:case 0x2abe:case 0x2ac0:case 0x2ac2:case 0x2ac6:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -231,6 +237,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 next.pc==0x47cae || next.pc==0x47cc0 || next.pc==0x47cc6 || next.pc==0x47cca || next.pc==0x47ce6 ||
                 next.pc==0x1dc84 || next.pc==0x1dc8a || next.pc==0x210ae || next.pc==0x210b4 ||
                 (next.pc>=0x2b3e8 && next.pc<0x2b40c))ok=animation_interpreter_block(c);
+            else if ((next.pc>=0x4804e && next.pc<=0x480b6) || (next.pc>=0xc364 && next.pc<=0xc3be) ||
+                (next.pc>=0x28ae && next.pc<=0x2916) || next.pc==0x2a00 || next.pc==0x2a02 || next.pc==0x2a06 ||
+                (next.pc>=0x2ab8 && next.pc<=0x2ac6))ok=animation_fade_card_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

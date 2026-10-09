@@ -289,7 +289,7 @@ def negatives(exe, records, resources, program):
                          native_exception_rollback_equivalence_claimed=False))
     for pc in (0x16f50, 0x16f64, 0x1871a, 0x18738):
         reject('flag_or_DIVU_only_%06x' % pc, {'pc': pc}, 'unsupported animation map transfer PC')
-    reject('post_map_body_unsupported', {'pc': 0x4804e}, 'unsupported animation machine PC')
+    reject('post_map_body_unsupported', {'pc': 0xc00468}, 'unsupported animation machine PC')
     reject('live_MOVEM_pushes_before_fixed_stack_write', {'pc': 0x18424, 'a7': 0x100008},
            'program bus write requires RAM mirror units')
     reject('live_MOVEM_pops_before_bank_stack_read', {'pc': 0x18530, 'a7': 0x1ffff8},
@@ -306,7 +306,8 @@ def negatives(exe, records, resources, program):
            'a0': 0x106000, 'd2': 0, 'd3': 0, 'd4': 0, 'd5': 0},
            'animation machine block budget exceeded')
     whole = next(fx for _, fx, _ in records if fx['entry_pc'] == 0x48042)
-    reject('whole_map_before_unsupported_continuation', {}, 'unsupported animation machine PC', fx=whole)
+    # Whole run now proceeds past 4804e (fade_card core); first checked failure moved to a write guard.
+    reject('whole_map_before_fade_body_write_guard', {}, 'unsupported animation machine write device', fx=whole)
     reject('PVC_bank3_before_missing_primary_ROM_chunk', {},
            'missing or ambiguous physical program bus ROM byte', fx=whole,
            selected_resources=[p for p in resources if 'program_rom_300000' not in str(p)])
