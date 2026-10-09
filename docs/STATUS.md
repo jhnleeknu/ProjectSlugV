@@ -1938,3 +1938,11 @@
 - c00468은 실행하지 않는다. BIOS 재개는 선언된 PC=c37c/A7+=4/BYTE10fdc6/carry Unknown이며 프레임 재진입은 PC=2ab8만 바꾸는 선언 fixture다. 자연 scheduler·BIOS 실행 증거가 아니다.
 - Native 정상25조건 split319/continuous196·guard7(SHA `f53387b7122286eca94c55371a34a09f900489eb9ab2766f9c98e086da7f57fc`). C++ 32조건 split327/continuous196·재개299·ports18389·음성22·zero-step117 일치(SHA `ad6e83ea686fe864319ff6c288710a069f78734765ce61e2781a4666740058c5`). `make -j4 all test` exit0 Python257/C++163/경고0. 기존 13개 공식 회귀 통과. 상세는 계약·`animation-machine-fade-card-execution.md`·리뷰0232.
 - 다음: 자식 c250 callback(페이드→de424→a29c/a2b8/a370 카드 메뉴→부모62=ff→2a00) 연결, 이후 480bc 프레임 helper 묶음. BIOS 내부, 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 스테이지/적/보스·미사용 자료는 미완료이며 전체 Goal은 active다.
+
+
+## 2026-10-10 — 카드 자식 callback c250의 페이드·장면 준비·타이머
+
+- Baseline `e25f276`, branch `codex/animation-machine-card-menu`. 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high core, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기). Codex Astra/Sol 미사용(호출 불가).
+- 부모 480ac RTS→2ac2→2ab8의 자연 dispatch로 자식 c250을 실행하고, de424(e7c16·8da2 palette49·43ffc scene de40c·16fac/16ff8 node109156·1861a 전송·17012), 페이드 2회, 7e 타이머(SUBQ+BCS), c290→a29c 경계를 연결했다(`engine/src/animation_machine_card_child.cpp`). 기존 helper·리소스 규격을 그대로 사용한다.
+- Native 정상26조건 split555/continuous111·guard6, C++ 32조건 split568/continuous112·음성18·zero-step126 일치. `make -j4 all test` exit0 Python257/C++164/경고0, 기존14개 회귀 통과. 상세는 계약·`animation-machine-card-child-execution.md`·리뷰0233.
+- 다음: a29c/a0a0/a2b8 카드 메뉴 push → a370 메뉴 프레임 → c188/c1c4 callback(bd26의 BIOS 재호출 경계 포함) → c2c8 페이드·부모62=ff·2a00. 기존 host 메뉴 API(step_menu_frame 등)는 live stack 실행을 대신하지 않는다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.

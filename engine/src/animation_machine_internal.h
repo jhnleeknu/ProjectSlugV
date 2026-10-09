@@ -50,5 +50,6 @@ bool animation_palette_bind_block(AnimationMachineContext& c);
 bool animation_map_transfer_block(AnimationMachineContext& c);
 bool animation_scene_block(AnimationMachineContext& c);
 bool animation_fade_card_block(AnimationMachineContext& c);
+bool animation_card_child_block(AnimationMachineContext& c);
 }
 #endif
