@@ -98,7 +98,10 @@ void tail(){
  // Wrong stop at the 1a470 boundary rolls back.
  Bytes ram=zero_ram();putf(ram,0x540e,4,PL);reject(ram,state(0x1a78c),STOP,"unsupported animation machine PC");
 }
+// Terminated two-record motion path at MOT (type 14 from time 0, terminator type ffff at time 100).
+void motion_path(Bytes&ram){put(ram,MOT,2,0);put(ram,MOT+2,2,0x14);put(ram,MOT+10,2,0x100);put(ram,MOT+12,2,0xffff);}
 // Non-null motion: 19832 -> 19844 stop (53fa=0), 19bbe/19802 -> 19812 stop (53fa!=0); direct 19978/19d98 -> 19910.
+// 19812/19844/19910 now execute (motion walk U3), so they remain valid stops; the frame continues to 1a7a8.
 void motion(){
  {Bytes ram=natural_ram();putf(ram,0x53b4,4,MOT);State s=state(0x1a73c);Out o;assert(run(ram,s,0x19844,o));
   assert(s.a[7]==SP-8&&get(ram,SP-4,4)==0x1a766&&get(ram,SP-8,4)==0x19c22&&s.a[1]==MOT&&s.d[7]==0x002ff000&&getf(ram,0x53c8,4)==0x002ff000);
@@ -106,12 +109,16 @@ void motion(){
   reject(natural_ram(),state(0x1a73c),0x19812,"unsupported animation machine PC");}
  {Bytes ram=natural_ram();putf(ram,0x53b4,4,MOT);putf(ram,0x543e,2,2);State s=state(0x1a73c);Out o;assert(run(ram,s,0x19812,o));
   assert(s.a[7]==SP-8&&get(ram,SP-4,4)==0x1a766&&get(ram,SP-8,4)==0x19bca&&s.a[1]==MOT&&getf(ram,0x53fa,2)==2&&s.d[0]==0x00500000&&s.d[1]==0x00300000);
-  ram=natural_ram();putf(ram,0x53b4,4,MOT);putf(ram,0x543e,2,2);reject(ram,state(0x1a73c),0x19844,"unsupported animation machine PC");}
+  ram=natural_ram();putf(ram,0x53b4,4,MOT);putf(ram,0x543e,2,2);motion_path(ram);reject(ram,state(0x1a73c),0x19844,"unsupported animation machine PC");
+  // Never-reached stops still roll back at the 1a7a8 boundary after the U3 walks.
+  ram=natural_ram();putf(ram,0x53b4,4,MOT);motion_path(ram);reject(ram,state(0x1a73c),0x1a0b6,"unsupported animation machine PC");
+  ram=natural_ram();putf(ram,0x53b4,4,MOT);motion_path(ram);s=state(0x1a73c);assert(run(ram,s,0x1a7a8,o)&&s.a[7]==SP-4&&get(ram,SP-4,4)==0x1a78c);}
  const std::uint32_t entries[][2]={{0x19978,0x1997c},{0x19d98,0x19da0}};
  for(unsigned int i=0;i<2;++i){Bytes ram=zero_ram();putf(ram,0x53b4,4,MOT);State s=state(entries[i][0]);s.d[7]=0x12345678;Out o;
   assert(run(ram,s,0x19910,o)&&quiet(o)&&s.a[7]==SP-4&&get(ram,SP-4,4)==entries[i][1]&&s.a[1]==MOT);
   assert(s.d[7]==(i?0x56780000U:0x12345678U));
-  reject(ram,state(entries[i][0]),STOP,"unsupported animation machine PC");}
+  motion_path(ram);s=state(entries[i][0]);assert(run(ram,s,STOP,o)&&s.a[7]==SP+4);
+  motion_path(ram);reject(ram,state(entries[i][0]),0x1a0b6,"unsupported animation machine PC");}
  // 10d3fa != 0 with null motion: 19bca D7 = (53fa<<8) + D6 (=0), clamped by 19c28 (53ee<<16).
  {Bytes ram=natural_ram();putf(ram,0x543e,2,0x0300);State s=state(0x1a75e);s.a[7]=SP;Out o;assert(run(ram,s,0x1a766,o)&&quiet(o));
   assert(getf(ram,0x53fa,2)==0x0300&&s.d[6]==0&&s.d[7]==0x00030000&&s.d[5]==0x01000000);
@@ -395,8 +402,8 @@ void errors(){
  assert(bytes==1724&&interior==647); // 862 even PCs minus 215 block starts
  const unsigned int nb=sizeof(BUNDLED)/sizeof(BUNDLED[0]);assert(nb==84);
  for(unsigned int i=0;i<nb;++i){assert(!listed(BUNDLED[i]));Bytes ram=zero_ram();reject(ram,state(BUNDLED[i]),STOP,"unsupported animation scene core PC");}
- // Neighbours outside the ranges and the six boundaries; odd PCs are rejected first.
- const std::uint32_t outside[]={0x197d8,0x19812,0x19830,0x19844,0x198ec,0x19910,0x19976,0x199d4,0x19a3e,0x19b50,0x19b94,0x19dee,0x1a268,
+ // Neighbours outside the ranges and the remaining boundaries (19812/19844/19910 belong to U3); odd PCs are rejected first.
+ const std::uint32_t outside[]={0x197d8,0x19768,0x19938,0x19976,0x199d4,0x19a3e,0x19b50,0x19b94,0x19dee,0x1a268,
   0x1a3a6,0x1a3d4,0x1a40e,0x1a440,0x1a470,0x1a524,0x1a5a4,0x1a73a,0x1a7a8,0x1a0b6};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram=zero_ram();reject(ram,state(outside[i]),STOP,"unsupported animation machine PC");}
  {Bytes ram=zero_ram();reject(ram,state(0x1a73d),STOP,"unaligned animation machine PC");}
