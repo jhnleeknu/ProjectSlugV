@@ -3,7 +3,8 @@
 Controlled fixtures; no expected-register injection. The frozen native observation is an
 immutable input (this verifier never invokes the observer main). C++ resumes only from
 the previous actual C++ output plus the host changes declared in the native step record.
-The BIOS (c00468) and the card menu (a29c) are never executed; a29c is a stop boundary only;
+The BIOS (c00468) is never executed; a29c is only a stop here (the card menu core executes it in
+verify_animation_machine_card_menu.py) and a370 is the unexecuted boundary;
 frame re-entry is a declared PC change, not a scheduler.
 """
 import hashlib
@@ -24,6 +25,7 @@ NATIVE_SHA = '3e48b69e4827d5a25f7085aee1c81bf6bc0b41a64daa159a3232e690c16f3312'
 NATIVE_TOOL_SHA = 'd9b229b7ecd79f1e412ccc55e78c2c57061e376bf32fbbed83237272cb03b7ae'
 BIOS = 0xc00468
 A29C = 0xa29c
+A370 = 0xa370
 MARKER = struct.pack('>BII', 1, 0xdeadbeef, 0x87)
 CONTRACT_PCS = (0xc250, 0xc258, 0xc25e, 0xc264, 0xc266, 0xc26c, 0xc274, 0xc27a, 0xc286, 0xc28e, 0xc290,
                 0xc2a2, 0xde424, 0xde42a, 0xde42e, 0xde444, 0xde450, 0xde456, 0xde45a, 0xde460,
@@ -433,12 +435,20 @@ def compare_all(exe, rows, resources, instructions, bios_start):
 
 
 def compare_guards(exe, guards, resources, guard_errors):
-    rows = []
+    rows, superseded = [], []
     for row, phase, ram, state, pvc, bank, step in guards:
         stop = phase['stop_pc']
         result, outgoing, out_pvc, ports, error = common.invoke(
             exe, OUT, 'guard_%s' % row['label'], ram, dict(state, carry=2), pvc, bank, resources,
             stop=stop, external=row['fixture']['external'])
+        if row['label'] in SUPERSEDED_GUARDS:
+            # The frozen native guard stopped where the card menu had no executor; the card menu core now runs
+            # a29c/a2b8, so the same input is a checked positive stop (the genuine unsupported boundary is a370).
+            want_pc, why = SUPERSEDED_GUARDS[row['label']]
+            assert result['ok'] and not error and result['pc'] == want_pc and result['status'] == 0, (row['label'], error)
+            superseded.append(dict(label=row['label'], native_guard=phase['guard'], CPP_now_ok_at_stop=hex(want_pc),
+                                   reason=why))
+            continue
         assert not result['ok'], row['label']
         assert error.strip() == guard_errors[row['label']], (row['label'], error)
         assert {k: result[k] for k in common.STATE_KEYS} == dict(state, carry=2)
@@ -446,7 +456,7 @@ def compare_guards(exe, guards, resources, guard_errors):
         assert ports == MARKER and result['external_reads'] == 0x12345678 and result['status'] == 1
         rows.append(dict(label=row['label'], native_guard=phase['guard'], checked_API_error=error.strip(),
                          all_API_outputs_preserved=True, native_fault_rollback_equivalence_claimed=False))
-    return rows
+    return rows, superseded
 
 
 def negatives(exe, rows, ends, resources, neg_errors):
@@ -482,12 +492,13 @@ def negatives(exe, rows, ends, resources, neg_errors):
         reject('bound_branch_direct_entry_%06x' % pc, base4, {'pc': pc})
     reject('mid_block_direct_entry_de44a', base4, {'pc': 0xde44a})
     reject('c2a8_return_has_no_executor', base4, {'pc': 0xc2a8})
-    reject('a29c_pc_has_no_executor', base4, {'pc': A29C})
-    reject('a2b8_pc_has_no_executor', base4, {'pc': 0xa2b8})
-    # 7e=0 borrow reaches JSR a29c; with any other stop the whole transaction rolls back.
+    reject('a370_pc_has_no_executor', base4, {'pc': A370})
+    reject('c2c0_pc_has_no_executor', base4, {'pc': 0xc2c0})   # a2b8 is executed by the card menu core now
+    # 7e=0 borrow reaches JSR a29c. a29c is executed now (card menu core), so with any stop other than the
+    # a29c stop the menu runs on and meets the unexecuted boundary a370: the whole transaction rolls back.
     zero7e = ((state4['a6'] + 0x7e, 2, 0),)
-    reject('a29c_call_with_other_stop_rolls_back', (ram4, dict(state4, pc=0x2ab8), pvc4, bank4), memory=zero7e)
-    reject('a29c_call_with_stop_2ac2_rolls_back', (ram4, dict(state4, pc=0x2ab8), pvc4, bank4), memory=zero7e, stop=0x2ac2)
+    reject('a370_after_a29c_call_with_other_stop_rolls_back', (ram4, dict(state4, pc=0x2ab8), pvc4, bank4), memory=zero7e)
+    reject('a370_after_a29c_call_with_stop_2ac2_rolls_back', (ram4, dict(state4, pc=0x2ab8), pvc4, bank4), memory=zero7e, stop=0x2ac2)
     reject('c286_odd_A6_read', (ram4, dict(state4, pc=0xc286), pvc4, bank4), {'a6': state4['a6'] + 1})
     reject('odd_A6_dispatcher_read', (ram4, dict(state4, pc=0x2ab8), pvc4, bank4), {'a6': state4['a6'] + 1})
     reject('odd_callback_JSR_target', (ram4, dict(state4, pc=0x2ab8), pvc4, bank4),
@@ -539,21 +550,22 @@ def zero_step(exe, ends, rows, resources):
     return result_rows
 
 
+SUPERSEDED_GUARDS = {
+    'guard-stop-c2a8-never-reached': (0xc2a8, 'a29c is executed by the card menu core, so stop c2a8 is reached'),
+    'guard-callback-a2b8': (0x2ac2, 'a2b8/a2bc are executed by the card menu core (JSR (A0)=a2b8 returns to 2ac2)')}
 GUARD_ERRORS = {
     'guard-odd-A6-child': 'program bus requires even WORD/LONG address',
     'guard-odd-A7-push-child': 'program bus requires even WORD/LONG address',
-    'guard-run-past-a29c': 'unsupported animation machine PC',
-    'guard-stop-c2a8-never-reached': 'unsupported animation machine PC',
-    'guard-callback-a2b8': 'unsupported animation machine PC',
+    'guard-run-past-a29c': 'unsupported animation machine PC',   # now raised at the unexecuted boundary a370
     'guard-dispatch-continues-to-sibling': 'animation fade card odd JSR target'}
 NEG_ERRORS = {
     'bound_branch_direct_entry_00c28a': 'unsupported animation card child PC',
     'mid_block_direct_entry_de44a': 'unsupported animation card child PC',
     'c2a8_return_has_no_executor': 'unsupported animation machine PC',
-    'a29c_pc_has_no_executor': 'unsupported animation machine PC',
-    'a2b8_pc_has_no_executor': 'unsupported animation machine PC',
-    'a29c_call_with_other_stop_rolls_back': 'unsupported animation machine PC',
-    'a29c_call_with_stop_2ac2_rolls_back': 'unsupported animation machine PC',
+    'a370_pc_has_no_executor': 'unsupported animation machine PC',
+    'c2c0_pc_has_no_executor': 'unsupported animation machine PC',
+    'a370_after_a29c_call_with_other_stop_rolls_back': 'unsupported animation machine PC',
+    'a370_after_a29c_call_with_stop_2ac2_rolls_back': 'unsupported animation machine PC',
     'c286_odd_A6_read': 'program bus requires even WORD/LONG address',
     'odd_A6_dispatcher_read': 'program bus requires even WORD/LONG address',
     'odd_callback_JSR_target': 'animation fade card odd JSR target',
@@ -582,7 +594,7 @@ def main():
     report, rows, native_refs, instructions, program_reads, control_count = audit_native(program, source)
     refs.update(native_refs)
     matches, totals, ends, guards = compare(exe, rows, resources, instructions, bios_start)
-    guarded = compare_guards(exe, guards, resources, GUARD_ERRORS)
+    guarded, superseded = compare_guards(exe, guards, resources, GUARD_ERRORS)
     negative = negatives(exe, rows, ends, resources, NEG_ERRORS)
     zero = zero_step(exe, ends, rows, resources)
     for name, expected in list(inputs.items()) + list(refs.items()):
@@ -599,7 +611,7 @@ def main():
                   native_observation_sha256=NATIVE_SHA, native_tool_sha256=NATIVE_TOOL_SHA,
                   actual_CPP=dict(totals, matches=matches),
                   original_program_read_audit=program_reads,
-                  native_guards_checked_API=guarded,
+                  native_guards_checked_API=guarded, native_guards_superseded_by_card_menu_core=superseded,
                   native_continuous_control_phases_replayed=control_count,
                   negatives=negative, negative_count=len(negative) + len(guarded), zero_step=zero,
                   bios_start=dict(chain_label=bios_start[0][0], step=bios_start[0][1],
@@ -609,7 +621,7 @@ def main():
                   ROM_unchanged=True,
                   limits=['Controlled fixtures; frame re-entry is a declared PC-only change (A6/A7 previous real outputs), not a natural scheduler, IRQ or VBlank; parent 480ac and other objects are not run per frame.',
                           'c00468 (BIOS) is never executed; its output state is the actual C++ fade/card chain output plus declared host changes (PC=c37c, A7+=4, BYTE 10fdc6, 28ae/parent fields). Other BIOS effects unmodeled/unknown.',
-                          'a29c is a stop boundary only: never executed; a29c/a0a0/a2b8/a370 card menu and c1c4 are out of scope.',
+                          'a29c is used as a stop here only (it is executed by the card menu verifier); a370 (menu frame) and c1c4 are out of scope and never executed.',
                           'Declared RAM fixtures (28ae pool/parent fields, 7e/76/7a/7c/80 boundary writes) are inputs, not original-measured preparation.',
                           'Native has no SR reads; carry is checked against source opcode classification only. No general CCR/timing/IRQ or hardware proof.',
                           'Video/watchdog are instruction-unit ordered register ports; no bus-cycle or rendered VRAM/pixel claim. PVC effects independently fold original ordered writes.',

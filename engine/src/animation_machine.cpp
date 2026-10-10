@@ -98,6 +98,8 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xde424:case 0xde450:case 0xde456:case 0xde45a:case 0xde460:case 0xde466:
     case 0xde46c:case 0xde478:case 0xde47e:case 0xde484:case 0xde48a:
     case 0xe7c16:case 0xe7c1a:case 0xe7c1e:case 0xe7c30:
+    // Card menu a0a0/38e8/c2a8 blocks: JSR/RTS/LEA only. ADDA/SUBA blocks stay Unknown.
+    case 0xa0c2:case 0xa158:case 0xa17e:case 0x3878:case 0x38a4:case 0xc2a8:case 0xa2bc:case 0xc2ba:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -247,6 +249,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x2ab8 && next.pc<=0x2ac6))ok=animation_fade_card_block(c);
             else if ((next.pc>=0xc250 && next.pc<=0xc2a2) || (next.pc>=0xde424 && next.pc<=0xde48a) ||
                 (next.pc>=0xe7c16 && next.pc<=0xe7c30))ok=animation_card_child_block(c);
+            else if ((next.pc>=0xa0a0 && next.pc<=0xa1e0) || (next.pc>=0xa29c && next.pc<=0xa2bc) ||
+                (next.pc>=0x386e && next.pc<=0x38fe && next.pc!=0x38c8 && next.pc!=0x38e2) ||
+                (next.pc>=0xc2a8 && next.pc<=0xc2ba))ok=animation_card_menu_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

@@ -1946,3 +1946,10 @@
 - 부모 480ac RTS→2ac2→2ab8의 자연 dispatch로 자식 c250을 실행하고, de424(e7c16·8da2 palette49·43ffc scene de40c·16fac/16ff8 node109156·1861a 전송·17012), 페이드 2회, 7e 타이머(SUBQ+BCS), c290→a29c 경계를 연결했다(`engine/src/animation_machine_card_child.cpp`). 기존 helper·리소스 규격을 그대로 사용한다.
 - Native 정상26조건 split555/continuous111·guard6, C++ 32조건 split568/continuous112·음성18·zero-step126 일치. `make -j4 all test` exit0 Python257/C++164/경고0, 기존14개 회귀 통과. 상세는 계약·`animation-machine-card-child-execution.md`·리뷰0233.
 - 다음: a29c/a0a0/a2b8 카드 메뉴 push → a370 메뉴 프레임 → c188/c1c4 callback(bd26의 BIOS 재호출 경계 포함) → c2c8 페이드·부모62=ff·2a00. 기존 host 메뉴 API(step_menu_frame 등)는 live stack 실행을 대신하지 않는다. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-10 — 카드 메뉴 push(a29c→a0a0→38e8/386e)와 renderer 설정
+
+- Baseline `bfbfe60`, branch `codex/animation-machine-card-menu-push`. 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high core, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기). Codex Astra/Sol 미사용(호출 불가).
+- 카드 자식 c2a2 JSR a29c에서 메뉴 프레임 push(107efe), 항목 폭 측정(escape·TRAP 경계 38c8/38e2), 폭·높이 갱신, c2a8→a2b8 renderer e84c8 설정, c2ba JSR a370 경계까지 live RAM/A7으로 연결했다(`engine/src/animation_machine_card_menu.cpp`). 기존 host 메뉴 API는 바꾸지 않았다.
+- Native 정상85조건 split2301/control111·guard10, C++ 95조건 split2405/continuous111·음성132·zero-step123 일치. `make -j4 all test` exit0 Python257/경고0, 기존 회귀 15개 통과. 상세는 계약·`animation-machine-card-menu-push-execution.md`·리뷰0234.
+- 다음: a370 열림 프레임(a5d2/a348/9b58 상자, a5ea 첫 전체 그리기·9e1a/9d3a/3918/e84c8→3650, callback c1c4/bf94·a216 커서·3af8 효과음, 계약 `animation-machine-card-menu-open-contract.md`) → a406 입력 프레임·bf2c 자동 선택 타이머(계약 `animation-machine-card-menu-input-contract.md`) → a662 닫기·bd26 BIOS 카드. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
