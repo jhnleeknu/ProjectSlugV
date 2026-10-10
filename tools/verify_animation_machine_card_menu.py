@@ -4,8 +4,10 @@ Controlled fixtures; no expected-register injection. The frozen native observati
 immutable input (this verifier never invokes the observer main). C++ resumes only from the
 previous actual C++ output plus the host changes and declared initial registers/bank state
 recorded in the native fixture. The a29c start state is the actual C++ output of the reviewed
-card-child chain (re-run here), not native registers. a370 (menu frame), 9b58 (nested push)
-and 38c8/38e2 (TRAP #f) are stop boundaries only: never executed.
+card-child chain (re-run here), not native registers. 38c8/38e2 (TRAP #f) are stop boundaries only: never executed.
+a370 (opening frame), 9b58 and c2c0 are executed by the card menu open core and verified in
+verify_animation_machine_card_menu_open.py; here they are normal stops. a406, 9e94 and c2c8 are the still unexecuted
+boundaries used for the unsupported-PC negatives.
 """
 import json
 from pathlib import Path
@@ -30,13 +32,16 @@ BLOCK_STARTS = (0xa29c, 0xa0a0, 0xa0c2, 0xa0c4, 0xa0f8, 0xa104, 0xa158, 0xa15e, 
                 0xc2a8, 0xa2b8, 0xa2bc, 0xc2b4, 0xc2ba)
 BOUND_BRANCH_PCS = (0xa0be, 0xa0f4, 0xa154, 0xa16a, 0xa172, 0xa17a, 0xa186, 0xa1a2, 0xa1b6, 0xa1c8,
                     0x3874, 0x3880, 0x38c4, 0x38de, 0x38f0, 0x38fc)
-BOUNDARY_PCS = (B9B58, T38C8, T38E2, A370)
+A406, B9E94, C2C8 = 0xa406, 0x9e94, 0xc2c8
+BOUNDARY_PCS = (T38C8, T38E2, A406, B9E94, C2C8)       # no executor (a370/9b58/c2c0 execute in the open core)
 MENU_RANGES = ((0xa0a0, 0xa1e2), (0xa29c, 0xa2be), (0x386e, 0x3902), (0xc2a8, 0xc2c0))
 CARRY_PRESERVING = (0xa0c2, 0xa158, 0xa17e, 0x3878, 0x38a4, 0xc2a8, 0xa2bc, 0xc2ba)
 CARD_CHILD_CHAIN_STEP = 24      # 'child-frame-borrow-c290+after-c2a2' -> stop a29c
+CARRY_PROBES = True          # the open-unit verifier re-runs this chain without the (already proven) carry probes
 DECLARED_REG_KEYS = ('d0', 'd1', 'd3', 'd7', 'a0', 'a5', 'a7')
 UNSUPPORTED_MACHINE = 'unsupported animation machine PC'
 UNSUPPORTED_MENU = 'unsupported animation card menu PC'
+ODD_JSR = 'animation fade card odd JSR target'
 WRITE_DEVICE = 'unsupported animation machine write device'
 EVEN = 'program bus requires even WORD/LONG address'
 
@@ -251,7 +256,7 @@ def compare(exe, rows, resources, instructions, connected_start, bios_start):
             carry_histogram[result['carry']] += 1
             # Carry probes: the same phase with a known incoming C must yield exactly the source classification
             # and otherwise identical outputs (preserving blocks keep it, all other blocks make it Unknown).
-            menu_only = bool(executed) and all(any(low <= pc < high for low, high in MENU_RANGES) for pc in executed)
+            menu_only = CARRY_PROBES and bool(executed) and all(any(low <= pc < high for low, high in MENU_RANGES) for pc in executed)
             for probe in (1, 2) if menu_only else ():
                 again = common.invoke(exe, OUT, 'c%03d_carry%d_%03d' % (row['index'], probe, j), data['ram_before.bin'],
                                       dict(phase_in, carry=probe), phase_pvc, phase_bank, resources,
@@ -330,12 +335,20 @@ def compare(exe, rows, resources, instructions, connected_start, bios_start):
 
 
 def compare_guards(exe, guards, resources, guard_errors):
-    rows = []
+    rows, superseded = [], []
     for row, phase, ram, state, pvc, bank, step in guards:
         stop = phase['stop_pc']
         result, outgoing, out_pvc, ports, error = common.invoke(
             exe, OUT, 'guard_%s' % row['label'], ram, dict(state, carry=2), pvc, bank, resources,
             stop=stop, external=row['fixture']['external'])
+        if row['label'] in SUPERSEDED_GUARDS:
+            # The frozen native guard stopped where the menu push had no executor; the card menu open core now
+            # runs 9b58 / a370 / c2c0, so the same input is a checked positive stop (not counted as a negative).
+            want_pc, why = SUPERSEDED_GUARDS[row['label']]
+            assert result['ok'] and not error and result['pc'] == want_pc and result['status'] == 0, (row['label'], error)
+            superseded.append(dict(label=row['label'], native_guard=phase['guard'], CPP_now_ok_at_stop=hex(want_pc),
+                                   reason=why))
+            continue
         assert not result['ok'], row['label']
         assert error.strip() == guard_errors[row['label']], (row['label'], error)
         assert {k: result[k] for k in common.STATE_KEYS} == dict(state, carry=2)
@@ -343,7 +356,7 @@ def compare_guards(exe, guards, resources, guard_errors):
         assert ports == MARKER and result['external_reads'] == 0x12345678 and result['status'] == 1
         rows.append(dict(label=row['label'], native_guard=phase['guard'], checked_API_error=error.strip(),
                          all_API_outputs_preserved=True, native_fault_rollback_equivalence_claimed=False))
-    return rows
+    return rows, superseded
 
 
 def menu_interior_pcs(instructions):
@@ -380,18 +393,13 @@ def negatives(exe, starts, instructions, resources, neg_errors):
         reject('interior_direct_entry_%06x' % pc, base, {'pc': pc})
     for pc in BOUNDARY_PCS:
         reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc})
-    for pc in (0xa1e2, 0xa2be, 0x3902, 0xc2c8, 0xc2c0, 0xa09e):
+    for pc in (0xa1e2, 0xa2be, 0x3902, 0xa09e):
         reject('outside_range_entry_%06x' % pc, base, {'pc': pc})
-    # a370 / 9b58 / 38c8 / 38e2 reached with any other stop: full rollback
-    reject('a370_reached_with_stop_ff000', base)
-    reject('a370_reached_with_stop_c2c0', base, stop=0xc2c0)
-    reject('a370_reached_with_stop_9b58', base, stop=B9B58)
-    reject('a370_reached_with_stop_38c8', base, stop=T38C8)
-    reject('a370_reached_with_stop_38e2', base, stop=T38E2)
-    reject('9b58_reached_with_stop_ff000', starts[('direct-a0a0-nested-9b58', 0)])
-    reject('9b58_reached_with_stop_a370', starts[('direct-a0a0-nested-9b58', 0)], stop=A370)
-    reject('9b58_first_valid_slot_with_stop_a370', starts[('direct-a0a0-first-valid-slot-nested-9b58', 0)], stop=A370)
-    reject('overflow_rts_a370_with_stop_ff000', starts[('direct-a0a0-overflow-a370', 0)])
+    # a370 executes now (open core): with a stop that is never reached the opening frame returns to the dispatcher,
+    # which continues into the odd JSR target of the next object; the whole transaction rolls back.
+    reject('a370_runs_then_dispatcher_continues_with_stop_ff000', base)
+    reject('a370_runs_then_dispatcher_continues_with_stop_38c8', base, stop=T38C8)
+    reject('a370_runs_then_dispatcher_continues_with_stop_38e2', base, stop=T38E2)
     reject('38c8_reached_with_stop_ff000', starts[('trap-38c8-d3-74ff-item', 0)])
     reject('38c8_reached_with_stop_a370', starts[('trap-38c8-d3-74ff-item', 0)], stop=A370)
     reject('38c8_reached_with_stop_38e2', starts[('trap-38c8-d3-74ff-item', 0)], stop=T38E2)
@@ -399,11 +407,13 @@ def negatives(exe, starts, instructions, resources, neg_errors):
     reject('38e2_reached_with_stop_38c8', starts[('trap-38e2-l-7500', 0)], stop=T38C8)
     reject('38e2_reached_with_stop_a370', starts[('trap-38e2-l-7500', 0)], stop=A370)
     # Positive controls: the same inputs succeed when the matching boundary is the stop.
-    for label, stop in (('connected-a29c-to-a370', A370), ('direct-a0a0-nested-9b58', B9B58),
+    for label, stop in (('connected-a29c-to-a370', A370), ('connected-a29c-to-a370', 0xc2c0),
+                        ('connected-a29c-to-a370', B9B58), ('direct-a0a0-nested-9b58', B9B58),
+                        ('direct-a0a0-overflow-a370', A370),
                         ('trap-38c8-d3-74ff-item', T38C8), ('trap-38e2-l-7500', T38E2)):
         r, s, p, b = starts[(label, 0)]
-        result, _, _, _, error = common.invoke(exe, OUT, 'control_' + label, r, dict(s, carry=2), p, b, resources, stop=stop)
-        assert result['ok'] and not error and result['pc'] == stop and result['status'] == 0, label
+        result, _, _, _, error = common.invoke(exe, OUT, 'control_%s_%06x' % (label, stop), r, dict(s, carry=2), p, b, resources, stop=stop)
+        assert result['ok'] and not error and result['pc'] == stop and result['status'] == 0, (label, hex(stop))
     return out, len(interior)
 
 
@@ -444,10 +454,12 @@ GUARD_ERRORS = {
     'guard-odd-A7': EVEN,
     'guard-odd-A2-record': 'invalid animation machine write size/alignment',
     'guard-overflow-rts-unsupported-target': UNSUPPORTED_MACHINE,
-    'guard-stop-9b58-never-reached': UNSUPPORTED_MACHINE,
-    'guard-run-past-a370': UNSUPPORTED_MACHINE,
     'guard-trap-reached-without-stop': UNSUPPORTED_MACHINE,
-    'guard-stop-38c8-never-reached': UNSUPPORTED_MACHINE}
+    # a370 executes now: the frame returns to the dispatcher, which meets the odd JSR target (was: unsupported a370)
+    'guard-stop-38c8-never-reached': ODD_JSR}
+SUPERSEDED_GUARDS = {
+    'guard-stop-9b58-never-reached': (B9B58, '9b58 is executed by the card menu open core, so stop 9b58 is reached'),
+    'guard-run-past-a370': (0xc2c0, 'a370 is executed by the card menu open core; the frame reaches the c2c0 stop')}
 
 
 class Errors(dict):
@@ -460,9 +472,8 @@ class Errors(dict):
                               ('interior_direct_entry_', UNSUPPORTED_MENU),
                               ('boundary_direct_entry_', UNSUPPORTED_MACHINE),
                               ('outside_range_entry_', UNSUPPORTED_MACHINE),
-                              ('a370_reached_', UNSUPPORTED_MACHINE), ('9b58_', UNSUPPORTED_MACHINE),
-                              ('overflow_rts_', UNSUPPORTED_MACHINE), ('38c8_', UNSUPPORTED_MACHINE),
-                              ('38e2_', UNSUPPORTED_MACHINE)):
+                              ('a370_runs_then_dispatcher_continues_', ODD_JSR),
+                              ('38c8_', UNSUPPORTED_MACHINE), ('38e2_', UNSUPPORTED_MACHINE)):
             if label.startswith(prefix):
                 return error
         raise KeyError(label)
@@ -504,7 +515,7 @@ def main():
     assert sha(connected_start[0]) == report['card_child_crosscheck']['ram_after_sha256']
     # PVC: raw native 1ff0..1ff3 vs masked device storage is excluded; the other bytes are compared in start_of_row.
     matches, totals, ends, starts, guards = compare(exe, rows, resources, instructions, connected_start, bios_start)
-    guarded = compare_guards(exe, guards, resources, GUARD_ERRORS)
+    guarded, superseded = compare_guards(exe, guards, resources, GUARD_ERRORS)
     negative, interior_count = negatives(exe, starts, instructions, resources, NEG_ERRORS)
     zero = zero_step(exe, connected_start, resources)
     boundary_zero = boundary_zero_step(exe, connected_start, resources, {pc: True for pc in BOUNDARY_PCS})
@@ -523,7 +534,7 @@ def main():
                   contract_sha256=CONTRACT_SHA,
                   actual_CPP=dict(totals, matches=matches),
                   original_program_read_audit=program_reads,
-                  native_guards_checked_API=guarded,
+                  native_guards_checked_API=guarded, native_guards_superseded_by_card_menu_open_core=superseded,
                   native_continuous_control_phases_replayed=control_count,
                   negatives=negative, negative_count=len(negative) + len(guarded),
                   interior_PCs_rejected=interior_count, zero_step=zero, boundary_zero_step=boundary_zero,
@@ -537,7 +548,7 @@ def main():
                   limits=['Controlled fixtures; frame re-entry is a declared PC-only change, not a natural scheduler, IRQ or VBlank.',
                           'No banked descriptor exists in ROM (bank_descriptor_search of both 2/3 banks: 0 terminating descriptors); only banked strings (title/item pointers read through the current bank) are covered.',
                           'Carry is a source-opcode classification (native SR is never read), not a native C measurement; ADDA/SUBA are conservatively Unknown.',
-                          'a370 (menu frame), 9b58 (nested push), 38c8/38e2 (TRAP #f) are stop boundaries only, never executed; a370 and later (input, cursor, drawing, callbacks c1c4/bf94, c2c8 onward) are out of scope.',
+                          '38c8/38e2 (TRAP #f) are stop boundaries only, never executed; a370 (opening frame), 9b58 and c2c0 execute in the card menu open core (verify_animation_machine_card_menu_open.py) and are only normal stops here; a406 and later (input, cursor selection, c2c8 onward) are out of scope.',
                           'Declared initial registers (A0/A5/A7/D0/D1/D3/D7), declared bank state and declared RAM fixtures are inputs, not original-measured preparation; the rest starts from the actual C++ card-child output.',
                           'Native observation artifacts are audited by hash/trace consistency, not re-executed here.',
                           'Checked failures preserve API outputs, not original CPU fault rollback; bundled-branch/interior direct entries have no native guard (API-only rejection).'])

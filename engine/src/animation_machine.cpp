@@ -100,6 +100,17 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xe7c16:case 0xe7c1a:case 0xe7c1e:case 0xe7c30:
     // Card menu a0a0/38e8/c2a8 blocks: JSR/RTS/LEA only. ADDA/SUBA blocks stay Unknown.
     case 0xa0c2:case 0xa158:case 0xa17e:case 0x3878:case 0x38a4:case 0xc2a8:case 0xa2bc:case 0xc2ba:
+    // Card menu open blocks: BSR/JSR/JMP/BRA/RTS/LEA/MOVEA/MOVEM/BTST and conditional branches only.
+    // The a018 caller BCS blocks consume the C set by a06c (ANDI CCR) or a076 (ORI CCR).
+    case 0x391a:case 0x3926:case 0x3928:case 0x392a:case 0x9b54:case 0x9b56:case 0x9b64:case 0x9b78:
+    case 0x9ba6:case 0x9bc8:case 0x9bcc:case 0x9be6:case 0x9bea:case 0x9c10:case 0x9c32:case 0x9c36:
+    case 0x9c50:case 0x9c54:case 0x9c76:case 0x9c98:case 0x9c9c:case 0x9cb6:case 0x9cba:case 0x9cd4:
+    case 0x9cd8:case 0x9cf8:case 0x9cfc:case 0x9d1e:case 0x9d22:case 0x9d38:case 0x9d4a:case 0x9d92:
+    case 0x9d96:case 0x9dc0:case 0x9dd6:case 0x9dfe:case 0x9e02:case 0x9e14:case 0x9e26:case 0x9e34:
+    case 0x9e72:case 0x9e92:case 0xa008:case 0xa00c:case 0xa016:case 0xa040:case 0xa238:case 0xa348:
+    case 0xa36e:case 0xa396:case 0xa3a8:case 0xa3b4:case 0xa3c6:case 0xa5e2:case 0xa61c:case 0xa624:
+    case 0xbf94:case 0xbfbc:case 0xc1c4:case 0xc1e6:case 0xc1ee:case 0xc1f4:case 0xc1fe:case 0xc202:
+    case 0xc208:case 0xc212:case 0xc2c6:case 0xe84d0:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -252,6 +263,13 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             else if ((next.pc>=0xa0a0 && next.pc<=0xa1e0) || (next.pc>=0xa29c && next.pc<=0xa2bc) ||
                 (next.pc>=0x386e && next.pc<=0x38fe && next.pc!=0x38c8 && next.pc!=0x38e2) ||
                 (next.pc>=0xc2a8 && next.pc<=0xc2ba))ok=animation_card_menu_block(c);
+            else if ((next.pc>=0x3650 && next.pc<=0x366e) || (next.pc>=0x3918 && next.pc<=0x392a) ||
+                (next.pc>=0x9b26 && next.pc<=0x9e92) || (next.pc>=0x9f7c && next.pc<=0x9fc2) ||
+                (next.pc>=0xa008 && next.pc<=0xa07e) || (next.pc>=0xa216 && next.pc<=0xa27e) ||
+                (next.pc>=0xa348 && next.pc<=0xa404) || (next.pc>=0xa5d2 && next.pc<=0xa660 && next.pc!=0xa63c) ||
+                (next.pc>=0xa73e && next.pc<=0xa758) || (next.pc>=0xbf94 && next.pc<=0xbfbc) ||
+                (next.pc>=0xc1c4 && next.pc<=0xc212) || (next.pc>=0xc2c0 && next.pc<=0xc2c6) ||
+                (next.pc>=0xe84c8 && next.pc<=0xe84d0))ok=animation_card_menu_open_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

@@ -1953,3 +1953,10 @@
 - 카드 자식 c2a2 JSR a29c에서 메뉴 프레임 push(107efe), 항목 폭 측정(escape·TRAP 경계 38c8/38e2), 폭·높이 갱신, c2a8→a2b8 renderer e84c8 설정, c2ba JSR a370 경계까지 live RAM/A7으로 연결했다(`engine/src/animation_machine_card_menu.cpp`). 기존 host 메뉴 API는 바꾸지 않았다.
 - Native 정상85조건 split2301/control111·guard10, C++ 95조건 split2405/continuous111·음성132·zero-step123 일치. `make -j4 all test` exit0 Python257/경고0, 기존 회귀 15개 통과. 상세는 계약·`animation-machine-card-menu-push-execution.md`·리뷰0234.
 - 다음: a370 열림 프레임(a5d2/a348/9b58 상자, a5ea 첫 전체 그리기·9e1a/9d3a/3918/e84c8→3650, callback c1c4/bf94·a216 커서·3af8 효과음, 계약 `animation-machine-card-menu-open-contract.md`) → a406 입력 프레임·bf2c 자동 선택 타이머(계약 `animation-machine-card-menu-input-contract.md`) → a662 닫기·bd26 BIOS 카드. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-10 — 카드 메뉴 첫 프레임(a370 열림→a5ea 첫 전체 그리기·callback)
+
+- Baseline `34814b7`, branch `codex/animation-machine-card-menu-open`. 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high core는 별도 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기). Codex Astra/Sol 미사용(호출 불가).
+- a370 열림 프레임(a348/9b58 상자, a018 가림 known C), a5ea 첫 전체 그리기(9e1a/9d3a/3918, e84c8→3650), callback c1c4/bf94·a216 커서·3af8 효과음, c2c0/c2c6을 live RAM/A7로 연결했다(`engine/src/animation_machine_card_menu_open.cpp`).
+- Native 정상79·guard9 split14493, C++ 88조건 split14969·음성365·zero-step606 일치. `make -j4 all test` exit0 Python257/경고0, 기존 회귀 16개 통과. 상세는 계약·`animation-machine-card-menu-open-execution.md`·리뷰0235.
+- 진행 중(작업 트리 밖 worktree에 리뷰 완료 core, 검증 대기): 0236 입력·bf2c 타이머, 0237 닫기·자식/부모 종료, 0238 YES 카드 저장(BIOS 경계 3회), 0239 중첩 복귀, 480bc U1 helper, U2 장면 core(`animation-machine-480bc-scope.md`). 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.

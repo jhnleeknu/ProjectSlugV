@@ -14,7 +14,7 @@ bool menu_bls_byte(AnimationMachineContext& c,std::uint32_t address,std::uint32_
 }
 // Card menu push a29c -> a0a0 (frame stack at 107e0e..107f0e), text width 38e8/386e,
 // and the card child renderer setup c2a8 -> a2b8 -> c2ba.
-// 9b58 (nested push), 38c8/38e2 (TRAP #f) and a370 (menu frame) have no executor.
+// 38c8/38e2 (TRAP #f) have no executor; 9b58 and a370 run in animation_machine_card_menu_open.cpp.
 bool animation_card_menu_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0;
     switch(r.pc) {
@@ -39,7 +39,7 @@ bool animation_card_menu_block(AnimationMachineContext& c) {
            !am_write(c,r.a[2]+9U,1,255) || !am_write(c,r.a[2]+0xaU,1,255) ||
            !am_write(c,r.a[2]+0xbU,1,0) || !am_write(c,r.a[2]+0xcU,1,0))return false;
         r.a[1]=0xa008;r.a[2]+=0x10U;r.pc=r.a[2]>=0x107f0eU?0xa104:0xa0f8;return true;
-    // Nested menu: BSR 9b58 (no executor) with return a100.
+    // Nested menu: BSR 9b58 (card menu open executor) with return a100.
     case 0xa0f8:
         if(!am_write(c,am_index(r.a[5],0xff12),4,r.a[2]))return false;return am_call(c,0x9b58,0xa100);
     case 0xa104:
@@ -148,7 +148,7 @@ bool animation_card_menu_block(AnimationMachineContext& c) {
         if(!am_write(c,am_index(r.a[5],0xff16),4,r.a[0]))return false;r.pc=0xa2bc;return true;
     case 0xc2b4:
         if(!am_write(c,r.a[6],4,0xc2ba))return false;r.pc=0xc2ba;return true;
-    // JSR a370 (menu frame, no executor).
+    // JSR a370 (menu frame, card menu open executor).
     case 0xc2ba:return am_call(c,0xa370,0xc2c0);
     default:return am_error(c,"unsupported animation card menu PC");
     }
