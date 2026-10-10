@@ -111,6 +111,10 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xa36e:case 0xa396:case 0xa3a8:case 0xa3b4:case 0xa3c6:case 0xa5e2:case 0xa61c:case 0xa624:
     case 0xbf94:case 0xbfbc:case 0xc1c4:case 0xc1e6:case 0xc1ee:case 0xc1f4:case 0xc1fe:case 0xc202:
     case 0xc208:case 0xc212:case 0xc2c6:case 0xe84d0:
+    // Card menu input blocks: BSR/JSR/JMP/BRA/MOVEA/BTST/BSET/BCLR and conditional branches only.
+    // SNE blocks, MOVE/MOVEQ/CMP/CMPI/TST/SUBQ/ORI/ANDI/OR blocks stay Unknown.
+    case 0xa412:case 0xa41a:case 0xa42a:case 0xa442:case 0xa488:case 0xa562:case 0xa566:
+    case 0xa570:case 0xa574:case 0xa57e:case 0xa714:case 0xbf50:case 0xbf8e:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -270,6 +274,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xa73e && next.pc<=0xa758) || (next.pc>=0xbf94 && next.pc<=0xbfbc) ||
                 (next.pc>=0xc1c4 && next.pc<=0xc212) || (next.pc>=0xc2c0 && next.pc<=0xc2c6) ||
                 (next.pc>=0xe84c8 && next.pc<=0xe84d0))ok=animation_card_menu_open_block(c);
+            else if ((next.pc>=0x9fc4 && next.pc<=0x9fcc) || (next.pc>=0x9ff4 && next.pc<=0x9ffc) ||
+                (next.pc>=0xa1ee && next.pc<=0xa1f8) || (next.pc>=0xa406 && next.pc<=0xa5d0) ||
+                (next.pc>=0xa70a && next.pc<=0xa718) || (next.pc>=0xbf2c && next.pc<=0xbf92))ok=animation_card_menu_input_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
