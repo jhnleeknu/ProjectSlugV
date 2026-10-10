@@ -121,7 +121,8 @@ const std::uint32_t TABLE[][3]={
  {0xc202,0x9f36,0x9f36},{0xc208,0xa71a,0xa71a},{0xc212,0xff000,0xff000},{0xe84c8,0xe84d0,0xe84d0},
  {0xe84d0,0x3650,0x3650},{0xc2c0,0xc2c8,0xc2c8},{0xc2c6,0xff000,0xff000}};
 const unsigned int ROWS=sizeof(TABLE)/sizeof(TABLE[0]);
-const std::uint32_t BOUNDARY[]={0x9e94,0x9f36,0xa2be,0xa406,0xa662,0xa6da,0xa70a,0xa71a,0xbd26,0xe84d6,0xa63c,0xc2c8};
+// a406 and a70a now run in the card menu input unit (its own test).
+const std::uint32_t BOUNDARY[]={0x9e94,0x9f36,0xa2be,0xa662,0xa6da,0xa71a,0xbd26,0xe84d6,0xa63c,0xc2c8};
 const unsigned int BOUNDARIES=sizeof(BOUNDARY)/sizeof(BOUNDARY[0]);
 // Blocks made only of LEA/MOVEA/MOVEM/BTST/BSR/JSR/JMP/BRA/RTS/conditional branches (capstone classification).
 const std::uint32_t KEEP[]={0x391a,0x3926,0x3928,0x392a,0x9b54,0x9b56,0x9b64,0x9b78,0x9ba6,0x9bc8,0x9bcc,0x9be6,0x9bea,0x9c10,
@@ -301,9 +302,9 @@ void boundaries(){
   case 1:generic(FRAME,ram,s);put(ram,0x107f0e,4,UP);frame(ram,UP,DESC,1,1,0,0,0,1,1);put(ram,TOP+0xf,1,1);stop=0xa2be;break; // f bit0, 4!=0
   case 2:generic(0xa3ac,ram,s);put(ram,TOP+4,1,0);stop=0xa6da;break;                    // BSR a6da
   case 3:generic(FRAME,ram,s);put(ram,DESC+0xa,4,0xa6da);stop=0xa6da;break;              // hook JSR (A4)
-  case 4:generic(FRAME,ram,s);put(ram,0x107f1b,1,0);stop=0xa406;break;
+  case 4:generic(FRAME,ram,s);put(ram,0x107f1b,1,0);put(ram,TOP+4,1,6);put(ram,DESC+6,4,0xa6da);stop=0xa6da;break; // -e5=0: a406 input frame, descriptor hook JSR (A3)
   case 5:generic(FRAME,ram,s);put(ram,0x107f1b,1,2);stop=0xa662;break;
-  case 6:generic(0xbf94,ram,s);s.d[0]=0x77770003;stop=0xa70a;break;
+  case 6:generic(0xbf94,ram,s);s.d[0]=0x77770003;put(ram,SP,4,0xa662);stop=0xa662;break; // a70a/a1ee RTS to a declared a662 return
   case 7:generic(0xc1c4,ram,s);s.d[0]=0x77770003;stop=0xbd26;break;
   case 8:generic(0x3918,ram,s);text(ram,TEXT,"\\c" " A",65535);s.a[1]=0xa008;stop=0xe84d6;break;  // \c 20 -> D1.B >= 10
   case 9:generic(0xa5ea,ram,s);put(ram,DESC+0x10,4,0xffffffffU);put(ram,DESC+0x14,4,0xbf94);put(ram,TOP+6,1,0);stop=0xa63c;break; // TRAP #f
@@ -314,7 +315,8 @@ void boundaries(){
   Out o;assert(run(ram,s,stop,o)&&s.pc==stop&&clean(o));
   if(k==1)assert(s.a[7]==SP-8&&get(ram,SP-8,4)==0xa3ac&&get(ram,SP-4,4)==TOP);
   if(k==3)assert(s.a[7]==SP-8&&get(ram,SP-8,4)==0xa3c8);
-  if(k==6)assert(get(ram,CHILD+0x80,1)==0xff&&s.a[7]==SP&&(s.d[0]&65535U)==3);
+  if(k==4)assert(s.a[7]==SP-8&&get(ram,SP-8,4)==0xa442&&get(ram,SP-4,4)==TOP);
+  if(k==6)assert(get(ram,CHILD+0x80,1)==0xff&&s.a[7]==SP+4&&get(ram,0x107f1b,1)==2&&s.a[2]==TOP&&get(ram,0x104d82,2)==0x1a5b);
   if(k==7)assert(s.a[7]==SP-4&&get(ram,SP-4,4)==0xc1ea&&get(ram,CHILD+0x7e,2)==0);
   if(k==8)assert(o.ports.size()==0&&(s.d[1]&255U)==0x20&&s.a[7]==SP-4&&get(ram,SP-4,4)==0x392a); // a010 pushed e84c8 and RTS used it
   if(k==9)assert(o.ports.size()==14&&get(ram,0x107f1b,1)==0); // box h=2 w=5 (10), title "AB" (4), no items
@@ -366,8 +368,8 @@ void errors(){
   reject(ram,s,STOP,pc==0xa63c?"unsupported animation machine PC":"unsupported animation card menu open PC");++interior;}
  assert(interior>=500);
  // Neighbours outside the routed ranges.
- const std::uint32_t outside[]={0x364e,0x3670,0x3916,0x392c,0x9b24,0x9f7a,0x9fc4,0xa006,0xa080,0xa214,0xa280,0xa346,0xa5d0,0xa73c,0xa75a,
-  0xbf92,0xbfbe,0xc1c2,0xc214,0xc2bc,0xc2be,0xe84c6};
+ const std::uint32_t outside[]={0x364e,0x3670,0x3916,0x392c,0x9b24,0x9f7a,0xa006,0xa080,0xa214,0xa280,0xa346,0xa73c,0xa75a,
+  0xbfbe,0xc1c2,0xc214,0xc2bc,0xc2be,0xe84c6};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;ms5::AnimationMachineState s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;ms5::AnimationMachineState s;generic(0xa371,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }

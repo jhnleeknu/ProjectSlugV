@@ -53,5 +53,6 @@ bool animation_fade_card_block(AnimationMachineContext& c);
 bool animation_card_child_block(AnimationMachineContext& c);
 bool animation_card_menu_block(AnimationMachineContext& c);
 bool animation_card_menu_open_block(AnimationMachineContext& c);
+bool animation_card_menu_input_block(AnimationMachineContext& c);
 }
 #endif

@@ -1960,3 +1960,9 @@
 - a370 열림 프레임(a348/9b58 상자, a018 가림 known C), a5ea 첫 전체 그리기(9e1a/9d3a/3918, e84c8→3650), callback c1c4/bf94·a216 커서·3af8 효과음, c2c0/c2c6을 live RAM/A7로 연결했다(`engine/src/animation_machine_card_menu_open.cpp`).
 - Native 정상79·guard9 split14493, C++ 88조건 split14969·음성365·zero-step606 일치. `make -j4 all test` exit0 Python257/경고0, 기존 회귀 16개 통과. 상세는 계약·`animation-machine-card-menu-open-execution.md`·리뷰0235.
 - 진행 중(작업 트리 밖 worktree에 리뷰 완료 core, 검증 대기): 0236 입력·bf2c 타이머, 0237 닫기·자식/부모 종료, 0238 YES 카드 저장(BIOS 경계 3회), 0239 중첩 복귀, 480bc U1 helper, U2 장면 core(`animation-machine-480bc-scope.md`). 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 카드 메뉴 입력 프레임(a406)·bf2c 타이머·선택
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기). Codex Astra/Sol 미사용(호출 불가).
+- a406 입력 프레임, bf2c 7e 카운트다운·사건 3, 10fdb6/10fdb7 mask, 입력 edge bit 순서, 사건 전달 a44e/a5aa, a70a 효과음→a1ee -e5=2를 live RAM/A7로 연결했다(`engine/src/animation_machine_card_menu_input.cpp`).
+- Native 정상92·guard7 split35786, C++ 99조건 split35779·음성128·zero-step180 일치(보고서 `383e7d4f…`). 단위 커밋에서는 해당 검증기만 실행했고 이전 검증기 경계 이동·전체 회귀는 0239 뒤 정렬 커밋에 기록한다. 리뷰 0236.
