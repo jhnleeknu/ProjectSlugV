@@ -155,8 +155,11 @@ void push_paths(){
   assert(run(ram,s,f2[i][1],o)&&s.a[2]==f2[i][2]&&s.a[5]==0x108000&&s.a[7]==SP-4&&get(ram,SP-4,4)==0x2468ace0&&get(ram,0x107f12,4)==f2[i][0]);}
  // Nested menu (-f2=107efe): a0c4 builds 107eee, A2+10 < 107f0e, a0f8 -ee=107efe and BSR 9b58.
  ram.assign(65536,0x5a);put(ram,0x107f0e,4,0x107efe);put(ram,0x107f12,4,OLD_EE);s=state(0xa0a0);const ms5::AnimationMachineState old=s;
- // 9b58 now executes (open unit): with 4(107efe)=0 it returns at 9b64 to a100, a push-unit interior PC.
- {Bytes r2=ram;put(r2,0x107f02,1,0);reject(r2,s,NESTED,"unsupported animation card menu PC");}
+ // 9b58 now executes (open unit): with 4(107efe)=0 it returns at 9b64 to a100; a100 BSR 9e1a pushes a104
+ // and 9e1a (4=0) returns at 9e26 to a104 with the MOVEM LONGs still on the stack.
+ {Bytes r2=ram;ms5::AnimationMachineState t=s;put(r2,0x107f02,1,0);Out a;
+  assert(run(r2,t,0x9e1a,a)&&t.pc==0x9e1a&&t.a[7]==SP-20&&get(r2,SP-20,4)==0xa104&&quiet(a));
+  a=Out();assert(run(r2,t,0xa104,a)&&t.a[7]==SP-16&&get(r2,SP-16,4)==old.d[0]&&quiet(a));}
  o=Out();assert(run(ram,s,NEST,o)&&s.pc==NEST&&s.a[7]==SP-20&&get(ram,SP-20,4)==0xa100&&quiet(o));
  // MOVEM.L D0-D1/A0,-(A7): ascending D0, D1, A0 above the old -ee LONG.
  assert(get(ram,SP-16,4)==old.d[0]&&get(ram,SP-12,4)==old.d[1]&&get(ram,SP-8,4)==old.a[0]&&get(ram,SP-4,4)==OLD_EE);
@@ -181,24 +184,25 @@ void errors(){
  s=menu_state();s.a[7]=SP-3;reject(menu_ram(),s,FRAME,"even WORD/LONG",&p);
  // Bundled branch PCs and interior PCs are rejected by the card menu executor.
  const std::uint32_t bundled[]={0xa0be,0xa0f4,0xa154,0xa16a,0xa172,0xa17a,0xa186,0xa1a2,0xa1b6,0xa1c8,0x3874,0x3880,0x38c4,0x38de,0x38f0,0x38fc,
-  0xa0a4,0xa0aa,0xa0ae,0xa0b2,0xa0b8,0xa0c8,0xa0cc,0xa0e4,0xa0e8,0xa0ee,0xa0fc,0xa100,0xa108,0xa110,0xa14a,0xa14c,0xa14e,0xa150,0xa160,0xa164,
+  0xa0a4,0xa0aa,0xa0ae,0xa0b2,0xa0b8,0xa0c8,0xa0cc,0xa0e4,0xa0e8,0xa0ee,0xa0fc,0xa102,0xa108,0xa110,0xa14a,0xa14c,0xa14e,0xa150,0xa160,0xa164,
   0xa16e,0xa176,0xa190,0xa194,0xa196,0xa19a,0xa19e,0xa1a8,0xa1b0,0xa1b2,0xa1c2,0xa1c4,0xa1d6,0xa1dc,0xa1e0,0xa2a4,0xa2aa,0xa2b4,0xa2b6,0xa2ba,
   0x3870,0x387c,0x3884,0x3888,0x388c,0x3890,0x3894,0x3898,0x389c,0x38a0,0x38aa,0x38ac,0x38b0,0x38b2,0x38b4,0x38ba,0x38bc,0x38c0,0x38cc,
   0x38d0,0x38d2,0x38d4,0x38d6,0x38da,0x38e6,0x38ec,0x38f6,0xc2ae,0xc2b0,0xc2b2,0xc2b6,0xc2b8};
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){s=state(bundled[i]);reject(menu_ram(),s,STOP,"unsupported animation card menu PC",&p);}
  // Boundaries without an executor and neighbours outside the routed ranges.
- const std::uint32_t outside[]={NESTED,0x9ee6,TRAP_N,TRAP_L,0x9f36,0xa09e,0xa1e2,0xa29a,0xa6da,0x386c,0x3900,0xc2a6,0xc2fa};
+ const std::uint32_t outside[]={NESTED,0x9ee6,TRAP_N,TRAP_L,0xc00468,0xa09e,0xa1e2,0xa29a,0xa6da,0x386c,0x3900,0xc2a6,0xc2fa};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){s=state(outside[i]);reject(menu_ram(),s,STOP,"unsupported animation machine PC",&p);}
  s=state(0xa0a1);reject(menu_ram(),s,STOP,"unaligned animation machine PC",&p);
 }
-const std::uint32_t LISTED[]={0xa29c,0xa0a0,0xa0c2,0xa0c4,0xa0f8,0xa104,0xa158,0xa15e,0xa166,0xa17e,0xa184,0xa18a,0xa18c,0xa198,0xa1a6,0xa1ac,
+const std::uint32_t LISTED[]={0xa29c,0xa0a0,0xa0c2,0xa0c4,0xa0f8,0xa100,0xa104,0xa158,0xa15e,0xa166,0xa17e,0xa184,0xa18a,0xa18c,0xa198,0xa1a6,0xa1ac,
  0xa1ae,0xa1ba,0xa1be,0xa1cc,0xa1d0,0x386e,0x3878,0x387a,0x38a4,0x38a6,0x38b6,0x38be,0x38ca,0x38ce,0x38e4,0x38e8,0x38ee,0x38f4,0x38fa,0x38fe,
  0xc2a8,0xa2b8,0xa2bc,0xc2b4,0xc2ba};
 void zero_step(){
  const Physical p=resources();
  for(unsigned int carry=0;carry<3;++carry){
-  for(unsigned int i=0;i<sizeof(LISTED)/sizeof(LISTED[0])+4;++i){
-   const std::uint32_t pc=i<sizeof(LISTED)/sizeof(LISTED[0])?LISTED[i]:(i==41?FRAME:i==42?NEST:i==43?TRAP_N:TRAP_L);
+  const unsigned int n=sizeof(LISTED)/sizeof(LISTED[0]);
+  for(unsigned int i=0;i<n+4;++i){
+   const std::uint32_t pc=i<n?LISTED[i]:(i==n?FRAME:i==n+1?NEST:i==n+2?TRAP_N:TRAP_L);
    Bytes ram(65536,0x33);const Bytes before=ram;ms5::AnimationMachineState s=state(pc);s.carry=carry_of(carry);const ms5::AnimationMachineState old=s;Out o;
    assert(run(ram,s,pc,o,&p)&&same(s,old)&&ram==before&&quiet(o));}}
 }
@@ -211,6 +215,7 @@ std::uint32_t one_block(std::uint32_t pc,Bytes&ram,ms5::AnimationMachineState&s)
  case 0xa0c2:case 0x3878:case 0x38a4:case 0xa2bc:return STOP;
  case 0xa0c4:return 0xa104;
  case 0xa0f8:return NEST;
+ case 0xa100:return 0x9e1a;
  case 0xa104:put(ram,SP+8,4,0xc188);put(ram,0x107f0e,4,0x107efe);return 0xa15e;
  case 0xa158:case 0xa17e:return 0x38e8;
  case 0xa15e:put(ram,DESC+0x10,4,TEXT);return 0xa166;
@@ -242,16 +247,16 @@ std::uint32_t one_block(std::uint32_t pc,Bytes&ram,ms5::AnimationMachineState&s)
 }
 void carry(){
  const Physical p=resources();
- // Only JSR/RTS/LEA blocks keep C; ADDA/SUBA, MOVE, MOVEQ, CMP, TST, ADDQ and logic blocks give Unknown.
- const std::uint32_t keep[]={0xa0c2,0xa158,0xa17e,0x3878,0x38a4,0xc2a8,0xa2bc,0xc2ba};
+ // Only JSR/BSR/RTS/LEA blocks keep C; ADDA/SUBA, MOVE, MOVEQ, CMP, TST, ADDQ and logic blocks give Unknown.
+ const std::uint32_t keep[]={0xa0c2,0xa158,0xa17e,0x3878,0x38a4,0xc2a8,0xa2bc,0xc2ba,0xa100};
  for(unsigned int i=0;i<sizeof(LISTED)/sizeof(LISTED[0]);++i){
-  bool preserve=false;for(unsigned int k=0;k<8;++k)if(keep[k]==LISTED[i])preserve=true;
+  bool preserve=false;for(unsigned int k=0;k<9;++k)if(keep[k]==LISTED[i])preserve=true;
   for(unsigned int carry=0;carry<3;++carry){Bytes ram;ms5::AnimationMachineState s;const std::uint32_t stop=one_block(LISTED[i],ram,s);s.carry=carry_of(carry);Out o;
    assert(run(ram,s,stop,o,&p)&&s.pc==stop&&quiet(o));
    assert(s.carry==(preserve?carry_of(carry):ms5::AnimationCarryUnknown));}}
  // Calls push their actual return LONG.
- const std::uint32_t calls_[][3]={{0xa158,0x38e8,0xa15e},{0xa17e,0x38e8,0xa184},{0x38e8,0x386e,0x38ee},{0x38f4,0x386e,0x38fa},{0xc2a8,0xa2b8,0xc2b4},{0xc2ba,FRAME,0xc2c0},{0xa0f8,NEST,0xa100}};
- for(unsigned int i=0;i<7;++i){Bytes ram;ms5::AnimationMachineState s;one_block(calls_[i][0],ram,s);Out o;const std::uint32_t a7=s.a[7]-(calls_[i][0]==0x38e8?6U:4U);
+ const std::uint32_t calls_[][3]={{0xa158,0x38e8,0xa15e},{0xa17e,0x38e8,0xa184},{0x38e8,0x386e,0x38ee},{0x38f4,0x386e,0x38fa},{0xc2a8,0xa2b8,0xc2b4},{0xc2ba,FRAME,0xc2c0},{0xa0f8,NEST,0xa100},{0xa100,0x9e1a,0xa104}};
+ for(unsigned int i=0;i<8;++i){Bytes ram;ms5::AnimationMachineState s;one_block(calls_[i][0],ram,s);Out o;const std::uint32_t a7=s.a[7]-(calls_[i][0]==0x38e8?6U:4U);
   assert(run(ram,s,calls_[i][1],o,&p)&&s.a[7]==a7&&get(ram,a7,4)==calls_[i][2]);}
  // a2b8 writes -ea through the live A5; c2b4 stores c2ba at (A6).
  Bytes ram;ms5::AnimationMachineState s;one_block(0xa2b8,ram,s);s.a[5]=0x109000;s.a[0]=0x13579bdf;Out o;assert(run(ram,s,0xa2bc,o)&&get(ram,0x108f16,4)==0x13579bdf);

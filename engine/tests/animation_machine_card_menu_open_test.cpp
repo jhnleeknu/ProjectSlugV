@@ -117,20 +117,22 @@ const std::uint32_t TABLE[][3]={
  {0xa63e,0x9b3e,0x9b3e},{0xa64c,0x9b3e,0x9b3e},{0xa65e,0xff000,0xff000},{0xa73e,0xa754,0xa754},{0xa74a,0x3af8,0x3af8},
  {0xa754,0xff000,0xff000},{0xbf94,0xa73e,0xa73e},{0xbf9a,0xbfa8,0xbfa8},{0xbfa2,0xbfa8,0xbfa8},{0xbfa8,0xbfbc,0xbfbc},
  {0xbfb0,0xa70a,0xa70a},{0xbfbc,0xff000,0xff000},{0xc1c4,0xa73e,0xa73e},{0xc1ca,0xc1de,0xc1de},{0xc1d2,0xa216,0xa216},
- {0xc1de,0xc212,0xc212},{0xc1e6,0xbd26,0xbd26},{0xc1ee,0x9f36,0x9f36},{0xc1f4,0xa71a,0xa71a},{0xc1fe,0xc212,0xc212},
+ {0xc1de,0xc212,0xc212},{0xc1e6,0xbd26,0xbd26},{0xc1ea,0xc202,0xc1ee},{0xc1ee,0x9f36,0x9f36},{0xc1f4,0xa71a,0xa71a},{0xc1fe,0xc212,0xc212},
  {0xc202,0x9f36,0x9f36},{0xc208,0xa71a,0xa71a},{0xc212,0xff000,0xff000},{0xe84c8,0xe84d0,0xe84d0},
  {0xe84d0,0x3650,0x3650},{0xc2c0,0xc2c8,0xc2c8},{0xc2c6,0xff000,0xff000}};
 const unsigned int ROWS=sizeof(TABLE)/sizeof(TABLE[0]);
-// a406 and a70a now run in the card menu input unit, 9e94/a2be/a662/c2c8 in the close unit (their own tests).
-const std::uint32_t BOUNDARY[]={0x9f36,0xa6da,0xa71a,0xbd26,0xe84d6,0xa63c};
+// a406 and a70a now run in the card menu input unit, 9e94/a2be/a662/c2c8 in the close unit and
+// bd26/9f36/a71a in the save unit (their own tests). c00468/c0046e are the BIOS calls of the save unit.
+const std::uint32_t BOUNDARY[]={0xa6da,0xe84d6,0xa63c,0xc00468,0xc0046e};
 const unsigned int BOUNDARIES=sizeof(BOUNDARY)/sizeof(BOUNDARY[0]);
 // Blocks made only of LEA/MOVEA/MOVEM/BTST/BSR/JSR/JMP/BRA/RTS/conditional branches (capstone classification).
 const std::uint32_t KEEP[]={0x391a,0x3926,0x3928,0x392a,0x9b54,0x9b56,0x9b64,0x9b78,0x9ba6,0x9bc8,0x9bcc,0x9be6,0x9bea,0x9c10,
  0x9c32,0x9c36,0x9c50,0x9c54,0x9c76,0x9c98,0x9c9c,0x9cb6,0x9cba,0x9cd4,0x9cd8,0x9cf8,0x9cfc,0x9d1e,0x9d22,0x9d38,0x9d4a,0x9d92,
  0x9d96,0x9dc0,0x9dd6,0x9dfe,0x9e02,0x9e14,0x9e26,0x9e34,0x9e72,0x9e92,0xa008,0xa00c,0xa016,0xa040,0xa238,0xa348,0xa36e,0xa396,
- 0xa3a8,0xa3b4,0xa3c6,0xa5e2,0xa61c,0xa624,0xbf94,0xbfbc,0xc1c4,0xc1e6,0xc1ee,0xc1f4,0xc1fe,0xc202,0xc208,0xc212,0xc2c6,0xe84d0};
-// a018 caller BCS return PCs (contract item 7 and a00c).
-const std::uint32_t BCS[]={0x9ba6,0x9bcc,0x9bea,0x9c10,0x9c36,0x9c54,0x9c76,0x9c9c,0x9cba,0x9cd8,0x9cfc,0x9d22,0x9dc0,0x9dd6,0xa00c};
+ 0xa3a8,0xa3b4,0xa3c6,0xa5e2,0xa61c,0xa624,0xbf94,0xbfbc,0xc1c4,0xc1e6,0xc1ea,0xc1ee,0xc1f4,0xc1fe,0xc202,0xc208,0xc212,0xc2c6,0xe84d0};
+// Known-carry consumers: a018 caller BCS return PCs (contract item 7 and a00c) and the BCC c1ea
+// after bd26 (be2e Set / be34 Clear, save unit).
+const std::uint32_t BCS[]={0x9ba6,0x9bcc,0x9bea,0x9c10,0x9c36,0x9c54,0x9c76,0x9c9c,0x9cba,0x9cd8,0x9cfc,0x9d22,0x9dc0,0x9dd6,0xa00c,0xc1ea};
 bool member(const std::uint32_t*list,unsigned int n,std::uint32_t pc){for(unsigned int i=0;i<n;++i)if(list[i]==pc)return true;return false;}
 bool listed(std::uint32_t pc){for(unsigned int i=0;i<ROWS;++i)if(TABLE[i][0]==pc)return true;return false;}
 void append(Ports&all,const Ports&part){for(unsigned int i=0;i<part.size();++i)all.push_back(part[i]);}
@@ -296,7 +298,7 @@ void boundaries(){
  for(unsigned int i=0;i<BOUNDARIES;++i){Bytes ram;ms5::AnimationMachineState s;generic(BOUNDARY[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  struct Reach {std::uint32_t pc,stop;};
  // Each boundary reached from its natural predecessor; stop there succeeds, any other stop rolls back.
- // Close-unit entries (9e94 a2be a662 c2c8) now execute: only the successful stop is checked here.
+ // Close-unit entries (9e94 a2be a662 c2c8) and the save entry bd26 now execute: only the successful stop is checked here.
  for(unsigned int k=0;k<11;++k){Bytes ram;ms5::AnimationMachineState s;std::uint32_t stop=0;
   switch(k){
   case 0:generic(0x9b58,ram,s);put(ram,DESC+0xe,2,0x0001);stop=0x9e94;break;           // flags bit0
@@ -306,13 +308,13 @@ void boundaries(){
   case 4:generic(FRAME,ram,s);put(ram,0x107f1b,1,0);put(ram,TOP+4,1,6);put(ram,DESC+6,4,0xa6da);stop=0xa6da;break; // -e5=0: a406 input frame, descriptor hook JSR (A3)
   case 5:generic(FRAME,ram,s);put(ram,0x107f1b,1,2);stop=0xa662;break;
   case 6:generic(0xbf94,ram,s);s.d[0]=0x77770003;put(ram,SP,4,0xa662);stop=0xa662;break; // a70a/a1ee RTS to a declared a662 return
-  case 7:generic(0xc1c4,ram,s);s.d[0]=0x77770003;stop=0xbd26;break;
+  case 7:generic(0xc1c4,ram,s);s.d[0]=0x77770003;stop=0xbd26;break;               // bd26 runs in the save unit
   case 8:generic(0x3918,ram,s);text(ram,TEXT,"\\c" " A",65535);s.a[1]=0xa008;stop=0xe84d6;break;  // \c 20 -> D1.B >= 10
   case 9:generic(0xa5ea,ram,s);put(ram,DESC+0x10,4,0xffffffffU);put(ram,DESC+0x14,4,0xbf94);put(ram,TOP+6,1,0);stop=0xa63c;break; // TRAP #f
   default:generic(0xc2ba,ram,s);put(ram,0x107f0e,4,0x107f0e);stop=0xc2c8;break;         // D0=-1 after JSR a370
   }
   const Bytes start=ram;const ms5::AnimationMachineState old=s;
-  if(stop!=0x9e94&&stop!=0xa2be&&stop!=0xa662&&stop!=0xc2c8)reject(start,old,STOP,"unsupported animation machine PC");
+  if(stop!=0x9e94&&stop!=0xa2be&&stop!=0xa662&&stop!=0xc2c8&&stop!=0xbd26)reject(start,old,STOP,"unsupported animation machine PC");
   Out o;assert(run(ram,s,stop,o)&&s.pc==stop&&clean(o));
   if(k==1)assert(s.a[7]==SP-8&&get(ram,SP-8,4)==0xa3ac&&get(ram,SP-4,4)==TOP);
   if(k==3)assert(s.a[7]==SP-8&&get(ram,SP-8,4)==0xa3c8);
@@ -380,17 +382,17 @@ void zero_step(){
   const Bytes before=ram;const ms5::AnimationMachineState old=s;Out o;assert(run(ram,s,pc,o)&&same(s,old)&&ram==before&&quiet(o));}
 }
 void carry(){
- assert(ROWS==202);unsigned int keeps=0,consumers=0;
+ assert(ROWS==203);unsigned int keeps=0,consumers=0;
  for(unsigned int i=0;i<ROWS;++i){
   const std::uint32_t pc=TABLE[i][0];const bool keep=member(KEEP,sizeof(KEEP)/sizeof(KEEP[0]),pc);
-  const bool consumer=TABLE[i][1]!=TABLE[i][2];assert(consumer==member(BCS,15,pc));if(keep)++keeps;if(consumer){++consumers;assert(keep);}
+  const bool consumer=TABLE[i][1]!=TABLE[i][2];assert(consumer==member(BCS,16,pc));if(keep)++keeps;if(consumer){++consumers;assert(keep);}
   for(unsigned int carry=0;carry<3;++carry){Bytes ram;ms5::AnimationMachineState s;generic(pc,ram,s);s.carry=carry_of(carry);
    if(consumer&&carry==0){reject(ram,s,STOP,"card menu caller requires known carry");continue;}
    const std::uint32_t stop=carry==2?TABLE[i][2]:TABLE[i][1];Out o;assert(run(ram,s,stop,o)&&s.pc==stop&&clean(o));
    ms5::AnimationCarryState expect=keep?carry_of(carry):ms5::AnimationCarryUnknown;
    if(pc==0xa06c)expect=ms5::AnimationCarryClear;if(pc==0xa076)expect=ms5::AnimationCarrySet;
    assert(s.carry==expect);}}
- assert(keeps==68&&consumers==15);
+ assert(keeps==69&&consumers==16);
 }
 }
 int main(){natural();opening();covered();draw_edges();boundaries();callbacks();errors();zero_step();carry();

@@ -1971,3 +1971,8 @@
 
 - 같은 작업자 구성. a662 높이 축소(6(A2)<<6), 행 지우기(a018 known C), 9e94, a67e pop, c2c8 페이드·7e=14 타이머, 부모 62=ff·2a00 제거를 연결했다(`engine/src/animation_machine_card_menu_close.cpp`). a344 ADDQ는 source 분류에 맞춰 carry Unknown.
 - Native 정상71·guard11, C++ 82조건 split7886·음성98·zero-step93 일치(보고서 `8f4255c5…`). 2a00 cleanup은 선언 fixture(1d/6c/104ca4)가 필요하다. 리뷰 0237.
+
+## 2026-10-11 — 카드 메뉴 YES: 카드 저장 bd26(BIOS 경계 3회)·결과 메뉴
+
+- 같은 작업자 구성. bbb8 이름 복사, bb74 checksum, BIOS c00468×2·c0046e 경계(실행하지 않음, 선언 재개 PC=복귀/A7+=4/10fdc6), be0c known C→c1ea, 9f36→a71a→a0a0 중첩 push, 효과음 1adb를 연결했다(`engine/src/animation_machine_card_menu_save.cpp`).
+- Native 정상66·guard13, C++ 79조건 split4038·BIOS 재개71·음성95·zero-step87 일치(보고서 `8c403230…`). 리뷰 0238. BIOS 내부·카드 기록 결과는 미확인.

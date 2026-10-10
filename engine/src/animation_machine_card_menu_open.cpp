@@ -12,7 +12,7 @@ bool open_tile(AnimationMachineContext& c,unsigned int size,std::uint32_t tile,s
     if(size==1)am_byte(r.d[0],tile);else am_word(r.d[0],tile);
     open_port(c,4,r.d[0]);am_swap(r.d[0]);am_word(r.d[0],r.d[0]+0x20U);r.pc=next;return true;
 }
-// BCS after BSR a018: consumes the C left by a06c (Clear) or a076 (Set).
+// BCS after BSR a018 (C from a06c Clear / a076 Set), or BCC c1ea after bd26 (be34 Clear / be2e Set).
 bool open_carry(AnimationMachineContext& c,std::uint32_t clear_pc,std::uint32_t set_pc) {
     if(c.s.carry==AnimationCarryUnknown)return am_error(c,"card menu caller requires known carry");
     c.s.pc=c.s.carry==AnimationCarryClear?clear_pc:set_pc;return true;
@@ -52,8 +52,8 @@ bool open_a018_return(AnimationMachineContext& c,AnimationCarryState carry) {
 // box 9b58, items 9e1a/9d3a, cover test a018, text loop 3918 with renderers
 // a008/e84c8->3650, item callbacks 9b3e -> c1c4/bf94 (a73e sound, a216 cursor).
 // c2c0/c2c6 (TST.B D0 after JSR a370) return the c2ba frame to its caller.
-// Executed by other units: a406/a70a (input), 9e94/a2be/a662/c2c8 (close).
-// Boundaries without an executor: 9f36 a6da a71a bd26 e84d6 a63c.
+// Executed by other units: a406/a70a (input), 9e94/a2be/a662/c2c8 (close), bd26/9f36/a71a (save).
+// Boundaries without an executor: a6da e84d6 a63c.
 bool animation_card_menu_open_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0;
     switch(r.pc) {
@@ -386,6 +386,8 @@ bool animation_card_menu_open_block(AnimationMachineContext& c) {
     case 0xc1d2:if(!am_write(c,r.a[6]+0x7eU,2,0x012c))return false;r.pc=0xa216;return true;
     case 0xc1de:r.pc=(r.d[0]&65535U)!=3U?0xc212:0xc1e6;return true;
     case 0xc1e6:return am_call(c,0xbd26,0xc1ea);
+    // BCC c202: consumes the C left by be2e (ORI CCR, Set: SAVE OK c1ee) or be34 (ANDI CCR, Clear: NO SAVE c202).
+    case 0xc1ea:return open_carry(c,0xc202,0xc1ee);
     case 0xc1ee:case 0xc202:return am_call(c,0x9f36,r.pc==0xc1ee?0xc1f4:0xc208);
     case 0xc1f4:r.a[0]=0xc214;return am_call(c,0xa71a,0xc1fe);
     case 0xc1fe:r.pc=0xc212;return true;
