@@ -228,6 +228,14 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // by 28ae. F1b has no known-carry producer. MOVE/MOVEQ/TST/SUBQ/ADDQ/CLR blocks stay Unknown.
     case 0x1c5b0:case 0x1c5bc:case 0x1c5c0:case 0x1c5cc:case 0x1c5d8:case 0x1c5dc:case 0x1c5e8:case 0x47da4:
     case 0x47daa:case 0x47db0:case 0x47dba:case 0x47dc0:case 0x47dc6:case 0x47df4:case 0x47e0a:case 0x47e2a:
+    // Stage catalog (F1c1) blocks: JSR/JMP/BSR/BRA/RTS/LEA/MOVEA and conditional branches only, including the six 478ac
+    // BRA.W slots. 478e4 47944 4795c 47974 are the BCC blocks consuming the C returned by 72f0 and 28ae. F1c1 has no
+    // known-carry producer (the 47550 SUBQ borrow reaches no consumer). MOVE/MOVEQ/CLR/TST/CMP/CMPI/CMPA/SUBQ/LSL/BCLR/
+    // ADDI/Scc/OR blocks and the 3d58/3d6e BYTE stack blocks stay Unknown.
+    case 0x3d6a:case 0x47540:case 0x4754a:case 0x47556:case 0x47558:case 0x4782a:case 0x47830:case 0x47836:case 0x4783c:
+    case 0x47886:case 0x4788c:case 0x47890:case 0x478a8:case 0x478ac:case 0x478b0:case 0x478b4:case 0x478b8:case 0x478bc:
+    case 0x478c0:case 0x478de:case 0x478e4:case 0x478e6:case 0x478ec:case 0x478fe:case 0x47912:case 0x47918:case 0x4791c:
+    case 0x47944:case 0x47948:case 0x4795c:case 0x47960:case 0x47974:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -440,6 +448,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             else if ((next.pc>=0x47da4 && next.pc<0x47eac) || (next.pc>=0x4b6e4 && next.pc<0x4b6f4) ||
                 (next.pc>=0x1c5b0 && next.pc<0x1c5ea) || (next.pc>=0x1bee4 && next.pc<0x1bef8) ||
                 (next.pc>=0xca48 && next.pc<0xca50) || (next.pc>=0x9056 && next.pc<0x9060))ok=animation_area_clear_block(c);
+            else if ((next.pc>=0x477e4 && next.pc<0x479b0 && next.pc!=0x478a6) || (next.pc>=0x474e2 && next.pc<0x474f4) ||
+                (next.pc>=0x47540 && next.pc<0x4755e) || (next.pc>=0x3d58 && next.pc<0x3d62) || (next.pc>=0x3d6a && next.pc<0x3d7c) ||
+                (next.pc>=0xca8a && next.pc<0xca9e) || (next.pc>=0x4814e && next.pc<0x48156))ok=animation_stage_catalog_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
