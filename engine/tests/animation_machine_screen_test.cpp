@@ -66,7 +66,7 @@ void errors(){Bytes ram(65536,0);put(ram,SP,4,STOP);ms5::AnimationMachineState s
  s=state(0x47fd0);s.a[6]=0xffffe;reject(ram,s,STOP,"unsupported animation machine write device");
  s=state(0x47fdc);s.a[6]=0x102001;reject(ram,s,STOP,"even WORD/LONG");
  s=state(0x47fe0);reject(ram,s,STOP,"unsupported animation machine PC"); // BNE needs unrepresented incoming Z.
- s=state(0x1a7a8);reject(ram,s,STOP,"unsupported animation machine PC"); // 1a7a8 (scene update, frame helper U4) has no executor.
+ s=state(0x1a470);reject(ram,s,STOP,"unsupported animation machine PC"); // 1a470 (frame helper U5) has no executor; 1a7a8 is U4 now.
 }
 }
 int main(){preserving();reset();clear_screen();live_a4();upper();errors();std::cout<<"animation_machine_screen_test PASS "<<calls<<" API invocations\n";}

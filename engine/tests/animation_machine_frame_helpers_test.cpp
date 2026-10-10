@@ -53,10 +53,12 @@ void natural(){
  {Bytes ram=natural_ram(2,2);State s=state(0x480bc);Out o;assert(run(ram,s,0x47650,o)&&s.a[7]==SP-4&&s.a[0]==P1&&s.d[0]==0&&get(ram,FLAGS,1)==1&&s.carry==ms5::AnimationCarrySet);
   assert(run(ram,s,0x47656,o)&&s.a[0]==P2&&s.d[0]==1&&s.carry==ms5::AnimationCarryUnknown);
   assert(run(ram,s,0x1a73c,o)&&get(ram,FLAGS,1)==3&&s.a[7]==SP-4&&get(ram,SP-4,4)==0x480c6);}
- // Another stop continues through 1a73c (U2 scene core) to its 1a7a8 boundary and rolls back everything.
+ // Another stop continues through 1a73c (U2 scene core, U4 scene update 1a7a8) back to 480c6, reaches the 49b0c
+ // boundary and rolls back everything.
  reject(natural_ram(2,1),state(0x480bc),STOP,"unsupported animation machine PC");
 }
-// Each shell JSR to a helper stops at its boundary; other stops roll back (1a73c now runs U2 up to its 1a7a8 boundary).
+// Each shell JSR to a helper stops at its boundary; other stops roll back (1a73c now runs U2+U4 and returns to 480c6,
+// which then stops at the 49b0c boundary).
 void shell(){
  const std::uint32_t edges[][3]={{0x480c0,0x1a73c,0x480c6},{0x480c6,0x49b0c,0x480cc},{0x480cc,0x4aa88,0x480d2},{0x480e4,0xe8a48,0x480ea}};
  for(unsigned int i=0;i<4;++i){Bytes ram(65536,0);put(ram,SP,4,RETURN);State s=state(edges[i][0]);s.carry=ms5::AnimationCarryClear;State want=s;Out o;
@@ -274,9 +276,10 @@ void errors(){
  for(unsigned int i=0;i<11;++i)for(std::uint32_t pc=ranges[i][0];pc<=ranges[i][1];pc+=2){
   if(listed(pc)||pc==0x4939c)continue;Bytes ram;State s;generic(pc,ram,s);reject(ram,s,STOP,"unsupported animation frame helper PC");++interior;}
  assert(interior==300); // 406 even PCs in the routed ranges (4939c excluded) minus 106 block starts
- // Neighbours outside the ranges, the TRAP boundary and the U3..U7 boundaries (1a7a8 for U4); odd PCs are rejected first.
+ // Neighbours outside the ranges, the TRAP boundary and the U5..U7 boundaries (U3 and U4 1a7a8 now execute); odd PCs are
+ // rejected first.
  const std::uint32_t outside[]={0x480f2,0x47640,0x6f1c0,0x6f1c4,0x2efa4,0x2efdc,0x3c42,0x3c7c,0xb4a28,0xb4ab0,0x49390,0x4939c,0x493bc,
-  0x1c026,0x1c052,0x4d9d4,0x4da08,0xb481c,0xb4850,0x46f50,0x4706c,0x1a7a8,0x49b0c,0x4aa88,0xe8a48};
+  0x1c026,0x1c052,0x4d9d4,0x4da08,0xb481c,0xb4850,0x46f50,0x4706c,0x49b0c,0x4aa88,0xe8a48};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0x47657,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
