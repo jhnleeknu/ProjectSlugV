@@ -118,6 +118,10 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // Card menu close blocks: JSR/BSR/RTS/BCS only (a344 ADDQ.W #2,A7 stays Unknown like ADDA/SUBA).
     // a324 is the BCS that consumes the C set by a018 (a06c/a076). MOVE/MOVEQ/SWAP/CMPI/SUBQ/ADDI blocks stay Unknown.
     case 0x9ee4:case 0xa320:case 0xa324:case 0xa672:case 0xa67a:case 0xc2f8:
+    // Card menu save blocks: BSR/JSR/BRA/RTS/MOVEA (+)/BCC only. c1ea is the BCC that consumes the C
+    // set by be2e (ORI CCR) or be34 (ANDI CCR) in the same block as their RTS. bbb8/be0c (MOVE.L An,-(A7)),
+    // MOVE/MOVEQ/EXT/ADD/NOT/ADDI/SUBQ/ANDI/MULU/TST blocks stay Unknown.
+    case 0xa100:case 0xa71a:case 0xa72a:case 0xbb8c:case 0xbbd0:case 0xbd90:case 0xc1ea:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -282,6 +286,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xa70a && next.pc<=0xa718) || (next.pc>=0xbf2c && next.pc<=0xbf92))ok=animation_card_menu_input_block(c);
             else if ((next.pc>=0x9e94 && next.pc<=0x9ee4) || (next.pc>=0xa2be && next.pc<=0xa346) ||
                 (next.pc>=0xa662 && next.pc<=0xa696) || (next.pc>=0xc2c8 && next.pc<=0xc2f8))ok=animation_card_menu_close_block(c);
+            else if ((next.pc>=0x9f36 && next.pc<=0x9f76) || (next.pc>=0xa71a && next.pc<=0xa72a) ||
+                (next.pc>=0xbb74 && next.pc<=0xbb8c) || (next.pc>=0xbbb8 && next.pc<=0xbbd2) ||
+                (next.pc>=0xbd26 && next.pc<=0xbd92) || (next.pc>=0xbe0c && next.pc<=0xbe38))ok=animation_card_menu_save_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

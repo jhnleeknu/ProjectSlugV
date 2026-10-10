@@ -67,7 +67,8 @@ bool input_store(AnimationMachineContext& c,std::uint32_t offset) {
 // descriptor frame hook a43e (JSR 6(desc)), pending event loops a44e/a5aa (9b3e), P1/P2 input
 // groups a472..a562 (bits 0,1,2,3,5,4), cursor a566/a574 (a216), events a582..a5a0.
 // c188 hook bf2c: 7e countdown -> 9ff4 (e=3), 80(A6) -> a70a, 10fdb6/10fdb7 -> 9fc4 (d).
-// a70a: sound 1a5b (3af8) then a1ee (-e5=2, A2=-f2). Boundaries: a662, bd26, other hook targets.
+// a70a: sound 1a5b (3af8) then a1ee (-e5=2, A2=-f2). a662 (close unit) and bd26 (save unit) run elsewhere;
+// other hook targets are boundaries.
 bool animation_card_menu_input_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0;bool clear=false;
     switch(r.pc) {

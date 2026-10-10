@@ -14,7 +14,8 @@ bool menu_bls_byte(AnimationMachineContext& c,std::uint32_t address,std::uint32_
 }
 // Card menu push a29c -> a0a0 (frame stack at 107e0e..107f0e), text width 38e8/386e,
 // and the card child renderer setup c2a8 -> a2b8 -> c2ba.
-// 38c8/38e2 (TRAP #f) have no executor; 9b58 and a370 run in animation_machine_card_menu_open.cpp.
+// 38c8/38e2 (TRAP #f) have no executor; 9b58, 9e1a and a370 run in animation_machine_card_menu_open.cpp.
+// The nested push a0f8/a100 is reached from a71a (card menu save unit) with -f2 already holding a menu.
 bool animation_card_menu_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0;
     switch(r.pc) {
@@ -42,6 +43,8 @@ bool animation_card_menu_block(AnimationMachineContext& c) {
     // Nested menu: BSR 9b58 (card menu open executor) with return a100.
     case 0xa0f8:
         if(!am_write(c,am_index(r.a[5],0xff12),4,r.a[2]))return false;return am_call(c,0x9b58,0xa100);
+    // BSR 9e1a (card menu open executor): the older menu's items are redrawn before a104 fills the new frame.
+    case 0xa100:return am_call(c,0x9e1a,0xa104);
     case 0xa104:
         if(!am_pop(c,4,r.d[0]) || !am_pop(c,4,r.d[1]) || !am_pop(c,4,r.a[0]) ||
            !am_read(c,am_index(r.a[5],0xff0e),4,value))return false;r.a[2]=value;
