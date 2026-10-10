@@ -46,6 +46,7 @@ test: build/physical_rom_resource_test build/program_bus_test build/animation_ex
 	./build/animation_machine_card_menu_test
 	./build/animation_machine_card_menu_open_test
 	./build/animation_machine_card_menu_input_test
+	./build/animation_machine_card_menu_close_test
 	./build/program_stack_test
 	./build/physical_rom_resource_test
 	./build/program_bus_test
@@ -1227,7 +1228,7 @@ test: build/program_stack_test
 build/program_stack_test: engine/src/program_stack.cpp engine/src/program_bus.cpp engine/tests/program_stack_test.cpp engine/include/ms5/program_stack.h $(PROGRAM_BUS_HEADERS) | build
 	$(CXX) $(CXXFLAGS) engine/src/program_stack.cpp engine/src/program_bus.cpp engine/tests/program_stack_test.cpp -o $@
 
-ANIMATION_MACHINE_SOURCES = engine/src/animation_machine.cpp engine/src/animation_machine_interpreter.cpp engine/src/animation_machine_sprite.cpp engine/src/animation_machine_sound.cpp engine/src/animation_machine_readiness.cpp engine/src/animation_machine_hud.cpp engine/src/animation_machine_transition.cpp engine/src/animation_machine_exit.cpp engine/src/animation_machine_screen.cpp engine/src/animation_machine_cleanup.cpp engine/src/animation_machine_scene.cpp engine/src/animation_machine_palette_bind.cpp engine/src/animation_machine_map_transfer.cpp engine/src/animation_machine_fade_card.cpp engine/src/animation_machine_card_child.cpp engine/src/animation_machine_card_menu.cpp engine/src/animation_machine_card_menu_open.cpp engine/src/animation_machine_card_menu_input.cpp engine/src/palette_effect_execution.cpp engine/src/program_bus.cpp engine/src/program_stack.cpp
+ANIMATION_MACHINE_SOURCES = engine/src/animation_machine.cpp engine/src/animation_machine_interpreter.cpp engine/src/animation_machine_sprite.cpp engine/src/animation_machine_sound.cpp engine/src/animation_machine_readiness.cpp engine/src/animation_machine_hud.cpp engine/src/animation_machine_transition.cpp engine/src/animation_machine_exit.cpp engine/src/animation_machine_screen.cpp engine/src/animation_machine_cleanup.cpp engine/src/animation_machine_scene.cpp engine/src/animation_machine_palette_bind.cpp engine/src/animation_machine_map_transfer.cpp engine/src/animation_machine_fade_card.cpp engine/src/animation_machine_card_child.cpp engine/src/animation_machine_card_menu.cpp engine/src/animation_machine_card_menu_open.cpp engine/src/animation_machine_card_menu_input.cpp engine/src/animation_machine_card_menu_close.cpp engine/src/palette_effect_execution.cpp engine/src/program_bus.cpp engine/src/program_stack.cpp
 ANIMATION_MACHINE_HEADERS = engine/include/ms5/palette_effect_execution.h engine/include/ms5/object_restart_execution.h engine/include/ms5/animation_machine.h engine/src/animation_machine_internal.h engine/include/ms5/program_stack.h $(PROGRAM_BUS_HEADERS)
 test: build/animation_machine_test build/animation_machine_device_test
 build/animation_machine_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_test.cpp | build
@@ -1302,3 +1303,7 @@ build/animation_machine_card_menu_open_test: $(ANIMATION_MACHINE_SOURCES) $(ANIM
 test: build/animation_machine_card_menu_input_test
 build/animation_machine_card_menu_input_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_input_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_card_menu_input_test.cpp -o $@
+
+test: build/animation_machine_card_menu_close_test
+build/animation_machine_card_menu_close_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_close_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_card_menu_close_test.cpp -o $@

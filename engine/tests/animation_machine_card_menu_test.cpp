@@ -4,7 +4,7 @@
 namespace {
 typedef std::vector<std::uint8_t> Bytes;
 typedef std::vector<ms5::PhysicalRomResource> Physical;
-const std::uint32_t SP=0x1feffc,STOP=0xff000,CHILD=0x103000,FRAME=0xa370,NEST=0x9b58,TRAP_N=0x38c8,TRAP_L=0x38e2,CLOSE=0xa662;
+const std::uint32_t SP=0x1feffc,STOP=0xff000,CHILD=0x103000,FRAME=0xa370,NEST=0x9b58,TRAP_N=0x38c8,TRAP_L=0x38e2,NESTED=0xa698;
 const std::uint32_t DESC=0x104100,TEXT=0x104800,OLD_EE=0x10a0b0c0;
 unsigned int calls=0;
 void put(Bytes&b,std::uint32_t a,unsigned int n,std::uint32_t v){for(unsigned int i=0;i<n;++i)b[(a+i)&65535U]=static_cast<std::uint8_t>(v>>(8*(n-i-1)));}
@@ -56,10 +56,10 @@ void natural(){
  assert(get(ram,CHILD,4)==0xc2ba&&s.d[0]==6&&s.d[1]==old.d[1]&&s.d[2]==(old.d[2]&0xffffff00U)&&s.d[3]==old.d[3]&&s.d[7]==old.d[7]);
  assert(s.a[0]==0xe84c8&&s.a[1]==0xa008&&s.a[2]==0x107efe&&s.a[3]==0xc188&&s.a[5]==0x108000&&s.a[6]==CHILD&&s.carry==ms5::AnimationCarryUnknown);
  // a370 now continues in the card menu open unit (its own test): the opening frame returns
- // through c2c0/c2c6 to 2ac2. A stop at the still-unsupported a662 is never reached; the
+ // through c2c0/c2c6 to 2ac2. A stop at the still-unsupported a698 is never reached; the
  // dispatcher then follows 8(A6)=5a5a5a5a and the whole invocation rolls back.
  {Bytes r2=start;ms5::AnimationMachineState t=old;Out to;assert(run(r2,t,0x2ac2,to,&p)&&t.pc==0x2ac2&&t.a[7]==SP+4&&quiet(to));}
- reject(start,old,CLOSE,"unsupported program bus device address",&p);
+ reject(start,old,NESTED,"unsupported program bus device address",&p);
  // Walk through every reached split checkpoint in order; equals the continuous run.
  const std::uint32_t walk[]={0xa0a0,0xa0c4,0xa104,0xa15e,0xa166,0xa17e,0x38e8,0x386e,0x3878,0x38ee,0x38f4,0x38fa,0x38fe,0xa184,0xa18a,
   0xa18c,0xa198,0xa1a6,0xa1ae,0xa1ba,0xa1be,0xa1cc,0xa1d0,0xc2a8,0xa2b8,0xa2bc,0xc2b4,0xc2ba,FRAME};
@@ -144,8 +144,8 @@ void escapes(){
 }
 void push_paths(){
  // a0a0 overflow: -f2=107e14 -> A2=107e04 < 107e0e; a0c2 RTS pops the pushed old -ee (a370) as the PC.
- // a370 now has an executor, so the unsupported-PC rollback uses a popped a662 (close, no executor) instead.
- Bytes ram(65536,0);put(ram,0x107f12,4,CLOSE);put(ram,0x107f0e,4,0x107e14);ms5::AnimationMachineState s=state(0xa0a0);
+ // a370 and a662 now have executors, so the unsupported-PC rollback uses a popped a698 (nested close return, no executor).
+ Bytes ram(65536,0);put(ram,0x107f12,4,NESTED);put(ram,0x107f0e,4,0x107e14);ms5::AnimationMachineState s=state(0xa0a0);
  reject(ram,s,STOP,"unsupported animation machine PC");put(ram,0x107f12,4,FRAME);
  Out o;assert(run(ram,s,FRAME,o)&&s.pc==FRAME&&s.a[7]==SP&&s.a[2]==0x107e04&&s.a[5]==0x108000&&quiet(o));
  assert(get(ram,0x107f12,4)==0x107e14&&get(ram,0x107f0e,4)==0x107e14&&get(ram,SP-4,4)==FRAME);
@@ -156,7 +156,7 @@ void push_paths(){
  // Nested menu (-f2=107efe): a0c4 builds 107eee, A2+10 < 107f0e, a0f8 -ee=107efe and BSR 9b58.
  ram.assign(65536,0x5a);put(ram,0x107f0e,4,0x107efe);put(ram,0x107f12,4,OLD_EE);s=state(0xa0a0);const ms5::AnimationMachineState old=s;
  // 9b58 now executes (open unit): with 4(107efe)=0 it returns at 9b64 to a100, a push-unit interior PC.
- {Bytes r2=ram;put(r2,0x107f02,1,0);reject(r2,s,CLOSE,"unsupported animation card menu PC");}
+ {Bytes r2=ram;put(r2,0x107f02,1,0);reject(r2,s,NESTED,"unsupported animation card menu PC");}
  o=Out();assert(run(ram,s,NEST,o)&&s.pc==NEST&&s.a[7]==SP-20&&get(ram,SP-20,4)==0xa100&&quiet(o));
  // MOVEM.L D0-D1/A0,-(A7): ascending D0, D1, A0 above the old -ee LONG.
  assert(get(ram,SP-16,4)==old.d[0]&&get(ram,SP-12,4)==old.d[1]&&get(ram,SP-8,4)==old.a[0]&&get(ram,SP-4,4)==OLD_EE);
@@ -187,7 +187,7 @@ void errors(){
   0x38d0,0x38d2,0x38d4,0x38d6,0x38da,0x38e6,0x38ec,0x38f6,0xc2ae,0xc2b0,0xc2b2,0xc2b6,0xc2b8};
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){s=state(bundled[i]);reject(menu_ram(),s,STOP,"unsupported animation card menu PC",&p);}
  // Boundaries without an executor and neighbours outside the routed ranges.
- const std::uint32_t outside[]={CLOSE,0x9e94,TRAP_N,TRAP_L,0x9f36,0xa09e,0xa1e2,0xa29a,0xa2be,0x386c,0x3900,0xc2a6,0xc2c8};
+ const std::uint32_t outside[]={NESTED,0x9ee6,TRAP_N,TRAP_L,0x9f36,0xa09e,0xa1e2,0xa29a,0xa6da,0x386c,0x3900,0xc2a6,0xc2fa};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){s=state(outside[i]);reject(menu_ram(),s,STOP,"unsupported animation machine PC",&p);}
  s=state(0xa0a1);reject(menu_ram(),s,STOP,"unaligned animation machine PC",&p);
 }

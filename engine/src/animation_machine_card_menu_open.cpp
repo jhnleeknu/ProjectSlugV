@@ -52,7 +52,8 @@ bool open_a018_return(AnimationMachineContext& c,AnimationCarryState carry) {
 // box 9b58, items 9e1a/9d3a, cover test a018, text loop 3918 with renderers
 // a008/e84c8->3650, item callbacks 9b3e -> c1c4/bf94 (a73e sound, a216 cursor).
 // c2c0/c2c6 (TST.B D0 after JSR a370) return the c2ba frame to its caller.
-// Boundaries without an executor: 9e94 9f36 a2be a406 a662 a6da a70a a71a bd26 e84d6 a63c c2c8.
+// Executed by other units: a406/a70a (input), 9e94/a2be/a662/c2c8 (close).
+// Boundaries without an executor: 9f36 a6da a71a bd26 e84d6 a63c.
 bool animation_card_menu_open_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0;
     switch(r.pc) {
@@ -389,7 +390,7 @@ bool animation_card_menu_open_block(AnimationMachineContext& c) {
     case 0xc1f4:r.a[0]=0xc214;return am_call(c,0xa71a,0xc1fe);
     case 0xc1fe:r.pc=0xc212;return true;
     case 0xc208:r.a[0]=0xc232;return am_call(c,0xa71a,0xc212);
-    // c2c0 TST.B D0; BNE c2c8 (no executor); c2c6 RTS.
+    // c2c0 TST.B D0; BNE c2c8 (close unit); c2c6 RTS.
     case 0xc2c0:r.pc=(r.d[0]&255U)?0xc2c8:0xc2c6;return true;
     // CMPI.B #10,D1; BCC e84d6 (kana renderer, no executor); JMP 3650.
     case 0xe84c8:r.pc=(r.d[1]&255U)>=0x10U?0xe84d6:0xe84d0;return true;
