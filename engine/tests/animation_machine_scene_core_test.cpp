@@ -96,8 +96,9 @@ void tail(){
   assert(run(ram,s,STOP,o)&&s.pc==STOP&&s.a[7]==SP+4&&s.a[0]==(k?PL:0U)&&s.d[7]==(k==1?0xffffU:(k==2?4U:0U)));
   assert(s.carry==ms5::AnimationCarryUnknown);stack_from(expect,ram);assert(ram==expect);
   assert(o.ports.size()==2&&port(o,0,0x2ffff2,0x1000)&&port(o,1,0x2ffff0,0)&&o.dev.bank_base==0x200000);}
- // Wrong stop at the 1a470 boundary rolls back.
- Bytes ram=zero_ram();putf(ram,0x540e,4,PL);reject(ram,state(0x1a78c),STOP,"unsupported animation machine PC");
+ // 1a470 now runs U5 (due record: 28ae, 43e08, no copy); a stop it never reaches (1a492, the not-due branch) rolls
+ // back everything at the STOP return address.
+ Bytes ram=zero_ram();putf(ram,0x540e,4,PL);reject(ram,state(0x1a78c),0x1a492,"unsupported animation machine PC");
 }
 // Terminated two-record motion path at MOT (type 14 from time 0, terminator type ffff at time 100).
 void motion_path(Bytes&ram){put(ram,MOT,2,0);put(ram,MOT+2,2,0x14);put(ram,MOT+10,2,0x100);put(ram,MOT+12,2,0xffff);}
@@ -131,7 +132,8 @@ void script(){
  {Bytes ram=natural_ram();putf(ram,0x5412,4,SCR);putf(ram,0x5416,2,3);put(ram,SCR,2,0x0001);State s=state(0x1a73c);Out o;
   assert(run(ram,s,0x1a0b6,o)&&s.a[7]==SP-8&&get(ram,SP-4,4)==0x1a75e&&get(ram,SP-8,4)==0x1a296&&s.a[1]==SCR&&(s.d[0]&65535U)==3);
   assert(o.ports.size()==2&&s.carry==ms5::AnimationCarryUnknown); // 1a2cc Set is consumed at 1a756; 1a26a CMPA leaves Unknown
-  ram=natural_ram();putf(ram,0x5412,4,SCR);putf(ram,0x5416,2,3);put(ram,SCR,2,1);reject(ram,state(0x1a73c),0x1a7a8,"unsupported animation machine PC");}
+  // 1a0b6 now runs U5: opcode WORD 1 computes the odd PC 1a0bd, rejected with full rollback.
+  ram=natural_ram();putf(ram,0x5412,4,SCR);putf(ram,0x5416,2,3);put(ram,SCR,2,1);reject(ram,state(0x1a73c),0x1a7a8,"unaligned animation machine PC");}
  {Bytes ram=natural_ram();putf(ram,0x5412,4,SCR);putf(ram,0x5416,2,3);put(ram,SCR,2,0x8000);State s=state(0x1a73c);Out o;
   assert(run(ram,s,0x1a7a8,o)&&getf(ram,0x5416,2)==0xffff&&getf(ram,0x5412,4)==SCR);}
  {Bytes ram=natural_ram();putf(ram,0x5412,4,SCR);putf(ram,0x5416,2,4);put(ram,SCR,2,1);State s=state(0x1a73c);Out o;
@@ -403,11 +405,14 @@ void errors(){
  assert(bytes==1724&&interior==647); // 862 even PCs minus 215 block starts
  const unsigned int nb=sizeof(BUNDLED)/sizeof(BUNDLED[0]);assert(nb==84);
  for(unsigned int i=0;i<nb;++i){assert(!listed(BUNDLED[i]));Bytes ram=zero_ram();reject(ram,state(BUNDLED[i]),STOP,"unsupported animation scene core PC");}
- // Neighbours outside the ranges and the remaining boundaries (19812/19844/19910 belong to U3, 1a7a8 to U4); odd PCs
- // are rejected first.
- const std::uint32_t outside[]={0x197d8,0x19768,0x19938,0x19976,0x199d4,0x19a3e,0x19b50,0x19b94,0x19dee,0x1a268,
-  0x1a3a6,0x1a3d4,0x1a40e,0x1a440,0x1a470,0x1a524,0x1a5a4,0x1a73a,0x1a0b6};
+ // Neighbours outside the ranges (19812/19844/19910 belong to U3, 1a7a8 to U4, the former 1a0b6/1a40e/1a470
+ // boundaries to U5); odd PCs are rejected first.
+ const std::uint32_t outside[]={0x19768,0x19770,0x19938,0x19976,0x199d4,0x19a3e,0x19b50,0x19b94,0x19dee,
+  0x1a3a6,0x1a3d4,0x1a414,0x1a440,0x1a5a4,0x1a73a};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram=zero_ram();reject(ram,state(outside[i]),STOP,"unsupported animation machine PC");}
+ // Former neighbours now inside the U5 ranges (interior PCs).
+ const std::uint32_t u5[]={0x197d8,0x1a268,0x1a524};
+ for(unsigned int i=0;i<3;++i){Bytes ram=zero_ram();reject(ram,state(u5[i]),STOP,"unsupported animation script placement PC");}
  {Bytes ram=zero_ram();reject(ram,state(0x1a73d),STOP,"unaligned animation machine PC");}
 }
 void zero_step(){

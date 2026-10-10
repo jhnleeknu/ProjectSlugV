@@ -184,6 +184,14 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x1a018:case 0x1a046:case 0x1a060:case 0x1a7f4:case 0x1a808:case 0x1a830:case 0x1a844:case 0x1a86c:case 0x1a880:case 0x1a8a8:
     case 0x1a8bc:case 0x1a8ce:case 0x1a8de:case 0x1a8ee:case 0x1a8fe:case 0x1a90e:case 0x1afec:case 0x1b00e:case 0x1b014:case 0x1b07a:
     case 0x1b0a8:case 0x1b0b8:case 0x1b0c4:case 0x1b0de:case 0x1b126:
+    // Script placement (480bc U5) blocks: BSR/JMP/BRA/RTS/LEA/MOVEA/NOP and conditional branches only, including
+    // the twenty 1a0bc..1a108 BRA.W slots. 197a2 is the BCC consuming the C returned by 18c06. MOVE.L An,-(A7)
+    // blocks and MOVE/MOVEQ/CMP/CMPA/TST/SUB/SUBQ/ADD/AND/OR/ROL/LSL/SWAP/NEG/CLR blocks stay Unknown
+    // (3d7e and 1a484 set and consume their C inside the block). U5 has no known-carry producer.
+    case 0x197a2:case 0x1a086:case 0x1a09e:case 0x1a0bc:case 0x1a0c0:case 0x1a0c4:case 0x1a0c8:case 0x1a0cc:case 0x1a0d0:
+    case 0x1a0d4:case 0x1a0d8:case 0x1a0dc:case 0x1a0e0:case 0x1a0e4:case 0x1a0e8:case 0x1a0ec:case 0x1a0f0:case 0x1a0f4:
+    case 0x1a0f8:case 0x1a0fc:case 0x1a100:case 0x1a104:case 0x1a108:case 0x1a10c:case 0x1a116:case 0x1a182:case 0x1a1be:
+    case 0x1a1cc:case 0x1a1f6:case 0x1a216:case 0x1a21c:case 0x1a23a:case 0x1a23e:case 0x1a51a:case 0xe8a02:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -368,6 +376,10 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             else if ((next.pc>=0x1a7a8 && next.pc<0x1a910) || (next.pc>=0x1724c && next.pc<0x17292) ||
                 (next.pc>=0x43ea8 && next.pc<0x43eb8) || (next.pc>=0x1afda && next.pc<0x1b128) ||
                 (next.pc>=0x19e64 && next.pc<0x1a07a) || (next.pc>=0x18656 && next.pc<0x18702))ok=animation_scene_update_block(c);
+            else if ((next.pc>=0x3d7e && next.pc<0x3db2) || next.pc==0x16fee || (next.pc>=0x19772 && next.pc<0x197da) ||
+                (next.pc>=0x19e60 && next.pc<0x19e64) || (next.pc>=0x1a086 && next.pc<0x1a26a) ||
+                (next.pc>=0x1a40e && next.pc<0x1a414) || (next.pc>=0x1a470 && next.pc<0x1a526) ||
+                (next.pc>=0xe89fa && next.pc<0xe8a0c))ok=animation_script_placement_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

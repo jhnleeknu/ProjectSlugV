@@ -61,5 +61,6 @@ bool animation_frame_helpers_block(AnimationMachineContext& c);
 bool animation_scene_core_block(AnimationMachineContext& c);
 bool animation_motion_walk_block(AnimationMachineContext& c);
 bool animation_scene_update_block(AnimationMachineContext& c);
+bool animation_script_placement_block(AnimationMachineContext& c);
 }
 #endif
