@@ -190,8 +190,8 @@ void close_edges(){
   unsigned int skipped=0;for(unsigned int i=0;i<o.ports.size();++i)if(covered(up,o.ports[i].value>>16))++skipped;
   assert(skipped==0&&e.size()<closing(5,1).size());}
  // Nested stack: a declared older frame TOP below the closing UP=-f2 (height 0): a67e -f2=107efe < 107f0e -> a698.
+ // a698 now runs in the nested unit (its own test); only the stop at its entry is checked here.
  {Bytes ram=empty_ram;State s=empty_state;for(unsigned int i=0;i<16;++i)put(ram,UP+i,1,get(ram,TOP+i,1));put(ram,F2,4,UP);inputs(ram,0,0,0,0);s.pc=0x2ab8;
-  reject(ram,s,RETURN,"unsupported animation machine PC",&p);
   Out o;assert(run(ram,s,NESTED,o,&p)&&quiet(o)&&get(ram,F2,4)==TOP&&get(ram,EE,4)==UP&&s.a[2]==TOP&&s.a[7]==SP-4&&get(ram,SP-4,4)==0xc2c0&&get(ram,CHILD,4)==0xc2ba);}
  // Odd A2 from -f2=107eff with byte 5 nonzero: a662 MOVE.L/MOVE.B succeed, MOVE.W 4(A2) at a2be fails.
  {Bytes ram=snap_ram;State s=snap;put(ram,F2,4,0x107eff);put(ram,TOP+5,1,0x80);inputs(ram,0,0,0,0);s.pc=0x2ab8;reject(ram,s,RETURN,"even WORD/LONG",&p);}
@@ -294,8 +294,9 @@ void errors(){
  assert(interior==131); // 162 even PCs in the four ranges minus 31 block starts
  const std::uint32_t bundled[]={0xa66a,0xa66e,0xa2ca,0xa2cc,0xa30a,0xa31c,0xa68a,0xa690,0xc2e4,0x9eb4,0x9ec6,0x9ed6,0x9ee0,0xa338,0xa340,0xa346,0xa696};
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){assert(!listed(bundled[i]));Bytes ram;State s;generic(bundled[i],ram,s);reject(ram,s,STOP,"unsupported animation card menu close PC");}
- // Neighbours outside the routed ranges and the a698 boundary.
- const std::uint32_t outside[]={0x9ee6,NESTED,0xa6da,0xa6d8,0xc2fa};
+ // Neighbours outside the routed ranges and boundaries still without an executor
+ // (a698..a708 now run in the nested unit).
+ const std::uint32_t outside[]={0x9ee6,0xa63c,0xe84d6,0xc2fa};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0xa663,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }

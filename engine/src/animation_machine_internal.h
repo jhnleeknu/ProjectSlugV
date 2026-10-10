@@ -56,5 +56,6 @@ bool animation_card_menu_open_block(AnimationMachineContext& c);
 bool animation_card_menu_input_block(AnimationMachineContext& c);
 bool animation_card_menu_close_block(AnimationMachineContext& c);
 bool animation_card_menu_save_block(AnimationMachineContext& c);
+bool animation_card_menu_nested_block(AnimationMachineContext& c);
 }
 #endif

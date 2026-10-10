@@ -244,10 +244,11 @@ void fixtures(){
  {Bytes ram;State s;generic(0xa406,ram,s);put(ram,DESC+6,4,0);put(ram,P1,1,0x04);put(ram,P2,1,0);Out o;
   assert(run(ram,s,0xa444,o)&&quiet(o)&&s.a[7]==SP&&s.a[3]==0&&get(ram,CHILD+0x7e,2)==0x012c);
   o=Out();assert(run(ram,s,0xbf94,o)&&(s.d[0]&65535U)==1);o=Out();assert(run(ram,s,STOP,o)&&quiet(o)&&get(ram,E6,1)==1&&s.d[0]==0&&s.a[7]==SP+4&&get(ram,TOP+0xe,1)==0xff);}
- // Other hook targets are boundaries (a6da has no executor; 9f36 now runs in the save unit): stop there
+ // Other hook targets are boundaries (a63c TRAP #f has no executor; 9f36 now runs in the save unit and
+ // a6da in the nested unit): stop there
  // succeeds with A2 and a442 pushed; other stops roll back.
- {Bytes ram;State s;generic(0xa406,ram,s);put(ram,DESC+6,4,0xa6da);reject(ram,s,STOP,"unsupported animation machine PC");
-  Out o;assert(run(ram,s,0xa6da,o)&&quiet(o)&&s.a[7]==SP-8&&get(ram,SP-8,4)==0xa442&&get(ram,SP-4,4)==TOP&&s.a[3]==0xa6da&&get(ram,0x107f12,4)==TOP);}
+ {Bytes ram;State s;generic(0xa406,ram,s);put(ram,DESC+6,4,0xa63c);reject(ram,s,STOP,"unsupported animation machine PC");
+  Out o;assert(run(ram,s,0xa63c,o)&&quiet(o)&&s.a[7]==SP-8&&get(ram,SP-8,4)==0xa442&&get(ram,SP-4,4)==TOP&&s.a[3]==0xa63c&&get(ram,0x107f12,4)==TOP);}
  // 4 < c: a412 BSR a348 (box h=2, WORD 4(A2) += c<<6), a416 MOVEQ #0 RTS; the hook does not run.
  {Bytes ram;State s;generic(0xa406,ram,s);put(ram,TOP+4,2,0x0200);Out o;assert(run(ram,s,STOP,o)&&clean(o)&&s.d[0]==0&&s.a[7]==SP+4);
   Ports e;box(e,4,4,0x11,2,0x0b);assert(same_ports(o.ports,e)&&get(ram,TOP+4,2)==0x0300&&get(ram,CHILD+0x7e,2)==0x012c&&get(ram,TOP+0xe,1)==0xff);}
@@ -299,8 +300,8 @@ void errors(){
  const std::uint32_t bundled[]={0xa420,0xa40a,0xa40e,0xa49a,0xa4a2,0xa4aa,0xa4ac,0xa4ce,0xa556,0xbf30,0xbf36,0xbf3a,0xbf64,0xbf68,0xbf6e,0xa5b0,0xa454};
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){Bytes ram;State s;generic(bundled[i],ram,s);reject(ram,s,STOP,"unsupported animation card menu input PC");}
  // Neighbours outside the routed ranges and the boundaries (a71a/bd26 now run in the save unit;
- // its BIOS calls c00468/c0046e have no executor).
- const std::uint32_t outside[]={0x9fce,0x9ff2,0x9ffe,0xa1e2,0xa1ec,0xa1fa,0xa708,0xa72c,0xbf2a,0xa698,0xc00468,0xc0046e};
+ // its BIOS calls c00468/c0046e have no executor; a698..a708 now run in the nested unit).
+ const std::uint32_t outside[]={0x9fce,0x9ff2,0x9ffe,0xa1e2,0xa1ec,0xa1fa,0xa72c,0xbf2a,0xa63c,0xc00468,0xc0046e};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0xa407,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }

@@ -52,8 +52,8 @@ bool open_a018_return(AnimationMachineContext& c,AnimationCarryState carry) {
 // box 9b58, items 9e1a/9d3a, cover test a018, text loop 3918 with renderers
 // a008/e84c8->3650, item callbacks 9b3e -> c1c4/bf94 (a73e sound, a216 cursor).
 // c2c0/c2c6 (TST.B D0 after JSR a370) return the c2ba frame to its caller.
-// Executed by other units: a406/a70a (input), 9e94/a2be/a662/c2c8 (close), bd26/9f36/a71a (save).
-// Boundaries without an executor: a6da e84d6 a63c.
+// Executed by other units: a406/a70a (input), 9e94/a2be/a662/c2c8 (close), bd26/9f36/a71a (save),
+// a6da (nested). Boundaries without an executor: e84d6 a63c.
 bool animation_card_menu_open_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0;
     switch(r.pc) {

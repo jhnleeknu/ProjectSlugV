@@ -14,7 +14,7 @@ bool close_byte(AnimationMachineContext& c,std::uint32_t address,std::uint32_t& 
 // new height, erase loop with the a018 cover test) until 4(A2)=0; then 9e94 (flag-bit0 clear
 // rows, nothing when 4(A2)=0), ADDI.L #10,-f2 pops the frame and a694 returns D0=-1 to c2c0.
 // c2c8 child end: fade 8c16, 7e timer c2e0, parent 62(c(A6))=ff and JMP 2a00.
-// Boundary without an executor: a698 (nested menu return, -f2 still below 107f0e).
+// a698 (nested menu return, -f2 still below 107f0e) runs in the nested unit.
 bool animation_card_menu_close_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0;
     switch(r.pc) {
