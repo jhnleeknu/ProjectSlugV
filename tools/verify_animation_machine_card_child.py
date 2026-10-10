@@ -491,11 +491,19 @@ def negatives(exe, rows, ends, resources, neg_errors):
     for pc in BOUND_BRANCH_PCS:
         reject('bound_branch_direct_entry_%06x' % pc, base4, {'pc': pc})
     reject('mid_block_direct_entry_de44a', base4, {'pc': 0xde44a})
-    reject('c2a8_return_has_no_executor', base4, {'pc': 0xc2a8})
-    # a370, 9b58 and c2c0 are executed by the card menu open core now; these PCs have no executor.
-    reject('a406_pc_has_no_executor', base4, {'pc': 0xa406})
-    reject('9e94_pc_has_no_executor', base4, {'pc': 0x9e94})
-    reject('c2c8_pc_has_no_executor', base4, {'pc': 0xc2c8})
+    # c2a8 -> a2b8 -> c2ba -> a370 -> c2c0 -> c2c8 -> c2f8 are all executed now (card menu push/open/close cores);
+    # the RTS of c2f8 pops a stale non-code word, an odd PC: whole transaction rolls back (inferred mechanism, the
+    # stops c2ba c2c0 c2c8 c2f8 from this entry were checked ok in this verifier, see mechanism_c2a8_* below).
+    reject('c2a8_flow_runs_to_c2f8_RTS_then_unaligned_PC', base4, {'pc': 0xc2a8})
+    # a406..a5d0 (input core), 9e94 and c2c8 (close core) are executed now; these PCs still have no executor.
+    reject('a63c_trap_pc_has_no_executor', base4, {'pc': 0xa63c})
+    reject('e84d6_pc_has_no_executor', base4, {'pc': 0xe84d6})
+    reject('c00468_bios_pc_has_no_executor', base4, {'pc': 0xc00468})
+    for stop in (0xc2ba, 0xc2c0, 0xc2c8, 0xc2f8):
+        result, _, _, _, error = common.invoke(exe, OUT, 'mechanism_c2a8_%06x' % stop, ram4,
+                                               dict(state4, pc=0xc2a8, carry=2), pvc4, bank4, resources,
+                                               stop=stop, external=external)
+        assert result['ok'] and not error and result['pc'] == stop and result['status'] == 0, (hex(stop), error)
     # 7e=0 borrow reaches JSR a29c. a29c and the opening frame a370 are executed now (card menu cores): with the
     # a29c stop the push stops there, with stop 2ac2 the frame returns to the dispatcher (positive control below),
     # and with any other stop the dispatcher goes on to the next object and meets the odd JSR target: full rollback.
@@ -563,6 +571,12 @@ SUPERSEDED_GUARDS = {
     'guard-stop-c2a8-never-reached': (0xc2a8, 'a29c is executed by the card menu core, so stop c2a8 is reached'),
     'guard-callback-a2b8': (0x2ac2, 'a2b8/a2bc are executed by the card menu core (JSR (A0)=a2b8 returns to 2ac2)'),
     'guard-run-past-a29c': (0x2ac2, 'a370 is executed by the card menu open core; the opening frame returns to the 2ac2 stop')}
+SUPERSEDED_NEGATIVES = [
+    dict(label='a406_pc_has_no_executor', now='executed by the card menu input core'),
+    dict(label='a662_pc_has_no_executor', now='executed by the card menu close core'),
+    dict(label='9e94_pc_has_no_executor', now='executed by the card menu close core'),
+    dict(label='c2c8_pc_has_no_executor', now='executed by the card menu close core'),
+    dict(label='c2a8_return_has_no_executor', now='c2a8 is a card menu push block; renamed to the c2f8 RTS rollback negative')]
 GUARD_ERRORS = {
     'guard-odd-A6-child': 'program bus requires even WORD/LONG address',
     'guard-odd-A7-push-child': 'program bus requires even WORD/LONG address',
@@ -570,10 +584,10 @@ GUARD_ERRORS = {
 NEG_ERRORS = {
     'bound_branch_direct_entry_00c28a': 'unsupported animation card child PC',
     'mid_block_direct_entry_de44a': 'unsupported animation card child PC',
-    'c2a8_return_has_no_executor': 'unsupported animation machine PC',
-    'a406_pc_has_no_executor': 'unsupported animation machine PC',
-    '9e94_pc_has_no_executor': 'unsupported animation machine PC',
-    'c2c8_pc_has_no_executor': 'unsupported animation machine PC',
+    'c2a8_flow_runs_to_c2f8_RTS_then_unaligned_PC': 'unaligned animation machine PC',
+    'a63c_trap_pc_has_no_executor': 'unsupported animation machine PC',
+    'e84d6_pc_has_no_executor': 'unsupported animation machine PC',
+    'c00468_bios_pc_has_no_executor': 'unsupported animation machine PC',
     'a29c_call_then_open_frame_with_stop_ff000_rolls_back': 'animation fade card odd JSR target',
     'a29c_call_then_open_frame_with_stop_a406_rolls_back': 'animation fade card odd JSR target',
     'c286_odd_A6_read': 'program bus requires even WORD/LONG address',
@@ -622,6 +636,7 @@ def main():
                   actual_CPP=dict(totals, matches=matches),
                   original_program_read_audit=program_reads,
                   native_guards_checked_API=guarded, native_guards_superseded_by_card_menu_core=superseded,
+                  negatives_superseded_by_card_menu_cores=SUPERSEDED_NEGATIVES,
                   native_continuous_control_phases_replayed=control_count,
                   negatives=negative, negative_count=len(negative) + len(guarded), zero_step=zero,
                   bios_start=dict(chain_label=bios_start[0][0], step=bios_start[0][1],

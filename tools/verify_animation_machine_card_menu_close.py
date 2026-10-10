@@ -238,7 +238,7 @@ def audit_static(program, source):
 
 def cpp_preserving_cases_close():
     text = (ROOT / 'engine/src/animation_machine.cpp').read_text()
-    section = text.split('// Card menu close blocks')[1].split('// BTST/BEQ')[0]
+    section = text.split('// Card menu close blocks')[1].split('// Card menu save blocks')[0].split('// BTST/BEQ')[0]
     close_section = section.split('\n')
     cases = []
     for line in close_section:
@@ -574,21 +574,30 @@ def compare(exe, rows, report, resources, instructions, close_instructions, prog
     return out_rows, totals, guards, a698_starts, frames, program_reads, registers_seen
 
 
+# a698 and the lower nested helpers (a6da..) are executed by the nested core now: these native guards (stopped where no
+# executor existed) are recorded with the observed C++ outcome, not counted as negatives.
+SUPERSEDED_GUARDS = ('guard-a698-without-stop', 'guard-a6da-lower-reaches-zero')
 GUARD_ERRORS = {
     'guard-cleanup-without-fixture': 'animation cleanup original TRAP15: coordinate index',
     'guard-odd-f2-shrink': EVEN, 'guard-odd-ee-direct-a2be': EVEN, 'guard-odd-A7-reentry': EVEN,
     'guard-odd-A7-direct-a2d6': EVEN, 'guard-odd-A7-direct-a306': EVEN, 'guard-odd-A6-child': EVEN,
-    'guard-a698-without-stop': UNSUPPORTED_MACHINE, 'guard-a6da-lower-reaches-zero': UNSUPPORTED_MACHINE,
     'guard-parent-ptr-rom0': 'unsupported animation machine write device',
     'guard-parent-ptr-bank': 'unsupported animation machine write device'}
 
 
 def compare_guards(exe, guards, resources, guard_errors):
     rows = []
+    superseded = []
     for row, phase, ram, state, pvc, bank in guards:
         result, outgoing, out_pvc, ports, error = common.invoke(
             exe, OUT, 'guard_%s' % row['label'], ram, dict(state, carry=2), pvc, bank, resources,
             stop=phase['stop_pc'], external=row['fixture']['external'])
+        if row['label'] in SUPERSEDED_GUARDS:
+            if not result['ok']:
+                assert {k: result[k] for k in common.STATE_KEYS} == dict(state, carry=2) and outgoing == ram
+            superseded.append(dict(label=row['label'], native_guard=phase['guard'], CPP_now_ok=result['ok'],
+                                   CPP_now_error=error.strip(), CPP_now_pc=hex(result['pc'])))
+            continue
         assert not result['ok'], (row['label'], 'C++ accepted the native guard input', hex(result['pc']))
         assert error.strip() == guard_errors[row['label']], (row['label'], error.strip())
         assert {k: result[k] for k in common.STATE_KEYS} == dict(state, carry=2)
@@ -596,7 +605,7 @@ def compare_guards(exe, guards, resources, guard_errors):
         assert ports == MARKER and result['external_reads'] == 0x12345678 and result['status'] == 1
         rows.append(dict(label=row['label'], native_guard=phase['guard'], checked_API_error=error.strip(),
                          all_API_outputs_preserved=True, native_fault_rollback_equivalence_claimed=False))
-    return rows
+    return rows, superseded
 
 
 def expected_pc_error(close_instructions, pc):
@@ -629,17 +638,17 @@ def negatives(exe, base, a698_starts, close_instructions, resources):
     for pc in interior:
         assert expected_pc_error(close_instructions, pc) == UNSUPPORTED_CLOSE
         reject('interior_direct_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_CLOSE)
-    reject('boundary_direct_entry_%06x' % A698, base, {'pc': A698}, expected=UNSUPPORTED_MACHINE)
-    outside = (0x9ee6, 0xa69a, 0xa6da, 0xc2fa, 0xc2fc)
+    # a698/a69a/a6da are executed by the nested core now (superseded as unsupported-PC negatives); these still have none.
+    for pc in (0xa63c, 0xe84d6, 0xc00468, 0xc0046e, 0x1a73c):
+        reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_MACHINE)
+    outside = (0x9ee6, 0xc2fa, 0xc2fc)
     for pc in outside:
         assert expected_pc_error(close_instructions, pc) == UNSUPPORTED_MACHINE
         reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_MACHINE)
     # a698 reached from the native nested rows' step start with any other stop: full rollback; positive control with stop a698.
     assert a698_starts
     for label, step, start in a698_starts:
-        for stop in NEG_STOPS:
-            reject('a698_reached_via_%s_step%d_with_stop_%06x' % (label, step, stop), start, stop=stop,
-                   expected=UNSUPPORTED_MACHINE)
+        # reached with any other stop: a698 is executed by the nested core now, so no unsupported-PC rollback (superseded)
         r, s, p, b = start
         result, _, _, _, error = common.invoke(exe, OUT, 'control_a698_%s_%d' % (label, step), r, dict(s, carry=2), p, b,
                                                resources, stop=A698)
@@ -740,8 +749,8 @@ def main():
     ranges = tuple(tuple(r) for r in static['ranges'])
     matches, totals, guards, a698_starts, frames, program_reads, registers_seen = compare(
         exe, rows, report, resources, instructions, close_instructions, program, prefix_end, ranges)
-    guarded = compare_guards(exe, guards, resources, GUARD_ERRORS)
-    assert len(guarded) == 11
+    guarded, guards_superseded = compare_guards(exe, guards, resources, GUARD_ERRORS)
+    assert len(guarded) + len(guards_superseded) == 11 and len(guards_superseded) == 2
     base = prefix_end
     negative, interior_count, outside_count = negatives(exe, base, a698_starts, close_instructions, resources)
     bcs = bcs_known_carry_controls(exe, base, resources)
@@ -765,7 +774,8 @@ def main():
                   prefix_chain_actual_CPP=dict(prefix_totals, crosschecks=prefix_checks),
                   close_frames=frames,
                   original_program_read_audit=program_reads,
-                  native_guards_checked_API=guarded,
+                  native_guards_checked_API=guarded, native_guards_superseded_by_nested_core=guards_superseded,
+                  negatives_superseded_by_nested_core=['boundary_direct_entry_a698', 'outside_range_entry_a69a', 'outside_range_entry_a6da', 'a698_reached_via_*_with_other_stops'],
                   declared_register_changes_asserted_against_record=[list(x) for x in registers_seen],
                   negatives=negative, negative_count=len(negative) + len(guarded),
                   interior_PCs_rejected=interior_count, outside_range_entries_rejected=outside_count,

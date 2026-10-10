@@ -746,7 +746,7 @@ def main():
                                                       for p in block_walk(union, pc, block_set)))
     assert preserving == sorted(CPP_PRESERVING), [hex(p) for p in preserving]
     cpp_text = (ROOT / 'engine/src/animation_machine.cpp').read_text()
-    section = cpp_text.split('// Card menu save blocks')[1].split('// BTST/BEQ')[0]
+    section = cpp_text.split('// Card menu save blocks')[1].split('// Card menu nested blocks')[0].split('// BTST/BEQ')[0]
     assert sorted(int(x, 16) for x in re.findall(r'case 0x([0-9a-f]+):', section)) == preserving
     for pc, outcomes in totals['single_block'].items():
         walk = block_walk(union, pc, block_set)

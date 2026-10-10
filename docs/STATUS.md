@@ -1981,3 +1981,8 @@
 
 - 같은 작업자 구성. 결과 메뉴 열림·입력·닫기, a698 중첩 복귀(부모 커서 callback D0=7/0), a6da 재그리기, 부모 bf2c→a70a→닫기→c2c8→2a00까지 연결했다(`engine/src/animation_machine_card_menu_nested.cpp`).
 - Native 정상57·guard5 split11605(자연 73프레임 체인 2갈래), C++ 64 row split12293·음성32·zero-step33 일치(보고서 `081d476c…`). 리뷰 0239.
+
+## 2026-10-11 — 카드 메뉴 최종 상태 검증기 정렬과 전체 회귀
+
+- 0236~0239 최종 상태에서 이전 카드 메뉴 검증기의 경계 음성·superseded 기록을 정렬했다(엔진·native 비교 코드 불변). card_child/card_menu/open/input/close/save/nested와 이전 회귀 14종 통과, `make -j4 all test` exit0. 상세는 리뷰 0240.
+- 다음: 480bc 프레임 helper U1~U7 통합(각 단위 검증 완료), F1a stage entry(core 완료, native 관측 중), F1b(core·관측 진행), F1c1/F1c2·F2/F3 계약. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.

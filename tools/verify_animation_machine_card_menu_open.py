@@ -37,7 +37,14 @@ assert len(BLOCK_STARTS) == len(BLOCK_SET) == 202
 CALLER_BCS = (0x9ba6, 0x9bcc, 0x9bea, 0x9c10, 0x9c36, 0x9c54, 0x9c76, 0x9c9c, 0x9cba, 0x9cd8, 0x9cfc, 0x9d22,
               0x9dc0, 0x9dd6, 0xa00c)
 # Contract boundaries (no executor): the stop-reachable ones plus 9f36/a6da/a71a (only reachable through boundaries).
-BOUNDARY_PCS = (0x9e94, 0x9f36, 0xa2be, 0xa406, 0xa662, 0xa6da, 0xa70a, 0xa71a, 0xbd26, 0xe84d6, A63C)
+# Boundaries of the frozen native open observation. Later card menu cores execute most of them now (input: a406 a70a;
+# close: 9e94 a2be a662 c2c8; save: 9f36 a71a bd26; nested: a6da), so a direct entry there is no unsupported-PC
+# negative any more (the errors depend on the entry register state); they stay stop-only boundaries of the native rows
+# and their rollback negatives are superseded (positive stop controls remain). 9fc4 (end of an open range) is an input block.
+BOUNDARY_PCS = (0x9e94, 0x9f36, 0xa2be, A406, A662, 0xa6da, 0xa70a, 0xa71a, 0xbd26, 0xe84d6, A63C)
+EXECUTED_BOUNDARIES = (0x9e94, 0x9f36, 0xa2be, A406, A662, 0xa6da, 0xa70a, 0xa71a, 0xbd26)
+EXECUTED_RANGE_ENDS = (0x9fc4,)
+NEGATIVE_BOUNDARY_PCS = (0xe84d6, A63C, 0xc00468, 0xc0046e, 0x1a73c)      # c00468/c0046e BIOS, 1a73c: no executor anywhere
 STOP_BOUNDARIES = (0x9e94, 0xa2be, A406, A662, 0xa70a, 0xbd26, 0xe84d6, A63C, C2C8)
 OPEN_RANGES = ((0x9b26, 0x9b58), (0x9b58, 0x9bbc), (0x9bbc, 0x9cd4), (0x9cd4, 0x9d3a), (0x9d3a, 0x9e1a), (0x9e1a, 0x9e94),
                (0x9f7c, 0x9fc4), (0xa008, 0xa080), (0xa216, 0xa280), (0xa348, 0xa370), (0xa370, 0xa3e2),
@@ -59,10 +66,12 @@ FLOW_ONLY = cc.FLOW_ONLY
 END_MNEMONICS = ('bra', 'jmp', 'rts', 'bsr', 'jsr', 'beq', 'bne', 'bcc', 'bcs', 'bmi', 'bpl', 'bvc', 'bvs', 'bhi', 'bls',
                  'bge', 'blt', 'bgt', 'ble', 'dbra', 'dbf')
 COND_BRANCH = ('beq', 'bne', 'bcc', 'bcs', 'bmi', 'bpl', 'bvc', 'bvs', 'bhi', 'bls', 'bge', 'blt', 'bgt', 'ble')
+# Native guards that stopped at a406 / c2c8 (no executor then): the input / close cores execute them now, so they are
+# recorded (observed C++ outcome), not counted as negatives.
+SUPERSEDED_GUARDS = ('guard-e5-0-without-stop', 'guard-e5-3-c2c8-without-stop')
 GUARD_ERRORS = {
     'guard-odd-f2-A2': EVEN, 'guard-odd-ee-direct-a348': EVEN, 'guard-odd-descriptor-A3-a3ba': EVEN,
     'guard-odd-descriptor-A3-9b58': EVEN, 'guard-odd-A7': EVEN,
-    'guard-e5-0-without-stop': UNSUPPORTED_MACHINE, 'guard-e5-3-c2c8-without-stop': UNSUPPORTED_MACHINE,
     'guard-a63c-without-stop': UNSUPPORTED_MACHINE, 'guard-d1-ge-10-without-stop': UNSUPPORTED_MACHINE}
 # Rows whose last step ends at a boundary stop (native stop_pc) -> used for the other-stop rollback negatives.
 BOUNDARY_ROWS = {0x9e94: 'desc-flags-0001-9e94', 0xa2be: 'loop-older-f-bit0-byte4-a2be', A406: 'state-e5-0-a406',
@@ -132,7 +141,7 @@ def derived_preserving(instructions):
 def cpp_preserving_cases():
     """The carry-preserving list of the open section in animation_machine.cpp (text parse, compared to the derivation)."""
     text = (ROOT / 'engine/src/animation_machine.cpp').read_text()
-    section = text.split('// Card menu open blocks')[1].split('// BTST/BEQ')[0]
+    section = text.split('// Card menu open blocks')[1].split('// Card menu input blocks')[0].split('// BTST/BEQ')[0]
     return sorted(int(x, 16) for x in re.findall(r'case 0x([0-9a-f]+):', section))
 
 
@@ -430,11 +439,19 @@ def chain_consistency(report, rows, ends, cpp_out, step_info, push_end, totals):
 
 def compare_guards(exe, guards, resources):
     rows = []
+    superseded = []
     for row, phase, ram, state, pvc, bank, step in guards:
         stop = phase['stop_pc']
         result, outgoing, out_pvc, ports, error = common.invoke(
             exe, OUT, 'guard_%s' % row['label'], ram, dict(state, carry=2), pvc, bank, resources,
             stop=stop, external=row['fixture']['external'])
+        if row['label'] in SUPERSEDED_GUARDS:
+            assert error.strip() != UNSUPPORTED_MACHINE or result['pc'] != phase['outgoing']['pc'], row['label']
+            if not result['ok']:
+                assert {k: result[k] for k in common.STATE_KEYS} == dict(state, carry=2) and outgoing == ram
+            superseded.append(dict(label=row['label'], native_guard=phase['guard'], CPP_now_ok=result['ok'],
+                                   CPP_now_error=error.strip(), CPP_now_pc=hex(result['pc'])))
+            continue
         assert not result['ok'], (row['label'], 'C++ accepted the native guard input', hex(result['pc']))
         assert error.strip() == GUARD_ERRORS[row['label']], (row['label'], error)
         assert {k: result[k] for k in common.STATE_KEYS} == dict(state, carry=2)
@@ -442,7 +459,7 @@ def compare_guards(exe, guards, resources):
         assert ports == MARKER and result['external_reads'] == 0x12345678 and result['status'] == 1
         rows.append(dict(label=row['label'], native_guard=phase['guard'], checked_API_error=error.strip(),
                          all_API_outputs_preserved=True, native_fault_rollback_equivalence_claimed=False))
-    return rows
+    return rows, superseded
 
 
 def expected_pc_error(instructions, pc):
@@ -456,7 +473,8 @@ def expected_pc_error(instructions, pc):
 def interior_pcs(instructions):
     pcs = []
     for pc in sorted(instructions):
-        if in_ranges(pc, OPEN_RANGES) and pc not in BLOCK_SET and pc != A63C:
+        # c1ea (BCC after BSR bd26) is a block of the open core now (save unit): superseded, not an interior negative.
+        if in_ranges(pc, OPEN_RANGES) and pc not in BLOCK_SET and pc != A63C and pc != 0xc1ea:
             pcs.append(pc)
     return pcs
 
@@ -485,9 +503,10 @@ def negatives(exe, rows, starts, instructions, push_end, resources):
     for pc in interior:
         kind = 'bundled_branch' if pc in branches else 'interior'
         reject('%s_direct_entry_%06x' % (kind, pc), base, {'pc': pc}, expected=expected_pc_error(instructions, pc))
-    for pc in sorted(set(BOUNDARY_PCS) | {C2C8}):
+    for pc in sorted(NEGATIVE_BOUNDARY_PCS):
         reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_MACHINE)
-    ends_outside = sorted({high for _low, high in OPEN_RANGES} - set(BLOCK_STARTS) - set(BOUNDARY_PCS) - {C2C8})
+    ends_outside = sorted({high for _low, high in OPEN_RANGES} - set(BLOCK_STARTS) - set(BOUNDARY_PCS) - {C2C8}
+                          - set(EXECUTED_RANGE_ENDS))
     for pc in ends_outside:
         reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_MACHINE)
     # Each stop boundary reached from the native boundary row's final step with any other stop: full rollback.
@@ -499,6 +518,8 @@ def negatives(exe, rows, starts, instructions, push_end, resources):
         start = starts[(label, last)]
         assert row['phases'][-1]['outgoing']['pc'] == boundary
         others = [0xff000, 0x2ac2] + [b for b in (A406, 0xbd26) if b != boundary]
+        if boundary in EXECUTED_BOUNDARIES or boundary == C2C8:
+            others = []     # executed by a later card menu core now: not an unsupported-PC rollback (superseded)
         for stop in others:
             reject('%06x_reached_via_%s_with_stop_%06x' % (boundary, label, stop), start, stop=stop,
                    expected=UNSUPPORTED_MACHINE)
@@ -612,7 +633,7 @@ def main():
     matches, totals, ends, starts, guards, cpp_out, step_info = compare(
         exe, rows, resources, instructions, push_end, bios_start, set(preserving))
     frames = chain_consistency(report, rows, ends, cpp_out, step_info, push_end, totals)
-    guarded = compare_guards(exe, guards, resources)
+    guarded, guards_superseded = compare_guards(exe, guards, resources)
     negative, interior_count, branch_count, rollback = negatives(exe, rows, starts, instructions, push_end, resources)
     bcs_known = bcs_known_carry_controls(exe, push_end, resources)
     zero = zero_step(exe, push_end, resources)
@@ -633,7 +654,8 @@ def main():
                   actual_CPP=dict(totals, matches=matches),
                   open_frames_C_plus_plus=frames,
                   original_program_read_audit=program_reads,
-                  native_guards_checked_API=guarded, native_guards_superseded=[],
+                  native_guards_checked_API=guarded, native_guards_superseded_by_later_card_menu_cores=guards_superseded,
+                  negatives_superseded_by_later_card_menu_cores=dict(direct_entry_pcs=[hex(x) for x in sorted(set(EXECUTED_BOUNDARIES) | {C2C8})], range_end_pcs=[hex(x) for x in EXECUTED_RANGE_ENDS], boundary_rollback_with_other_stops=[hex(x) for x in sorted(set(EXECUTED_BOUNDARIES))]),
                   native_continuous_control_phases_replayed=control_count,
                   negatives=negative, negative_count=len(negative) + len(guarded),
                   interior_PCs_rejected=interior_count, bundled_branch_PCs_among_interior=branch_count,

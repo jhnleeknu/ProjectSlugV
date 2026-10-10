@@ -6,7 +6,7 @@ previous actual C++ output plus the host changes and declared initial registers/
 recorded in the native fixture. The a29c start state is the actual C++ output of the reviewed
 card-child chain (re-run here), not native registers. 38c8/38e2 (TRAP #f) are stop boundaries only: never executed.
 a370 (opening frame), 9b58 and c2c0 are executed by the card menu open core and verified in
-verify_animation_machine_card_menu_open.py; here they are normal stops. a406, 9e94 and c2c8 are the still unexecuted
+verify_animation_machine_card_menu_open.py; here they are normal stops. a63c (TRAP #f), e84d6 and the BIOS call c00468 are the still unexecuted
 boundaries used for the unsupported-PC negatives.
 """
 import json
@@ -32,8 +32,8 @@ BLOCK_STARTS = (0xa29c, 0xa0a0, 0xa0c2, 0xa0c4, 0xa0f8, 0xa104, 0xa158, 0xa15e, 
                 0xc2a8, 0xa2b8, 0xa2bc, 0xc2b4, 0xc2ba)
 BOUND_BRANCH_PCS = (0xa0be, 0xa0f4, 0xa154, 0xa16a, 0xa172, 0xa17a, 0xa186, 0xa1a2, 0xa1b6, 0xa1c8,
                     0x3874, 0x3880, 0x38c4, 0x38de, 0x38f0, 0x38fc)
-A406, B9E94, C2C8 = 0xa406, 0x9e94, 0xc2c8
-BOUNDARY_PCS = (T38C8, T38E2, A406, B9E94, C2C8)       # no executor (a370/9b58/c2c0 execute in the open core)
+A63C, E84D6, BIOS_C00468 = 0xa63c, 0xe84d6, 0xc00468
+BOUNDARY_PCS = (T38C8, T38E2, A63C, E84D6, BIOS_C00468)       # no executor (a370/9b58/c2c0 open core, a406.. input core, 9e94/a2be/a662/c2c8 close core, bd26/9f36/a71a save core, a698.. nested core)
 MENU_RANGES = ((0xa0a0, 0xa1e2), (0xa29c, 0xa2be), (0x386e, 0x3902), (0xc2a8, 0xc2c0))
 CARRY_PRESERVING = (0xa0c2, 0xa158, 0xa17e, 0x3878, 0x38a4, 0xc2a8, 0xa2bc, 0xc2ba)
 CARD_CHILD_CHAIN_STEP = 24      # 'child-frame-borrow-c290+after-c2a2' -> stop a29c
@@ -360,7 +360,8 @@ def compare_guards(exe, guards, resources, guard_errors):
 
 
 def menu_interior_pcs(instructions):
-    skip = set(BLOCK_STARTS) | set(BOUND_BRANCH_PCS) | set(BOUNDARY_PCS)
+    # a100 (BSR 9e1a, nested push return) is a block of the card menu core now: superseded, no longer an interior negative.
+    skip = set(BLOCK_STARTS) | set(BOUND_BRANCH_PCS) | set(BOUNDARY_PCS) | {0xa100}
     pcs = []
     for pc in sorted(instructions):
         if any(low <= pc < high for low, high in MENU_RANGES) and pc not in skip:
@@ -393,7 +394,7 @@ def negatives(exe, starts, instructions, resources, neg_errors):
         reject('interior_direct_entry_%06x' % pc, base, {'pc': pc})
     for pc in BOUNDARY_PCS:
         reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc})
-    for pc in (0xa1e2, 0xa2be, 0x3902, 0xa09e):
+    for pc in (0xa1e2, 0x3902, 0xa09e):      # a2be is executed by the close core now (superseded)
         reject('outside_range_entry_%06x' % pc, base, {'pc': pc})
     # a370 executes now (open core): with a stop that is never reached the opening frame returns to the dispatcher,
     # which continues into the odd JSR target of the next object; the whole transaction rolls back.
@@ -535,6 +536,7 @@ def main():
                   actual_CPP=dict(totals, matches=matches),
                   original_program_read_audit=program_reads,
                   native_guards_checked_API=guarded, native_guards_superseded_by_card_menu_open_core=superseded,
+                  negatives_superseded_by_later_card_menu_cores=dict(interior_direct_entry_a100='block of the card menu core (BSR 9e1a) now', outside_range_entry_a2be='executed by the close core', boundary_direct_entry_a662_9e94_c2c8_a406='executed by the input/close cores'),
                   native_continuous_control_phases_replayed=control_count,
                   negatives=negative, negative_count=len(negative) + len(guarded),
                   interior_PCs_rejected=interior_count, zero_step=zero, boundary_zero_step=boundary_zero,
@@ -548,7 +550,7 @@ def main():
                   limits=['Controlled fixtures; frame re-entry is a declared PC-only change, not a natural scheduler, IRQ or VBlank.',
                           'No banked descriptor exists in ROM (bank_descriptor_search of both 2/3 banks: 0 terminating descriptors); only banked strings (title/item pointers read through the current bank) are covered.',
                           'Carry is a source-opcode classification (native SR is never read), not a native C measurement; ADDA/SUBA are conservatively Unknown.',
-                          '38c8/38e2 (TRAP #f) are stop boundaries only, never executed; a370 (opening frame), 9b58 and c2c0 execute in the card menu open core (verify_animation_machine_card_menu_open.py) and are only normal stops here; a406 and later (input, cursor selection, c2c8 onward) are out of scope.',
+                          '38c8/38e2 (TRAP #f) are stop boundaries only, never executed; a370 (opening frame), 9b58 and c2c0 execute in the card menu open core (verify_animation_machine_card_menu_open.py) and are only normal stops here; a406..a5d0 (input), 9e94/a2be/a662/c2c8 (close), bd26/9f36/a71a (save) and a698.. (nested) are executed by later card menu cores; a63c, e84d6 and c00468 have no executor and are out of scope.',
                           'Declared initial registers (A0/A5/A7/D0/D1/D3/D7), declared bank state and declared RAM fixtures are inputs, not original-measured preparation; the rest starts from the actual C++ card-child output.',
                           'Native observation artifacts are audited by hash/trace consistency, not re-executed here.',
                           'Checked failures preserve API outputs, not original CPU fault rollback; bundled-branch/interior direct entries have no native guard (API-only rejection).'])

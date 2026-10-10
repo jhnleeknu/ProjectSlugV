@@ -47,6 +47,10 @@ OPEN_CHAIN_LAST_STEP = 30
 DECLARED_INITIAL = {'guard-odd-A7-a43e': ('a7',), 'guard-odd-A7-2ac0': ('a7',)}   # odd A7 is the declared guard fixture
 A662, BD26, H9000, HC2C0, HFFF00 = 0xa662, 0xbd26, 0x9000, 0xc2c0, 0xfff00
 BOUNDARY_PCS = (A662, BD26)
+# a662 is executed by the close core and bd26 by the save core now: they stay stop boundaries of the frozen native
+# observation (stop controls below) but are no longer unsupported-PC negatives. These PCs still have no executor.
+NEGATIVE_BOUNDARY_PCS = (0xe84d6, 0xa63c, 0xc00468, 0xc0046e, 0x1a73c)
+SUPERSEDED_GUARDS = ('guard-a662-without-stop', 'guard-bd26-without-stop')
 HOOK_STOP_PCS = (H9000, HC2C0, HFFF00)
 INPUT_BLOCK_STARTS = (
     0x9fc4, 0x9ff4, 0xa1ee, 0xa406, 0xa412, 0xa416, 0xa41a, 0xa424, 0xa42a, 0xa42c, 0xa43e, 0xa442, 0xa444, 0xa44e,
@@ -637,10 +641,17 @@ def compare(exe, program, report, rows, resources, instructions, bios_start):
 
 def compare_guards(exe, guards, resources, guard_errors, native_guards):
     rows = []
+    superseded = []
     for row, phase, ram, state, pvc, bank in guards:
         result, outgoing, out_pvc, ports, error = run(
             exe, 'guard_%s' % row['label'], ram, dict(state, carry=2), pvc, bank, resources,
             stop=phase['stop_pc'], external=row['fixture']['external'], keep=True)
+        if row['label'] in SUPERSEDED_GUARDS:
+            if not result['ok']:
+                assert {k: result[k] for k in STATE_KEYS} == dict(state, carry=2) and outgoing == ram
+            superseded.append(dict(label=row['label'], native_guard=phase['guard'], CPP_now_ok=result['ok'],
+                                   CPP_now_error=error.strip(), CPP_now_pc=hex(result['pc'])))
+            continue
         assert not result['ok'], row['label']
         assert error.strip() == guard_errors[row['label']], (row['label'], error)
         assert {k: result[k] for k in STATE_KEYS} == dict(state, carry=2)
@@ -649,7 +660,7 @@ def compare_guards(exe, guards, resources, guard_errors, native_guards):
         assert phase['guard'] == native_guards[row['label']]
         rows.append(dict(label=row['label'], native_guard=phase['guard'], checked_API_error=error.strip(),
                          all_API_outputs_preserved=True, native_fault_rollback_equivalence_claimed=False))
-    return rows
+    return rows, superseded
 
 
 def interior_pcs(instructions):
@@ -682,15 +693,11 @@ def negatives(exe, base, starts, instructions, resources, neg_errors):
     interior = interior_pcs(instructions)
     for pc in interior:
         reject('interior_direct_entry_%06x' % pc, base, {'pc': pc})
-    for pc in BOUNDARY_PCS + (HFFF00, ):
+    for pc in NEGATIVE_BOUNDARY_PCS + (HFFF00, ):
         reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc})
     a662 = starts[('guard-a662-without-stop', 'guard')]
     bd26 = starts[('guard-bd26-without-stop', 'guard')]
     hook = starts[('guard-hook-target-without-stop', 'guard')]
-    for stop in (0x2ac2, BD26, HFFF00, HC2C0):
-        reject('a662_reached_with_stop_%06x' % stop, a662, stop=stop)
-    for stop in (0x2ac2, A662, HFFF00, HC2C0):
-        reject('bd26_reached_with_stop_%06x' % stop, bd26, stop=stop)
     for stop in (0x2ac2, A662, BD26, HC2C0):
         reject('hook_fff00_reached_with_stop_%06x' % stop, hook, stop=stop)
     # Positive controls: the same inputs succeed when the matching boundary is the stop.
@@ -763,8 +770,7 @@ GUARD_ERRORS = {
     'guard-odd-A7-a43e': EVEN,
     'guard-odd-A7-2ac0': EVEN,
     'guard-hook-target-without-stop': UNSUPPORTED_MACHINE,
-    'guard-bd26-without-stop': UNSUPPORTED_MACHINE,
-    'guard-a662-without-stop': UNSUPPORTED_MACHINE}
+    }
 
 
 class Errors(dict):
@@ -845,7 +851,7 @@ def main():
     base = ends[(chain_label, OPEN_CHAIN_LAST_STEP)]
     assert base[1]['pc'] == 0x2ac2
     native_guards = {g['label']: g['guard'] for g in report['guard_reports']}
-    guarded = compare_guards(exe, guards, resources, GUARD_ERRORS, native_guards)
+    guarded, guards_superseded = compare_guards(exe, guards, resources, GUARD_ERRORS, native_guards)
     negative, controls, interior_count = negatives(exe, base, starts, instructions, resources, NEG_ERRORS)
     negative.append(odd_jump_negative(exe, starts, rows, resources, NEG_ERRORS, covered))
     zero = zero_step(exe, base, resources)
@@ -875,6 +881,8 @@ def main():
                   countdown=dict(frames=len(chain_w7e), first=chain_w7e[0], last=chain_w7e[-1],
                                  equals_native_w7e_after_each_frame=True),
                   native_guards_checked_API=guarded,
+                  native_guards_superseded_by_later_card_menu_cores=guards_superseded,
+                  negatives_superseded_by_later_card_menu_cores=dict(direct_entry_pcs=[hex(A662), hex(BD26)], reached_with_other_stops=['a662_reached_with_stop_*', 'bd26_reached_with_stop_*']),
                   negatives=negative, positive_controls=controls, negative_count=len(negative) + len(guarded),
                   interior_PCs_rejected=interior_count, zero_step=zero, boundary_zero_step=boundary_zero,
                   carry=dict(
