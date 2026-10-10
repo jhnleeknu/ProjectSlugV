@@ -715,8 +715,9 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation stage entry PC");++inside;if(in_list(BUNDLED,25,pc))++bundled;}
  assert(even==2804&&inside==2658&&bundled==25);
  for(unsigned int i=0;i<25;++i)assert(!is_start(BUNDLED[i]));
- // Unrouted neighbours of the ranges (the other neighbours belong to existing units).
- const std::uint32_t outside[]={0x47a92,0x72ee,0x72fa,0x19a00,0x1a3c6,0xe8a1a,0xe8a3a,0x477a0,0xddf98,0xddfa4,0x9068,0x4e26c,0xc3ce};
+ // Unrouted neighbours of the ranges (the other neighbours belong to existing units; 47a92 and 477a0 are now stage area
+ // F1c2 PCs, and the unrouted 5f018 and 5f01a, outside every unit contract, stand in for them).
+ const std::uint32_t outside[]={0x5f018,0x72ee,0x72fa,0x19a00,0x1a3c6,0xe8a1a,0xe8a3a,0x5f01a,0xddf98,0xddfa4,0x9068,0x4e26c,0xc3ce};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x47a95,0x72f1,0x1a5a5,0xe909d,0x362b};
