@@ -2016,3 +2016,9 @@
 - 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
 - 1a0b6 script opcode 20개, 19772, 1a086/1a09e/19e60, 3d7e, e89fa, 1a470을 연결했다(`engine/src/animation_machine_script_placement.cpp`). C++가 scene_frame 594 frame 1a73c→RTS 전체를 native와 일치시켰다.
 - 단위 커밋 상태에서 해당 검증기 통과(보고서 `bdb51d12…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0245. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U6 입력
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 49b0c 입력 core와 알려진 callback(JSR (A1))을 연결했다(`engine/src/animation_machine_input.cpp`). 상위 BYTE가 0이 아닌 JSR (A1) 대상과 내부 49e36은 checked 오류(의도된 차이).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `f74a5d8e…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0246. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.

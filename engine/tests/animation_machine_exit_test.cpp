@@ -17,6 +17,9 @@ void reject(Bytes ram,ms5::AnimationMachineState s,std::uint32_t stop,const char
  assert(o.error.find(message)!=std::string::npos&&ram==old&&same(s,before)&&dev.pvc==o.dev.pvc&&dev.bank_base==o.dev.bank_base);
  assert(o.reads==99&&o.status==ms5::AnimationMachineWaiting&&o.ports.size()==1&&o.ports[0].address==0xdeadbeef&&o.ports[0].value==0x87&&o.ports[0].size==1);
 }
+// Synthetic physical row for the U6 default mask 49ab0 (contract bytes 10 20 40 80).
+Out mask_row(){Out o;ms5::PhysicalRomResource r;r.source_rom_offset=0x49ab0;r.data.push_back(0x10);r.data.push_back(0x20);r.data.push_back(0x40);r.data.push_back(0x80);
+ o.physical.push_back(r);return o;}
 void lookup(Out&o){ms5::PhysicalRomResource r;r.source_rom_offset=0x30ec;for(unsigned int i=0;i<8;++i)r.data.push_back(static_cast<std::uint8_t>(0x60+i));o.physical.push_back(r);}
 void preserving(){const std::uint32_t jsr[][3]={{0x47eb2,0x16ed2,0x47eb8},{0x47ee0,0x49f8c,0x47ee6},{0x47ef8,0x1c63c,0x47efe},{0x47f42,0x48398,0x47f46},{0x47f4e,0x3af8,0x47f54},{0x47f58,0x3af8,0x47f5e},{0x47f62,0x3af8,0x47f68},{0x47f68,0x3c84,0x47f6e},{0x47f6e,0x3d44,0x47f74},{0x47f7c,0x3af8,0x47f82},{0x47f96,0x8c16,0x47f9c},{0x47fb8,0x8c16,0x47fbe},{0x47fbe,0x4e24e,0x47fc4},{0x47fc4,0xca7e,0x47fca},{0x1c642,0x289e,0x1c648},{0x1c65e,0x289e,0x1c664},{0x48398,0x30f4,0x4839e},{0x3d48,0x3ac8,0x3d4c}};
  const std::uint32_t rts[]={0x1c674,0x483a8,0x3102,0x3c88,0x4e252,0xca82,0x8ca4,0x8cc8};const std::uint32_t jumps[][2]={{0x47ed6,0x47edc},{0x47f3e,0x480bc},{0x47f46,0x47c5a},{0x1c63c,0x1c642},{0x1c658,0x1c65e}};
@@ -67,9 +70,12 @@ void errors(){Bytes ram(65536,0);put(ram,SP,4,STOP);ms5::AnimationMachineState s
  s=state(0x8c16);s.a[7]=0x107dc8;s.d[0]=1;s.d[1]=2;s.d[2]=3;s.d[3]=32;reject(ram,s,STOP,"unsupported animation machine PC");
  s=state(0x47f74);s.a[7]=0x100002;reject(ram,s,STOP,"RAM");
  s=state(0x47f0a);s.a[6]=0x102001;reject(ram,s,STOP,"even WORD/LONG");
- s=state(0x47fa8);s.a[6]=SP-0x7a;put(ram,SP,4,1);reject(ram,s,STOP,"unsupported animation machine PC");
+ s=state(0x47fa8);s.a[6]=SP-0x7a;put(ram,SP,4,1);reject(ram,s,STOP,"unsupported animation machine PC",mask_row());
  s=state(0x47f8a);reject(ram,s,STOP,"unsupported animation exit PC"); // Z-only BNE is not an arbitrary entry.
- s=state(0x47fca);reject(ram,s,STOP,"unsupported animation machine PC");
+ // 47fa8/47fca reach 480bc; 49b0c (U6) reads the default mask row 49ab0 and returns to 480cc, which stops at the 4aa88
+ // boundary. Without that row the same paths fail on the ROM read.
+ s=state(0x47fca);reject(ram,s,STOP,"unsupported animation machine PC",mask_row());
+ s=state(0x47fca);reject(ram,s,STOP,"program bus ROM");
 }
 }
 int main(){preserving();helpers();palette();entry_and_countdown();sequence();errors();std::cout<<"animation_machine_exit_test PASS "<<calls<<" API invocations\n";}
