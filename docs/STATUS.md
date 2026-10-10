@@ -1992,3 +1992,9 @@
 - 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
 - 480bc shell, 47642/47656 player flags, 6f1c2, b4a2a region boxes, 4701e/46f52 spatial bins, 2efa6/3c44 loop sound을 live RAM/A7로 연결했다(`engine/src/animation_machine_frame_helpers.cpp`). 경계 1a73c/49b0c/4aa88/e8a48, TRAP #15 4939c.
 - 단위 커밋 상태에서 해당 검증기 통과(보고서 `737f1c0d…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0241. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U2 장면 core
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 1a73c 장면 core, 1a2b4 조건, 1a26a/1a442 gate, 1a526, 카메라 19b96/19a40/19ac8, 19d08/19d98, 19978, 1a3d6, motion null 경로를 연결했다(`engine/src/animation_machine_scene_core.cpp`).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `c2c62cc2…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0242. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
