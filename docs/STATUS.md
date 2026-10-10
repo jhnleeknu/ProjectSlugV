@@ -1966,3 +1966,8 @@
 - 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기). Codex Astra/Sol 미사용(호출 불가).
 - a406 입력 프레임, bf2c 7e 카운트다운·사건 3, 10fdb6/10fdb7 mask, 입력 edge bit 순서, 사건 전달 a44e/a5aa, a70a 효과음→a1ee -e5=2를 live RAM/A7로 연결했다(`engine/src/animation_machine_card_menu_input.cpp`).
 - Native 정상92·guard7 split35786, C++ 99조건 split35779·음성128·zero-step180 일치(보고서 `383e7d4f…`). 단위 커밋에서는 해당 검증기만 실행했고 이전 검증기 경계 이동·전체 회귀는 0239 뒤 정렬 커밋에 기록한다. 리뷰 0236.
+
+## 2026-10-11 — 카드 메뉴 닫기(a662/a2be/9e94)와 자식·부모 종료
+
+- 같은 작업자 구성. a662 높이 축소(6(A2)<<6), 행 지우기(a018 known C), 9e94, a67e pop, c2c8 페이드·7e=14 타이머, 부모 62=ff·2a00 제거를 연결했다(`engine/src/animation_machine_card_menu_close.cpp`). a344 ADDQ는 source 분류에 맞춰 carry Unknown.
+- Native 정상71·guard11, C++ 82조건 split7886·음성98·zero-step93 일치(보고서 `8f4255c5…`). 2a00 cleanup은 선언 fixture(1d/6c/104ca4)가 필요하다. 리뷰 0237.

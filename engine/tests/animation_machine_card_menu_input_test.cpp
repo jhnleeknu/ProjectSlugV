@@ -128,8 +128,7 @@ void natural(){
    0xa442,0xa444,0xa44e,0xa458,0x9b3e,0x9b26,0x9b42,0x9b54,0xbf94,0xa73e,0xa754,0xbf9a,0xbfa8,0xbfb0,0xa70a,0x3af8,0xa714,0xa1ee,0xa46a,
    0xa44e,0xa472,0xa488,0xa496,0xa4b8,0xa4da,0xa4fc,0xa51e,0xa540,0xa562,0xa5ce,0xc2c0,0xc2c6,RETURN};
   State end=s;splits(start,old,ram,end,o.ports,walk,sizeof(walk)/sizeof(walk[0]),RETURN);}
- // Next re-entry: a3e2 -e5=2 -> a662 (close, no executor). Any other stop rolls back.
- {Bytes r=ram;State t=s;inputs(r,0,0,0,0);t.pc=0x2ab8;reject(r,t,RETURN,"unsupported animation machine PC",&p);}
+ // Next re-entry: a3e2 -e5=2 -> a662 (now the close unit, its own test); the stop at its entry succeeds.
  o=Out();assert(frame(ram,s,0,0,0,0,CLOSE,o)&&s.pc==CLOSE&&quiet(o)&&s.a[7]==SP-4&&get(ram,SP-4,4)==0xc2c0&&s.a[2]==TOP&&get(ram,0x107f12,4)==TOP);
 }
 // Input frame from the first-frame snapshot; stop at the given PC.
@@ -178,9 +177,8 @@ void moves(){
  const std::uint32_t bits[]={0x04,0x08,0x20},events[]={1,2,4};
  for(unsigned int i=0;i<3;++i){Bytes r;State t;Out a;assert(from_first(1,0,bits[i],0,0xbf94,r,t,a)&&quiet(a)&&(t.d[0]&65535U)==events[i]&&get(r,TOP+0xe,1)==0xff);
   a=Out();assert(run(r,t,RETURN,a,&p)&&quiet(a)&&get(r,0x104d8c,2)==2&&get(r,CHILD+0x7e,2)==0x012a&&get(r,CHILD+0x80,1)==0&&get(r,E5,1)==0&&get(r,E6,1)==1);}
- // Select (bit4, event 3) on NO: 80=ff, sound 1a5b, -e5=2; the next re-entry stops at a662.
+ // Select (bit4, event 3) on NO: 80=ff, sound 1a5b, -e5=2; the next re-entry reaches a662 (close unit).
  {Bytes r;State t;Out a;assert(from_first(1,0,0x10,0,RETURN,r,t,a)&&quiet(a)&&get(r,CHILD+0x80,1)==0xff&&get(r,E5,1)==2&&get(r,0x104d84,2)==0x1a5b&&get(r,E6,1)==1);
-  {Bytes r2=r;State t2=t;inputs(r2,0,0,0,0);t2.pc=0x2ab8;reject(r2,t2,RETURN,"unsupported animation machine PC",&p);}
   a=Out();assert(frame(r,t,0,0,0,0,CLOSE,a)&&t.pc==CLOSE&&quiet(a));}
  // Select on YES (after the up frame): c1c4 event 3 -> JSR bd26 (BIOS card, no executor).
  {Bytes r=up;State t=up_state;Out a;inputs(r,0,1,0,0x10);t.pc=0x2ab8;
@@ -235,7 +233,7 @@ const std::uint32_t TABLE[][2]={
  {0xbf34,0xbf48},{0xbf3e,0x9ff4},{0xbf48,0xbf5c},{0xbf50,0xa70a},{0xbf56,0xbf8e},{0xbf5c,0xbf6a},{0xbf6a,0xbf76},{0xbf72,0xbf76},
  {0xbf76,0xbf82},{0xbf82,0xbf8e},{0xbf8a,0xbf8e},{0xbf8e,0x9fc4}};
 const unsigned int ROWS=sizeof(TABLE)/sizeof(TABLE[0]);
-const std::uint32_t BOUNDARY[]={CLOSE,CARD};
+const std::uint32_t BOUNDARY[]={CLOSE,CARD}; // a662 runs in the close unit; zero-step still holds.
 // Blocks made only of BSR/JSR/JMP/BRA/MOVEA/BTST/BSET/BCLR and conditional branches (capstone classification).
 const std::uint32_t KEEP[]={0xa412,0xa41a,0xa42a,0xa442,0xa488,0xa562,0xa566,0xa570,0xa574,0xa57e,0xa714,0xbf50,0xbf8e};
 bool member(const std::uint32_t*list,unsigned int n,std::uint32_t pc){for(unsigned int i=0;i<n;++i)if(list[i]==pc)return true;return false;}
@@ -299,7 +297,7 @@ void errors(){
  const std::uint32_t bundled[]={0xa420,0xa40a,0xa40e,0xa49a,0xa4a2,0xa4aa,0xa4ac,0xa4ce,0xa556,0xbf30,0xbf36,0xbf3a,0xbf64,0xbf68,0xbf6e,0xa5b0,0xa454};
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){Bytes ram;State s;generic(bundled[i],ram,s);reject(ram,s,STOP,"unsupported animation card menu input PC");}
  // Neighbours outside the routed ranges and the boundaries.
- const std::uint32_t outside[]={0x9fce,0x9ff2,0x9ffe,0xa1e2,0xa1ec,0xa1fa,0xa708,0xa71a,0xbf2a,CLOSE,CARD};
+ const std::uint32_t outside[]={0x9fce,0x9ff2,0x9ffe,0xa1e2,0xa1ec,0xa1fa,0xa708,0xa71a,0xbf2a,0xa698,CARD};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0xa407,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
