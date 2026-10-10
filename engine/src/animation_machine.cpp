@@ -174,6 +174,16 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x19734:case 0x19738:case 0x1973a:case 0x1974c:case 0x1974e:case 0x19752:case 0x19756:case 0x1981a:case 0x19830:case 0x19870:
     case 0x19874:case 0x19878:case 0x19894:case 0x1989a:case 0x198b4:case 0x198b8:case 0x198bc:case 0x198d8:case 0x198de:case 0x19910:
     case 0x19924:
+    // Scene update (480bc U4) blocks: BSR/JSR/JMP/BRA/RTS/LEA/MOVEA/MOVEM/BTST/BCLR/BSET Dn and conditional
+    // branches only, including the eight 19e8a BRA.W slots and the 19e86 indexed JMP. U4 has no carry consumer
+    // and no known-carry producer; MOVE/MOVEQ/CLR/ADD/SUB/SUBX/OR/AND/MULU/MULS/ASR/LSL/ROL/NEG/SWAP/TST/CMPI/
+    // CMPA blocks and the DBRA blocks (1b0cc 1b0d6) stay Unknown.
+    case 0x1728c:case 0x18662:case 0x186b2:case 0x18700:case 0x19e6e:case 0x19e70:case 0x19e7a:case 0x19e84:case 0x19e86:case 0x19e8a:
+    case 0x19e8e:case 0x19e92:case 0x19e96:case 0x19e9a:case 0x19e9e:case 0x19ea2:case 0x19ea6:case 0x19edc:case 0x19eee:case 0x19f00:
+    case 0x19f12:case 0x19f46:case 0x19f4a:case 0x19f54:case 0x19f74:case 0x19f80:case 0x19f86:case 0x19f8a:case 0x19fc0:case 0x19ff0:
+    case 0x1a018:case 0x1a046:case 0x1a060:case 0x1a7f4:case 0x1a808:case 0x1a830:case 0x1a844:case 0x1a86c:case 0x1a880:case 0x1a8a8:
+    case 0x1a8bc:case 0x1a8ce:case 0x1a8de:case 0x1a8ee:case 0x1a8fe:case 0x1a90e:case 0x1afec:case 0x1b00e:case 0x1b014:case 0x1b07a:
+    case 0x1b0a8:case 0x1b0b8:case 0x1b0c4:case 0x1b0de:case 0x1b126:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -355,6 +365,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x1a73c && next.pc<0x1a7a8))ok=animation_scene_core_block(c);
             else if ((next.pc>=0x18c06 && next.pc<0x19768) || (next.pc>=0x19812 && next.pc<0x19832) ||
                 (next.pc>=0x19844 && next.pc<0x198ee) || (next.pc>=0x19910 && next.pc<0x19938))ok=animation_motion_walk_block(c);
+            else if ((next.pc>=0x1a7a8 && next.pc<0x1a910) || (next.pc>=0x1724c && next.pc<0x17292) ||
+                (next.pc>=0x43ea8 && next.pc<0x43eb8) || (next.pc>=0x1afda && next.pc<0x1b128) ||
+                (next.pc>=0x19e64 && next.pc<0x1a07a) || (next.pc>=0x18656 && next.pc<0x18702))ok=animation_scene_update_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

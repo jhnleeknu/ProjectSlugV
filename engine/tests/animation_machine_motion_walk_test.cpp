@@ -619,7 +619,7 @@ void widths(){
   assert(run(ram,s,STOP,o)&&quiet(o)&&s.a[1]==0&&s.a[7]==SP+4);}}
 }
 // U2 -> U3 -> U2 split runs from the natural seed shape: the U3 entries are ordinary stops and the frame
-// reaches the 1a7a8 boundary with the same result continuous or split.
+// reaches the 1a7a8 (U4 entry) stop with the same result continuous or split.
 Bytes natural_ram(){
  Bytes ram=zero_ram();
  putf(ram,0x541e,2,0x0100);putf(ram,0x5420,2,0x0080);putf(ram,0x5440,2,0x0200);putf(ram,0x5442,2,0x0040);
@@ -640,7 +640,8 @@ void handover(){
  Bytes ram=natural_ram();State s=state(0x1a73c);
  for(unsigned int i=0;i<sizeof(stops)/sizeof(stops[0]);++i){Out q;assert(run(ram,s,stops[i],q)&&s.pc==stops[i]);}
  assert(same(s,w)&&ram==whole);
- // The 1a0b6 script boundary is not reached (null script): rollback at 1a7a8, including the PVC writes.
+ // The 1a0b6 script boundary is not reached (null script): the frame runs through U4 (1a7a8) to its RTS and rolls
+ // back at the STOP return address, including the PVC writes.
  reject(natural_ram(),state(0x1a73c),0x1a0b6,"unsupported animation machine PC");
  // A non-null script with an open gate stops at 1a0b6 before any U3 walk.
  {Bytes r=natural_ram();putf(r,0x5412,4,0x10eb00);putf(r,0x5416,2,3);put(r,0x10eb00,2,1);State t=state(0x1a73c);Out q;

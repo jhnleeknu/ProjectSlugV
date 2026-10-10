@@ -132,7 +132,7 @@ void errors(){
  put(ram,0x104ca0,2,1);put(ram,0x104c9c,4,0x103001);s=state(0x28ae);s.d[0]=0;reject(ram,s,STOP,"even WORD/LONG");
  const std::uint32_t bundled[]={0x4806e,0x48094,0x480b0,0xc38a,0x28ba,0x28c2,0x28d6,0x48050,0x48064,0xc366,0x28c8,0x2902};
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){s=state(bundled[i]);reject(ram,s,STOP,"unsupported animation fade card PC");}
- const std::uint32_t outside[]={0x1a7a8,0x2aac,0x2ab2,0x2a04,0x2a08,BIOS};
+ const std::uint32_t outside[]={0x1a470,0x2aac,0x2ab2,0x2a04,0x2a08,BIOS}; // 1a470: frame helper U5 boundary (1a7a8 is U4 now)
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){s=state(outside[i]);reject(ram,s,STOP,"unsupported animation machine PC");}
 }
 }

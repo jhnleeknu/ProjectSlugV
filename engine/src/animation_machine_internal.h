@@ -60,5 +60,6 @@ bool animation_card_menu_nested_block(AnimationMachineContext& c);
 bool animation_frame_helpers_block(AnimationMachineContext& c);
 bool animation_scene_core_block(AnimationMachineContext& c);
 bool animation_motion_walk_block(AnimationMachineContext& c);
+bool animation_scene_update_block(AnimationMachineContext& c);
 }
 #endif
