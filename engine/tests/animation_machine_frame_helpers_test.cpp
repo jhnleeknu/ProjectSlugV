@@ -2,7 +2,8 @@
 #include <cassert>
 #include <iostream>
 // 480bc frame helper shell (U1) through run_animation_machine only. All inputs are declared RAM
-// fixtures (no ROM resources are read); the return LONG of each direct entry is declared at SP.
+// fixtures; the return LONG of each direct entry is declared at SP. The only ROM bytes read are the U6 default mask
+// row 49ab0 (contract bytes 10 20 40 80, synthetic physical row) on the paths that now run 49b0c to the 4aa88 boundary.
 namespace {
 typedef std::vector<std::uint8_t> Bytes;
 typedef ms5::AnimationMachineState State;
@@ -25,9 +26,13 @@ bool run(Bytes&ram,State&s,std::uint32_t stop,Out&o){++calls;ms5::ProgramBusStat
  const bool ok=ms5::run_animation_machine(ram,w,bus,s,o.dev,stop,0,o.reads,o.status,o.ports,o.error);if(!ok)std::cerr<<std::hex<<"run error "<<o.error<<" stop "<<stop<<"\n";return ok;}
 // Success: returned (not waiting), no reads/ports/PVC/bank effects.
 bool quiet(const Out&o){return o.reads==0&&o.status==ms5::AnimationMachineReturned&&o.error.empty()&&o.ports.empty()&&o.dev.pvc==Out().dev.pvc&&o.dev.bank_base==0x200000;}
+// Synthetic physical row for the U6 default mask 49ab0.
+std::vector<ms5::PhysicalRomResource> mask_row(){std::vector<ms5::PhysicalRomResource> p(1);p[0].source_rom_offset=0x49ab0;
+ const std::uint8_t mask[4]={0x10,0x20,0x40,0x80};p[0].data.assign(mask,mask+4);return p;}
+const std::vector<ms5::PhysicalRomResource> MASK_ROW=mask_row();
 // Failure preserves RAM, registers, device and every output.
-void reject(Bytes ram,State s,std::uint32_t stop,const char*message){
- const Bytes before=ram;const State old=s;Out o;const ms5::AnimationMachineDevice dev=o.dev;++calls;ms5::ProgramBusState bus;std::vector<ms5::FixedDataResource>w;
+void reject(Bytes ram,State s,std::uint32_t stop,const char*message,const std::vector<ms5::PhysicalRomResource>*physical=NULL){
+ const Bytes before=ram;const State old=s;Out o;const ms5::AnimationMachineDevice dev=o.dev;++calls;ms5::ProgramBusState bus;bus.physical_rom=physical;std::vector<ms5::FixedDataResource>w;
  if(ms5::run_animation_machine(ram,w,bus,s,o.dev,stop,0,o.reads,o.status,o.ports,o.error)){std::cerr<<std::hex<<"unexpected success "<<old.pc<<" stop "<<stop<<"\n";assert(false);}
  if(o.error.find(message)==std::string::npos)std::cerr<<std::hex<<old.pc<<": "<<o.error<<" expected "<<message<<"\n";
  assert(o.error.find(message)!=std::string::npos&&ram==before&&same(s,old)&&dev.pvc==o.dev.pvc&&dev.bank_base==o.dev.bank_base&&o.reads==99&&
@@ -53,17 +58,18 @@ void natural(){
  {Bytes ram=natural_ram(2,2);State s=state(0x480bc);Out o;assert(run(ram,s,0x47650,o)&&s.a[7]==SP-4&&s.a[0]==P1&&s.d[0]==0&&get(ram,FLAGS,1)==1&&s.carry==ms5::AnimationCarrySet);
   assert(run(ram,s,0x47656,o)&&s.a[0]==P2&&s.d[0]==1&&s.carry==ms5::AnimationCarryUnknown);
   assert(run(ram,s,0x1a73c,o)&&get(ram,FLAGS,1)==3&&s.a[7]==SP-4&&get(ram,SP-4,4)==0x480c6);}
- // Another stop continues through 1a73c (U2 scene core, U4 scene update 1a7a8) back to 480c6, reaches the 49b0c
- // boundary and rolls back everything.
- reject(natural_ram(2,1),state(0x480bc),STOP,"unsupported animation machine PC");
+ // Another stop continues through 1a73c (U2 scene core, U4 scene update 1a7a8) back to 480c6, runs 49b0c (U6 input)
+ // back to 480cc, reaches the 4aa88 boundary and rolls back everything.
+ reject(natural_ram(2,1),state(0x480bc),STOP,"unsupported animation machine PC",&MASK_ROW);
+ reject(natural_ram(2,1),state(0x480bc),STOP,"program bus ROM"); // the 49ab4 default mask read needs the ROM row
 }
-// Each shell JSR to a helper stops at its boundary; other stops roll back (1a73c now runs U2+U4 and returns to 480c6,
-// which then stops at the 49b0c boundary).
+// Each shell JSR to a helper stops at its entry; other stops roll back (1a73c now runs U2+U4 and returns to 480c6,
+// 49b0c runs U6 and returns to 480cc; both then stop at the 4aa88 boundary).
 void shell(){
  const std::uint32_t edges[][3]={{0x480c0,0x1a73c,0x480c6},{0x480c6,0x49b0c,0x480cc},{0x480cc,0x4aa88,0x480d2},{0x480e4,0xe8a48,0x480ea}};
  for(unsigned int i=0;i<4;++i){Bytes ram(65536,0);put(ram,SP,4,RETURN);State s=state(edges[i][0]);s.carry=ms5::AnimationCarryClear;State want=s;Out o;
   assert(run(ram,s,edges[i][1],o)&&quiet(o));want.pc=edges[i][1];want.a[7]=SP-4;assert(same(s,want)&&get(ram,SP-4,4)==edges[i][2]);
-  reject(ram,state(edges[i][0]),STOP,"unsupported animation machine PC");}
+  reject(ram,state(edges[i][0]),STOP,"unsupported animation machine PC",&MASK_ROW);}
  // 480d2..480e4: b4a2a (both players Clear), 6f1c2, 4701e (every slot skipped by a negative 26 WORD), then the e8a48 stop.
  Bytes ram(65536,0);put(ram,SP,4,RETURN);for(unsigned int i=0;i<8;++i)put(ram,SLOT0+0x2c*i+0x26,4,0xffff0000U);
  State s=state(0x480d2);Out o;assert(run(ram,s,0x480e4,o)&&quiet(o)&&s.a[7]==SP&&get(ram,SP,4)==RETURN);
@@ -276,10 +282,10 @@ void errors(){
  for(unsigned int i=0;i<11;++i)for(std::uint32_t pc=ranges[i][0];pc<=ranges[i][1];pc+=2){
   if(listed(pc)||pc==0x4939c)continue;Bytes ram;State s;generic(pc,ram,s);reject(ram,s,STOP,"unsupported animation frame helper PC");++interior;}
  assert(interior==300); // 406 even PCs in the routed ranges (4939c excluded) minus 106 block starts
- // Neighbours outside the ranges, the TRAP boundary and the U5..U7 boundaries (U3 and U4 1a7a8 now execute); odd PCs are
- // rejected first.
+ // Neighbours outside the ranges, the TRAP boundary and the U7 boundaries (U2..U6 now execute; 49ab2 is the U6 default
+ // mask data before 49ab4); odd PCs are rejected first.
  const std::uint32_t outside[]={0x480f2,0x47640,0x6f1c0,0x6f1c4,0x2efa4,0x2efdc,0x3c42,0x3c7c,0xb4a28,0xb4ab0,0x49390,0x4939c,0x493bc,
-  0x1c026,0x1c052,0x4d9d4,0x4da08,0xb481c,0xb4850,0x46f50,0x4706c,0x49b0c,0x4aa88,0xe8a48};
+  0x1c026,0x1c052,0x4d9d4,0x4da08,0xb481c,0xb4850,0x46f50,0x4706c,0x49ab2,0x4aa88,0xe8a48};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0x47657,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }

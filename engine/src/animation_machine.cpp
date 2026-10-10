@@ -192,6 +192,20 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x1a0d4:case 0x1a0d8:case 0x1a0dc:case 0x1a0e0:case 0x1a0e4:case 0x1a0e8:case 0x1a0ec:case 0x1a0f0:case 0x1a0f4:
     case 0x1a0f8:case 0x1a0fc:case 0x1a100:case 0x1a104:case 0x1a108:case 0x1a10c:case 0x1a116:case 0x1a182:case 0x1a1be:
     case 0x1a1cc:case 0x1a1f6:case 0x1a216:case 0x1a21c:case 0x1a23a:case 0x1a23e:case 0x1a51a:case 0xe8a02:
+    // Input (480bc U6) blocks: JSR (abs, (A1) or d16(PC))/BSR/BRA/RTS/LEA/MOVEA/MOVEM/BTST/BSET/BCLR and conditional
+    // branches only. 49b28 49b7e 4d7c6 are the BCC blocks consuming the C returned by 289e; 1d5b2 is the BCS
+    // consuming the C returned by 4836e (48378 ANDI CCR Clear / 4837e ORI CCR Set set it inside their own block).
+    // MOVE/MOVEQ/CLR/CMPI/CMPA/TST/SUB/ADDQ/SUBQ/AND/ANDI/OR/ORI/EOR/NEG/SWAP/LSL/MULU/ADDA/Scc blocks stay Unknown
+    // (49ad6 sets and consumes its C inside the block). 4d7f0 (TRAP #f) has no executor.
+    case 0x1d8cc:case 0x49ad4:case 0x49aec:case 0x49af4:case 0x49afc:case 0x49b1c:case 0x49b28:case 0x49b2c:case 0x49b2e:
+    case 0x49b36:case 0x49b52:case 0x49b56:case 0x49b5a:case 0x49b72:case 0x49b7e:case 0x49b82:case 0x49b84:case 0x49b8c:
+    case 0x49ba8:case 0x49bac:case 0x49bb0:
+    case 0x1bec0:case 0x1beca:case 0x1bed8:case 0x1d5ac:case 0x1d5b2:case 0x1d5e2:case 0x1d5fa:case 0x1d61a:case 0x1d632:
+    case 0x1d638:case 0x1d696:case 0x1d6f8:case 0x1da96:case 0x1dab2:case 0x1dab8:case 0x4836e:case 0x49c32:case 0x49c66:
+    case 0x49e28:case 0x49e2e:case 0x49f84:case 0x4d7ac:case 0x4d7b8:case 0x4d7c0:case 0x4d7c6:
+    case 0x49dd8:case 0x49de0:case 0x49de4:case 0x49e70:case 0x49e8e:case 0x49e96:case 0x49e9a:case 0x49e9c:case 0x49eb4:
+    case 0x49eca:case 0x49ed2:case 0x49eea:case 0x49eee:case 0x49f00:case 0x49f10:case 0x49f26:case 0x49f2a:case 0x49f58:
+    case 0x49f60:case 0x49f64:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -380,6 +394,14 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x19e60 && next.pc<0x19e64) || (next.pc>=0x1a086 && next.pc<0x1a26a) ||
                 (next.pc>=0x1a40e && next.pc<0x1a414) || (next.pc>=0x1a470 && next.pc<0x1a526) ||
                 (next.pc>=0xe89fa && next.pc<0xe8a0c))ok=animation_script_placement_block(c);
+            else if ((next.pc>=0x49ab4 && next.pc<0x49bca) || (next.pc>=0x49c20 && next.pc<0x49c38) ||
+                (next.pc>=0x49c66 && next.pc<0x49c6c) || (next.pc>=0x49d88 && next.pc<0x49f8c) || next.pc==0x1d8cc ||
+                (next.pc>=0xe73f2 && next.pc<0xe73f8) || (next.pc>=0x1bec0 && next.pc<0x1bee4) ||
+                (next.pc>=0x1d5ac && next.pc<0x1d5c4) || (next.pc>=0x1d5e2 && next.pc<0x1d5fc) ||
+                (next.pc>=0x1d61a && next.pc<0x1d63a) || (next.pc>=0x1d664 && next.pc<0x1d698) ||
+                (next.pc>=0x1d6c2 && next.pc<0x1d6fa) || (next.pc>=0x1da60 && next.pc<0x1daba) ||
+                (next.pc>=0x4836e && next.pc<0x48384) ||
+                (next.pc>=0x4d7a6 && next.pc<0x4d81c && next.pc!=0x4d7f0))ok=animation_input_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
