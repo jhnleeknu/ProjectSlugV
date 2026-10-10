@@ -223,6 +223,11 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x47b0e:case 0x47b12:case 0x47b16:case 0x47b1a:case 0x47b1e:case 0x47b22:case 0x47b26:case 0x47b3a:case 0x47b4a:
     case 0x47b50:case 0x47b64:case 0x47b86:case 0x47b88:case 0x47b9c:case 0x47b9e:case 0x47ba2:case 0x47bd4:case 0x47c0c:
     case 0x47c12:case 0x47c18:case 0x47c28:case 0x47c36:case 0x47c3c:case 0x47c54:case 0xddf9a:case 0xe8a24:case 0xe9086:
+    // Area clear (F1b) blocks: JSR/JMP/RTS/LEA/BSET/BCLR, conditional branches and Scc only (Scc leaves the CCR unchanged).
+    // 1c5bc 1c5d8 are the BCC blocks consuming the C returned by 289e; 47e0a (SCC.B 62(A6); BCC) consumes the C returned
+    // by 28ae. F1b has no known-carry producer. MOVE/MOVEQ/TST/SUBQ/ADDQ/CLR blocks stay Unknown.
+    case 0x1c5b0:case 0x1c5bc:case 0x1c5c0:case 0x1c5cc:case 0x1c5d8:case 0x1c5dc:case 0x1c5e8:case 0x47da4:
+    case 0x47daa:case 0x47db0:case 0x47dba:case 0x47dc0:case 0x47dc6:case 0x47df4:case 0x47e0a:case 0x47e2a:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -432,6 +437,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x362a && next.pc<0x3650) || (next.pc>=0x9060 && next.pc<0x9068) ||
                 (next.pc>=0x4e254 && next.pc<0x4e26c) || (next.pc>=0xca56 && next.pc<0xca5c) ||
                 (next.pc>=0xca76 && next.pc<0xca7e) || (next.pc>=0xc3c0 && next.pc<0xc3ce))ok=animation_stage_entry_block(c);
+            else if ((next.pc>=0x47da4 && next.pc<0x47eac) || (next.pc>=0x4b6e4 && next.pc<0x4b6f4) ||
+                (next.pc>=0x1c5b0 && next.pc<0x1c5ea) || (next.pc>=0x1bee4 && next.pc<0x1bef8) ||
+                (next.pc>=0xca48 && next.pc<0xca50) || (next.pc>=0x9056 && next.pc<0x9060))ok=animation_area_clear_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
