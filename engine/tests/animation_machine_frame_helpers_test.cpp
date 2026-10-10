@@ -3,7 +3,8 @@
 #include <iostream>
 // 480bc frame helper shell (U1) through run_animation_machine only. All inputs are declared RAM
 // fixtures; the return LONG of each direct entry is declared at SP. The only ROM bytes read are the U6 default mask
-// row 49ab0 (contract bytes 10 20 40 80, synthetic physical row) on the paths that now run 49b0c to the 4aa88 boundary.
+// row 49ab0 (contract bytes 10 20 40 80, synthetic physical row) on the paths that run 49b0c. Whole frames through U7
+// (4aa88/e8a48) are covered in detail by animation_machine_buffer_cue_test.
 namespace {
 typedef std::vector<std::uint8_t> Bytes;
 typedef ms5::AnimationMachineState State;
@@ -30,6 +31,12 @@ bool quiet(const Out&o){return o.reads==0&&o.status==ms5::AnimationMachineReturn
 std::vector<ms5::PhysicalRomResource> mask_row(){std::vector<ms5::PhysicalRomResource> p(1);p[0].source_rom_offset=0x49ab0;
  const std::uint8_t mask[4]={0x10,0x20,0x40,0x80};p[0].data.assign(mask,mask+4);return p;}
 const std::vector<ms5::PhysicalRomResource> MASK_ROW=mask_row();
+bool run_rom(Bytes&ram,State&s,std::uint32_t stop,Out&o){++calls;ms5::ProgramBusState bus;bus.physical_rom=&MASK_ROW;std::vector<ms5::FixedDataResource>w;
+ const bool ok=ms5::run_animation_machine(ram,w,bus,s,o.dev,stop,0,o.reads,o.status,o.ports,o.error);if(!ok)std::cerr<<std::hex<<"run error "<<o.error<<" stop "<<stop<<"\n";return ok;}
+// U7 needs a RAM ring cursor (10dc88) and 4701e skips every spatial slot with a negative 26 WORD.
+void frame_ready(Bytes&ram){put(ram,0x10dc88,4,0x10db88);for(unsigned int i=0;i<8;++i)put(ram,SLOT0+0x2c*i+0x26,4,0xffff0000U);}
+// U7 debug slot 0 (10f001 bit7) whose sprite callback LONG 109152 (0) is not the supported cd50.
+void bad_callback(Bytes&ram){put(ram,0x10f001,1,0x80);put(ram,0x10daf8,4,0x10e000);put(ram,0x10dafc,4,0x10e100);}
 // Failure preserves RAM, registers, device and every output.
 void reject(Bytes ram,State s,std::uint32_t stop,const char*message,const std::vector<ms5::PhysicalRomResource>*physical=NULL){
  const Bytes before=ram;const State old=s;Out o;const ms5::AnimationMachineDevice dev=o.dev;++calls;ms5::ProgramBusState bus;bus.physical_rom=physical;std::vector<ms5::FixedDataResource>w;
@@ -58,18 +65,21 @@ void natural(){
  {Bytes ram=natural_ram(2,2);State s=state(0x480bc);Out o;assert(run(ram,s,0x47650,o)&&s.a[7]==SP-4&&s.a[0]==P1&&s.d[0]==0&&get(ram,FLAGS,1)==1&&s.carry==ms5::AnimationCarrySet);
   assert(run(ram,s,0x47656,o)&&s.a[0]==P2&&s.d[0]==1&&s.carry==ms5::AnimationCarryUnknown);
   assert(run(ram,s,0x1a73c,o)&&get(ram,FLAGS,1)==3&&s.a[7]==SP-4&&get(ram,SP-4,4)==0x480c6);}
- // Another stop continues through 1a73c (U2 scene core, U4 scene update 1a7a8) back to 480c6, runs 49b0c (U6 input)
- // back to 480cc, reaches the 4aa88 boundary and rolls back everything.
- reject(natural_ram(2,1),state(0x480bc),STOP,"unsupported animation machine PC",&MASK_ROW);
+ // The whole frame continues through 1a73c (U2 scene core, U4 scene update 1a7a8), 49b0c (U6 input), 4aa88 and e8a48 (U7)
+ // and the U1 helpers to the 480f0 RTS (return LONG 2ac2). An unsupported sprite callback in U7 rolls back everything.
+ {Bytes ram=natural_ram(2,1);frame_ready(ram);State s=state(0x480bc);Out o;assert(run_rom(ram,s,RETURN,o)&&s.pc==RETURN&&s.a[7]==SP+4&&
+   o.status==ms5::AnimationMachineReturned&&get(ram,0x10dc88,4)==0x10dba8&&get(ram,FLAGS,1)==1);}
+ {Bytes ram=natural_ram(2,1);frame_ready(ram);bad_callback(ram);reject(ram,state(0x480bc),STOP,"unsupported sprite callback target",&MASK_ROW);}
  reject(natural_ram(2,1),state(0x480bc),STOP,"program bus ROM"); // the 49ab4 default mask read needs the ROM row
 }
-// Each shell JSR to a helper stops at its entry; other stops roll back (1a73c now runs U2+U4 and returns to 480c6,
-// 49b0c runs U6 and returns to 480cc; both then stop at the 4aa88 boundary).
+// Each shell JSR to a helper stops at its entry; from there the frame runs every helper (U2..U7 and the U1 helpers) to the
+// 480f0 RTS. An unsupported U7 sprite callback rolls back everything.
 void shell(){
  const std::uint32_t edges[][3]={{0x480c0,0x1a73c,0x480c6},{0x480c6,0x49b0c,0x480cc},{0x480cc,0x4aa88,0x480d2},{0x480e4,0xe8a48,0x480ea}};
  for(unsigned int i=0;i<4;++i){Bytes ram(65536,0);put(ram,SP,4,RETURN);State s=state(edges[i][0]);s.carry=ms5::AnimationCarryClear;State want=s;Out o;
   assert(run(ram,s,edges[i][1],o)&&quiet(o));want.pc=edges[i][1];want.a[7]=SP-4;assert(same(s,want)&&get(ram,SP-4,4)==edges[i][2]);
-  reject(ram,state(edges[i][0]),STOP,"unsupported animation machine PC",&MASK_ROW);}
+  Bytes full=ram;frame_ready(full);State t=state(edges[i][0]);assert(run_rom(full,t,RETURN,o)&&t.pc==RETURN&&t.a[7]==SP+4&&o.status==ms5::AnimationMachineReturned);
+  if(i<3){Bytes bad=ram;frame_ready(bad);bad_callback(bad);reject(bad,state(edges[i][0]),STOP,"unsupported sprite callback target",&MASK_ROW);}}
  // 480d2..480e4: b4a2a (both players Clear), 6f1c2, 4701e (every slot skipped by a negative 26 WORD), then the e8a48 stop.
  Bytes ram(65536,0);put(ram,SP,4,RETURN);for(unsigned int i=0;i<8;++i)put(ram,SLOT0+0x2c*i+0x26,4,0xffff0000U);
  State s=state(0x480d2);Out o;assert(run(ram,s,0x480e4,o)&&quiet(o)&&s.a[7]==SP&&get(ram,SP,4)==RETURN);
@@ -282,10 +292,10 @@ void errors(){
  for(unsigned int i=0;i<11;++i)for(std::uint32_t pc=ranges[i][0];pc<=ranges[i][1];pc+=2){
   if(listed(pc)||pc==0x4939c)continue;Bytes ram;State s;generic(pc,ram,s);reject(ram,s,STOP,"unsupported animation frame helper PC");++interior;}
  assert(interior==300); // 406 even PCs in the routed ranges (4939c excluded) minus 106 block starts
- // Neighbours outside the ranges, the TRAP boundary and the U7 boundaries (U2..U6 now execute; 49ab2 is the U6 default
- // mask data before 49ab4); odd PCs are rejected first.
+ // Neighbours outside the ranges and the TRAP boundary (U2..U7 now execute; 49ab2 is the U6 default mask data before
+ // 49ab4); odd PCs are rejected first.
  const std::uint32_t outside[]={0x480f2,0x47640,0x6f1c0,0x6f1c4,0x2efa4,0x2efdc,0x3c42,0x3c7c,0xb4a28,0xb4ab0,0x49390,0x4939c,0x493bc,
-  0x1c026,0x1c052,0x4d9d4,0x4da08,0xb481c,0xb4850,0x46f50,0x4706c,0x49ab2,0x4aa88,0xe8a48};
+  0x1c026,0x1c052,0x4d9d4,0x4da08,0xb481c,0xb4850,0x46f50,0x4706c,0x49ab2};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0x47657,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }

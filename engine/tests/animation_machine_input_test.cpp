@@ -4,8 +4,8 @@
 // 480bc frame helper U6 (input 49b0c with the 49ab4 mask loop, 49afe edge merge, 49bb4 one-shot mask store, slot
 // setter 49c20/49c32/49c66, the dynamic JSR (A1) callbacks 49e34 1d8cc e73f2 49de6 1bec0 49f66 1d5ac/4836e 1d5e2
 // 1d61a 1d628 1d664 1d6c2 1da60/4d7a6 49d88 49e38 49e9c 49eba 49ef0 49f2c, and the existing 289e) through
-// run_animation_machine only. The natural 480bc->47642->1a73c->49b0c path needs U7 (4aa88) to return, so every case is
-// a declared direct entry: zero RAM (or the declared BASE fixture: player objects 100cb8/100da8, camera 10d3a2/a6/aa,
+// run_animation_machine only. The natural 480bc->47642->1a73c->49b0c path (whole frames need U7; see
+// animation_machine_buffer_cue_test) is not used here: every case is a declared direct entry: zero RAM (or the declared BASE fixture: player objects 100cb8/100da8, camera 10d3a2/a6/aa,
 // targets 10d73c/e, latch 10d732, 10d740/1, 10de24, 10d683, inputs 104caa/ab/b0/b1, mode 100012, user masks
 // 10f01c/10f020, player words 10d726..10d731, A6+3a, record sources 10dcba/10dce6) plus per-case byte puts, the return
 // LONG at SP and declared registers. Synthetic typed physical bytes (not a ROM oracle): the contract's default mask row
