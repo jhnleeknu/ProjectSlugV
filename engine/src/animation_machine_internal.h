@@ -68,5 +68,6 @@ bool animation_stage_entry_block(AnimationMachineContext& c);
 bool animation_area_clear_block(AnimationMachineContext& c);
 bool animation_stage_catalog_block(AnimationMachineContext& c);
 bool animation_stage_area_block(AnimationMachineContext& c);
+bool animation_stage_event_block(AnimationMachineContext& c);
 }
 #endif
