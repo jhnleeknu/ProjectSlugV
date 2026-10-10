@@ -206,6 +206,12 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x49dd8:case 0x49de0:case 0x49de4:case 0x49e70:case 0x49e8e:case 0x49e96:case 0x49e9a:case 0x49e9c:case 0x49eb4:
     case 0x49eca:case 0x49ed2:case 0x49eea:case 0x49eee:case 0x49f00:case 0x49f10:case 0x49f26:case 0x49f2a:case 0x49f58:
     case 0x49f60:case 0x49f64:
+    // Buffer/cue (480bc U7) blocks: JSR/BSR/RTS/LEA/MOVEA/BTST/BSET/BCHG and conditional branches only. 298e is the
+    // 2986 tail that consumes the known C left by 28ae (290c/2916 RTS) for its MOVE SR image and restores it with
+    // MOVE (A7)+,SR. EXG (4ab86), ADDA (e8ae8) and MOVE/MOVEQ/CLR/TST/CMP/CMPI/CMPA/ADD/ADDQ/SUBI/NEG/SWAP/EORI/OR/ANDI/
+    // LSR/LSL blocks stay Unknown (their conditional branches consume flags produced inside the same block).
+    case 0x4aa88:case 0x4aafc:case 0x4ab2e:case 0x4ab74:case 0x4b7ae:case 0x4b7f6:case 0xe8ab6:case 0xe8ac2:
+    case 0xe8ace:case 0xe8af2:case 0xe8b08:case 0xe8b16:case 0xe8b2a:case 0xe8b46:case 0xe8b58:case 0x298e:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -402,6 +408,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x1d6c2 && next.pc<0x1d6fa) || (next.pc>=0x1da60 && next.pc<0x1daba) ||
                 (next.pc>=0x4836e && next.pc<0x48384) ||
                 (next.pc>=0x4d7a6 && next.pc<0x4d81c && next.pc!=0x4d7f0))ok=animation_input_block(c);
+            else if ((next.pc>=0x4aa88 && next.pc<0x4abc0) || (next.pc>=0x4b784 && next.pc<0x4b82e) ||
+                (next.pc>=0xe8a48 && next.pc<0xe8b5a) || (next.pc>=0x2986 && next.pc<0x299c))ok=animation_buffer_cue_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

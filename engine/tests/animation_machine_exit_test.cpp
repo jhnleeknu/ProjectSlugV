@@ -70,11 +70,13 @@ void errors(){Bytes ram(65536,0);put(ram,SP,4,STOP);ms5::AnimationMachineState s
  s=state(0x8c16);s.a[7]=0x107dc8;s.d[0]=1;s.d[1]=2;s.d[2]=3;s.d[3]=32;reject(ram,s,STOP,"unsupported animation machine PC");
  s=state(0x47f74);s.a[7]=0x100002;reject(ram,s,STOP,"RAM");
  s=state(0x47f0a);s.a[6]=0x102001;reject(ram,s,STOP,"even WORD/LONG");
- s=state(0x47fa8);s.a[6]=SP-0x7a;put(ram,SP,4,1);reject(ram,s,STOP,"unsupported animation machine PC",mask_row());
+ // U7 debug slot 0 (10f001 bit7) with sprite callback LONG 109152 = 0, not the supported cd50.
+ put(ram,0x10f001,1,0x80);put(ram,0x10daf8,4,0x10e000);put(ram,0x10dafc,4,0x10e100);
+ s=state(0x47fa8);s.a[6]=SP-0x7a;put(ram,SP,4,1);reject(ram,s,STOP,"unsupported sprite callback target",mask_row());
  s=state(0x47f8a);reject(ram,s,STOP,"unsupported animation exit PC"); // Z-only BNE is not an arbitrary entry.
- // 47fa8/47fca reach 480bc; 49b0c (U6) reads the default mask row 49ab0 and returns to 480cc, which stops at the 4aa88
- // boundary. Without that row the same paths fail on the ROM read.
- s=state(0x47fca);reject(ram,s,STOP,"unsupported animation machine PC",mask_row());
+ // 47fa8/47fca reach 480bc; 49b0c (U6) reads the default mask row 49ab0 and returns to 480cc; 4aa88 (U7) then reaches the
+ // declared debug slot's unsupported sprite callback. Without that row the same paths fail on the ROM read.
+ s=state(0x47fca);reject(ram,s,STOP,"unsupported sprite callback target",mask_row());
  s=state(0x47fca);reject(ram,s,STOP,"program bus ROM");
 }
 }

@@ -54,8 +54,8 @@ bool helper_decrement(AnimationMachineContext& c,std::uint32_t next) {
 }
 // 480bc frame helper shell (U1): 47642/47656 player flags, 6f1c2, b4a2a region boxes (49392, 1c028,
 // 4d9d6, b481e), 4701e/46f52 spatial bins, 2efa6/3c44 loop sound. Existing executors: 289e (readiness,
-// known C), 43e38 (cleanup), 3af8/3ac8 (sound). Called units: 1a73c (U2), 49b0c (U6); boundaries without an executor: 4aa88
-// e8a48 and 4939c (TRAP #f when A5 != 108000). All A5-relative operands use the live A5.
+// known C), 43e38 (cleanup), 3af8/3ac8 (sound). Called units: 1a73c (U2), 49b0c (U6), 4aa88 and e8a48 (U7); boundary
+// without an executor: 4939c (TRAP #f when A5 != 108000). All A5-relative operands use the live A5.
 bool animation_frame_helpers_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0;
     switch(r.pc) {
