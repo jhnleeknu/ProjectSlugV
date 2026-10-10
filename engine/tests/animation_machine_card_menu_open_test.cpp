@@ -122,8 +122,9 @@ const std::uint32_t TABLE[][3]={
  {0xe84d0,0x3650,0x3650},{0xc2c0,0xc2c8,0xc2c8},{0xc2c6,0xff000,0xff000}};
 const unsigned int ROWS=sizeof(TABLE)/sizeof(TABLE[0]);
 // a406 and a70a now run in the card menu input unit, 9e94/a2be/a662/c2c8 in the close unit and
-// bd26/9f36/a71a in the save unit (their own tests). c00468/c0046e are the BIOS calls of the save unit.
-const std::uint32_t BOUNDARY[]={0xa6da,0xe84d6,0xa63c,0xc00468,0xc0046e};
+// bd26/9f36/a71a in the save unit and a6da/a698 in the nested unit (their own tests).
+// c00468/c0046e are the BIOS calls of the save unit.
+const std::uint32_t BOUNDARY[]={0xe84d6,0xa63c,0xc00468,0xc0046e};
 const unsigned int BOUNDARIES=sizeof(BOUNDARY)/sizeof(BOUNDARY[0]);
 // Blocks made only of LEA/MOVEA/MOVEM/BTST/BSR/JSR/JMP/BRA/RTS/conditional branches (capstone classification).
 const std::uint32_t KEEP[]={0x391a,0x3926,0x3928,0x392a,0x9b54,0x9b56,0x9b64,0x9b78,0x9ba6,0x9bc8,0x9bcc,0x9be6,0x9bea,0x9c10,
@@ -298,7 +299,8 @@ void boundaries(){
  for(unsigned int i=0;i<BOUNDARIES;++i){Bytes ram;ms5::AnimationMachineState s;generic(BOUNDARY[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  struct Reach {std::uint32_t pc,stop;};
  // Each boundary reached from its natural predecessor; stop there succeeds, any other stop rolls back.
- // Close-unit entries (9e94 a2be a662 c2c8) and the save entry bd26 now execute: only the successful stop is checked here.
+ // Close-unit entries (9e94 a2be a662 c2c8), the save entry bd26 and the nested entry a6da now execute:
+ // only the successful stop is checked here.
  for(unsigned int k=0;k<11;++k){Bytes ram;ms5::AnimationMachineState s;std::uint32_t stop=0;
   switch(k){
   case 0:generic(0x9b58,ram,s);put(ram,DESC+0xe,2,0x0001);stop=0x9e94;break;           // flags bit0
@@ -314,7 +316,7 @@ void boundaries(){
   default:generic(0xc2ba,ram,s);put(ram,0x107f0e,4,0x107f0e);stop=0xc2c8;break;         // D0=-1 after JSR a370
   }
   const Bytes start=ram;const ms5::AnimationMachineState old=s;
-  if(stop!=0x9e94&&stop!=0xa2be&&stop!=0xa662&&stop!=0xc2c8&&stop!=0xbd26)reject(start,old,STOP,"unsupported animation machine PC");
+  if(stop!=0x9e94&&stop!=0xa2be&&stop!=0xa662&&stop!=0xc2c8&&stop!=0xbd26&&stop!=0xa6da)reject(start,old,STOP,"unsupported animation machine PC");
   Out o;assert(run(ram,s,stop,o)&&s.pc==stop&&clean(o));
   if(k==1)assert(s.a[7]==SP-8&&get(ram,SP-8,4)==0xa3ac&&get(ram,SP-4,4)==TOP);
   if(k==3)assert(s.a[7]==SP-8&&get(ram,SP-8,4)==0xa3c8);
@@ -370,8 +372,9 @@ void errors(){
   if(listed(pc))continue;Bytes ram;ms5::AnimationMachineState s;generic(pc,ram,s);
   reject(ram,s,STOP,pc==0xa63c?"unsupported animation machine PC":"unsupported animation card menu open PC");++interior;}
  assert(interior>=500);
- // Neighbours outside the routed ranges (a346 is now the interior RTS of the close a344 block).
- const std::uint32_t outside[]={0x364e,0x3670,0x3916,0x392c,0x9b24,0x9f7a,0xa006,0xa080,0xa214,0xa280,0xa698,0xa73c,0xa75a,
+ // Neighbours outside the routed ranges (a346 is now the interior RTS of the close a344 block;
+ // a698 now runs in the nested unit).
+ const std::uint32_t outside[]={0x364e,0x3670,0x3916,0x392c,0x9b24,0x9f7a,0xa006,0xa080,0xa214,0xa280,0xa73c,0xa75a,
   0xbfbe,0xc1c2,0xc214,0xc2bc,0xc2be,0xe84c6};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;ms5::AnimationMachineState s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;ms5::AnimationMachineState s;generic(0xa371,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}

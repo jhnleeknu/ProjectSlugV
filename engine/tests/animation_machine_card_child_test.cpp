@@ -85,7 +85,7 @@ void timers(){
  const std::uint32_t t[]={0,1,0x8000,0x14,0xffff};
  for(unsigned int i=0;i<5;++i){Bytes ram(65536,0x5a);put(ram,SP,4,STOP);put(ram,CHILD+0x7e,2,t[i]);put(ram,CHILD+0x76,4,0xc188);put(ram,CHILD+0x7a,2,4);put(ram,CHILD+0x7c,2,4);
   ms5::AnimationMachineState s=state(0xc286);Out o;const bool borrow=t[i]==0;
-  if(borrow)reject(ram,s,0xa698,"unsupported animation machine PC",&p); // a29c and the a370 frame now run; a698 is never reached.
+  if(borrow)reject(ram,s,0xa63c,"unsupported animation machine PC",&p); // a29c and the a370 frame now run; a63c is never reached.
   assert(run(ram,s,borrow?MENU:STOP,o)&&get(ram,CHILD+0x7e,2)==((t[i]-1U)&65535U)&&s.carry==ms5::AnimationCarryUnknown&&o.ports.empty());
   if(borrow)assert(s.a[7]==SP-4&&get(ram,SP-4,4)==0xc2a8&&get(ram,CHILD+0x80,1)==0&&s.a[0]==0xc188&&s.d[0]==0xabcd0004U&&s.d[1]==0xabce0004U);
   else assert(s.a[7]==SP+4&&get(ram,CHILD+0x80,1)==0x5a);}
@@ -96,9 +96,9 @@ void menu_boundary(){
  ms5::AnimationMachineState s=state(0xc290);const ms5::AnimationMachineState old=s;Out o;
  assert(run(ram,s,MENU,o)&&s.pc==MENU&&s.a[0]==0x12345678&&s.d[0]==0xabcd8001U&&s.d[1]==0xabcefffeU&&s.a[7]==SP-4&&get(ram,SP-4,4)==0xc2a8);
  assert(get(ram,CHILD+0x80,1)==0&&get(ram,CHILD+0x7f,1)==0x5a&&get(ram,CHILD+0x81,1)==0x5a&&s.a[6]==old.a[6]&&s.d[2]==old.d[2]&&o.ports.empty());
- // With the c188 descriptor the a29c menu push and the a370 frame run on; the a698 stop is never reached.
+ // With the c188 descriptor the a29c menu push and the a370 frame run on; the a63c stop is never reached.
  const Physical p=resources();Bytes menu(65536,0x5a);put(menu,CHILD+0x76,4,0xc188);put(menu,CHILD+0x7a,2,4);put(menu,CHILD+0x7c,2,4);
- s=state(0xc290);reject(menu,s,STOP,"unsupported animation machine PC",&p);reject(menu,s,0xa698,"unsupported animation machine PC",&p);
+ s=state(0xc290);reject(menu,s,STOP,"unsupported animation machine PC",&p);reject(menu,s,0xa63c,"unsupported animation machine PC",&p);
  o=Out();assert(run(menu,s,FRAME,o,&p)&&s.pc==FRAME&&s.a[7]==SP-4&&get(menu,SP-4,4)==0xc2c0&&get(menu,CHILD,4)==0xc2ba&&s.a[0]==0xe84c8&&o.ports.empty());
 }
 void scene_helper(){
@@ -170,8 +170,8 @@ void chain(){
   assert(r2==ram&&same(t,s)&&so.dev.pvc==o.dev.pvc&&so.dev.bank_base==o.dev.bank_base&&total==frame_ports);}
  // Timer re-entries: 13 .. 0 return through c28e.
  for(unsigned int k=1;k<=0x13;++k){s.pc=0x2ab8;hold=ram;assert(run(ram,s,0x2ac2,o,&p)&&s.a[0]==0xc286&&s.a[7]==SP+4&&get(ram,CHILD+0x7e,2)==0x13U-k&&o.ports.empty());}
- // Borrow frame: a29c and the a370 menu frame now execute; a stop at the still-unsupported a698 rolls back.
- s.pc=0x2ab8;reject(ram,s,0xa698,"unsupported animation machine PC",&p,&o.dev);
+ // Borrow frame: a29c and the a370 menu frame now execute; a stop at the still-unsupported a63c rolls back.
+ s.pc=0x2ab8;reject(ram,s,0xa63c,"unsupported animation machine PC",&p,&o.dev);
  const std::uint32_t d0=s.d[0]&0xffff0000U,d1=s.d[1]&0xffff0000U;
  assert(run(ram,s,MENU,o,&p)&&s.pc==MENU&&s.a[7]==SP-4&&get(ram,SP-4,4)==0xc2a8&&get(ram,SP,4)==0x2ac2&&s.a[0]==0xc188&&s.d[0]==(d0|4)&&s.d[1]==(d1|4));
  assert(get(ram,CHILD+0x7e,2)==0xffff&&get(ram,CHILD+0x80,1)==0&&get(ram,CHILD,4)==0xc286&&s.a[6]==CHILD&&o.ports.empty()&&s.carry==ms5::AnimationCarryUnknown);
@@ -188,7 +188,7 @@ void errors(){
  const std::uint32_t bundled[]={0xc28a,0xc28c,0xc252,0xc254,0xc256,0xc25a,0xc260,0xc26e,0xc276,0xc292,0xc298,0xc29c,0xc2a0,
   0xde434,0xde43c,0xde44a,0xde44c,0xde452,0xde470,0xde476,0xde42c,0xe7c18,0xe7c28,0xe7c2c};
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){s=state(bundled[i]);reject(ram,s,STOP,"unsupported animation card child PC",&p);}
- const std::uint32_t outside[]={0xa698,0x9ee6,0xc2fa,0xc2a4,0xc24e,0xde422,0xde48c,0xe7c12,0xe7c14,0xe7c32,0xe7c34};
+ const std::uint32_t outside[]={0xa63c,0x9ee6,0xc2fa,0xc2a4,0xc24e,0xde422,0xde48c,0xe7c12,0xe7c14,0xe7c32,0xe7c34};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){s=state(outside[i]);reject(ram,s,STOP,"unsupported animation machine PC",&p);}
  s=state(0xc251);reject(ram,s,STOP,"unaligned animation machine PC");
 }

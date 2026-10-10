@@ -1976,3 +1976,8 @@
 
 - 같은 작업자 구성. bbb8 이름 복사, bb74 checksum, BIOS c00468×2·c0046e 경계(실행하지 않음, 선언 재개 PC=복귀/A7+=4/10fdc6), be0c known C→c1ea, 9f36→a71a→a0a0 중첩 push, 효과음 1adb를 연결했다(`engine/src/animation_machine_card_menu_save.cpp`).
 - Native 정상66·guard13, C++ 79조건 split4038·BIOS 재개71·음성95·zero-step87 일치(보고서 `8c403230…`). 리뷰 0238. BIOS 내부·카드 기록 결과는 미확인.
+
+## 2026-10-11 — 결과 하위 메뉴와 중첩 복귀(a698/a6da)
+
+- 같은 작업자 구성. 결과 메뉴 열림·입력·닫기, a698 중첩 복귀(부모 커서 callback D0=7/0), a6da 재그리기, 부모 bf2c→a70a→닫기→c2c8→2a00까지 연결했다(`engine/src/animation_machine_card_menu_nested.cpp`).
+- Native 정상57·guard5 split11605(자연 73프레임 체인 2갈래), C++ 64 row split12293·음성32·zero-step33 일치(보고서 `081d476c…`). 리뷰 0239.

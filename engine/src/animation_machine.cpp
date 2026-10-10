@@ -122,6 +122,9 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // set by be2e (ORI CCR) or be34 (ANDI CCR) in the same block as their RTS. bbb8/be0c (MOVE.L An,-(A7)),
     // MOVE/MOVEQ/EXT/ADD/NOT/ADDI/SUBQ/ANDI/MULU/TST blocks stay Unknown.
     case 0xa100:case 0xa71a:case 0xa72a:case 0xbb8c:case 0xbbd0:case 0xbd90:case 0xc1ea:
+    // Card menu nested blocks: MOVEA/BSR/RTS only (a6ce, a6f8, a706). a6fc (SUBA.W), a6b2/a6ea (CMPA),
+    // a6da/a6f0 (MOVE.L An stores), a698/a6bc (MOVE) and a6d6 (MOVEQ) stay Unknown.
+    case 0xa6ce:case 0xa6f8:case 0xa706:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -289,6 +292,7 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             else if ((next.pc>=0x9f36 && next.pc<=0x9f76) || (next.pc>=0xa71a && next.pc<=0xa72a) ||
                 (next.pc>=0xbb74 && next.pc<=0xbb8c) || (next.pc>=0xbbb8 && next.pc<=0xbbd2) ||
                 (next.pc>=0xbd26 && next.pc<=0xbd92) || (next.pc>=0xbe0c && next.pc<=0xbe38))ok=animation_card_menu_save_block(c);
+            else if (next.pc>=0xa698 && next.pc<=0xa708)ok=animation_card_menu_nested_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
