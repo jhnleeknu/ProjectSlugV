@@ -29,9 +29,9 @@ Baseline: 카드 메뉴 연결 통합 이후. 범위 근거는 `animation-machin
 6. `b4a2a` WORD `8000`→`10dd48`; D0=0, JSR `49392`(복귀 `b4a38`), BCC `b4a5e`; C=1이면 D0=0, JSR `1c028`(복귀 `b4a44`), CMPA.W #0,A1 같으면 `b4a5e`, 아니면 MOVEM.W (A1),D0-D3(부호확장 LONG), D0.W+=42(A0), D1.W+=46(A0), MOVEM.W D0-D3→`10dd48`. 같은 순서로 D0=1, `10dd50`. `b4a92` A0=`10dd58`: BYTE≠0이면 SUBQ.B, A0+=2, 다시 한 번, A0+=2; JSR `b481e`(복귀 `b4aae`); RTS.
 7. `49392` CMPA.L #`108000`,A5 다르면 `4939c` TRAP #f(경계, 실행하지 않음). 같으면 A0=`100cb8`; D0.W AND 1≠0이면 A0=`100da8`; BTST D0(mod 32 아님: 메모리 피연산자이므로 mod 8),`10d68e`; 0이면 RTS(Z만 바뀜, C는 ANDI.W가 지운 Clear), 아니면 ORI CCR #1(known Set) RTS. 즉 `493a2` ANDI.W #1,D0가 C=0을 만들고 `493ae` BTST는 C를 바꾸지 않는다.
 8. `1c028` D0.W push; JSR `4d9d6`(복귀 `1c030`); D0.W pop; CMPA.W #0,A0≠0이면 RTS; 아니면 A0=`100cb8`(D0 AND 1이면 `100da8`), A1=LONG 56(A0), RTS. `4d9d6` A4=`10dcba`(D0.B≠0이면 `10dce6`); TST.W (A4)=0이면 A0=0 RTS; 아니면 D0.L=A6, D0.W=WORD 6(A4), 0이면 A0=D0.W 부호확장(=0) RTS, 아니면 A0=D0.L(A6 상위 WORD|WORD), A1=LONG 8(A4), RTS.
-9. `b481e` D0.W=WORD `10800e` AND 1; 0이면 A1=`10dd5c`, A2=`10dd98`; 아니면 A1=`10dd98`, A2=`10ddd4`; D0=0; A1≠A2인 동안 WORD 0→(A1), A1+=a. RTS.
+9. `b481e` D0.W=WORD -7ff2(A5)=`10000e` AND 1; 0이면 A1=`10dd5c`, A2=`10dd98`; 아니면 A1=`10dd98`, A2=`10ddd4`; D0=0; A1≠A2인 동안 WORD 0→(A1), A1+=a. RTS.
 10. `4701e` `10d646`부터 LONG 0 9개(36바이트); WORD 7→`10d67c`; A0=`10d61a`; 루프: D0.W=2a(A0)≠0이면 SUBQ.W, 2a(A0)←D0, JSR `43e38`(기존, 복귀 `47054`); TST.W 26(A0) 음수가 아니면 BSR `46f52`(복귀 `47060`); A0-=2c; SUBQ.W #1,`10d67c`, BCC 반복(이전 WORD가 0이 아니면). 8회.
-11. `46f52` A1=LONG 26(A0)(rect 자료); D0..D3=WORD 1c,20,14,18(A0); 부호 비교로 정렬(BLE/EXG); MOVEM.W (A1)+,D4-D7; D7+1; 각 LSL.W #3; D6+=D4, D7+=D5; D0+=D4, D1+=D5, D2+=D6, D3+=D7; D7=WORD `10d67c`; D6=BYTE (A1) ROL.B #2 AND 3, SUBQ.W #3, borrow면 NOT.W D6 후 A1=`10d669`에서 BSET D7,-(A1) DBRA; 이후 X 범위(`ffa0`/`1ff`, BGT/BLT 부호)와 Y 범위(`0080`/`1ff`)로 잘라 LSR.W #5 bin을 `10d646`·`10d656` BYTE 배열에 BSET D7 DBRA. 범위 밖이면 RTS.
+11. `46f52` A1=LONG 26(A0)(rect 자료); D0..D3=WORD 1c,20,14,18(A0); 부호 비교로 정렬(BLE/EXG); MOVEM.W (A1)+,D4-D7; D7+1; 각 LSL.W #3; D6+=D4, D7+=D5; D0+=D4, D1+=D5, D2+=D6, D3+=D7; D7=WORD `10d67c`; D6=BYTE (A1) ROL.B #2 AND 3, SUBQ.W #3, borrow면 NOT.W D6 후 A1=`10d669`에서 BSET D7,-(A1) DBRA; 이후 X 범위(`ffa0`/`1ff`, BGT/BLT 부호)(원본은 X 단계에서 `46fcc` CMP.W D5,D1 / `46fd2` MOVE.W D5,D1로 D1을 자르고 D2는 자르지 않는다. 따라서 X bin이 16바이트 X 배열을 넘어 Y 배열까지 쓸 수 있다. 원본 버그 여부 미확인)와 Y 범위(`0080`/`1ff`)로 잘라 LSR.W #5 bin을 `10d646`·`10d656` BYTE 배열에 BSET D7 DBRA. 범위 밖이면 RTS.
 
 ## 구현 범위와 규약
 
@@ -46,7 +46,7 @@ Baseline: 카드 메뉴 연결 통합 이후. 범위 근거는 `animation-machin
 ## 검증 조건(최소)
 
 - 자연: stage seed에서 `480bc` 진입→`47642`(두 player 객체, `289e` 결과와 61 bit7 조합)→`1a73c` stop.
-- 직접 진입(선언 복귀 LONG): `b4a2a`(두 player의 `49392` Set/Clear, `1c028` A1 null/비null, `4d9d6` A4 두 갈래와 6(A4) 0/비0, `10dd58` BYTE 0/비0, `10800e` bit0 두 갈래), `4701e`(2a 타이머 0/비0으로 `43e38` 호출, 26 음수/비음수, `46f52` 범위 안/밖·DBRA 횟수·ROL 경로), `2efa6`(`10d490`/`10d491` 네 조합, `3af8`·`3c44` 경로), `3c44`(ring 일치/불일치, 빈 ring), `6f1c2`.
+- 직접 진입(선언 복귀 LONG): `b4a2a`(두 player의 `49392` Set/Clear, `1c028` A1 null/비null, `4d9d6` A4 두 갈래와 6(A4) 0/비0, `10dd58` BYTE 0/비0, `10000e` bit0 두 갈래), `4701e`(2a 타이머 0/비0으로 `43e38` 호출, 26 음수/비음수, `46f52` 범위 안/밖·DBRA 횟수·ROL 경로), `2efa6`(`10d490`/`10d491` 네 조합, `3af8`·`3c44` 경로), `3c44`(ring 일치/불일치, 빈 ring), `6f1c2`.
 - 경계: A5≠`108000`→`4939c` TRAP stop, 비경계 stop rollback, 홀수 A0/A1/A4/A7 오류 rollback, 내부 PC 거부, Unknown carry로 BCC 진입 오류, zero-step.
 - 비교 항목은 기존과 같다.
 
