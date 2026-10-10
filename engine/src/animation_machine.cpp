@@ -125,6 +125,15 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // Card menu nested blocks: MOVEA/BSR/RTS only (a6ce, a6f8, a706). a6fc (SUBA.W), a6b2/a6ea (CMPA),
     // a6da/a6f0 (MOVE.L An stores), a698/a6bc (MOVE) and a6d6 (MOVEQ) stay Unknown.
     case 0xa6ce:case 0xa6f8:case 0xa706:
+    // Frame helper (480bc U1) blocks: JSR/BSR/BRA/RTS/LEA/MOVEA/BTST/BSET and conditional branches only.
+    // 4765c, b4a38 and b4a6c are the BCC blocks consuming the C returned by 289e or 49392; 493aa/493ae/493ba
+    // carry the Clear set by the 4939e ANDI.W or the Set of the 493b6 ORI CCR to the RTS. DBRA blocks
+    // (46faa 4700a 47016) and MOVE/MOVEQ/CMP/CMPA/TST/SUB/ADD/ANDI/ADDA/ADDQ/CLR/SNE/EXG/NOT blocks stay Unknown.
+    case 0x480bc:case 0x480c0:case 0x480c6:case 0x480cc:case 0x480d2:case 0x480d8:case 0x480de:case 0x480e4:
+    case 0x480ea:case 0x480f0:case 0x47656:case 0x4765c:case 0x47660:case 0x4766a:case 0x47670:case 0x6f1c2:
+    case 0x2efc8:case 0x2efda:case 0x3c68:case 0xb4a38:case 0xb4a6c:case 0xb4aae:case 0x493aa:case 0x493ae:
+    case 0x493ba:case 0x1c03a:case 0x1c048:case 0x1c04c:case 0x4d9e0:case 0x4d9ea:case 0x4d9fc:case 0x4da00:
+    case 0xb482a:case 0xb4836:case 0xb484e:case 0x4701c:case 0x4705c:case 0x4706a:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -293,6 +302,11 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xbb74 && next.pc<=0xbb8c) || (next.pc>=0xbbb8 && next.pc<=0xbbd2) ||
                 (next.pc>=0xbd26 && next.pc<=0xbd92) || (next.pc>=0xbe0c && next.pc<=0xbe38))ok=animation_card_menu_save_block(c);
             else if (next.pc>=0xa698 && next.pc<=0xa708)ok=animation_card_menu_nested_block(c);
+            else if ((next.pc>=0x480bc && next.pc<=0x480f0) || (next.pc>=0x47642 && next.pc<=0x47670) ||
+                next.pc==0x6f1c2 || (next.pc>=0x2efa6 && next.pc<=0x2efda) || (next.pc>=0x3c44 && next.pc<=0x3c7a) ||
+                (next.pc>=0xb4a2a && next.pc<=0xb4aae) || (next.pc>=0x49392 && next.pc<=0x493ba && next.pc!=0x4939c) ||
+                (next.pc>=0x1c028 && next.pc<=0x1c050) || (next.pc>=0x4d9d6 && next.pc<=0x4da06) ||
+                (next.pc>=0xb481e && next.pc<=0xb484e) || (next.pc>=0x46f52 && next.pc<=0x4706a))ok=animation_frame_helpers_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

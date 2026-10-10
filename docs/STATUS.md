@@ -1986,3 +1986,9 @@
 
 - 0236~0239 최종 상태에서 이전 카드 메뉴 검증기의 경계 음성·superseded 기록을 정렬했다(엔진·native 비교 코드 불변). card_child/card_menu/open/input/close/save/nested와 이전 회귀 14종 통과, `make -j4 all test` exit0. 상세는 리뷰 0240.
 - 다음: 480bc 프레임 helper U1~U7 통합(각 단위 검증 완료), F1a stage entry(core 완료, native 관측 중), F1b(core·관측 진행), F1c1/F1c2·F2/F3 계약. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U1 프레임 shell·가벼운 helper
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 480bc shell, 47642/47656 player flags, 6f1c2, b4a2a region boxes, 4701e/46f52 spatial bins, 2efa6/3c44 loop sound을 live RAM/A7로 연결했다(`engine/src/animation_machine_frame_helpers.cpp`). 경계 1a73c/49b0c/4aa88/e8a48, TRAP #15 4939c.
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `737f1c0d…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0241. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
