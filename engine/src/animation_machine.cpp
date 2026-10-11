@@ -397,6 +397,13 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x7023e:case 0x70246:case 0x7024c:case 0x70254:case 0x7026a:case 0x70270:case 0x70278:case 0x7027e:case 0x70286:
     case 0x7028c:case 0x70418:case 0x7041e:case 0x70476:case 0x70496:case 0x704f0:case 0x704f6:case 0x70502:case 0x70506:
     case 0x70512:case 0x70522:case 0x70548:
+    // Objects U13 (F4) blocks: LEA+JSR/JSR/JMP/BRA/RTS blocks, the BTST+Bcc blocks 70a40 b81aa (Z only) and the four consumers b80ce
+    // (C returned by 1ab02), b819c (4b54e), b83f2 (49fc6) and ea5f6 (the U12 boundary 1abda). U13 has no known-carry producer.
+    // MOVE/MOVEQ/CLR/TST/CMPI/ADDI/ADD/SUBQ/BSET/BCLR+MOVE.L blocks, the MOVE.L #imm,(A6) blocks and the WORD push/pop blocks stay
+    // Unknown.
+    case 0x709a6:case 0x70a40:case 0xb80c4:case 0xb80ce:case 0xb80d2:case 0xb80d8:case 0xb8110:case 0xb8132:case 0xb8138:
+    case 0xb816e:case 0xb8190:case 0xb8196:case 0xb819c:case 0xb81aa:case 0xb81ba:case 0xb83e6:case 0xb83ec:case 0xb83f2:
+    case 0xb83fc:case 0xea5f0:case 0xea5f6:case 0xea624:case 0xf1a62:case 0xf1a74:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -671,6 +678,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x4911a && next.pc<0x4913e) || (next.pc>=0x49140 && next.pc<0x49174) || (next.pc>=0x49176 && next.pc<0x491b6) ||
                 (next.pc>=0x492ae && next.pc<0x492d0) || (next.pc>=0x4c0ac && next.pc<0x4c0ea) || (next.pc>=0x70054 && next.pc<0x7028e) ||
                 (next.pc>=0x70418 && next.pc<0x7054c))ok=animation_objects_u12_block(c);
+            else if ((next.pc>=0x7090a && next.pc<0x7091e) || (next.pc>=0x70932 && next.pc<0x70a6c) || (next.pc>=0xb80c4 && next.pc<0xb812c) ||
+                (next.pc>=0xb8132 && next.pc<0xb81be) || (next.pc>=0xb83e6 && next.pc<0xb8400) || (next.pc>=0xea5f0 && next.pc<0xea600) ||
+                (next.pc>=0xea60c && next.pc<0xea626) || (next.pc>=0xf1a4e && next.pc<0xf1a7a))ok=animation_objects_u13_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
