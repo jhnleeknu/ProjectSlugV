@@ -1,0 +1,364 @@
+{
+  "schema_version": 1,
+  "scope": "Claude-started U15b/U15c and F2/F3/F4 U01-U16 integration only",
+  "source_commit": "88ca9e4ad26e5dda3391af9face937cf3d08dfef",
+  "source_rom_sha256": "29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f",
+  "standard_reports_current": 35,
+  "standard_reports": [
+    {
+      "tool": "verify_animation_machine.py",
+      "report": "artifacts/animation_machine_execution/verification.json",
+      "status": "current",
+      "sha256": "0e571df1fabe28260cde7c68b371cf3f72e75d1f967dca210fdb845b55c468b8",
+      "inputs": 77,
+      "bad": [],
+      "tool_sha256": "4bcbda0ed711b284b4cdbe381c202cca3066efa2e394eae1da83d84222464184"
+    },
+    {
+      "tool": "verify_animation_machine_activation.py",
+      "report": "artifacts/animation_machine_activation_execution/verification.json",
+      "status": "current",
+      "sha256": "ab7540e35422c3a1ff626093e3e748beb975c80b7be8b687f4b18c7ef8ac8878",
+      "inputs": 109,
+      "bad": [],
+      "tool_sha256": "76b031af801cd10364fd8216c1f4cdeb591a868df3bf3e9358362f85f6098d78"
+    },
+    {
+      "tool": "verify_animation_machine_area_clear.py",
+      "report": "artifacts/animation_machine_area_clear_execution/verification.json",
+      "status": "current",
+      "sha256": "2133af5e08f24169d797bb253b20dc2ede762b5476e08e3845be8b2965e34179",
+      "inputs": 102,
+      "bad": [],
+      "tool_sha256": "ecd497021151b2caffa0b6d064d1e5bae733a9e3c688adcecd7022cb8f664a19"
+    },
+    {
+      "tool": "verify_animation_machine_buffer_cue.py",
+      "report": "artifacts/animation_machine_buffer_cue_verify/verification.json",
+      "status": "current",
+      "sha256": "aedb162f15f420b6f49a675aaaa5601fcfa08fe0ca6ce5a369cf9fa17840c285",
+      "inputs": 102,
+      "bad": [],
+      "tool_sha256": "49cb78a05893cc1b9eb5ff78527bae9641463d84330d827d8d05a5742ff60eae"
+    },
+    {
+      "tool": "verify_animation_machine_callers.py",
+      "report": "artifacts/animation_machine_callers_execution/verification.json",
+      "status": "current",
+      "sha256": "01eca55c9546d5f01014a4ece0079b4d4d3f593a66730d3371d5597ccbafe435",
+      "inputs": 98,
+      "bad": [],
+      "tool_sha256": "1e22738e07ed02e28a720f74d94487bbc81dacbcca8ba3cd559e31815d1b2cfb"
+    },
+    {
+      "tool": "verify_animation_machine_card_child.py",
+      "report": "artifacts/animation_machine_card_child_execution/verification.json",
+      "status": "current",
+      "sha256": "7632c94755632a6a3e88188257302664d7282a45d9eaa68e560e07a0e23707c9",
+      "inputs": 102,
+      "bad": [],
+      "tool_sha256": "9d8c8e3d1fa371c6102946f168916ce2bff06654e6bbe8add2b30d6228e30368"
+    },
+    {
+      "tool": "verify_animation_machine_card_menu.py",
+      "report": "artifacts/animation_machine_card_menu_execution/verification.json",
+      "status": "current",
+      "sha256": "d72c4bc6eb63d29fac87b75ba0dec65aad6b7c2d5a34edfea55f7fd9b76443f1",
+      "inputs": 103,
+      "bad": [],
+      "tool_sha256": "ceb8039972d7891ee88dfc18bfaf84bea245ab2e0a000a89c749bcce1c48d10e"
+    },
+    {
+      "tool": "verify_animation_machine_card_menu_close.py",
+      "report": "artifacts/animation_machine_card_menu_close_execution/verification.json",
+      "status": "current",
+      "sha256": "a2ee3906de92c27c10988425e04d4c68178a18bf54981b28c68abcdc643a289d",
+      "inputs": 104,
+      "bad": [],
+      "tool_sha256": "0c97cc17da9c421ba0a1a9c74307fa225830c9e1617d98c1ae866f14f604e8af"
+    },
+    {
+      "tool": "verify_animation_machine_card_menu_input.py",
+      "report": "artifacts/animation_machine_card_menu_input_execution/verification.json",
+      "status": "current",
+      "sha256": "f4ee5eaef2db5ec4a29e2045d51404ff5641d03139242fc6ce93574b1e050bca",
+      "inputs": 104,
+      "bad": [],
+      "tool_sha256": "d582bc784e03b86519c114d2961ee19f6da3fcc130c20de6abe6ba3e9bce216a"
+    },
+    {
+      "tool": "verify_animation_machine_card_menu_nested.py",
+      "report": "artifacts/animation_machine_card_menu_nested_execution/verification.json",
+      "status": "current",
+      "sha256": "78f749a9e14a3721a225eca7dd174186979041181a18dc021307375058a11519",
+      "inputs": 102,
+      "bad": [],
+      "tool_sha256": "4f086c41f2d96c6a5d898a7d75c8805e9c73964d07a9daf23488c5b9e35bdafa"
+    },
+    {
+      "tool": "verify_animation_machine_card_menu_open.py",
+      "report": "artifacts/animation_machine_card_menu_open_execution/verification.json",
+      "status": "current",
+      "sha256": "d30d6c940a446cd997cd385d4bad107e29e5f249dc5c56c5bc61bca42218128a",
+      "inputs": 106,
+      "bad": [],
+      "tool_sha256": "b8c845fd789f63a8d90cca7dc471c1aaa3a584407c75680324fc735239f3e3f1"
+    },
+    {
+      "tool": "verify_animation_machine_card_menu_save.py",
+      "report": "artifacts/animation_machine_card_menu_save_execution/verification.json",
+      "status": "current",
+      "sha256": "0e790b227f6c814e9d750517f5f9da36ec2d43a2eb8ffd3820644f71a5998471",
+      "inputs": 104,
+      "bad": [],
+      "tool_sha256": "d367a25e1bec8f3428595425fba7a892af6a9d005c173ed24e95a785d9aac4ae"
+    },
+    {
+      "tool": "verify_animation_machine_carry.py",
+      "report": "artifacts/animation_machine_carry_execution/verification.json",
+      "status": "current",
+      "sha256": "66385a9a898c4d0f05d9309fea590906f51cb20b024fde4860efe4bf758ff20e",
+      "inputs": 101,
+      "bad": [],
+      "tool_sha256": "ac68f5d531fde0c2ffbe0e9c7310cb9061d47e42b39d71f464622d5b1cc02274"
+    },
+    {
+      "tool": "verify_animation_machine_cleanup.py",
+      "report": "artifacts/animation_machine_cleanup_execution/verification.json",
+      "status": "current",
+      "sha256": "e29c02d8ef4894875f625401a3225b69d5c580e4eb85dec01d68f85cdfef6b39",
+      "inputs": 118,
+      "bad": [],
+      "tool_sha256": "9ed8b562de709de5bada76d4919f30aeee79f1d80fa79d59b450f008629c06bc"
+    },
+    {
+      "tool": "verify_animation_machine_exit.py",
+      "report": "artifacts/animation_machine_exit_execution/verification.json",
+      "status": "current",
+      "sha256": "16c65755eca1b9c8ae0b9e412d822821ef237313a9e6c45abae076ef49ea0b49",
+      "inputs": 116,
+      "bad": [],
+      "tool_sha256": "a80caeed0ba52962bc09cb370849743cabeb3fd8a25792f7112c87e492e3b647"
+    },
+    {
+      "tool": "verify_animation_machine_fade_card.py",
+      "report": "artifacts/animation_machine_fade_card_execution/verification.json",
+      "status": "current",
+      "sha256": "dfe009233394d38a327568de7bb111563455e9961ffba2ccc35345b209c9e321",
+      "inputs": 100,
+      "bad": [],
+      "tool_sha256": "f723502b28e7f07ae3bb883c4d5e28ce6c161bb967b81d9f24e50e86a87d87ef"
+    },
+    {
+      "tool": "verify_animation_machine_frame_helpers.py",
+      "report": "artifacts/animation_machine_frame_helpers_execution/verification.json",
+      "status": "current",
+      "sha256": "9e634745528c6e0842a277ff35b6722c6dd09fb3daf884ec79b090d3483d4d8d",
+      "inputs": 112,
+      "bad": [],
+      "tool_sha256": "59f10eb1e326ee8cd83b0488c96b9d316c34e2a8819c6a5e3d90b1f191d067bc"
+    },
+    {
+      "tool": "verify_animation_machine_hud.py",
+      "report": "artifacts/animation_machine_hud_execution/verification.json",
+      "status": "current",
+      "sha256": "b651dbb984fd7a9e58be2f6e80aafa9b87ed0516d6bfd9d49a38743abd21c78c",
+      "inputs": 113,
+      "bad": [],
+      "tool_sha256": "e52b918508cb25b6796d4812748722b23286a415a6bb7f486af163c1279cb0e0"
+    },
+    {
+      "tool": "verify_animation_machine_input.py",
+      "report": "artifacts/animation_machine_input_execution/verification.json",
+      "status": "current",
+      "sha256": "f4dd24f45c67d0a400cca6c96cd1b291fae62466a153be7b43913df4b170c964",
+      "inputs": 114,
+      "bad": [],
+      "tool_sha256": "263c619e3e260288225a451d9b8e851bc00f667ad37c36eacdb6030a084df887"
+    },
+    {
+      "tool": "verify_animation_machine_map_transfer.py",
+      "report": "artifacts/animation_machine_map_transfer_execution/verification.json",
+      "status": "current",
+      "sha256": "67b8f1db409e4fea8e26a9dd97c2d6d9b84de7f4737dedb0dd18e6f5fd285bbe",
+      "inputs": 122,
+      "bad": [],
+      "tool_sha256": "a49cf54dbfa6f0d22a0c225a47462b973a6fc2fd074599dcdc51b7182fd5f6d0"
+    },
+    {
+      "tool": "verify_animation_machine_motion_walk.py",
+      "report": "artifacts/animation_machine_motion_walk_execution/verification.json",
+      "status": "current",
+      "sha256": "48e338e33d212c3404b41eff82e0df89cc3e05fa02ec29814474e1093837739b",
+      "inputs": 112,
+      "bad": [],
+      "tool_sha256": "1a6ce5693d05a4e89d7d183ec87f18c0bcbc18c3e80968af08ac2fc4080e49a9"
+    },
+    {
+      "tool": "verify_animation_machine_palette_bind.py",
+      "report": "artifacts/animation_machine_palette_bind_execution/verification.json",
+      "status": "current",
+      "sha256": "f6da12cf9c36a7e5b27187c93790e2269c827d5bf2b53799a2197293252722bc",
+      "inputs": 121,
+      "bad": [],
+      "tool_sha256": "7e7ad5891f47baa65994e89a524ae76dae168b2b61a075915986ca17f1853a0a"
+    },
+    {
+      "tool": "verify_animation_machine_readiness.py",
+      "report": "artifacts/animation_machine_readiness_execution/verification.json",
+      "status": "current",
+      "sha256": "5a673c6ad68481515749daed6a3526db7db86937a10258ff24aef91cf0bbc934",
+      "inputs": 112,
+      "bad": [],
+      "tool_sha256": "f123414810abf7f28f739fc5affed086fc027ba7f008fab4307bdac84759cf7e"
+    },
+    {
+      "tool": "verify_animation_machine_scene.py",
+      "report": "artifacts/animation_machine_scene_execution/verification.json",
+      "status": "current",
+      "sha256": "9e9135ec04c1f827373820eca59a1e6d35cbb74636e91cda05181efde790a518",
+      "inputs": 120,
+      "bad": [],
+      "tool_sha256": "3074a5674589f2314fb2b9212b166f0f9c39aad858751ee7d5c81c675ff0ca97"
+    },
+    {
+      "tool": "verify_animation_machine_scene_core.py",
+      "report": "artifacts/animation_machine_scene_core_execution/verification.json",
+      "status": "current",
+      "sha256": "e91a1a3e75ff55760f919ae6d275287fdbb8ad0645d5339f85cfe1e4728b52e9",
+      "inputs": 112,
+      "bad": [],
+      "tool_sha256": "040a0512d8ce3b094ba461e6219ece8a2cbf7e165bf18523d7856b8d9f5c8c5a"
+    },
+    {
+      "tool": "verify_animation_machine_scene_update.py",
+      "report": "artifacts/animation_machine_scene_update_execution/verification.json",
+      "status": "current",
+      "sha256": "a4370374673f1a6918c6b6d25fa4d1b170ca109e230d34cec1fc82e138202ec0",
+      "inputs": 113,
+      "bad": [],
+      "tool_sha256": "99b5bf633a47de884ab918e7c797d0329e047f670fe96373211e846e710ad852"
+    },
+    {
+      "tool": "verify_animation_machine_scheduler.py",
+      "report": "artifacts/animation_machine_scheduler_execution/verification.json",
+      "status": "current",
+      "sha256": "d1ac590d286ae584897ac76802b13890b73e728fd7061b44330cce3c4127a6d0",
+      "inputs": 104,
+      "bad": [],
+      "tool_sha256": "f7ba422e6aeaa7238950585e67340d1f9e6a76ec68e7fd9a868f9865efd79990"
+    },
+    {
+      "tool": "verify_animation_machine_screen.py",
+      "report": "artifacts/animation_machine_screen_execution/verification.json",
+      "status": "current",
+      "sha256": "0d3e98ceef5721fde77bcf8603d1adf74aaa88fcb77757ce54b290e64cf08a71",
+      "inputs": 118,
+      "bad": [],
+      "tool_sha256": "e51ff6a4badec81bc130dfd6fa9e91015e561a9ab7dc21ffe2c4684babe95b4b"
+    },
+    {
+      "tool": "verify_animation_machine_script_placement.py",
+      "report": "artifacts/animation_machine_script_placement_execution/verification.json",
+      "status": "current",
+      "sha256": "ec691e787d2b4e973793c716eefb5d484a379e7e43d8a8d37f69f5513d5e212a",
+      "inputs": 114,
+      "bad": [],
+      "tool_sha256": "f14b21291e6ec52f91148b571bf4a631fc6db7d544b00c5b9197b5cb3c92e233"
+    },
+    {
+      "tool": "verify_animation_machine_stage_area.py",
+      "report": "artifacts/animation_machine_stage_area_execution/verification.json",
+      "status": "current",
+      "sha256": "32a3c624fdef6f9d2b38ae273f20c188fb11715d8f67227d6f10e1a31cf6636e",
+      "inputs": 102,
+      "bad": [],
+      "tool_sha256": "3841f635e1d8fb869a76db2df54f59aeda062ccdeeee9d4b5ad646a5cba2aea3"
+    },
+    {
+      "tool": "verify_animation_machine_stage_catalog.py",
+      "report": "artifacts/animation_machine_stage_catalog_execution/verification.json",
+      "status": "current",
+      "sha256": "4d11fe782cb5f5a2d53241b4c867e4f4ca0e792876da5af6847dcd7f6fe39071",
+      "inputs": 103,
+      "bad": [],
+      "tool_sha256": "106bf08266d7cd8af1ee1a8b4389e72dba2dd5d3b6075999843daa73881d0770"
+    },
+    {
+      "tool": "verify_animation_machine_stage_entry.py",
+      "report": "artifacts/animation_machine_stage_entry_execution/verification.json",
+      "status": "current",
+      "sha256": "d5cabb67172caeba9cc87047469f99b224d40d7fde2b0287be08611a5c80f63e",
+      "inputs": 102,
+      "bad": [],
+      "tool_sha256": "bec171c8e1da97c817f7bfb79726ddc82f00ec77a2744b1dd312843ef40d23a1"
+    },
+    {
+      "tool": "verify_animation_machine_stage_event.py",
+      "report": "artifacts/animation_machine_stage_event_execution/verification.json",
+      "status": "current",
+      "sha256": "542a78105a6796eb31efabcf57ca97b140bad05d4a47e0e88fe5ccf4684910f3",
+      "inputs": 103,
+      "bad": [],
+      "tool_sha256": "ca7e109fc3b481e0130b05516ee0e61c98090bb0735e456453cf1ec30fdcaffe"
+    },
+    {
+      "tool": "verify_animation_machine_stage_event_ops.py",
+      "report": "artifacts/animation_machine_stage_event_ops_execution/verification.json",
+      "status": "current",
+      "sha256": "99c6f9c5780f95cf70f9551f4f4e98056313f2eb0d4d337123c19905943e561e",
+      "inputs": 104,
+      "bad": [],
+      "tool_sha256": "418349c51ba6f456a9a69f47e0529b6dfdc26a1db829fafd12d115b94b39e08c"
+    },
+    {
+      "tool": "verify_animation_machine_transition.py",
+      "report": "artifacts/animation_machine_transition_execution/verification.json",
+      "status": "current",
+      "sha256": "4ca6330c7b2a5c927ebb28b53a4c6a34649542d81b3b0e3f7eea9646c9578927",
+      "inputs": 115,
+      "bad": [],
+      "tool_sha256": "80e7440a729ad7c55b55f61cc5b118514be027bcd35ad09065e9a674b4524110"
+    }
+  ],
+  "additional_evidence": [
+    {
+      "name": "F4 objects",
+      "report": "artifacts/animation_machine_objects_integration_execution/execution.json",
+      "report_sha256": "be71ac7a2f690b580dafd397cbefa035bfc08e9eacea8b6777652659d55066e0",
+      "acceptance": "build/integration-regression/f4-final-input-audits/objects/acceptance.json",
+      "acceptance_sha256": "080b0e8844b82c487314aae7b3a5c37ece1faa13afa02d1eb8504c1766692239"
+    },
+    {
+      "name": "F4 scheduler RNG",
+      "report": "artifacts/animation_machine_scheduler_rng_f4_execution/verification.json",
+      "report_sha256": "029560b57a24b4b1679f30ce695a40081d76309cea0dc0ea277ba6d655bcf027",
+      "acceptance": "build/integration-regression/f4-final-input-audits/rng/acceptance.json",
+      "acceptance_sha256": "f11a95713c9407dfdd7e4412ef8050da51cfafd425dce559bb00386fb56688c0"
+    },
+    {
+      "name": "U15 UBSan",
+      "report": "build/sanitize-u15review/verification.json",
+      "report_sha256": "ebd3eebf16d66468cc21be2aa60d4c637195b2ce5ce8e878bc157000784de039"
+    }
+  ],
+  "build": {
+    "command": "make -j4 all test",
+    "exit_code": 0,
+    "cpp_test_executables": 204,
+    "python_tests": 257,
+    "log_sha256": "a8d798567aa9a473dd8bf1e9129c516a62923655c6f3eb65b6638b4f057275e5"
+  },
+  "supplemental_card_API_audit": {
+    "tool": "tools/audit_animation_machine_card_superseded.py",
+    "tool_sha256": "6af353144c3c42bad98a48426c926ab4d53ad109b1706d207e9e1281013fe8de",
+    "receipt_sha256": "2aa5d4577b47c4886df984fe52952512b04b77c7bd01ca60f6df9ade0c157841",
+    "acceptance_sha256": "aebee4fd711e3b7c89338c42150e6bf8311b8031c8f99240c5add0d753a6dff2",
+    "rows": 5,
+    "native_continuation_equivalence_claimed": false
+  },
+  "limits": [
+    "Per-suite declared native observations and contracts; checked rollback boundaries, step limits and excluded inputs are not execution equivalence.",
+    "Natural boot/IRQ, direct play, complete objects/stages/sound and the full game Goal remain outside this integration acceptance."
+  ]
+}

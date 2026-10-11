@@ -2064,3 +2064,21 @@
 - U15b/U16 충돌 4개는 양쪽의 등록·라우팅·시험을 함께 보존해 해결했다(`ade4f04`). main과 WIP 병합(`e0657a2`)에서는 확장된 실행부와 이동한 음성 경계를 보존하고 main의 검증·분석 기록을 합쳤다.
 - 내부 작업자 3개 모두 `gpt-6.1-sol` / `medium`: U15b/c 검토·카드 회귀, F2/F3 검증기 통합, F4 원본 비교. 메인은 의미 검토·통합·나머지 회귀를 맡는다. AGENTS.md와 docs/GOAL.md에도 이미 6.1 모델 규칙이 적용되어 있다.
 - 현재 빌드·원본 회귀 검증 실행 중이다. 단위 WIP PASS를 최종 통합 PASS로 대신하지 않으며, 완료 결과는 후속 기록에서 확정한다. 원본 ROM은 수정하지 않으며 생성 데이터는 Git에 추가하지 않는다.
+
+## 2026-10-12 — Claude 범위 통합 중간 검증 (전체 회귀 진행 중)
+
+- `codex/claude-integration`에서 U15c 등록(`9d5aa11`), 빌드 공통 오브젝트 재사용(`91bfe4a`), 기존 F4 계약·원본 관측 보존(`ed3d8dd`), F4 통합 검증·인수 감사(`617d4a4`), F3 통합 검증(`3debaf6`)을 기록했다. 기존 전체 Goal은 일시중지 상태를 유지한다.
+- `make -j4 all test` 종료 0: C++ 시험 실행 파일 204개, Python 시험 257개. U15b/c UBSan 진단 0. 엔진·헤더는 이 검증 후 바뀌지 않았다.
+- F4 matrix 4,743개: 원본 실행 일치 4,657, 명시적 rollback 경계 77, 원본 step limit 8, 기존 선언 flag 전제 위반 1. 미분류 불일치·translator abort 0. F4 RNG는 기본 142 seed의 24,646 pass/169,037 node와 변형 6 seed의 844 pass/6,116 node가 일치했다. 실제 원본 종료 도달은 61/2 seed이며 미지원 경계를 완주로 세지 않는다. 상세·해시는 F4 통합 실행 문서와 인수 도구에 기록했다.
+- F2/F3a/F3b 최종 원본 비교와 입력 해시 검사는 통과했다. F2 통합은 `737a5c2`, 기존 비카드 경계 정렬은 `e7bba12`, 카탈로그 성공 필수 검사는 `aee0eaa`로 기록했다. 현재 35개 기본 회귀 중 34개가 최종 소스·입력 해시 일치로 통과했고 `verify_animation_machine_card_menu_open.py` 한 개가 공식 전체 실행 중이다. 이전 도구 해시로 종료 검사가 실패했던 시험은 최종 고정 소스로 재실행했으며 이전 결과를 인수 결과로 사용하지 않는다.
+- 기존 검증기의 양쪽 결과 허용(success 또는 예전 error), 임의 오류 허용, 최종 PC/status 누락, superseded guard의 native prefix 검사 누락을 검토하고 명시적 API-only 결과와 원본 비교 범위를 구분하도록 강화했다. 새 게임 기능이나 U17 이후 작업은 추가하지 않았다.
+- 현재 통합 작업 디렉터리는 `/Users/start/.codex/worktrees/claude-integration/metalslug`다. 원래 충돌 상태의 checkout은 덮어쓰지 않았다. 진행 중인 마지막 카드 열기 검증이 끝나면 `docs/reviews/0256-claude-integration.md`와 최종 회귀 기록을 확정한다.
+
+
+## 2026-10-12 — Claude 착수 범위 통합 인수 완료
+
+- 사용자 지정 범위인 병합 충돌 해결 → U15b/U15c 마무리 → 기존 F2/F3/F4 U01~U16 통합 → 원본 비교·전체 회귀 검증을 완료했다. 검증 대상 최종 소스 커밋은 `88ca9e4`, 카드 추가 API 인수 도구는 `bc28e99`다. 결과는 `/Users/start/.codex/worktrees/claude-integration/metalslug`의 `codex/claude-integration` 브랜치에 있다. 원래 충돌 중인 checkout의 index/변경은 덮어쓰지 않았다.
+- 기본 공식 회귀 35/35 PASS. 최종 보고서·현재 입력 해시 감사도 35 current/0 pending/0 drift다. 마지막 card-menu-open은 88개 사례(guard 포함), split 14,969/control 282/negative 323/zero-step 606/carry probe 26,220을 검증했다. 입력 106개 일치, ROM 변경 없음. 보고서 SHA256 `d30d6c940a446cd997cd385d4bad107e29e5f249dc5c56c5bc61bca42218128a`.
+- 통합 빌드 `make -j4 all test`: C++ 실행 파일 204개·Python 시험 257개 통과, U15b/c UBSan 진단 없음. F2/F3 및 F4 별도 원본 비교·엄격한 인수 감사도 통과했다. F4의 4,657개 실행 일치/77개 rollback 경계/8개 원본 step limit/1개 입력 전제 위반 분류를 유지한다. API-only 결과를 원본 이후 실행 동등성으로 세지 않았다.
+- 메인이 소스 diff와 실제 검증 결과를 리뷰했다. 내부 작업자 3개 모두 `gpt-6.1-sol` / `medium`을 사용했고 새 외부 Claude 작업자는 생성하지 않았다. 검증·제약·실행 사고 기록은 `docs/reviews/0256-claude-integration.md`, 전체 보고서/도구 해시는 `docs/reviews/0256-regression-manifest.json`에 있다.
+- 이번 제한 작업은 여기서 종료한다. 다음 작업은 사용자 지시에 따른다. U17 이후·새 R 단위·직접 플레이·자연 부팅/IRQ·전체 게임 완료는 이번 인수 범위가 아니며, 기존 전체 Goal은 계속 일시중지 상태다. ROM과 추출 게임 데이터는 Git에 추가하지 않았다.

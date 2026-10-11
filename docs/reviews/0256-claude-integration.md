@@ -1,4 +1,4 @@
-# Claude 착수 범위 통합 리뷰 (검증 진행 중)
+# Claude 착수 범위 통합 리뷰 (제한 범위 인수 완료)
 
 ## 범위와 원본 보존
 
@@ -22,7 +22,7 @@ U15b/U15c의 각 96개 BRA 테이블 및 U15c 96개 ORI/MOVE 본문 상수는 �
 
 빌드 중 동일한 공통 엔진을 모든 테스트마다 다시 컴파일하는 비용이 커서 Makefile을 동일 소스·옵션의 오브젝트 재사용 방식으로 변경했다. 테스트 목록과 링크 순서는 유지한다. 검증기 컴파일 시간 제한은 병렬 실행 시 60초 초과가 발생해 300초로 늘렸으며 실행 비교 범위는 줄이지 않았다.
 
-## 현재 확보한 검증
+## 통합 검증 결과
 
 - `make -j4 all test`: 종료 0, C++ 테스트 실행 파일 204개, Python 테스트 257개, 컴파일 경고 0. 로그 `/tmp/ms5-integration-build-final.log`.
 - 통합 U15b/c UBSan: 종료 0, 진단 없음. U15b 803 fixture/144 block/2,584 호출; U15c 427 fixture/196 block/2,879 호출. 재현 명령은 `.venv/bin/python tools/verify_u15_integration_sanitizers.py`(새 출력 디렉터리 필요)이며, 실제 명령·입력 및 바이너리 해시는 `build/sanitize-u15review/verification.json`에 기록한다.
@@ -32,7 +32,7 @@ U15b/U15c의 각 96개 BRA 테이블 및 U15c 96개 ORI/MOVE 본문 상수는 �
 - F3a: typed 560(일치 443·guard 117), 22,870 typed phase, natural 9,613, negative 1,020, zero-step 402. 보고서 `542a78105a6796eb31efabcf57ca97b140bad05d4a47e0e88fe5ccf4684910f3`; 입력 103개·관측 artifact 13개 해시 일치.
 - F3b: typed 284, phase 5,081, guard 38, 의도된 차이 4, natural 471, negative 894, zero-step 351. 보고서 `99c6f9c5780f95cf70f9551f4f4e98056313f2eb0d4d337123c19905943e561e`; 입력 104개·관측 artifact 13개 해시 일치.
 - F2: 142 seed, 원본 동등 whole pass 10,498, node 종료·port digest 79,680, RAM dump frame 6,946, 추가 fixture 20, negative 177, zero-step 51. 보고서 `d1ac590d286ae584897ac76802b13890b73e728fd7061b44330cce3c4127a6d0`; 입력 104개·관측 artifact 13개 해시 일치.
-- 나머지 원본 회귀는 최종 도구 버전으로 완료 여부를 확인 중이다. 이전 개별 WIP 결과를 통합 완료로 대신하지 않는다.
+- 기본 원본 회귀 35개 모두 최종 도구 버전의 전체 실행으로 통과했다. 각 보고서와 현재 입력 해시를 마지막으로 대조해 35 current/0 pending/0 drift를 확인했다. 전체 목록과 보고서·도구 SHA256은 `0256-regression-manifest.json`에 기록했다. 이전 개별 WIP 결과로 통합 결과를 대신하지 않았다.
 
 ## 검증기에서 발견한 사항
 
@@ -45,7 +45,7 @@ U15b/U15c의 각 96개 BRA 테이블 및 U15c 96개 ORI/MOVE 본문 상수는 �
 
 이동 로직 검증의 과거 입력 `scene_frame_execution/native_0221.bin`이 새 작업트리에 없어 시작 단계에서 중단된 실행은 비교 실패로 세지 않는다. 역사적 `scene_frame_execution` 자료를 원래 작업트리에서 별도로 복사하고 모든 바이트 해시를 확인했다. 추가 disassembly 입력은 두 관측 manifest의 동일 SHA256 `f8dc5c70f2e60db0357246bec0ff02651bdec7d3fff07c3dc47117f98971edd7`에 맞춰 복사했다. 원본 자료는 수정하지 않았다.
 
-추가 독립 리뷰에서 stage-catalog의 superseded guard가 일반 오류 처리보다 뒤에 있어, 과거 미지원 오류가 다시 발생해도 통과할 수 있음을 발견했다. 해당 원본 마지막 단계의 성공 검사를 먼저 수행하도록 바꾸고 정확한 PC·status·빈 오류와 원본 앞 구간 비교를 유지한다. input의 U06 주소 49be0/e73f8도 계약에 따른 명시적 성공 control로 분리했다. 전체 negative 531건을 별도로 재검증했으며 전체 원본 회귀는 다시 실행한다.
+추가 독립 리뷰에서 stage-catalog의 superseded guard가 일반 오류 처리보다 뒤에 있어, 과거 미지원 오류가 다시 발생해도 통과할 수 있음을 발견했다. 해당 원본 마지막 단계의 성공 검사를 먼저 수행하도록 바꾸고 정확한 PC·status·빈 오류와 원본 앞 구간 비교를 유지한다. input의 U06 주소 49be0/e73f8도 계약에 따른 명시적 성공 control로 분리했다. 전체 negative 531건을 별도로 재검증한 뒤 전체 원본 회귀도 최종 통과했다(아래 보고서 해시 참조).
 
 긴 원본 회귀 종료 후 오래된 API 오류 기대값 때문에 재실행하는 일을 줄이기 위해 별도 출력 경로에서 기존 negative 함수를 전수 사전 실행했다. screen 11, transition 12, stage-entry 2,730(+carry 12), scene-update 641(+추가 제어 17), stage-catalog 253(+carry 8), stage-area 719(+carry 10), script-placement 359(+cleanup 내부 20·추가 제어 6)이 통과했다. frame-helper의 4706c는 U09의 등록 경로를 실행한 뒤 정확한 WORD/LONG 정렬 오류를 반환하도록 기대값을 정렬했고 전체 negative 162건·stop 제어 5건·기존 추가 제어 2건이 통과했다. 모든 거부 사례의 전체 public 상태 복구 검사는 유지한다. 이는 API-only 사전 검증이며 최종 native 회귀 완료로 세지 않는다.
 
@@ -73,7 +73,7 @@ U15b/U15c의 각 96개 BRA 테이블 및 U15c 96개 ORI/MOVE 본문 상수는 �
 
 비카드 전체 회귀 완료 후 F4 인수 감사 두 개를 별도 출력 경로에서 현재 파일로 다시 수행해 종료 0을 확인했다. 두 receipt는 최초 인수 기록과 바이트 단위로 동일했다(객체 matrix `080b0e8844b82c487314aae7b3a5c37ece1faa13afa02d1eb8504c1766692239`, RNG `f11a95713c9407dfdd7e4412ef8050da51cfafd425dce559bb00386fb56688c0`). 152개 헤더의 이전·현재 해시 일치 및 `9d5aa11` 이후 헤더 무변경도 재확인했다.
 
-마지막 카드 열기 API 전수 사전 검사에서 e84d6 직접 진입의 오래된 미지원 오류 기대값과 `guard-d1-ge-10-without-stop`의 오래된 실패 기대값을 발견했다. 고정 push 입력의 직접 진입은 2abe/2ac0 원본 `20564e90`(MOVE.L (A6),A0; JSR (A0)) 지점에서 A6=103000, LONG(A6)=92bdcb15인 홀수 콜백에 도달한다. 해당 API 오류를 정확히 고정하고 전체 상태 복구를 유지했다. 새 guard와 기존 e5-0/e5-3 두 guard는 모두 PC=2ac2/status=0/빈 오류 성공만 허용한다. 과거 두 guard의 임의 성공·실패 수용을 제거했으며 원본 앞 구간 비교는 유지한다. 고정 소스의 API tail(negative 317, 유지된 오류 guard 6, 명시적 성공 guard 3, boundary control 10, known-carry 30, zero-step 606, boundary-zero 12)과 잘못된 결과 주입 12개 거부 검사가 통과했다. 이전 공식 실행은 자신이 생성한 PID/cwd/명령을 확인해 종료하고 진단 자료로 보존했으며, 수정된 전체 원본 비교를 새로 실행한다. 이 마지막 실행이 끝나기 전에는 전체 통합 완료로 세지 않는다.
+마지막 카드 열기 API 전수 사전 검사에서 e84d6 직접 진입의 오래된 미지원 오류 기대값과 `guard-d1-ge-10-without-stop`의 오래된 실패 기대값을 발견했다. 고정 push 입력의 직접 진입은 2abe/2ac0 원본 `20564e90`(MOVE.L (A6),A0; JSR (A0)) 지점에서 A6=103000, LONG(A6)=92bdcb15인 홀수 콜백에 도달한다. 해당 API 오류를 정확히 고정하고 전체 상태 복구를 유지했다. 새 guard와 기존 e5-0/e5-3 두 guard는 모두 PC=2ac2/status=0/빈 오류 성공만 허용한다. 과거 두 guard의 임의 성공·실패 수용을 제거했으며 원본 앞 구간 비교는 유지한다. 고정 소스의 API tail(negative 317, 유지된 오류 guard 6, 명시적 성공 guard 3, boundary control 10, known-carry 30, zero-step 606, boundary-zero 12)과 잘못된 결과 주입 12개 거부 검사가 통과했다. 이전 공식 실행은 자신이 생성한 PID/cwd/명령을 확인해 종료하고 진단 자료로 보존했으며, 수정된 전체 원본 비교를 새로 실행해 최종 통과했다. 마지막 보고서는 아래 최종 인수 기록에 고정한다.
 
 ## 카드의 기존 superseded guard 추가 인수 검사
 
@@ -85,6 +85,14 @@ input/close/save의 기존 전체 보고서는 superseded guard 5개의 이후 �
 - 메인 재검증: `.venv/bin/python tools/audit_animation_machine_card_superseded.py --save-receipt /tmp/ms5-card-save-guard-supplement/receipt.json --output /tmp/ms5-card-guard-main-acceptance.json`, 종료 0, 5개 인수. 새 실행 재현은 `--run-save NEW_EXTERNAL_DIRECTORY`로 가능하다. binary/sources/resources 필수 pin을 각각 삭제한 세 변형은 모두 거부됐다.
 - 도구 SHA256 `6af353144c3c42bad98a48426c926ab4d53ad109b1706d207e9e1281013fe8de`; save receipt `2aa5d4577b47c4886df984fe52952512b04b77c7bd01ca60f6df9ade0c157841`; 메인 인수 결과 `aebee4fd711e3b7c89338c42150e6bf8311b8031c8f99240c5add0d753a6dff2`. 추가 도구는 기존 전체 회귀 입력을 변경하지 않는다.
 
-## 미완료 기준
+카드 경계 정렬 소스는 `88ca9e4`, 위 추가 인수 도구와 검토 기록은 `bc28e99`로 커밋했다. 엔진 소스는 `9d5aa11` 이후 변경되지 않았으며 마지막 카드 열기 전체 비교도 최종 통과했다.
 
-모든 필수 통합 회귀의 최종 보고서, 입력 해시, 실제 실패·경계 분류를 대조한 뒤 이 초안을 완료 기록으로 갱신한다. 직접 플레이, 자연 부팅/IRQ, 전체 오브젝트·스테이지·사운드 동등성은 이번 제한 범위의 완료와 구분한다.
+## 최종 인수 판정과 남은 범위
+
+2026-10-12, 검증 대상 소스 커밋 `88ca9e4`에서 요청된 제한 범위를 인수했다. 마지막 card-menu-open 공식 실행은 종료 0: 88개 사례(guard 포함), split 14,969, control 282, resume 14,881, negative 323, interior 282, zero-step 606, carry probe 26,220. 유지된 오류 guard 6개와 정확한 성공을 요구하는 superseded guard 3개는 별도 분류한다. 보고서 SHA256은 `d30d6c940a446cd997cd385d4bad107e29e5f249dc5c56c5bc61bca42218128a`이며 현재 입력 106개가 모두 일치하고 failure=null/ROM_unchanged=true다.
+
+최종 전체 입력 감사와 `0256-regression-manifest.json` 작성 과정에서 기본 보고서 35개의 SHA256·현재 입력 해시를 다시 대조했다. 별도 F4 인수 결과, U15 UBSan, 빌드 결과, 카드 추가 API 감사의 해시도 같은 목록에 기록한다. 수정된 검증기와 그 원본 근거·정확한 결과 판정은 메인이 실제 diff와 실행 결과를 검토했다. ROM·추출 데이터·빌드 출력은 Git에 포함하지 않는다.
+
+병합 충돌 해결, U15b/U15c 등록 및 마무리, 기존 F2/F3/F4 U01~U16 통합, 선언된 원본 관측과의 비교 및 전체 회귀 검증까지 완료했다. 원래 충돌 중인 checkout의 index와 변경은 보존하며 결과는 별도 `codex/claude-integration` 브랜치에서 제공한다. 원격 PR이나 원격 병합은 수행하지 않았다.
+
+이 인수는 직접 플레이, 자연 부팅/IRQ, 전체 오브젝트·스테이지·사운드 동등성을 뜻하지 않는다. F4의 명시적 미지원 경계·원본 step limit·입력 전제 위반과 각 관측의 제한은 그대로 남는다. U17 이후 및 새 R 단위는 착수하지 않았다. 기존 전체 Goal의 범위·완료 기준·누적 기록은 변경하지 않았고 일시중지 상태를 유지한다.
