@@ -38,6 +38,7 @@ test: build/physical_rom_resource_test build/program_bus_test build/animation_ex
 	./build/animation_machine_exit_test
 	./build/animation_machine_screen_test
 	./build/animation_machine_cleanup_test
+	./build/animation_machine_node_delete_test
 	./build/animation_machine_scene_test
 	./build/animation_machine_palette_bind_test
 	./build/animation_machine_map_transfer_test
@@ -1299,6 +1300,10 @@ build/animation_machine_screen_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MA
 test: build/animation_machine_cleanup_test
 build/animation_machine_cleanup_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_cleanup_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_cleanup_test.cpp -o $@
+
+test: build/animation_machine_node_delete_test
+build/animation_machine_node_delete_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_node_delete_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_node_delete_test.cpp -o $@
 
 test: build/animation_machine_scene_test
 build/animation_machine_scene_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_scene_test.cpp | build

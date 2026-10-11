@@ -111,6 +111,9 @@ bool animation_cleanup_block(AnimationMachineContext& c) {
     case 0x2a1c:r.pc=0x2a0a;return true;
     case 0x2a1e:
         if(!am_read(c,r.a[6]+4U,4,r.a[6]))return false;return am_return(c);
+    // 2a24 BSR 2a0a (the 2a0a..2a22 sibling-chain cleanup) then 2a26 BRA 2a00 (fade_card 299c + stack restore).
+    case 0x2a24:return am_call(c,0x2a0a,0x2a26);
+    case 0x2a26:r.pc=0x2a00;return true;
     case 0x2a28:case 0x2a48:case 0x2a6c:case 0x2a90:
         if(!am_read(c,r.a[0]+0x10U,2,value))return false;
         if(value)return am_error(c,"animation cleanup original TRAP15: nonzero object type");
