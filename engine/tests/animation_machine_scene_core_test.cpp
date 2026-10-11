@@ -406,10 +406,13 @@ void errors(){
  const unsigned int nb=sizeof(BUNDLED)/sizeof(BUNDLED[0]);assert(nb==84);
  for(unsigned int i=0;i<nb;++i){assert(!listed(BUNDLED[i]));Bytes ram=zero_ram();reject(ram,state(BUNDLED[i]),STOP,"unsupported animation scene core PC");}
  // Neighbours outside the ranges (19812/19844/19910 belong to U3, 1a7a8 to U4, the former 1a0b6/1a40e/1a470
- // boundaries to U5); odd PCs are rejected first.
- const std::uint32_t outside[]={0x19768,0x19770,0x19938,0x19976,0x199d4,0x19a3e,0x19b50,0x19b94,0x19dee,
-  0x1a3a6,0x1a3d4,0x1a414,0x1a440,0x1a5a4,0x1a73a};
+ // boundaries to U5; 19768 19938 199d4 19b50 19dee 1a3c8 1a414 1a5a4.. belong to the stage entry unit F1a); odd PCs
+ // are rejected first.
+ const std::uint32_t outside[]={0x19a00,0x19a3e,0x1a3a6,0x1a3c6};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram=zero_ram();reject(ram,state(outside[i]),STOP,"unsupported animation machine PC");}
+ // Former neighbours now inside the stage entry (F1a) ranges (interior PCs).
+ const std::uint32_t f1a[]={0x19770,0x19976,0x1a3d4,0x1a440,0x1a73a};
+ for(unsigned int i=0;i<5;++i){Bytes ram=zero_ram();reject(ram,state(f1a[i]),STOP,"unsupported animation stage entry PC");}
  // Former neighbours now inside the U5 ranges (interior PCs).
  const std::uint32_t u5[]={0x197d8,0x1a268,0x1a524};
  for(unsigned int i=0;i<3;++i){Bytes ram=zero_ram();reject(ram,state(u5[i]),STOP,"unsupported animation script placement PC");}

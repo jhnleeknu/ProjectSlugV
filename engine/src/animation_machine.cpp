@@ -212,6 +212,17 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // LSR/LSL blocks stay Unknown (their conditional branches consume flags produced inside the same block).
     case 0x4aa88:case 0x4aafc:case 0x4ab2e:case 0x4ab74:case 0x4b7ae:case 0x4b7f6:case 0xe8ab6:case 0xe8ac2:
     case 0xe8ace:case 0xe8af2:case 0xe8b08:case 0xe8b16:case 0xe8b2a:case 0xe8b46:case 0xe8b58:case 0x298e:
+    // Stage entry (F1a) blocks: JSR/JMP/BSR/BRA/RTS/LEA/MOVEA/BSET and conditional branches only, including the eight
+    // 47b06 BRA.W slots. 47af6 1a670 1996e 47b86 47b9c 47bd4 are the BCC blocks consuming the C returned by 72f0, 199f6
+    // or U3 1971c, U3 18c06 and 28ae; 72f0 (SUBI.B) and 199f6 (ORI CCR) set their known C inside the block. ADDA (e90a6),
+    // the 17292 unrolled clear and MOVE/MOVEQ/CLR/TST/CMP/CMPI/CMPA/ADD/AND/SUBQ/SWAP blocks stay Unknown.
+    case 0x3634:case 0xc3cc:case 0x19956:case 0x1996e:case 0x199fc:case 0x19b94:case 0x19dee:case 0x19dfe:case 0x19e0e:
+    case 0x19e1e:case 0x19e2e:case 0x1a420:case 0x1a42c:case 0x1a436:case 0x1a438:case 0x1a62a:case 0x1a62e:case 0x1a632:
+    case 0x1a636:case 0x1a63a:case 0x1a642:case 0x1a64e:case 0x1a65a:case 0x1a65e:case 0x1a66c:case 0x1a670:case 0x1a678:
+    case 0x1a71c:case 0x1a720:case 0x47aa6:case 0x47ab4:case 0x47ada:case 0x47af0:case 0x47af6:case 0x47b06:case 0x47b0a:
+    case 0x47b0e:case 0x47b12:case 0x47b16:case 0x47b1a:case 0x47b1e:case 0x47b22:case 0x47b26:case 0x47b3a:case 0x47b4a:
+    case 0x47b50:case 0x47b64:case 0x47b86:case 0x47b88:case 0x47b9c:case 0x47b9e:case 0x47ba2:case 0x47bd4:case 0x47c0c:
+    case 0x47c12:case 0x47c18:case 0x47c28:case 0x47c36:case 0x47c3c:case 0x47c54:case 0xddf9a:case 0xe8a24:case 0xe9086:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -410,6 +421,17 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x4d7a6 && next.pc<0x4d81c && next.pc!=0x4d7f0))ok=animation_input_block(c);
             else if ((next.pc>=0x4aa88 && next.pc<0x4abc0) || (next.pc>=0x4b784 && next.pc<0x4b82e) ||
                 (next.pc>=0xe8a48 && next.pc<0xe8b5a) || (next.pc>=0x2986 && next.pc<0x299c))ok=animation_buffer_cue_block(c);
+            else if ((next.pc>=0x47a94 && next.pc<0x47c5a) || (next.pc>=0x72f0 && next.pc<0x72fa) ||
+                (next.pc>=0x1a5a4 && next.pc<0x1a73c) || (next.pc>=0x17292 && next.pc<0x1829a) ||
+                (next.pc>=0x19768 && next.pc<0x19772) || (next.pc>=0x19938 && next.pc<0x19978) ||
+                (next.pc>=0x199d4 && next.pc<0x19a00) || (next.pc>=0x19b50 && next.pc<0x19b96) ||
+                (next.pc>=0x19dee && next.pc<0x19e60) || (next.pc>=0x1a07a && next.pc<0x1a086) ||
+                (next.pc>=0x1a3c8 && next.pc<0x1a3d6) || (next.pc>=0x1a414 && next.pc<0x1a442) ||
+                (next.pc>=0xe8a1c && next.pc<0xe8a3a) || (next.pc>=0xe905c && next.pc<0xe90ca && next.pc!=0xe909c) ||
+                (next.pc>=0x477a2 && next.pc<0x477ac) || (next.pc>=0xddf9a && next.pc<0xddfa4) ||
+                (next.pc>=0x362a && next.pc<0x3650) || (next.pc>=0x9060 && next.pc<0x9068) ||
+                (next.pc>=0x4e254 && next.pc<0x4e26c) || (next.pc>=0xca56 && next.pc<0xca5c) ||
+                (next.pc>=0xca76 && next.pc<0xca7e) || (next.pc>=0xc3c0 && next.pc<0xc3ce))ok=animation_stage_entry_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

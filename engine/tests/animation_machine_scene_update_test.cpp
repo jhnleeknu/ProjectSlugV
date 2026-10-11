@@ -794,9 +794,11 @@ void interior(){
   if(listed(pc))continue;Bytes ram;State s;generic(pc,ram,s);reject(ram,s,STOP,"unsupported animation scene update PC");++inside;}}
  assert(bytes==1486&&inside==625); // 743 even PCs minus 118 block starts
  assert(NB==46);for(unsigned int i=0;i<NB;++i){assert(!listed(BUNDLED[i]));Bytes ram;State s;generic(BUNDLED[i],ram,s);reject(ram,s,STOP,"unsupported animation scene update PC");}
- // Neighbours outside the ranges and the data tables; odd PCs are rejected first.
- const std::uint32_t outside[]={0x17292,0x43eb8,0x1a910,0x1a912,0x1af12,0x1afd2,0x1afd8,0x1b128,0x19e5e,0x1a07a}; // 19e60..19e64 is U5 (19e60 MOVE.L A2,(A1))
+ // Neighbours outside the ranges and the data tables; odd PCs are rejected first. 17292 and 1a07a are stage entry (F1a)
+ // block starts and 19e5e is an F1a interior PC; 19e60..19e64 is U5 (19e60 MOVE.L A2,(A1)).
+ const std::uint32_t outside[]={0x43eb8,0x1a910,0x1a912,0x1af12,0x1afd2,0x1afd8,0x1b128};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
+ {Bytes ram;State s;generic(0x19e5e,ram,s);reject(ram,s,STOP,"unsupported animation stage entry PC");}
  {Bytes ram;State s;generic(0x1a7a9,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
 void zero_step(){

@@ -826,10 +826,13 @@ void interior(){
  // PC-relative data inside the routed range (never block starts).
  const std::uint32_t data[]={0x1a08e,0x1a092,0x1a09a,0x1a0a6,0x1a0b2,0x1a0b8};
  for(unsigned int i=0;i<6;++i){Bytes ram;State s;generic(data[i],ram,s);reject(ram,s,STOP,"unsupported animation script placement PC");}
- // Neighbours outside the ranges (1a07a..1a086, 1a414..1a442 and 19768..19772 are not reached by U5), the other
- // 43e04/43e34 cleanup entries and 16ff0 next to 16fee; odd PCs are rejected first.
- const std::uint32_t outside[]={0x3d7c,0x3db2,0x16ff0,0x19770,0x19e5e,0x1a07a,0x1a084,0x1a414,0x1a43c,0x1a440,0xe89f8,0xe8a0c,0x43e04,0x43e34};
+ // Neighbours outside the ranges, the other 43e04/43e34 cleanup entries and 16ff0 next to 16fee; odd PCs are rejected
+ // first. 1a07a..1a086, 1a414..1a442, 19768..19772 and 19dee..19e60 (not reached by U5) are stage entry (F1a) ranges:
+ // their interior PCs below fail there.
+ const std::uint32_t outside[]={0x3d7c,0x3db2,0x16ff0,0xe89f8,0xe8a0c,0x43e04,0x43e34};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
+ const std::uint32_t f1a[]={0x19770,0x19e5e,0x1a084,0x1a440};
+ for(unsigned int i=0;i<4;++i){Bytes ram;State s;generic(f1a[i],ram,s);reject(ram,s,STOP,"unsupported animation stage entry PC");}
  {Bytes ram;State s;generic(0x1a0b7,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
 void zero_step(){
