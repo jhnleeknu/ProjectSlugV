@@ -71,6 +71,20 @@ U15b/U15c의 각 96개 BRA 테이블 및 U15c 96개 ORI/MOVE 본문 상수는 �
 
 스테이지 카탈로그의 성공 필수 분기 수정도 공식 전체 실행으로 통과했다. 534개 사례, split 24,567, 원본 앞 구간 30,444프레임, native 파일 663개·blob 6,255개 해시 검사를 수행했다. 최종 보고서 SHA256은 `4d11fe782cb5f5a2d53241b4c867e4f4ca0e792876da5af6847dcd7f6fe39071`이며 입력 103개가 현재 소스와 일치한다. 과거 미지원 오류·잘못된 PC·대기 status·비어 있지 않은 오류를 주입한 네 회귀 사례는 성공 필수 분기에서 모두 거부됐다.
 
+비카드 전체 회귀 완료 후 F4 인수 감사 두 개를 별도 출력 경로에서 현재 파일로 다시 수행해 종료 0을 확인했다. 두 receipt는 최초 인수 기록과 바이트 단위로 동일했다(객체 matrix `080b0e8844b82c487314aae7b3a5c37ece1faa13afa02d1eb8504c1766692239`, RNG `f11a95713c9407dfdd7e4412ef8050da51cfafd425dce559bb00386fb56688c0`). 152개 헤더의 이전·현재 해시 일치 및 `9d5aa11` 이후 헤더 무변경도 재확인했다.
+
+마지막 카드 열기 API 전수 사전 검사에서 e84d6 직접 진입의 오래된 미지원 오류 기대값과 `guard-d1-ge-10-without-stop`의 오래된 실패 기대값을 발견했다. 고정 push 입력의 직접 진입은 2abe/2ac0 원본 `20564e90`(MOVE.L (A6),A0; JSR (A0)) 지점에서 A6=103000, LONG(A6)=92bdcb15인 홀수 콜백에 도달한다. 해당 API 오류를 정확히 고정하고 전체 상태 복구를 유지했다. 새 guard와 기존 e5-0/e5-3 두 guard는 모두 PC=2ac2/status=0/빈 오류 성공만 허용한다. 과거 두 guard의 임의 성공·실패 수용을 제거했으며 원본 앞 구간 비교는 유지한다. 고정 소스의 API tail(negative 317, 유지된 오류 guard 6, 명시적 성공 guard 3, boundary control 10, known-carry 30, zero-step 606, boundary-zero 12)과 잘못된 결과 주입 12개 거부 검사가 통과했다. 이전 공식 실행은 자신이 생성한 PID/cwd/명령을 확인해 종료하고 진단 자료로 보존했으며, 수정된 전체 원본 비교를 새로 실행한다. 이 마지막 실행이 끝나기 전에는 전체 통합 완료로 세지 않는다.
+
+## 카드의 기존 superseded guard 추가 인수 검사
+
+input/close/save의 기존 전체 보고서는 superseded guard 5개의 이후 실행을 원본 동등성 또는 negative 수에 포함하지 않는다. 이 분류를 유지하면서 `tools/audit_animation_machine_card_superseded.py`로 정확한 API 결과를 별도 검사했다. input/close 4개는 보고서에 해시가 고정된 입출력 24개를 사용하며, save 1개는 기존 출력이 삭제되어 고정 원본 관측의 마지막 guard 입력과 현재 production harness로 새로 실행했다. RAM·정규화한 PVC·레지스터 입력, binary·현재 source·8개 MS5D 및 manifest 해시를 확인한다.
+
+- input `guard-bd26-without-stop`: PC=c1e6/status=1/`unsupported animation machine PC`, 레지스터·RAM·PVC·bank·ports·external reads 전체 rollback.
+- input a662, close a698/a6da, save descriptor 0001: PC=2ac2/status=0/빈 오류의 성공만 허용한다. 원본의 이후 실행 동등성은 주장하지 않는다.
+- 해당 원본 앞 구간은 각각 100/8/15/28/10 phase이며 기존 전체 보고서의 비교 결과다. guard 이후 실행을 split/native-equal 또는 negative 수에 더하지 않는지도 검사한다.
+- 메인 재검증: `.venv/bin/python tools/audit_animation_machine_card_superseded.py --save-receipt /tmp/ms5-card-save-guard-supplement/receipt.json --output /tmp/ms5-card-guard-main-acceptance.json`, 종료 0, 5개 인수. 새 실행 재현은 `--run-save NEW_EXTERNAL_DIRECTORY`로 가능하다. binary/sources/resources 필수 pin을 각각 삭제한 세 변형은 모두 거부됐다.
+- 도구 SHA256 `6af353144c3c42bad98a48426c926ab4d53ad109b1706d207e9e1281013fe8de`; save receipt `2aa5d4577b47c4886df984fe52952512b04b77c7bd01ca60f6df9ade0c157841`; 메인 인수 결과 `aebee4fd711e3b7c89338c42150e6bf8311b8031c8f99240c5add0d753a6dff2`. 추가 도구는 기존 전체 회귀 입력을 변경하지 않는다.
+
 ## 미완료 기준
 
 모든 필수 통합 회귀의 최종 보고서, 입력 해시, 실제 실패·경계 분류를 대조한 뒤 이 초안을 완료 기록으로 갱신한다. 직접 플레이, 자연 부팅/IRQ, 전체 오브젝트·스테이지·사운드 동등성은 이번 제한 범위의 완료와 구분한다.
