@@ -310,6 +310,24 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xeb83e:case 0xeb84e:case 0xeb852:case 0xeb862:case 0xeb866:case 0xeb87c:case 0xeb880:case 0xeb896:case 0xeb8ae:
     case 0xeb8ba:case 0xeb8c6:case 0xeb8d2:case 0xeb8f2:case 0xeb910:case 0xeb928:case 0xeb92c:case 0xeb942:case 0xeb96e:
     case 0xeb98e:case 0xeb9b8:
+    // Objects U08a (F4) blocks: the 4483a JMP (computed PC), the 96 BRA.W table entries 4483e..449ba, JSR/BRA/RTS blocks and the
+    // MOVEM/LEA/MOVEA+JSR/JMP blocks 49274/49284/49290 only. U08a has no carry consumer or known-carry producer. MOVE/MOVEQ/NOT/
+    // ANDI/LSR/LSL/OR/ADDI/ADD/SUB/CMPA/CMP/CMPI/TST/SWAP/ROL/EXG/ORI blocks and 449be (MOVE.W #160,D7; RTS) stay Unknown.
+    case 0x43ebe:case 0x447da:case 0x447e0:case 0x447e4:case 0x4483a:case 0x4483e:case 0x44842:case 0x44846:case 0x4484a:
+    case 0x4484e:case 0x44852:case 0x44856:case 0x4485a:case 0x4485e:case 0x44862:case 0x44866:case 0x4486a:case 0x4486e:
+    case 0x44872:case 0x44876:case 0x4487a:case 0x4487e:case 0x44882:case 0x44886:case 0x4488a:case 0x4488e:case 0x44892:
+    case 0x44896:case 0x4489a:case 0x4489e:case 0x448a2:case 0x448a6:case 0x448aa:case 0x448ae:case 0x448b2:case 0x448b6:
+    case 0x448ba:case 0x448be:case 0x448c2:case 0x448c6:case 0x448ca:case 0x448ce:case 0x448d2:case 0x448d6:case 0x448da:
+    case 0x448de:case 0x448e2:case 0x448e6:case 0x448ea:case 0x448ee:case 0x448f2:case 0x448f6:case 0x448fa:case 0x448fe:
+    case 0x44902:case 0x44906:case 0x4490a:case 0x4490e:case 0x44912:case 0x44916:case 0x4491a:case 0x4491e:case 0x44922:
+    case 0x44926:case 0x4492a:case 0x4492e:case 0x44932:case 0x44936:case 0x4493a:case 0x4493e:case 0x44942:case 0x44946:
+    case 0x4494a:case 0x4494e:case 0x44952:case 0x44956:case 0x4495a:case 0x4495e:case 0x44962:case 0x44966:case 0x4496a:
+    case 0x4496e:case 0x44972:case 0x44976:case 0x4497a:case 0x4497e:case 0x44982:case 0x44986:case 0x4498a:case 0x4498e:
+    case 0x44992:case 0x44996:case 0x4499a:case 0x4499e:case 0x449a2:case 0x449a6:case 0x449aa:case 0x449ae:case 0x449b2:
+    case 0x449b6:case 0x449ba:case 0x449c4:case 0x449ca:case 0x449d0:case 0x449d6:case 0x449dc:case 0x449e6:case 0x449f0:
+    case 0x449fa:case 0x44a04:case 0x44a0e:case 0x44a18:case 0x44a22:case 0x44a2c:case 0x44a32:case 0x44a3a:case 0x44a44:
+    case 0x44a4c:case 0x44a58:case 0x44a64:case 0x44a70:case 0x44a7c:case 0x44a88:case 0x44a94:case 0x44aa0:case 0x44aac:
+    case 0x44ab8:case 0x44ac4:case 0x44ad0:case 0x44adc:case 0x49274:case 0x49284:case 0x49290:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -566,6 +584,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             else if ((next.pc>=0x49be0 && next.pc<0x49bf2) || (next.pc>=0xe73f8 && next.pc<0xe74f8) || (next.pc>=0xe7546 && next.pc<0xe7562) ||
                 (next.pc>=0xe7792 && next.pc<0xe7946) || (next.pc>=0xeb7b6 && next.pc<0xeb9ba) ||
                 (next.pc>=0xeba3e && next.pc<0xeba9e))ok=animation_objects_u06_block(c);
+            else if ((next.pc>=0x18be8 && next.pc<0x18c06) || (next.pc>=0x1aa3a && next.pc<0x1aa40) || (next.pc>=0x43eb8 && next.pc<0x43efa) ||
+                (next.pc>=0x447be && next.pc<0x44ade) || (next.pc>=0x49274 && next.pc<0x4929e))ok=animation_objects_u08_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
