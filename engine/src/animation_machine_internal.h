@@ -83,5 +83,6 @@ bool animation_objects_u09_block(AnimationMachineContext& c);
 bool animation_objects_u08b_block(AnimationMachineContext& c);
 bool animation_objects_u10_block(AnimationMachineContext& c);
 bool animation_objects_u11_block(AnimationMachineContext& c);
+bool animation_objects_u12_block(AnimationMachineContext& c);
 }
 #endif
