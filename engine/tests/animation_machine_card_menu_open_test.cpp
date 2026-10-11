@@ -124,7 +124,8 @@ const unsigned int ROWS=sizeof(TABLE)/sizeof(TABLE[0]);
 // a406 and a70a now run in the card menu input unit, 9e94/a2be/a662/c2c8 in the close unit and
 // bd26/9f36/a71a in the save unit and a6da/a698 in the nested unit (their own tests).
 // c00468/c0046e are the BIOS calls of the save unit.
-const std::uint32_t BOUNDARY[]={0xe84d6,0xa63c,0xc00468,0xc0046e};
+// 5f088 replaces e84d6 (now the objects U03 glyph writer; reached below as a successful stop only).
+const std::uint32_t BOUNDARY[]={0x5f088,0xa63c,0xc00468,0xc0046e};
 const unsigned int BOUNDARIES=sizeof(BOUNDARY)/sizeof(BOUNDARY[0]);
 // Blocks made only of LEA/MOVEA/MOVEM/BTST/BSR/JSR/JMP/BRA/RTS/conditional branches (capstone classification).
 const std::uint32_t KEEP[]={0x391a,0x3926,0x3928,0x392a,0x9b54,0x9b56,0x9b64,0x9b78,0x9ba6,0x9bc8,0x9bcc,0x9be6,0x9bea,0x9c10,
@@ -299,7 +300,7 @@ void boundaries(){
  for(unsigned int i=0;i<BOUNDARIES;++i){Bytes ram;ms5::AnimationMachineState s;generic(BOUNDARY[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  struct Reach {std::uint32_t pc,stop;};
  // Each boundary reached from its natural predecessor; stop there succeeds, any other stop rolls back.
- // Close-unit entries (9e94 a2be a662 c2c8), the save entry bd26 and the nested entry a6da now execute:
+ // Close-unit entries (9e94 a2be a662 c2c8), the save entry bd26, the nested entry a6da and the objects U03 writer e84d6 now execute:
  // only the successful stop is checked here.
  for(unsigned int k=0;k<11;++k){Bytes ram;ms5::AnimationMachineState s;std::uint32_t stop=0;
   switch(k){
@@ -316,7 +317,7 @@ void boundaries(){
   default:generic(0xc2ba,ram,s);put(ram,0x107f0e,4,0x107f0e);stop=0xc2c8;break;         // D0=-1 after JSR a370
   }
   const Bytes start=ram;const ms5::AnimationMachineState old=s;
-  if(stop!=0x9e94&&stop!=0xa2be&&stop!=0xa662&&stop!=0xc2c8&&stop!=0xbd26&&stop!=0xa6da)reject(start,old,STOP,"unsupported animation machine PC");
+  if(stop!=0x9e94&&stop!=0xa2be&&stop!=0xa662&&stop!=0xc2c8&&stop!=0xbd26&&stop!=0xa6da&&stop!=0xe84d6)reject(start,old,STOP,"unsupported animation machine PC");
   Out o;assert(run(ram,s,stop,o)&&s.pc==stop&&clean(o));
   if(k==1)assert(s.a[7]==SP-8&&get(ram,SP-8,4)==0xa3ac&&get(ram,SP-4,4)==TOP);
   if(k==3)assert(s.a[7]==SP-8&&get(ram,SP-8,4)==0xa3c8);

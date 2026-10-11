@@ -279,6 +279,9 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x1aaaa:case 0x1aae6:case 0x48296:case 0x482a8:case 0x4b55a:case 0x4b55c:case 0x4b6aa:case 0x4b6e2:case 0xb4dc2:
     case 0xb4dc6:case 0xb4df8:case 0xb4dfe:case 0xb4e12:case 0xb4e1c:case 0xb4e22:case 0xb4e26:case 0xb4e30:case 0xb4e34:
     case 0xb4e5a:case 0xb4e60:case 0xb4e6a:case 0xb4ffe:case 0xc6a90:case 0xdd4d0:case 0xdd4ea:case 0xdd4ec:
+    // Objects U03 (F4) blocks: BRA/LEA only and e88c0 (MOVEM.L (A7)+ and RTS keep the CCR). U03 has no carry consumer or
+    // known-carry producer; every CMPI/MOVE/ADDQ/ADDI/SUBI/ANDI/OR/LSL/SWAP/TST block (the ADDQ.W #6,A1 block e8866 too) stays Unknown.
+    case 0xe856a:case 0xe85b2:case 0xe85c2:case 0xe868c:case 0xe869c:case 0xe86da:case 0xe8706:case 0xe8856:case 0xe88c0:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -523,6 +526,7 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xb4df2 && next.pc<0xb4e46) || (next.pc>=0xb4e5a && next.pc<0xb4e6c) || (next.pc>=0xb4fd4 && next.pc<0xb503e) ||
                 (next.pc>=0xc6a90 && next.pc<0xc6a96) || (next.pc>=0xd6d22 && next.pc<0xd6d36) ||
                 (next.pc>=0xdd4d0 && next.pc<0xdd574))ok=animation_objects_u01_block(c);
+            else if (next.pc>=0xe84d6 && next.pc<0xe88c6)ok=animation_objects_u03_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

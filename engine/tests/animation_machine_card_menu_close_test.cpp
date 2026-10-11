@@ -296,7 +296,8 @@ void errors(){
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){assert(!listed(bundled[i]));Bytes ram;State s;generic(bundled[i],ram,s);reject(ram,s,STOP,"unsupported animation card menu close PC");}
  // Neighbours outside the routed ranges and boundaries still without an executor
  // (a698..a708 now run in the nested unit).
- const std::uint32_t outside[]={0x9ee6,0xa63c,0xe84d6,0xc2fa};
+ // 5f084 replaces e84d6 (now the objects U03 glyph writer).
+ const std::uint32_t outside[]={0x9ee6,0xa63c,0x5f084,0xc2fa};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0xa663,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
