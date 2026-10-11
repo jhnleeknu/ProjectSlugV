@@ -297,7 +297,7 @@ def main():
     extended_records,extended_refs=audit_extended(root,program,source);refs.update(extended_refs)
     harness=folder/'harness.cpp';harness.write_text(HARNESS);exe=folder/'animation_machine_harness'
     command=['clang++','-std=c++11','-O2','-Wall','-Wextra','-pedantic','-I'+str(root/'engine/include')]+[str(root/'engine/src'/n) for n in SOURCES]+[str(harness),'-o',str(exe)]
-    build=subprocess.run(command,capture_output=True,text=True,timeout=60);(folder/'compile.log').write_text(build.stdout+build.stderr)
+    build=subprocess.run(command,capture_output=True,text=True,timeout=300);(folder/'compile.log').write_text(build.stdout+build.stderr)
     assert build.returncode==0 and not build.stdout and not build.stderr,(build.returncode,build.stderr)
     matches=[]
     for i,(fx,n) in enumerate(fresh):

@@ -70,7 +70,7 @@ def compile_harness(root, folder):
                '-I' + str(root / 'engine/include')]
     command += [str(root / 'engine/src' / name) for name in common.SOURCES]
     command += [str(path), '-o', str(exe)]
-    run = subprocess.run(command, capture_output=True, text=True, timeout=60)
+    run = subprocess.run(command, capture_output=True, text=True, timeout=300)
     (folder / 'compile.log').write_text(run.stdout + run.stderr)
     assert run.returncode == 0 and not run.stdout and not run.stderr, run.stderr
     return exe, command

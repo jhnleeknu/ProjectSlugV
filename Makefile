@@ -1266,210 +1266,217 @@ build/program_stack_test: engine/src/program_stack.cpp engine/src/program_bus.cp
 
 ANIMATION_MACHINE_SOURCES = engine/src/animation_machine.cpp engine/src/animation_machine_interpreter.cpp engine/src/animation_machine_sprite.cpp engine/src/animation_machine_sound.cpp engine/src/animation_machine_readiness.cpp engine/src/animation_machine_hud.cpp engine/src/animation_machine_transition.cpp engine/src/animation_machine_exit.cpp engine/src/animation_machine_screen.cpp engine/src/animation_machine_cleanup.cpp engine/src/animation_machine_scene.cpp engine/src/animation_machine_palette_bind.cpp engine/src/animation_machine_map_transfer.cpp engine/src/animation_machine_fade_card.cpp engine/src/animation_machine_card_child.cpp engine/src/animation_machine_card_menu.cpp engine/src/animation_machine_card_menu_open.cpp engine/src/animation_machine_card_menu_input.cpp engine/src/animation_machine_card_menu_close.cpp engine/src/animation_machine_card_menu_save.cpp engine/src/animation_machine_card_menu_nested.cpp engine/src/animation_machine_frame_helpers.cpp engine/src/animation_machine_scene_core.cpp engine/src/animation_machine_motion_walk.cpp engine/src/animation_machine_scene_update.cpp engine/src/animation_machine_script_placement.cpp engine/src/animation_machine_input.cpp engine/src/animation_machine_buffer_cue.cpp engine/src/animation_machine_stage_entry.cpp engine/src/animation_machine_area_clear.cpp engine/src/animation_machine_stage_catalog.cpp engine/src/animation_machine_stage_area.cpp engine/src/animation_machine_stage_event.cpp engine/src/animation_machine_stage_event_ops.cpp engine/src/animation_machine_scheduler.cpp engine/src/animation_machine_objects_u01.cpp engine/src/animation_machine_objects_u02.cpp engine/src/animation_machine_objects_u03.cpp engine/src/animation_machine_objects_u05.cpp engine/src/animation_machine_objects_u04.cpp engine/src/animation_machine_objects_u06.cpp engine/src/animation_machine_objects_u07.cpp engine/src/animation_machine_objects_u08.cpp engine/src/animation_machine_objects_u09.cpp engine/src/animation_machine_objects_u08b.cpp engine/src/animation_machine_objects_u10.cpp engine/src/animation_machine_objects_u11.cpp engine/src/animation_machine_objects_u12.cpp engine/src/animation_machine_objects_u13.cpp engine/src/animation_machine_objects_u14.cpp engine/src/animation_machine_objects_u15.cpp engine/src/animation_machine_objects_u16.cpp engine/src/animation_machine_objects_u15b.cpp engine/src/animation_machine_objects_u15c.cpp engine/src/palette_effect_execution.cpp engine/src/program_bus.cpp engine/src/program_stack.cpp
 ANIMATION_MACHINE_HEADERS = engine/include/ms5/palette_effect_execution.h engine/include/ms5/object_restart_execution.h engine/include/ms5/animation_machine.h engine/src/animation_machine_internal.h engine/include/ms5/program_stack.h $(PROGRAM_BUS_HEADERS)
+
+# Compile the shared machine once; every unit still links the same sources and flags.
+ANIMATION_MACHINE_OBJECTS = $(patsubst engine/src/%.cpp,build/animation_machine_objects/%.o,$(ANIMATION_MACHINE_SOURCES))
+build/animation_machine_objects:
+	mkdir -p $@
+build/animation_machine_objects/%.o: engine/src/%.cpp $(ANIMATION_MACHINE_HEADERS) | build/animation_machine_objects
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 test: build/animation_machine_test build/animation_machine_device_test
-build/animation_machine_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_test.cpp -o $@
-build/animation_machine_device_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_device_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_device_test.cpp -o $@
+build/animation_machine_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_test.cpp -o $@
+build/animation_machine_device_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_device_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_device_test.cpp -o $@
 
 test: build/animation_machine_callers_test
-build/animation_machine_callers_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_callers_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_callers_test.cpp -o $@
+build/animation_machine_callers_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_callers_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_callers_test.cpp -o $@
 
 test: build/animation_machine_carry_test
-build/animation_machine_carry_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_carry_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_carry_test.cpp -o $@
+build/animation_machine_carry_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_carry_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_carry_test.cpp -o $@
 
 test: build/animation_machine_activation_test
-build/animation_machine_activation_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_activation_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_activation_test.cpp -o $@
+build/animation_machine_activation_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_activation_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_activation_test.cpp -o $@
 
 test: build/animation_machine_readiness_test
-build/animation_machine_readiness_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_readiness_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_readiness_test.cpp -o $@
+build/animation_machine_readiness_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_readiness_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_readiness_test.cpp -o $@
 
 test: build/animation_machine_hud_test
-build/animation_machine_hud_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_hud_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_hud_test.cpp -o $@
+build/animation_machine_hud_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_hud_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_hud_test.cpp -o $@
 
 test: build/animation_machine_transition_test
-build/animation_machine_transition_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_transition_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_transition_test.cpp -o $@
+build/animation_machine_transition_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_transition_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_transition_test.cpp -o $@
 
 test: build/animation_machine_exit_test
-build/animation_machine_exit_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_exit_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_exit_test.cpp -o $@
+build/animation_machine_exit_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_exit_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_exit_test.cpp -o $@
 
 test: build/animation_machine_screen_test
-build/animation_machine_screen_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_screen_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_screen_test.cpp -o $@
+build/animation_machine_screen_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_screen_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_screen_test.cpp -o $@
 
 test: build/animation_machine_cleanup_test
-build/animation_machine_cleanup_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_cleanup_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_cleanup_test.cpp -o $@
+build/animation_machine_cleanup_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_cleanup_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_cleanup_test.cpp -o $@
 
 test: build/animation_machine_node_delete_test
-build/animation_machine_node_delete_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_node_delete_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_node_delete_test.cpp -o $@
+build/animation_machine_node_delete_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_node_delete_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_node_delete_test.cpp -o $@
 
 test: build/animation_machine_scene_test
-build/animation_machine_scene_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_scene_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_scene_test.cpp -o $@
+build/animation_machine_scene_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_scene_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_scene_test.cpp -o $@
 
 test: build/animation_machine_palette_bind_test
-build/animation_machine_palette_bind_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_palette_bind_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_palette_bind_test.cpp -o $@
+build/animation_machine_palette_bind_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_palette_bind_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_palette_bind_test.cpp -o $@
 
 test: build/animation_machine_map_transfer_test
-build/animation_machine_map_transfer_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_map_transfer_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_map_transfer_test.cpp -o $@
+build/animation_machine_map_transfer_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_map_transfer_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_map_transfer_test.cpp -o $@
 
 test: build/animation_machine_fade_card_test
-build/animation_machine_fade_card_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_fade_card_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_fade_card_test.cpp -o $@
+build/animation_machine_fade_card_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_fade_card_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_fade_card_test.cpp -o $@
 
 test: build/animation_machine_card_child_test
-build/animation_machine_card_child_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_child_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_card_child_test.cpp -o $@
+build/animation_machine_card_child_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_child_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_card_child_test.cpp -o $@
 
 test: build/animation_machine_card_menu_test
-build/animation_machine_card_menu_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_card_menu_test.cpp -o $@
+build/animation_machine_card_menu_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_card_menu_test.cpp -o $@
 
 test: build/animation_machine_card_menu_open_test
-build/animation_machine_card_menu_open_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_open_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_card_menu_open_test.cpp -o $@
+build/animation_machine_card_menu_open_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_open_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_card_menu_open_test.cpp -o $@
 
 test: build/animation_machine_card_menu_input_test
-build/animation_machine_card_menu_input_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_input_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_card_menu_input_test.cpp -o $@
+build/animation_machine_card_menu_input_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_input_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_card_menu_input_test.cpp -o $@
 
 test: build/animation_machine_card_menu_close_test
-build/animation_machine_card_menu_close_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_close_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_card_menu_close_test.cpp -o $@
+build/animation_machine_card_menu_close_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_close_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_card_menu_close_test.cpp -o $@
 
 test: build/animation_machine_card_menu_save_test
-build/animation_machine_card_menu_save_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_save_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_card_menu_save_test.cpp -o $@
+build/animation_machine_card_menu_save_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_save_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_card_menu_save_test.cpp -o $@
 
 test: build/animation_machine_card_menu_nested_test
-build/animation_machine_card_menu_nested_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_nested_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_card_menu_nested_test.cpp -o $@
+build/animation_machine_card_menu_nested_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_card_menu_nested_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_card_menu_nested_test.cpp -o $@
 
 test: build/animation_machine_frame_helpers_test
-build/animation_machine_frame_helpers_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_frame_helpers_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_frame_helpers_test.cpp -o $@
+build/animation_machine_frame_helpers_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_frame_helpers_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_frame_helpers_test.cpp -o $@
 
 test: build/animation_machine_scene_core_test
-build/animation_machine_scene_core_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_scene_core_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_scene_core_test.cpp -o $@
+build/animation_machine_scene_core_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_scene_core_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_scene_core_test.cpp -o $@
 
 test: build/animation_machine_motion_walk_test
-build/animation_machine_motion_walk_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_motion_walk_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_motion_walk_test.cpp -o $@
+build/animation_machine_motion_walk_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_motion_walk_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_motion_walk_test.cpp -o $@
 
 test: build/animation_machine_scene_update_test
-build/animation_machine_scene_update_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_scene_update_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_scene_update_test.cpp -o $@
+build/animation_machine_scene_update_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_scene_update_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_scene_update_test.cpp -o $@
 
 test: build/animation_machine_script_placement_test
-build/animation_machine_script_placement_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_script_placement_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_script_placement_test.cpp -o $@
+build/animation_machine_script_placement_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_script_placement_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_script_placement_test.cpp -o $@
 
 test: build/animation_machine_input_test
-build/animation_machine_input_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_input_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_input_test.cpp -o $@
+build/animation_machine_input_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_input_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_input_test.cpp -o $@
 
 test: build/animation_machine_buffer_cue_test
-build/animation_machine_buffer_cue_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_buffer_cue_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_buffer_cue_test.cpp -o $@
+build/animation_machine_buffer_cue_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_buffer_cue_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_buffer_cue_test.cpp -o $@
 
 test: build/animation_machine_stage_entry_test
-build/animation_machine_stage_entry_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/src/palette_transfer.cpp engine/src/palette_upload.cpp engine/include/ms5/palette_transfer.h engine/include/ms5/palette_upload.h engine/tests/animation_machine_stage_entry_test.cpp | build
+build/animation_machine_stage_entry_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/src/palette_transfer.cpp engine/src/palette_upload.cpp engine/include/ms5/palette_transfer.h engine/include/ms5/palette_upload.h engine/tests/animation_machine_stage_entry_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/src/palette_transfer.cpp engine/src/palette_upload.cpp engine/tests/animation_machine_stage_entry_test.cpp -o $@
 
 test: build/animation_machine_area_clear_test
-build/animation_machine_area_clear_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_area_clear_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_area_clear_test.cpp -o $@
+build/animation_machine_area_clear_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_area_clear_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_area_clear_test.cpp -o $@
 
 test: build/animation_machine_stage_catalog_test
-build/animation_machine_stage_catalog_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/src/palette_transfer.cpp engine/src/palette_upload.cpp engine/include/ms5/palette_transfer.h engine/include/ms5/palette_upload.h engine/tests/animation_machine_stage_catalog_test.cpp | build
+build/animation_machine_stage_catalog_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/src/palette_transfer.cpp engine/src/palette_upload.cpp engine/include/ms5/palette_transfer.h engine/include/ms5/palette_upload.h engine/tests/animation_machine_stage_catalog_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/src/palette_transfer.cpp engine/src/palette_upload.cpp engine/tests/animation_machine_stage_catalog_test.cpp -o $@
 
 test: build/animation_machine_stage_area_test
-build/animation_machine_stage_area_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_stage_area_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_stage_area_test.cpp -o $@
+build/animation_machine_stage_area_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_stage_area_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_stage_area_test.cpp -o $@
 
 test: build/animation_machine_stage_event_test
-build/animation_machine_stage_event_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_stage_event_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_stage_event_test.cpp -o $@
+build/animation_machine_stage_event_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_stage_event_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_stage_event_test.cpp -o $@
 
 test: build/animation_machine_stage_event_ops_test
-build/animation_machine_stage_event_ops_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_stage_event_ops_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_stage_event_ops_test.cpp -o $@
+build/animation_machine_stage_event_ops_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_stage_event_ops_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_stage_event_ops_test.cpp -o $@
 
 test: build/animation_machine_scheduler_test
-build/animation_machine_scheduler_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_scheduler_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_scheduler_test.cpp -o $@
+build/animation_machine_scheduler_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_scheduler_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_scheduler_test.cpp -o $@
 
 test: build/animation_machine_objects_u01_test
-build/animation_machine_objects_u01_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u01_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u01_test.cpp -o $@
+build/animation_machine_objects_u01_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u01_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u01_test.cpp -o $@
 test: build/animation_machine_objects_u02_test
-build/animation_machine_objects_u02_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u02_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u02_test.cpp -o $@
+build/animation_machine_objects_u02_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u02_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u02_test.cpp -o $@
 
 test: build/animation_machine_objects_u03_test
-build/animation_machine_objects_u03_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u03_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u03_test.cpp -o $@
+build/animation_machine_objects_u03_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u03_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u03_test.cpp -o $@
 
 test: build/animation_machine_objects_u05_test
-build/animation_machine_objects_u05_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u05_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u05_test.cpp -o $@
+build/animation_machine_objects_u05_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u05_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u05_test.cpp -o $@
 test: build/animation_machine_objects_u04_test
-build/animation_machine_objects_u04_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u04_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u04_test.cpp -o $@
+build/animation_machine_objects_u04_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u04_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u04_test.cpp -o $@
 
 test: build/animation_machine_objects_u06_test
-build/animation_machine_objects_u06_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u06_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u06_test.cpp -o $@
+build/animation_machine_objects_u06_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u06_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u06_test.cpp -o $@
 test: build/animation_machine_objects_u07_test
-build/animation_machine_objects_u07_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u07_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u07_test.cpp -o $@
+build/animation_machine_objects_u07_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u07_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u07_test.cpp -o $@
 test: build/animation_machine_objects_u08_test
-build/animation_machine_objects_u08_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u08_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u08_test.cpp -o $@
+build/animation_machine_objects_u08_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u08_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u08_test.cpp -o $@
 test: build/animation_machine_objects_u09_test
-build/animation_machine_objects_u09_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u09_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u09_test.cpp -o $@
+build/animation_machine_objects_u09_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u09_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u09_test.cpp -o $@
 test: build/animation_machine_objects_u08b_test
-build/animation_machine_objects_u08b_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u08b_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u08b_test.cpp -o $@
+build/animation_machine_objects_u08b_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u08b_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u08b_test.cpp -o $@
 test: build/animation_machine_objects_u10_test
-build/animation_machine_objects_u10_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u10_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u10_test.cpp -o $@
+build/animation_machine_objects_u10_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u10_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u10_test.cpp -o $@
 test: build/animation_machine_objects_u11_test
-build/animation_machine_objects_u11_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u11_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u11_test.cpp -o $@
+build/animation_machine_objects_u11_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u11_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u11_test.cpp -o $@
 test: build/animation_machine_objects_u12_test
-build/animation_machine_objects_u12_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u12_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u12_test.cpp -o $@
+build/animation_machine_objects_u12_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u12_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u12_test.cpp -o $@
 test: build/animation_machine_objects_u13_test
-build/animation_machine_objects_u13_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u13_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u13_test.cpp -o $@
+build/animation_machine_objects_u13_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u13_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u13_test.cpp -o $@
 test: build/animation_machine_objects_u14_test
-build/animation_machine_objects_u14_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u14_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u14_test.cpp -o $@
+build/animation_machine_objects_u14_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u14_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u14_test.cpp -o $@
 test: build/animation_machine_objects_u15_test
-build/animation_machine_objects_u15_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u15_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u15_test.cpp -o $@
+build/animation_machine_objects_u15_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u15_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u15_test.cpp -o $@
 test: build/animation_machine_objects_u16_test
-build/animation_machine_objects_u16_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u16_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u16_test.cpp -o $@
+build/animation_machine_objects_u16_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u16_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u16_test.cpp -o $@
 test: build/animation_machine_objects_u15b_test
-build/animation_machine_objects_u15b_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u15b_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u15b_test.cpp -o $@
+build/animation_machine_objects_u15b_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u15b_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u15b_test.cpp -o $@
 
 test: build/animation_machine_objects_u15c_test
-build/animation_machine_objects_u15c_test: $(ANIMATION_MACHINE_SOURCES) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u15c_test.cpp | build
-	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_SOURCES) engine/tests/animation_machine_objects_u15c_test.cpp -o $@
+build/animation_machine_objects_u15c_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_objects_u15c_test.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_objects_u15c_test.cpp -o $@
