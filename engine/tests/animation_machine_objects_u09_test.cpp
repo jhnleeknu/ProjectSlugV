@@ -509,7 +509,8 @@ void interior(){
  assert(even==745&&inside==595);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
  // 43eb8 447be 4483a 49274 are U08a block starts since the U08a merge.
- const std::uint32_t outside[]={0x4683c,0x468e0,0x461ec,0x45176,0x470e6,0x46994,0x4699e,0x46bfc,0x46bfe,
+ // 4683c 468e0 461ec are U08b block starts since the U08b merge.
+ const std::uint32_t outside[]={0x45176,0x470e6,0x46994,0x4699e,0x46bfc,0x46bfe,
   0x47288,0x4728a,0x7670c,0x76852,0x76854,0x769fa,0x76a14,0x76a16};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x469a1,0x469d9,0x46bfb,0x4706d,0x470e7,0x47135,0x47287,0x7670f,0x76851,0x769fd,0x76a13};
@@ -522,7 +523,8 @@ void boundaries(){
   "4706c-slotfe-trap","46b84-c1","46ade-other"};
  const std::uint32_t want[]={0x43eb8,0x4683c,0x4483a,0x45176,0x447be,0x468e0,0x461ec,0x49274,0x49274,0x470e6,0x470e6,0x43eb8,0x4483a};
  for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(final_of(names[i]).s.pc==want[i]);
-  if(want[i]==0x43eb8||want[i]==0x447be||want[i]==0x4483a||want[i]==0x49274)continue; // U08a executes these now.
+  if(want[i]==0x43eb8||want[i]==0x447be||want[i]==0x4483a||want[i]==0x49274||want[i]==0x4683c||want[i]==0x468e0||
+     want[i]==0x461ec)continue; // U08a/U08b execute these now.
   Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
  const char* consumers[]={"76a08-clear","76a08-set"};
  for(unsigned int i=0;i<2;++i){const Fixture&f=fixture_of(consumers[i]);Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,0);
