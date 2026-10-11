@@ -404,6 +404,13 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x709a6:case 0x70a40:case 0xb80c4:case 0xb80ce:case 0xb80d2:case 0xb80d8:case 0xb8110:case 0xb8132:case 0xb8138:
     case 0xb816e:case 0xb8190:case 0xb8196:case 0xb819c:case 0xb81aa:case 0xb81ba:case 0xb83e6:case 0xb83ec:case 0xb83f2:
     case 0xb83fc:case 0xea5f0:case 0xea5f6:case 0xea624:case 0xf1a62:case 0xf1a74:
+    // Objects U14 (F4) blocks: BSR/JSR/LEA+JSR/BRA/JMP/RTS blocks, the SUBA.W+RTS block 4926e, the BCLR/BSET (Z only) blocks
+    // 16efc 16f06 and the MOVEA+BTST+Bcc blocks 51758 5176e. U14 has no carry consumer across blocks and no known-carry producer.
+    // MOVE/MOVEQ/MOVEA+MOVE/CLR/TST/CMP/CMPI/ADD/ADDI/SUBQ/LSR/BSET/BCLR+MOVE blocks, the MOVE.L #imm,(A6) blocks and the BYTE/LONG
+    // push/pop blocks stay Unknown.
+    case 0x16efc:case 0x16f06:case 0x16f0c:case 0x49260:case 0x4926e:case 0x50cca:case 0x50cce:case 0x50d2c:case 0x50d44:
+    case 0x50d58:case 0x50d94:case 0x50dac:case 0x514bc:case 0x51668:case 0x5169a:case 0x51720:case 0x51758:case 0x51766:
+    case 0x5176e:case 0x5177a:case 0x51798:case 0x5179e:case 0x51fda:case 0x51ff2:case 0x5205c:case 0x614d4:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -681,6 +688,10 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             else if ((next.pc>=0x7090a && next.pc<0x7091e) || (next.pc>=0x70932 && next.pc<0x70a6c) || (next.pc>=0xb80c4 && next.pc<0xb812c) ||
                 (next.pc>=0xb8132 && next.pc<0xb81be) || (next.pc>=0xb83e6 && next.pc<0xb8400) || (next.pc>=0xea5f0 && next.pc<0xea600) ||
                 (next.pc>=0xea60c && next.pc<0xea626) || (next.pc>=0xf1a4e && next.pc<0xf1a7a))ok=animation_objects_u13_block(c);
+            else if ((next.pc>=0x16ef0 && next.pc<0x16f0e) || (next.pc>=0x49260 && next.pc<0x49274) || (next.pc>=0x4a496 && next.pc<0x4a4b4) ||
+                (next.pc>=0x50cca && next.pc<0x50cd2) || (next.pc>=0x50d2c && next.pc<0x50dae) || (next.pc>=0x51482 && next.pc<0x51574) ||
+                (next.pc>=0x51634 && next.pc<0x517a0) || (next.pc>=0x51fcc && next.pc<0x51ff4) || (next.pc>=0x51ffa && next.pc<0x5205e) ||
+                (next.pc>=0x614d4 && next.pc<0x614da) || (next.pc>=0x7086a && next.pc<0x7087e))ok=animation_objects_u14_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
