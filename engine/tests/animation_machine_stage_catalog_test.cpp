@@ -9,8 +9,8 @@
 // Stage controller F1c1 (catalog selection, music and entry effect 477e4..479b0 with 474e2, 47540, 3d58/3d6a/3d6e, ca8a
 // and 4814e) through run_animation_machine only. A frame is one run from a callback PC to the dispatcher return 2ac2
 // (480bc -> 480f0 RTS); the next frame is the declared direct re-entry A6=100b30, A5=108000, A7=10effc, LONG 10effc=2ac2,
-// LONG 104ca4=1ff000, PC=LONG (A6) with the other registers and C kept; the last frame stops at the 479b0 callback (F1c2,
-// no executor). Child completion 62(A6) (and 10dd44 in the F1b part of a chain) changes only through declared host
+// LONG 104ca4=1ff000, PC=LONG (A6) with the other registers and C kept; the last frame stops at the 479b0 callback (the
+// F1c2 stage area, animation_machine_stage_area_test). Child completion 62(A6) (and 10dd44 in the F1b part of a chain) changes only through declared host
 // writes between frames; the 72f0 gate resumes after a declared IRQ effect (transfer_palette_banks on the RAM image).
 // All inputs are declared fixtures: zero RAM plus the BASE_* sets and PUTS rows, declared registers and the return LONG
 // at A7 (stack inside work RAM at 10effc). Synthetic typed physical bytes (not a ROM oracle and not ROM data): the U6
@@ -203,7 +203,7 @@ const Phase PHASES[]={
 {262,0,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b31,0x10effc},0x477ee,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"invalid animation machine write size/alignment"},
 {262,0,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x47842,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"even WORD/LONG"},
 {262,0,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e001,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x47978,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"invalid animation machine write size/alignment"},
-{262,0,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x478e6,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"unsupported animation machine PC"},
+{262,0,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x478e6,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"missing or ambiguous physical program bus ROM byte"},
 {262,0,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x4790a,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"unsupported animation machine PC"},
 {262,0,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x478e4,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"stage catalog caller requires known carry"},
 {262,0,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x47944,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"stage catalog caller requires known carry"},
@@ -665,7 +665,7 @@ void fixtures(){
 const Fixture& fixture_of(const char*name){for(unsigned int k=0;k<FIXTURE_COUNT;++k)if(std::strcmp(FIXTURES[k].name,name)==0)return FIXTURES[k];assert(false);return FIXTURES[0];}
 const Final& final_of(const char*name){for(unsigned int k=0;k<FIXTURE_COUNT;++k)if(std::strcmp(FIXTURES[k].name,name)==0)return finals[k];assert(false);return finals[0];}
 // Chains: frame by frame from the entry to 479b0. Every frame but the last stops at 2ac2; the last frame first rolls back
-// with stop 2ac2 (479b0 has no executor) and then stops at 479b0. Declared host writes follow their frame, then the re-entry.
+// with stop 2ac2 and then stops at 479b0. Declared host writes follow their frame, then the re-entry.
 std::vector<Bytes> chain_final;std::vector<State> chain_state;
 void chains(){
  assert(DIGEST_COUNT==CHAINS[CHAIN_COUNT-1].first_frame+CHAINS[CHAIN_COUNT-1].frames);
@@ -673,7 +673,7 @@ void chains(){
   State s=state_of(c.regs,c.entry,0);Out o;o.dev.bank_base=c.bank;o.dev.pvc=pvc_for(c.bank);
   for(unsigned int f=0;f<c.frames;++f){const bool last=f+1==c.frames;
    assert(s.pc==(f==0?c.entry:get(ram,NODE,4))&&s.a[6]==NODE&&s.a[7]==SP&&get(ram,SP,4)==RET_FRAME);
-   if(last)reject(ram,s,RET_FRAME,"unsupported animation machine PC",o.dev.bank_base);
+   if(last)reject(ram,s,RET_FRAME,"missing or ambiguous physical program bus ROM byte",o.dev.bank_base);
    if(!run(ram,s,last?FINAL:RET_FRAME,o)){std::cerr<<c.name<<" frame "<<f<<"\n";assert(false);}
    assert(o.status==ms5::AnimationMachineReturned&&s.pc==(last?FINAL:RET_FRAME)&&s.a[7]==(last?SP:SP+4));
    if(digest(ram,s,o.dev.bank_base,o.reads,o.status,o.ports)!=DIGESTS[c.first_frame+f]){std::cerr<<c.name<<" frame "<<f<<" digest\n";assert(false);}
@@ -785,8 +785,9 @@ void zero_step(){
    o.status==ms5::AnimationMachineReturned&&o.dev.bank_base==0x200000);}
 }
 // Every other even PC of the 7 routed ranges is rejected (9 bundled conditional branches among them); the 478a6 TRAP and
-// the unrouted neighbours (3d62 RTS, the 3d64 entry, 3d7c, ca88, 474f4 data, 4755e, the 479b0 callback (F1c2), 48156)
-// have no executor; odd PCs are rejected first.
+// the unrouted neighbours (3d62 RTS, the 3d64 entry, 3d7c, ca88, 474f4 data, 4755e, 48156; the 479b0 callback is now a
+// stage area F1c2 block start and the unrouted 5f01c, outside every unit contract, stands in for it) have no executor; odd
+// PCs are rejected first.
 void interior(){
  unsigned int even=0,inside=0,bundled=0;
  for(unsigned int r=0;r<7;++r)for(std::uint32_t pc=RANGES[r][0];pc<RANGES[r][1];pc+=2){++even;
@@ -794,13 +795,15 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation stage catalog PC");++inside;if(in_list(BUNDLED,9,pc))++bundled;}
  assert(even==282&&inside==214&&bundled==9);
  for(unsigned int i=0;i<9;++i)assert(!is_start(BUNDLED[i]));
- const std::uint32_t outside[]={0x478a6,0x3d62,0x3d64,0x3d7c,0xca88,0x474f4,0x4755e,0x479b0,0x48156,0x4814c};
+ const std::uint32_t outside[]={0x478a6,0x3d62,0x3d64,0x3d7c,0xca88,0x474f4,0x4755e,0x5f01c,0x48156,0x4814c};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x3d59,0x3d6b,0xca8b,0x474e3,0x47541,0x477e5,0x4814f};
  for(unsigned int i=0;i<7;++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
- // 478ec BRA 479b0 without the 479b0 stop rolls back the whole run (the ca8a/35a2 effects included).
- {Bytes ram;State s;generic(0x478e6,ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
+ // 478ec BRA 479b0 without the 479b0 stop continues into the F1c2 stage area, whose e7c36 (palette_bind) read of the
+ // e7b58 descriptor list has no row in this test's synthetic ROM: the whole run rolls back (the ca8a/35a2 effects, the last
+ // chain frames and the stop-not-479b0 row included).
+ {Bytes ram;State s;generic(0x478e6,ram,s,2);reject(ram,s,STOP,"missing or ambiguous physical program bus ROM byte");}
 }
 }
 int main(){

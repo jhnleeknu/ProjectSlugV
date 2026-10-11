@@ -2051,3 +2051,9 @@
 - 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
 - 477e4/477ee catalog·area 목록, 음악 비교 3d58/3d6e(BYTE push), 478a8 진입 효과 표, 478de gate를 연결했다(`engine/src/animation_machine_stage_catalog.cpp`, 67 block, TRAP 478a6 경계). 계약 자료 window의 group 4 끝은 dd4be가 아니라 dd4d0이다(리뷰 기록).
 - 단위 커밋 상태에서 해당 검증기 통과(보고서 `ce76d283…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 F1c2 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0251. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — stage controller F1c2: area 초기화·player 배치·음악 갱신
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 479b0~47a94 area 초기화, player 배치, RNG 49a58, 음악 갱신을 연결했다(`engine/src/animation_machine_stage_area.cpp`, 153 block, TRAP 4d824 경계). RNG 포인터가 work RAM 밖이면 checked 오류(의도된 차이).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `4adc0955…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 F1c2 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0252. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.

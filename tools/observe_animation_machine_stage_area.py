@@ -1,0 +1,2183 @@
+"""Unpatched stage controller F1c2 (stage area 479b0 .. 47a94: area initialization 47594 / 475ca, player placement 476dc, music update, the 49a58 RNG, the 48180 / 481de entry-effect
+helpers, the 4aa30 / 4d126 / 4ddb6 / 4e666 / b4a24 / b7a20 / d760a clears, cut at the F1a body 47a94, TRAP #15 boundary 4d824) native observation.
+
+Native Unicorn M68000 observation of the original ROM.  It reuses, by import and without editing them, the machinery of the buffer/cue observer U7
+(observe_animation_machine_buffer_cue and through it the script/placement observer U5, scene update U4, motion walk U3, scene core U2, frame helper U1, the U6 input
+observer ranges and the card-menu / fade-card chain): persistent-CPU Observer with the declared host-change vocabulary RAM write / PC redirect / A7 delta,
+fresh-twice reproduction, split (stop at the first hit of every checkpoint) versus continuous equivalence, ordered port events, banked reads with the modeled bank,
+SHA pins of every imported tool module, ROM SHA/mtime guard.  The declared observer extension of U5 (a WORD write to 3c0006 is a 'video' port event) is installed in
+this process exactly as U5/U7 do; nothing in the imported modules or tools is edited.  The F1a observer module (observe_animation_machine_stage_entry) is imported only for
+its F1A_SPLIT range constants; the F1b and F1c1 observers are NOT imported (their ranges are re-declared here from the F1b / F1c contracts).
+
+Unit: the 1,580 contract bytes of docs/analysis/animation-machine-stage-catalog-f1c-contract.md, F1c2 half (24 code ranges, 153 block starts, TRAP #15 boundary 4d824, entry = the
+callback 479b0, end = the F1a body 47a94).  Main decisions of the contract implemented here as the observation rules:
+  * one machine run = ONE frame.  A frame ends at the 480f0 RTS that pops the declared dispatcher return LONG 2ac2 (stop 2ac2, A7 = 1feffc + 4) OR, for the frame that runs the whole
+    F1c2 body, directly at the RTS (of the sound routine 3ac8 called by 3d44 at 47a8e) that returns to 47a94 (stop 47a94 = the F1a entry body; never executed here).  The next frame is a
+    declared direct re-entry: A6 = 100b30, A5 = 108000 (the previous native registers), PC := the callback LONG at (A6), A7 := 1feffc, LONG 2ac2 at (A7), LONG 104ca4 := 1ff000
+    (the declared dispatcher base): PC redirect + A7 delta + RAM writes, nothing else.  No scheduler is run: the children 4fcb8 / 4fd0a / 4ff4c / d764a are never executed.
+  * 479b0 is either reached mid-frame (BRA.W at 478ec / 47918 inside the F1c1 frame, the same frame continues into F1c2: the natural seeds) or by a declared re-entry at the callback
+    479b0 installed by 479a6 (the runtime fixtures of the child paths) or by a declared direct entry (typed).  The F1c1 code (477e4 .. 479b0, routed only as the prefix of a chain) is the
+    F1c1 unit; the model, the checkpoints and the block coverage of this tool are those of the 153 F1c2 starts.
+  * 4d824 (TRAP #15) is a stop only: the fall-through directly after the BCS.W at 4d820 that was not taken (D1.W >= 14).  The U6 TRAP at 4d7f0 (48180 -> 4d7a6) is a typed stop.
+  * 49a58 (RNG, A5 := 108000): the C++ rejects a ring pointer (LONG 10d722, 24 bit address) outside 100000..1fffff with 'stage area RNG pointer outside work RAM'.  The observer
+    declares the same policy natively: arriving at 49a58 with such a pointer is a guard row (problem rng_pointer_outside_ram, nothing executed); a typed pointer fffd0..fffff is run with the
+    policy disabled to document the deliberate difference (the original completes: the +2e lands in the work RAM).
+No SR reads, ROM patches, stubs, stack masking, register injection after execution begins or expected-register injection.  Every host change is declared in the step
+record; a declared initial SR (default 2000, CCR 0) and the declared initial registers are part of the fixture summary.  Nothing claims BIOS execution or a natural
+scheduler / natural IRQ.
+
+Seeds (all pinned by SHA256):
+  natural   artifacts/stage_entry_body/observation.json (pinned): the 137 begin outputs of the original 47a94 body runs (the 5 release-poisoned-prefix outputs are guard rows:
+            WORD 104d8a = 8001 makes U1 3c60 CMP.W (A1),D0 read an odd address).  Direct entry at 47da4 with the declared dispatcher return LONG 2ac2 at A7 = 1feffc, one frame per
+            machine run, the declared host write 10dd44 := ff after frame 188 (F1b contract), through 477ee and the F1c1 frames: 238 frames per seed, the last one ends at 47a94.
+            The 8 DUMP_SEEDS run this complete chain; the other seeds start from the recorded frame-236 output state of artifacts/animation_machine_stage_catalog_native
+            (observation.json pinned; the state SHA256 is recomputed from the stored blobs and compared with the recorded one) and run frame 237.  For every seed the
+            DUMP_SEEDS chain reproduces the recorded frame-236 state SHA (continuity of the prefix).
+  runtime   the 236 fixtures of the contract (original 2790 -> 3ef2 -> 49a1a(D0 = 0) on a zero RAM, host writes 10d680 / 10d681 / 10d683 / 10d686 / 104d74 / 104d76, the F1b frame base RAM with
+            DEAD player nodes (callback 270e), an explicit root node ring and the 5d1e / 10dd2a state): 59 catalog records x music same/different x entry 477ee / 477e4.
+  typed     declared variants / direct entries for every block start not reached (476ec, 49a7c, ...), the music branches same / 10fe / 19c1 / 19c0 / other, the player paths, the RNG wraps,
+            the sign-extended 4e67c index, d760a with a failing 28ae, the U6 4d7f0 stop, the sound-ring waits, and guards.
+Every condition is run as a fresh-CPU chain, split (stop at the first hit of every checkpoint of every frame) and continuous, each twice; the two are compared per frame and the
+reproductions by SHA of the complete native record.  Every frame that executes F1c2 code (and every frame of the dump seeds and boundary frames) is additionally replayed on a FRESH CPU
+from its recorded input state (the C++ one-run-one-frame view).  Every frame records the full state SHA256; full dumps are stored for 8 natural seeds, the boundary frames of all
+natural seeds and all frames of all non-natural conditions.
+
+An independent Python model of the contract (a M68000 subset interpreter written from the 68000 programmer's reference that decodes the ORIGINAL ROM BYTES of the 24 F1c2 ranges
+instruction by instruction with a complete CCR model, 32-bit register semantics, explicit byte/word/long operations; it shares no code with Unicorn, the disassembler or the C++) is
+compared with each native F1c2 segment: block-leader sequence with the full register file at every leader, ordered RAM writes / RAM reads / fixed-ROM reads of the F1c2 code, ordered
+ports, the final registers, PC and the whole 64KiB RAM image.  Every callee outside the F1c2 ranges is a black box whose native exit registers and RAM / port writes are replayed; the
+carry of 289e and 28ae is computed by the model from the contract formulas (not taken from the native run).  Any difference is recorded in contract_discrepancies.
+"""
+import collections
+import copy
+import gzip
+import hashlib
+import json
+import multiprocessing
+import os
+from pathlib import Path
+import re
+import shutil
+import struct
+import sys
+import time
+import unicorn
+from unicorn import UC_HOOK_CODE
+from unicorn.unicorn_py3.unicorn import uclib
+import observe_animation_machine_buffer_cue as bc
+import observe_animation_machine_stage_entry as f1a_mod
+from disassemble_program import load_verified_program,disassemble_range
+sp=bc.sp;inp=bc.inp;fh=bc.fh;fc=bc.fc;mt=bc.mt;op=bc.op;sc=bc.sc;seb=bc.seb;vsf=bc.vsf;shared=bc.shared;activation=bc.activation
+ROOT=sc.ROOT
+OUT=ROOT/'artifacts/animation_machine_stage_area_native'
+CONTRACT=ROOT/'docs/analysis/animation-machine-stage-catalog-f1c-contract.md'
+CONTRACT_SHA='f374c80f3528d5200aaa870bd66e8a58d09b400db7a84c8ee3a89fddd474a575'
+SCOPE=sc.SCOPE
+ROM_SHA=op.ROM_SHA
+CATALOG=ROOT/'artifacts/animation_machine_stage_catalog_native'
+CATALOG_OBS=CATALOG/'observation.json'
+CATALOG_SHA='15f7411230a5885e2737403e7584c6e263e2dce60ee3cc94f04ef3a1d3edd3fd'      # the F1c1 observation the frame-236 start states are read from (pinned)
+sha=fc.sha
+u8,u16,u32=op.u8,op.u16,sc.u32
+S=fc.S                                                      # 1feffc: A7 at a frame entry (the dispatcher return LONG lives here; offset effc of the 64KiB work-RAM image)
+M32=0xffffffff
+A5V=0x108000
+A6V=0x100b30                                                # the stage controller node (dispatcher A6) of the stage_entry_body observer
+KEYS=shared.isolated.REG_NAMES                              # d0..d7 a0..a6
+KEYS14=sc.KEYS14
+REG16=tuple('d%d'%i for i in range(8))+tuple('a%d'%i for i in range(8))
+PORT_REGIONS=fc.PORT_REGIONS
+FRAME_RET=0x2ac2
+ENTRY_PC=0x479b0                                            # F1c2 entry (callback)
+FINAL_STOP=0x47a94                                          # F1a entry body: stop only (the RTS of the sound routine 3ac8 called by 3d44 at 47a8e returns here)
+TRAP_STOP=0x4d824                                           # TRAP #15 of the 4d81c range check (D1.W >= 14): stop only
+U6_TRAP_STOP=0x4d7f0                                        # TRAP #15 of the U6 helper 4d7a6 (BYTE 27(A4) = 0): typed stop only
+RNG_PC=0x49a58
+RNG_PTR=0x10d722
+GATE_PC=0x478de
+GATE_RET=0x478e4
+TABLE_BASE=0x478ac
+TABLE_JMP=0x478a8
+WAIT_PCS=(0xcda4,0x3aea,GATE_PC)
+STEP_LIMIT=400000                                           # declared per-run instruction watchdog of the observer (the original has none); a fixture may declare a smaller step_limit
+CONTRACT_RANGES=((0x3d3a,0x3d44),(0x1bcfe,0x1bdde),(0x1be84,0x1be98),(0x2ef90,0x2efa6),(0x2efdc,0x2eff4),(0x46f2e,0x46f52),(0x47594,0x47642),(0x476dc,0x477a2),(0x479b0,0x47a54),(0x47a64,0x47a94),
+    (0x48180,0x481b2),(0x481de,0x48210),(0x49a58,0x49a84),(0x49a8e,0x49ab0),(0x4aa30,0x4aa86),(0x4d126,0x4d196),(0x4d81c,0x4d84e),(0x4ddb6,0x4ddde),(0x4e666,0x4e68e),(0xb4806,0xb481e),
+    (0xb4a24,0xb4a2a),(0xb7a20,0xb7a28),(0xb7a2e,0xb7a62),(0xd760a,0xd764a))
+AREA_RANGES=tuple(r for lo,hi in CONTRACT_RANGES for r in (((0x4d81c,0x4d824),(0x4d826,0x4d84e)) if lo==0x4d81c else ((lo,hi),)))        # routed: the TRAP at 4d824 is a boundary
+F1C1_PREFIX=((0x3d58,0x3d62),(0x3d6a,0x3d7c),(0xca8a,0xca9e),(0x474e2,0x474f4),(0x47540,0x4755e),(0x477e4,0x478a6),(0x478a8,0x479b0),(0x4814e,0x48156))     # F1c1 contract ranges (re-declared): routed only as the prefix of a chain
+F1B_RANGES=((0x47da4,0x47eac),(0x4b6e4,0x4b6f4),(0x1c5b0,0x1c5ea),(0x1bee4,0x1bef8),(0xca48,0xca50),(0x9056,0x9060))     # F1b contract ranges (re-declared; the F1b observer is not imported)
+F1A_ROUTED=tuple(f1a_mod.F1A_SPLIT)
+BOUNDARY_FRAMES=(0,29,188,189,235,236,237)
+DUMP_SEEDS=(0,60,117,118,134,126,135,141)                  # natural seeds with the full per-frame dumps (every family / bank / live-record case)
+DISCREPANCIES=[]
+INFO=[]
+
+
+def in_ranges(pc,ranges):return any(lo<=pc<hi for lo,hi in ranges)
+def in_area(pc):return in_ranges(pc,AREA_RANGES)
+
+
+# ----------------------------------------------------------------------------------
+# Contract text: byte table, block starts, bundled branches, carry classes
+# ----------------------------------------------------------------------------------
+def parse_contract(program):
+    lines=CONTRACT.read_text().splitlines()
+    rows=[];code=[]
+    pat_r=re.compile(r'^\| `([0-9a-f]+)\.\.([0-9a-f]+)` \| `([0-9a-f]+)` \|$')
+    sect=None
+    for line in lines:
+        if line.startswith('**F1c1**'):sect='f1c1'
+        elif line.startswith('**F1c2**'):sect='f1c2'
+        elif line.startswith('## F1c 실행 의미'):sect=None
+        if sect!='f1c2':continue
+        m=pat_r.match(line)
+        if m:
+            lo,hi=int(m.group(1),16),int(m.group(2),16);data=program[lo:hi]
+            assert data.hex()==m.group(3),(hex(lo),hex(hi));rows.append(dict(range='%x..%x'%(lo,hi),size=hi-lo,bytes_equal_to_rom=True,sha256=sha(data)));code.append((lo,hi))
+    assert code==list(CONTRACT_RANGES),code
+    assert sum(h-l for l,h in code)==1580
+    joined=b''.join(program[l:h] for l,h in code)
+    assert sha(joined)=='29e15c153b9b84ec7a16597761d7a181d367fa51893e466d76f577c4e7a2efae',sha(joined)
+    lists={}
+    pcs=lambda text:[int(x,16) for x in re.findall(r'`([0-9a-f]{4,5})`',text)]
+    for line in lines:
+        m=re.match(r'^\s*- F1c2\((\d+)(\+DBRA 1)?\):(.*)$',line)
+        if m:lists[int(m.group(1))]=pcs(m.group(3))
+    starts,bundled,preserve=lists.get(153),lists.get(23),lists.get(77)
+    assert starts and len(starts)==len(set(starts))==153,len(starts or ())
+    assert bundled and len(bundled)==len(set(bundled))==24,len(bundled or ())                 # 23 conditional branches + the DBRA 4aa72
+    assert preserve and len(preserve)==len(set(preserve))==77,len(preserve or ())
+    cons=None
+    for line in lines:
+        if re.match(r'^\s*- F1c2: `47716`',line):cons=pcs(line)
+    assert cons
+    return rows,starts,bundled,cons,preserve
+
+
+STARTS=();BUNDLED=();CONSUMERS=();PRESERVE=();TABLE=[];AREA_INSTR={};BB_ENTRIES=();LEAD_PCS=frozenset();CK_SET=frozenset();START_SET=frozenset();RANGES_ALL=()
+EVEN_PCS=();INTERIOR=()
+CALLBACK_STARTS=(ENTRY_PC,)                                 # the node callback entry (MOVE.L #479b0,(A6) at 479a6 / BRA.W at 478ec, 47918)
+DBRA_TARGETS=(0x4aa6e,)                                     # the DBRA target (a block start the branch-target scan does not see)
+DECODE_CACHE={}
+
+
+def install_decode_cache():
+    """Declared in-process speed-up (no semantic change): the base Observer.prepare decodes every routed range with capstone for each new CPU; the identical result is memoized so that the
+    per-frame fresh-CPU runs do not repeat it."""
+    original=fc.disassemble_range
+    def cached(program,start,size,base):
+        key=(id(program),start,size,base)
+        if key not in DECODE_CACHE:DECODE_CACHE[key]=list(original(program,start,size,base))
+        return DECODE_CACHE[key]
+    fc.disassemble_range=cached
+
+
+def external_targets(program):
+    """Targets of the JSR/JMP/BSR/BRA/Bcc instructions of the F1c2 ranges that leave the ranges (the black-box entries)."""
+    out={}
+    for lo,hi in AREA_RANGES:
+        for r in disassemble_range(program,lo,hi-lo,lo):
+            pc=r['cpu_address'];raw=bytes.fromhex(r['raw']);t,k=fh.branch_target(pc,raw)
+            if raw[:2] in (b'\x4e\xf9',b'\x4e\xb9'):t=int.from_bytes(raw[2:6],'big')            # JMP / JSR abs.l
+            if t is not None and not in_area(t):out.setdefault(t,[]).append(pc)
+    return out
+
+
+def configure(program,out_dir):
+    global STARTS,BUNDLED,CONSUMERS,PRESERVE,TABLE,AREA_INSTR,BB_ENTRIES,LEAD_PCS,CK_SET,START_SET,RANGES_ALL,EVEN_PCS,INTERIOR
+    ext=bc.configure(program,out_dir)                                   # installs the U5/U7 observer extension and fills fc/fh globals for the existing executors
+    rows,starts,bundled,cons,preserve=parse_contract(program)
+    TABLE=rows;STARTS=tuple(starts);BUNDLED=tuple(bundled);PRESERVE=tuple(preserve)
+    for lo,hi in AREA_RANGES:
+        for r in disassemble_range(program,lo,hi-lo,lo):AREA_INSTR[r['cpu_address']]=r
+    assert not any(r['classification']=='undecoded_word' for r in AREA_INSTR.values())
+    CONSUMERS=tuple(x for x in cons if x in set(STARTS) and AREA_INSTR[x]['mnemonic'].split('.')[0] in ('bcc','bcs','bne','beq'))
+    assert sorted(CONSUMERS)==[0x1bd34,0x1bd96,0x47716,0x47732,0x4776c],[hex(x) for x in CONSUMERS]
+    decoded=set(fh.leaders_of(program,AREA_RANGES))
+    full=decoded|set(CALLBACK_STARTS)|set(DBRA_TARGETS)
+    assert full==set(STARTS),(sorted(hex(x) for x in full^set(STARTS)))
+    assert not set(BUNDLED)&set(STARTS)
+    ext_t=external_targets(program)
+    ext_t.pop(FINAL_STOP,None)
+    BB_ENTRIES=tuple(sorted(ext_t))
+    EVEN_PCS=tuple(p for lo,hi in CONTRACT_RANGES for p in range(lo,hi,2))
+    INTERIOR=tuple(p for p in EVEN_PCS if p not in set(STARTS) and p!=TRAP_STOP)
+    assert len(EVEN_PCS)==790,len(EVEN_PCS)
+    assert len(INTERIOR)==636,len(INTERIOR)
+    START_SET=frozenset(STARTS);LEAD_PCS=frozenset(STARTS)|frozenset(BB_ENTRIES);CK_SET=frozenset(LEAD_PCS)
+    RANGES_ALL=tuple(dict.fromkeys(tuple(bc.RANGES)+F1B_RANGES+F1A_ROUTED+F1C1_PREFIX+AREA_RANGES))
+    assert not in_ranges(TRAP_STOP,RANGES_ALL)                          # 4d824 (TRAP #15) is a boundary, not routed
+    fc.OUT=out_dir;fc.RANGES=RANGES_ALL;fc.BOUNDARIES=();fc.KEY_PCS=()
+    fh.OUT=out_dir;fh.POOL.clear()
+    install_observer();install_decode_cache()
+    return ext
+
+
+# ----------------------------------------------------------------------------------
+# Observer: U5 observer (3c0006 video port) + declared initial SR, wait stops at cda4 / 3aea / the 478de palette gate, leader records (F1c2 block starts and the black-box entries
+# reached directly from F1c2 code), alternative stop PCs for probes, the 49a58 RNG pointer policy of the C++
+# ----------------------------------------------------------------------------------
+def sext(v,size):
+    v&={1:0xff,2:0xffff,4:M32}[size];return v-(1<<(8*size)) if v&{1:0x80,2:0x8000,4:0x80000000}[size] else v
+
+
+class AreaMixin(object):
+    def prepare(self,fx):
+        super().prepare(fx)
+        c=self.cpu;REGS=fc.REGS
+        if fx.get('sr') is not None:c.reg_write(REGS['sr'],fx['sr'])
+        self.leads=[];self.wait=None;self.mine_seen=set();self.total=0;self.last_pc=None;self.alt_stops=frozenset(fx.get('stop_alts',()));self.step_limit=fx.get('step_limit',STEP_LIMIT)
+        self.rng_policy=fx.get('rng_policy',True)
+        def cb(cpu,pc,size,user):
+            if self.guard is not None:
+                if pc&1 and self.guard.get('problem')=='unsupported_code_target' and self.guard.get('target')==pc:self.guard['odd_pc']=True
+                return
+            first_cp=pc in self.checkpoints and pc not in self.mine_seen
+            if first_cp:self.mine_seen.add(pc)
+            stopping=pc==self.stop_pc or (first_cp and not self.continuous)
+            if stopping:return
+            if pc in self.alt_stops:
+                self.stop_pc=pc;cpu.emu_stop();return
+            if pc==TABLE_JMP:                                               # JMP 478ac(PC,D0.W) of the F1c1 prefix: an odd computed PC is refused BEFORE the jump
+                t=(TABLE_BASE+sext(cpu.reg_read(REGS['d0'])&0xffff,2))&M32
+                if t&1:
+                    self.guard=dict(problem='unsupported_code_target',pc=pc,target=t,odd_pc=True,refused_before_jump=True);cpu.emu_stop();return
+            if pc==RNG_PC and self.rng_policy:                              # the C++ policy of 49a58: the ring pointer LONG 10d722 (24 bit address) must lie in the work RAM
+                ptr=int.from_bytes(cpu.mem_read(RNG_PTR,4),'big');p24=ptr&0xffffff
+                if not 0x100000<=p24<=0x1fffff:
+                    self.guard=dict(problem='rng_pointer_outside_ram',pc=pc,pointer=ptr,pointer24=p24,reason_kind='rng_pointer_outside_ram');cpu.emu_stop();return
+                if ptr>0xffffff:
+                    self.guard=dict(problem='rng_pointer_high_byte',pc=pc,pointer=ptr,pointer24=p24,reason_kind='rng_pointer_high_byte');cpu.emu_stop();return
+            self.total+=1
+            if self.total>self.step_limit:
+                self.guard=dict(problem='step_limit',pc=pc,steps=self.total,limit=self.step_limit);cpu.emu_stop();return
+            if pc in WAIT_PCS:
+                a5=cpu.reg_read(REGS['a5'])
+                if pc==0xcda4:
+                    live=int.from_bytes(cpu.mem_read((a5+0xd34)&M32,2),'big');want=cpu.reg_read(REGS['d4'])&0xffff;blocked=live!=want
+                elif pc==0x3aea:
+                    live=int.from_bytes(cpu.mem_read((a5-0x328c)&M32,2),'big');want=cpu.reg_read(REGS['d1'])&0xffff;blocked=live==want
+                else:                                                       # the 478de gate: a spin iteration finished (BCC.B at 478e4 taken -> 478de again)
+                    live=cpu.mem_read(0x107ded,1)[0];want=0x80;blocked=len(self.pcs)>=2 and self.pcs[-2]==GATE_RET and bool(live&0x80)
+                if blocked:
+                    self.stop_pc=pc;self.wait=dict(pc=pc,live_word=live,compared_word=want,kind={0xcda4:'sprite',0x3aea:'sound',GATE_PC:'palette-gate'}[pc]);cpu.emu_stop();return
+            if pc in LEAD_PCS and (pc in START_SET or (self.last_pc is not None and in_area(self.last_pc))):
+                self.leads.append(dict(pc=pc,regs=self.regs(),pc_index=len(self.pcs)-1,event_index=len(self.events)))
+            self.last_pc=pc
+        c.hook_add(UC_HOOK_CODE,cb)
+        return self
+    def begin_step(self,stop_pc,checkpoints):
+        super().begin_step(stop_pc,checkpoints);self.total=0           # the instruction watchdog counts per step (all split phases of a step together), so that split and continuous agree
+    def run(self,allow_guard=False):
+        self.leads=[];self.wait=None;self.mine_seen=set(self.seen)
+        r=super().run(allow_guard=allow_guard)
+        g=r['guard']
+        if g is not None and g.get('problem')=='unsupported_code_target':
+            t=g['target'];prev=r['pcs'][-2] if len(r['pcs'])>=2 and r['pcs'][-1]==t else (r['pcs'][-1] if r['pcs'] else None)
+            if t&1:g['reason']='odd target PC %x (an address error on the original CPU)'%t;g['odd_pc']=True
+            elif t==TRAP_STOP:g['reason']='TRAP #15 at 4d824 reached without the declared stop (the boundary is a stop only; the TRAP is never executed)'
+            elif t==U6_TRAP_STOP:g['reason']='TRAP #15 at 4d7f0 (U6 4d7a6) reached without the declared stop (the boundary is a stop only; the TRAP is never executed)'
+            elif prev==TABLE_JMP:g['reason']='computed PC 478ac+D0.W = %x (JMP 478ac(PC,D0.W)) is not a routed instruction start'%t
+            else:g['reason']='control transfer to %x, outside every routed range, from %s'%(t,hex(prev) if prev is not None else 'the entry')
+        elif g is not None and g.get('problem') in ('unsupported_write','unmapped_or_protected'):
+            g['reason']='write to the program ROM / an unmapped address %s'%hex(g.get('address',0))
+        elif g is not None and g.get('problem')=='unsupported_odd_data_access':
+            g['reason']='odd address %x for a %d-byte %s access (address error on the original CPU)'%(g['address'],g['size'],g['access']);g['reason_kind']='odd_word_access'
+        elif g is not None and g.get('problem')=='step_limit':
+            g['reason']='no terminator: the declared instruction watchdog (%d) expired at %x (the original code has no bound; the machine rolls back at its block budget)'%(g['limit'],g['pc']);g['reason_kind']='no_terminator'
+        elif g is not None and g.get('problem')=='rng_pointer_outside_ram':
+            g['reason']='stage area RNG pointer outside work RAM: LONG 10d722 = %08x (24 bit address %06x) is not in 100000..1fffff; the C++ rejects it at the entry of 49a58 (nothing executed)'%(g['pointer'],g['pointer24'])
+        elif g is not None and g.get('problem')=='rng_pointer_high_byte':
+            g['reason']='stage area RNG pointer %08x has a nonzero top byte; the C++ masks the 24 bit address (%06x, inside the work RAM) while Unicorn does not (no native observation possible)'%(g['pointer'],g['pointer24'])
+        if g is not None and 'reason' not in g:g['reason']='native guard %s'%g.get('problem')
+        r.update(leads=self.leads,wait=self.wait,waiting=self.wait is not None)
+        return r
+    def apply(self,changes):
+        before=self.regs();expected=dict(before);done=[]
+        for change in changes:
+            kind=change['kind']
+            if kind=='ram':self.cpu.mem_write(change['address'],change['value'].to_bytes(change['size'],'big'))
+            elif kind=='pc':self.cpu.reg_write(fc.REGS['pc'],change['to']);expected['pc']=change['to'];self.last_pc=None
+            elif kind=='a7_add':
+                expected['a7']=(before['a7']+change['delta'])&M32;self.cpu.reg_write(fc.REGS['a7'],expected['a7'])
+            else:raise AssertionError(kind)
+            done.append(dict(change,pc_before=before['pc'],a7_before=before['a7']))
+        assert self.regs()==expected
+        return done
+
+
+AreaObserver=None
+
+
+def install_observer():
+    global AreaObserver
+    base=[k for k in bc.U7Observer.__mro__ if k.__name__=='U5Observer'][0]
+    AreaObserver=type('AreaObserver',(AreaMixin,base),{})
+    fc.Observer=AreaObserver
+
+
+def W(address,size,value,why):return fc.ram_write(address,size,value,why)
+
+
+
+
+# ----------------------------------------------------------------------------------
+# Chain runner: persistent CPU, one step per declared stop (one step = one frame, or the release of a wait), split (stop at the first hit of every checkpoint) or continuous
+# ----------------------------------------------------------------------------------
+RUNS=[0]
+
+
+def run_chain(program,spec,continuous,sink=None):
+    RUNS[0]+=1
+    fx=spec['fixture'];allow=bool(spec.get('guarded'));o=AreaObserver(program,continuous);phases=[]
+    try:
+        first_step=spec['steps'][0]
+        o.prepare(dict(fx,stop_pc=first_step['stop_pc'],checkpoints=first_step['checkpoints'],stop_alts=first_step.get('alts',())))
+        for index,step in enumerate(spec['steps']):
+            o.begin_step(step['stop_pc'],step['checkpoints']);o.alt_stops=frozenset(step.get('alts',()));first=None;pending=step['changes']
+            while True:
+                remaining=[pc for pc in step['checkpoints'] if pc not in o.seen]
+                target=step['stop_pc'] if continuous or not remaining else remaining[0]
+                changes=o.apply(pending);pending=[]
+                p=o.run(allow_guard=allow)
+                if first is None:first=p['incoming']
+                p.update(label=step['label'] if not phases or phases[-1]['step']!=index else '%s+after-%x'%(step['label'],phases[-1]['outgoing']['pc']),step=index,host_changes=changes,stop_pc=target,
+                    carry=None,carry_in=None,branch_evidence=[],step_stop_pc=step['stop_pc'],phase_in_step=sum(q['step']==index for q in phases))
+                if sink is not None:sink(p)
+                else:phases.append(p)
+                if sink is not None:phases.append(dict(step=index,outgoing=p['outgoing'],guard=p['guard'],waiting=p['waiting'],phase_in_step=p['phase_in_step']))
+                if p['guard'] is not None:break
+                if p['waiting']:
+                    assert p['outgoing']['pc'] in WAIT_PCS,(spec['label'],hex(p['outgoing']['pc']))
+                    break
+                if p['outgoing']['pc']!=target and p['outgoing']['pc'] in step.get('alts',()):
+                    step['found_stop']=p['outgoing']['pc'];break                      # probe only: an alternative declared stop was reached
+                assert p['outgoing']['pc']==target,(spec['label'],step['label'],hex(p['outgoing']['pc']),hex(target))
+                if p['outgoing']['pc']==step['stop_pc']:
+                    if step.get('a7') is not None:
+                        kind,value=step['a7']
+                        want=(first['a7']+value)&M32 if kind=='entry' else value
+                        assert p['outgoing']['a7']==want,(spec['label'],step['label'],hex(p['outgoing']['a7']),hex(want))
+                    break
+                assert p['phase_in_step']<300,(spec['label'],step['label'])
+            if phases[-1]['guard'] is not None:
+                assert allow,(spec['label'],phases[-1]['guard']);assert index==len(spec['steps'])-1
+            else:
+                expect=step.get('expect')
+                if expect=='wait':assert phases[-1]['waiting'],(spec['label'],step['label'],'expected a wait stop, got',hex(phases[-1]['outgoing']['pc']))
+                if expect in ('return','boundary'):assert not phases[-1]['waiting'],(spec['label'],step['label'],'expected a stop, got a wait at',hex(phases[-1]['outgoing']['pc']))
+        last=phases[-1]
+        if allow:
+            if last['guard'] is not None or not spec.get('probe'):
+                g=last['guard'];assert g is not None,spec['label']
+                for key,value in (spec.get('guard') or {}).items():assert g.get(key)==value,(spec['label'],key,g)
+        else:assert all(p['guard'] is None for p in phases)
+        return phases
+    finally:o.close()
+
+
+def lead_key(p):return [(l['pc'],l['regs']) for l in p['leads']]
+
+
+def compare_steps(split,control):
+    steps=sorted({p['step'] for p in split});assert steps==sorted({p['step'] for p in control})
+    for index in steps:
+        a=[p for p in split if p['step']==index];b=[p for p in control if p['step']==index]
+        assert len(b)==1
+        pcs=[];events=[];changes=[];leads=[]
+        for p in a:pcs.extend(p['pcs'][:-1]);events.extend(p['events']);changes.extend(p['host_changes']);leads.extend(lead_key(p))
+        pcs+=a[-1]['pcs'][-1:]
+        assert (pcs,events,changes,leads)==(b[0]['pcs'],b[0]['events'],b[0]['host_changes'],lead_key(b[0])),(index,'split/continuous differ')
+        for key in ('outgoing','ram_after','pvc_after','guard','waiting','wait'):assert a[-1][key]==b[0][key],(index,key)
+        checkpoints={p['outgoing']['pc']:(p['outgoing'],p['ram_after'],p['pvc_after']) for p in a[:-1] if not p['waiting'] and p['guard'] is None}
+        seen=set()
+        for snap in b[0]['snapshots']:
+            regs=snap['registers'];assert checkpoints[regs['pc']]==(regs,snap['ram'],snap['pvc']);seen.add(regs['pc'])
+        assert seen==set(checkpoints),(index,sorted(map(hex,seen^set(checkpoints))))
+
+
+def with_checkpoints(program,spec):
+    probe=copy.deepcopy(spec)
+    for s in probe['steps']:s['checkpoints']=[]
+    try:phases=run_chain(program,probe,True)
+    except Exception as e:
+        diag=copy.deepcopy(probe);diag['guarded']=True;diag['guard']={}
+        try:last=run_chain(program,diag,True)[-1];info=(last['guard'],[hex(x) for x in last['pcs'][-8:]],hex(last['outgoing']['pc']))
+        except Exception as e2:info=repr(e2)
+        raise AssertionError('probe failed for condition %s: %r; diagnostic %r'%(spec['label'],e,info))
+    assert len(phases)==len(spec['steps']),(spec['label'],len(phases),len(spec['steps']))
+    for index,step in enumerate(spec['steps']):
+        order=[];entry=phases[index]['pcs'][0]
+        for pc in phases[index]['pcs'][1:]:
+            if pc in CK_SET and pc not in order and pc!=entry and pc!=step['stop_pc']:order.append(pc)
+        step['checkpoints']=order
+    return spec
+
+
+def jdump(x):return json.dumps(x,sort_keys=True,separators=(',',':'),default=str).encode()
+
+
+def phase_digest(p):
+    """SHA256 of the complete native record of one phase (every field that two reproductions must agree on)."""
+    h=hashlib.sha256()
+    for key in ('incoming','outgoing','pvc_before','pvc_after','ram_before','ram_after','guard','waiting','wait','host_changes','modeled_bank','bank_before','ff8_before','ff9_before','ff8_after','ff9_after','label','step','phase_in_step','stop_pc','step_stop_pc'):
+        v=p[key];h.update(key.encode());h.update(v if isinstance(v,(bytes,bytearray)) else jdump(v))
+    h.update(struct.pack('>%dI'%len(p['pcs']),*p['pcs']));h.update(jdump(p['events']));h.update(jdump(lead_key(p)))
+    h.update(jdump([(s['registers'],sha(s['ram']),sha(s['pvc'])) for s in p['snapshots']]))
+    return h.hexdigest()
+
+
+def run_digests(program,spec,continuous):
+    out=[]
+    run_chain(program,spec,continuous,sink=lambda p:out.append(phase_digest(p)))
+    return out
+
+
+def run_spec(program,spec):
+    split=run_chain(program,spec,False)
+    d_split=[phase_digest(p) for p in split]
+    assert run_digests(program,spec,False)==d_split,('split not reproduced',spec['label'])
+    control=run_chain(program,spec,True)
+    d_control=[phase_digest(p) for p in control]
+    assert run_digests(program,spec,True)==d_control,('continuous not reproduced',spec['label'])
+    compare_steps(split,control)
+    annotate(program,split);annotate(program,control)
+    assert [p['stop_evidence'] for p in split if p['step_stop_pc']==p['outgoing']['pc'] or p['waiting']]==[p['stop_evidence'] for p in control if p['step_stop_pc']==p['outgoing']['pc'] or p['waiting']]
+    return split,control,hashlib.sha256(''.join(d_split).encode()).hexdigest(),hashlib.sha256(''.join(d_control).encode()).hexdigest()
+
+
+
+
+# ----------------------------------------------------------------------------------
+# Stop evidence: a stop is accepted only directly after the transferring instruction
+# ----------------------------------------------------------------------------------
+WAIT_PREV={0xcda4:{0xcda0:'6700',0xcda8:'66fa'},0x3aea:{0x3ae6:'0241',0x3aee:'67fa'},GATE_PC:{GATE_RET:'64f8'}}
+
+
+def decode_one(program,pc):
+    r=list(disassemble_range(program,pc,8,pc))[0];assert r['cpu_address']==pc
+    return r
+
+
+def transfer_kind(program,prev,pc):
+    """How the instruction at `prev` (bytes read from the ROM) hands control to `pc`: 'return' (RTS), 'branch' (BRA/JMP), 'branch-taken' / 'branch-not-taken' (Bcc), 'fallthrough' (any other instruction)."""
+    r=decode_one(program,prev);raw=bytes.fromhex(r['raw']);w=int.from_bytes(raw[:2],'big');n=r['size']
+    if w==0x4e75:return 'return',raw
+    if (w&0xf000)==0x6000:
+        cond=(w>>8)&15;d=w&0xff
+        disp=int.from_bytes(raw[2:4],'big',signed=True) if d==0 else (d-256 if d&0x80 else d)
+        target=prev+2+disp
+        if cond==0:return ('branch' if target==pc else 'none'),raw
+        if cond==1:return ('branch' if target==pc else 'none'),raw
+        if target==pc:return 'branch-taken',raw
+        return ('branch-not-taken' if prev+n==pc else 'none'),raw
+    if w in (0x4ef9,0x4eb9):return ('branch' if int.from_bytes(raw[2:6],'big')==pc else 'none'),raw
+    return ('fallthrough' if prev+n==pc else 'none'),raw
+
+
+def stop_evidence(program,p,origin,group=()):
+    if p['guard'] is not None:return None
+    o=p['outgoing'];pcs=p['pcs'];pc=o['pc'];ram=p['ram_after']
+    if p['waiting']:
+        assert pcs[-1]==pc and pc in WAIT_PCS,(p['label'],hex(pc))
+        w=p['wait']
+        if len(pcs)==1:return dict(kind='wait',outgoing_pc=pc,previous_pc=None,wait=w,reached_from='zero-step re-stop: the resumed wait is still blocked (stop PC = entry PC, nothing executed)')
+        prev=pcs[-2];allowed=WAIT_PREV[pc]
+        assert prev in allowed and program[prev:prev+2].hex()==allowed[prev],(p['label'],hex(prev),hex(pc))
+        if pc==GATE_PC:
+            return dict(kind='wait',outgoing_pc=pc,previous_pc=prev,previous_bytes=program[prev:prev+2].hex(),wait=w,
+                reached_from='BCC.B 478de at 478e4 (bytes 64f8) taken after JSR 72f0 returned C = 0 (BYTE 107ded = %02x, bit7 set => C = 0); the Waiting is taken at the arrival at 478de, the JSR there is not executed again'%w['live_word'])
+        return dict(kind='wait',outgoing_pc=pc,previous_pc=prev,previous_bytes=program[prev:prev+2].hex(),wait=w,
+            reached_from='%s at %x %s into the %s wait at %x (blocked: live WORD %04x %s %04x); the instruction at %x is not executed'%(program[prev:prev+2].hex(),prev,'fell through' if prev in (0xcda0,0x3ae6) else 'looped back (taken)',w['kind'],pc,w['live_word'],'<>' if pc==0xcda4 else '=',w['compared_word'],pc))
+    if pc!=p['step_stop_pc']:return None
+    assert pcs[-1]==pc,(p['label'],pcs[-3:])
+    if len(pcs)==1:return dict(kind='zero-step',outgoing_pc=pc,previous_pc=None,reached_from='zero-step: stop PC equals the entry PC, nothing executed')
+    prev=pcs[-2];a7=o['a7'];inc=origin['incoming']
+    kind,raw=transfer_kind(program,prev,pc)
+    if kind=='return' and pc==FRAME_RET:
+        assert u32(ram,a7-4)==pc,(p['label'],hex(u32(ram,a7-4)))
+        on_stack=[off for off in range(0,64,2) if u32(origin['ram_before'],inc['a7']+off)==pc]
+        pushed=[e['pc'] for q in group for e in q['events'] if e['region']=='ram' and e['access']=='write' and e['size']==4 and int(e['bytes'],16)==pc]
+        assert on_stack or pushed or any(e['region']=='ram' and e['access']=='write' and e['size']==4 and int(e['bytes'],16)==pc and e['address']==a7-4 for e in p['events']),(p['label'],'the popped LONG %x was neither declared on the stack at the step entry nor pushed by a JSR of the step'%pc)
+        return dict(kind='return',outgoing_pc=pc,previous_pc=prev,previous_bytes='4e75',return_long_on_stack_at_entry_offsets=on_stack,entry_a7=inc['a7'],
+            reached_from='RTS at %x popped the declared return LONG %x (A7 after = %x); %x is never executed'%(prev,pc,a7,pc))
+    assert kind in ('branch','branch-taken','branch-not-taken','fallthrough','return'),(p['label'],hex(prev),hex(pc),kind)
+    if kind=='return':
+        assert u32(ram,a7-4)==pc,(p['label'],hex(u32(ram,a7-4)))
+        return dict(kind='return',outgoing_pc=pc,previous_pc=prev,previous_bytes='4e75',entry_a7=inc['a7'],reached_from='RTS at %x popped the return LONG %x; %x is not executed'%(prev,pc,pc))
+    name={'branch':'branch-boundary','branch-taken':'branch-boundary','branch-not-taken':'fallthrough-boundary','fallthrough':'fallthrough-boundary'}[kind]
+    how={'branch':'%s at %x (bytes %s) transferred control to %x','branch-taken':'conditional branch %s at %x (bytes %s) taken to %x','branch-not-taken':'conditional branch %s at %x (bytes %s) not taken, fell through to %x','fallthrough':'%s at %x (bytes %s) fell through to %x'}[kind]
+    mn=decode_one(program,prev)['mnemonic'].split('.')[0].upper()
+    return dict(kind=name,outgoing_pc=pc,previous_pc=prev,previous_bytes=raw.hex(),reached_from=(how%(mn,prev,raw.hex(),pc))+'; the instruction at %x is not executed'%pc)
+
+
+def annotate(program,phases):
+    first={};group=collections.defaultdict(list)
+    for p in phases:first.setdefault(p['step'],p);group[p['step']].append(p)
+    for p in phases:p['stop_evidence']=stop_evidence(program,p,first[p['step']],group[p['step']])
+
+
+# ----------------------------------------------------------------------------------
+# Independent model: a M68000 subset interpreter that decodes the ORIGINAL ROM BYTES of the F1c2 ranges (decoder written from the 68000 programmer's reference, not from the
+# disassembler / Unicorn / C++).  Complete CCR (X N Z V C, None = unknown), 32-bit register semantics, explicit byte / word / long operations.  Calls leave the F1c2
+# ranges at a black-box entry; the native exit state of the black box is replayed (registers, RAM / PVC writes); the carry of 72f0 and 28ae is computed from the contract formulas.
+# ----------------------------------------------------------------------------------
+class ModelError(Exception):pass
+SZ={0:1,1:2,2:4}
+MASK={1:0xff,2:0xffff,4:M32}
+SIGN={1:0x80,2:0x8000,4:0x80000000}
+
+
+def sext(v,size):
+    v&=MASK[size];return v-(1<<(8*size)) if v&SIGN[size] else v
+
+
+class NeedFlag(Exception):
+    def __init__(self,names):self.names=names
+
+
+class FM(object):
+    def __init__(self,program,bank_state,ram,regs,sr=None):
+        self.prog=program;self.bank,self.ff8,self.ff9=bank_state;self.ram=bytearray(ram)
+        self.r={k:regs[k]&M32 for k in KEYS+('a7',)};self.pc=regs['pc']
+        self.cc=dict(X=None,N=None,Z=None,V=None,C=None)
+        if sr is not None:self.cc=dict(X=(sr>>4)&1,N=(sr>>3)&1,Z=(sr>>2)&1,V=(sr>>1)&1,C=sr&1)
+        self.leads=[];self.writes=[];self.reads=[];self.rom_reads=[];self.ports=[];self.cache={};self.bb_writes=0;self.exec_pcs=set()
+    # ---- memory
+    def mem_read(self,a,n,log=True):
+        a&=M32
+        if n>1 and a&1:raise ModelError('odd read %x'%a)
+        if a<0x100000:
+            if log:self.rom_reads.append((a,n,'fixed'))
+            return int.from_bytes(self.prog[a:a+n],'big')
+        if a<0x200000:
+            if log:self.reads.append((a,n))
+            return int.from_bytes(bytes(self.ram[(a+i)&0xffff] for i in range(n)),'big')
+        if 0x200000<=a<0x2fe000:
+            ph=self.bank+a-0x200000
+            if log:self.rom_reads.append((a,n,'bank'))
+            return int.from_bytes(self.prog[ph:ph+n],'big')
+        raise ModelError('read %x'%a)
+    def put_ram(self,a,n,v):
+        for i,b in enumerate((v&MASK[n]).to_bytes(n,'big')):self.ram[(a+i)&0xffff]=b
+    def mem_write(self,a,n,v):
+        a&=M32
+        if n>1 and a&1:raise ModelError('odd write %x'%a)
+        if not 0x100000<=a<0x200000:raise ModelError('write %x'%a)
+        v&=MASK[n];self.put_ram(a,n,v);self.writes.append((a,n,v))
+    def pvc(self,a,v):
+        if a==0x2ffff0:self.ff8=v
+        else:self.ff9=v
+        self.bank=((self.ff8>>8)|(self.ff9<<8))+0x100000
+        self.ff8=(self.ff8&0xfe00)|0xa0;self.ff9&=0x7fff
+    # ---- decode (from the ROM bytes)
+    def ext(self,pos):return int.from_bytes(self.prog[pos:pos+2],'big')
+    def decode_ea(self,mode,reg,size,pos):
+        if mode==0:return ('dn',reg),pos
+        if mode==1:return ('an',reg),pos
+        if mode==2:return ('ind',reg),pos
+        if mode==3:return ('postinc',reg),pos
+        if mode==4:return ('predec',reg),pos
+        if mode==5:return ('disp',reg,sext(self.ext(pos),2)),pos+2
+        if mode==6:
+            e=self.ext(pos);return ('idx',reg,sext(e&0xff,1),(e>>12)&7,(e>>15)&1,(e>>11)&1),pos+2
+        if reg==0:return ('abs',sext(self.ext(pos),2)&M32),pos+2
+        if reg==1:return ('abs',(self.ext(pos)<<16)|self.ext(pos+2)),pos+4
+        if reg==2:return ('abs',(pos+sext(self.ext(pos),2))&M32),pos+2
+        if reg==3:
+            e=self.ext(pos);return ('pcidx',pos,sext(e&0xff,1),(e>>12)&7,(e>>15)&1,(e>>11)&1),pos+2
+        if reg==4:
+            if size==4:return ('imm',(self.ext(pos)<<16)|self.ext(pos+2)),pos+4
+            if size==2:return ('imm',self.ext(pos)),pos+2
+            return ('imm',self.ext(pos)&0xff),pos+2
+        raise ModelError('ea mode %d reg %d'%(mode,reg))
+    def decode(self,pc):
+        if pc in self.cache:return self.cache[pc]
+        w=self.ext(pc);hi=w>>12;ins=dict(pc=pc)
+        if w==0x4e75:ins.update(op='rts',len=2)
+        elif (w&0xfff0)==0x4e40:ins.update(op='trap',len=2)
+        elif hi in (1,2,3):
+            size={1:1,3:2,2:4}[hi];src,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);dm=(w>>6)&7;dr=(w>>9)&7
+            dst,pos=self.decode_ea(dm,dr,size,pos)
+            ins.update(op='movea' if dm==1 else 'move',size=size,src=src,dst=dst,len=pos-pc)
+        elif hi==7:ins.update(op='moveq',reg=(w>>9)&7,imm=w&0xff,len=2)
+        elif hi==6:
+            c=(w>>8)&15;d=w&0xff
+            if d==0:disp=sext(self.ext(pc+2),2);ln=4
+            elif d==0xff:raise ModelError('68020 long branch')
+            else:disp=sext(d,1);ln=2
+            ins.update(op={0:'bra',1:'bsr'}.get(c,'bcc'),cond=c,target=(pc+2+disp)&M32,len=ln)
+        elif (w&0xf1c0)==0x41c0:
+            ea,pos=self.decode_ea((w>>3)&7,w&7,4,pc+2);ins.update(op='lea',reg=(w>>9)&7,src=ea,len=pos-pc)
+        elif (w&0xffc0)==0x4e80:
+            ea,pos=self.decode_ea((w>>3)&7,w&7,4,pc+2);ins.update(op='jsr',src=ea,len=pos-pc)
+        elif (w&0xffc0)==0x4ec0:
+            ea,pos=self.decode_ea((w>>3)&7,w&7,4,pc+2);ins.update(op='jmp',src=ea,len=pos-pc)
+        elif (w&0xff00)==0x4200 and (w&0xc0)!=0xc0:
+            size=SZ[(w>>6)&3];ea,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);ins.update(op='clr',size=size,dst=ea,len=pos-pc)
+        elif (w&0xff00)==0x4a00 and (w&0xc0)!=0xc0:
+            size=SZ[(w>>6)&3];ea,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);ins.update(op='tst',size=size,src=ea,len=pos-pc)
+        elif hi==5 and (w&0xc0)==0xc0 and ((w>>3)&7)!=1:
+            ea,pos=self.decode_ea((w>>3)&7,w&7,1,pc+2);ins.update(op='scc',cond=(w>>8)&15,dst=ea,len=pos-pc)
+        elif hi==5 and (w&0x100) and (w&0xc0)!=0xc0:
+            size=SZ[(w>>6)&3];ea,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);q=(w>>9)&7;ins.update(op='subq',size=size,imm=q or 8,dst=ea,len=pos-pc)
+        elif hi==5 and not (w&0x100) and (w&0xc0)!=0xc0:
+            size=SZ[(w>>6)&3];ea,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);q=(w>>9)&7;ins.update(op='addq',size=size,imm=q or 8,dst=ea,len=pos-pc)
+        elif hi==5 and (w&0xf8)==0xc8:                        # DBcc Dn,disp16
+            disp=sext(self.ext(pc+2),2);ins.update(op='dbcc',cond=(w>>8)&15,reg=w&7,target=(pc+2+disp)&M32,len=4)
+        elif hi==0 and (w&0xff00)==0x0800:                    # static bit ops
+            t=(w>>6)&3;bit=self.ext(pc+2)&0xff;ea,pos=self.decode_ea((w>>3)&7,w&7,1,pc+4);ins.update(op=['btst','bchg','bclr','bset'][t],bit=bit,dst=ea,len=pos-pc)
+        elif hi==0 and (w&0x0100) and ((w>>3)&7)!=1:          # dynamic bit ops (bit number in Dn)
+            t=(w>>6)&3;ea,pos=self.decode_ea((w>>3)&7,w&7,1,pc+2);ins.update(op=['btst','bchg','bclr','bset'][t],bitreg=(w>>9)&7,dst=ea,len=pos-pc)
+        elif hi==0 and (w&0xff00)==0x0200 and (w&0xc0)!=0xc0:
+            size=SZ[(w>>6)&3];imm,pos=self.decode_ea(7,4,size,pc+2);ea,pos=self.decode_ea((w>>3)&7,w&7,size,pos);ins.update(op='andi',size=size,imm=imm[1],dst=ea,len=pos-pc)
+        elif hi==0 and (w&0xff00)==0x0600 and (w&0xc0)!=0xc0:
+            size=SZ[(w>>6)&3];imm,pos=self.decode_ea(7,4,size,pc+2);ea,pos=self.decode_ea((w>>3)&7,w&7,size,pos);ins.update(op='addi',size=size,imm=imm[1],dst=ea,len=pos-pc)
+        elif hi==0 and (w&0xf00)==0xc00 and (w&0xc0)!=0xc0:
+            size=SZ[(w>>6)&3];imm,pos=self.decode_ea(7,4,size,pc+2);ea,pos=self.decode_ea((w>>3)&7,w&7,size,pos);ins.update(op='cmpi',size=size,imm=imm[1],dst=ea,len=pos-pc)
+        elif hi==0xb:
+            om=(w>>6)&7;reg=(w>>9)&7
+            if om in (0,1,2):
+                size=SZ[om];ea,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);ins.update(op='cmp',size=size,reg=reg,src=ea,len=pos-pc)
+            elif om in (3,7):
+                size=2 if om==3 else 4;ea,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);ins.update(op='cmpa',size=size,reg=reg,src=ea,len=pos-pc)
+            else:raise ModelError('EOR %x'%pc)
+        elif hi==0x8:
+            om=(w>>6)&7;reg=(w>>9)&7
+            if om in (0,1,2):
+                size=SZ[om];ea,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);ins.update(op='or',size=size,reg=reg,src=ea,len=pos-pc)
+            else:raise ModelError('opcode %04x at %x'%(w,pc))
+        elif hi==0xc:
+            om=(w>>6)&7;reg=(w>>9)&7
+            if om in (0,1,2):
+                size=SZ[om];ea,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);ins.update(op='and',size=size,reg=reg,src=ea,len=pos-pc)
+            elif om==3:
+                ea,pos=self.decode_ea((w>>3)&7,w&7,2,pc+2);ins.update(op='mulu',reg=reg,src=ea,len=pos-pc)
+            else:raise ModelError('opcode %04x at %x'%(w,pc))
+        elif hi in (0xd,0x9):
+            om=(w>>6)&7;reg=(w>>9)&7;name='add' if hi==0xd else 'sub'
+            if om in (0,1,2):
+                size=SZ[om];ea,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);ins.update(op=name,size=size,reg=reg,src=ea,len=pos-pc)
+            elif om in (4,5,6):
+                size=SZ[om-4];ea,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);ins.update(op=name+'_mem',size=size,reg=reg,dst=ea,len=pos-pc)
+            else:
+                size=2 if om==3 else 4;ea,pos=self.decode_ea((w>>3)&7,w&7,size,pc+2);ins.update(op=name+'a',size=size,reg=reg,src=ea,len=pos-pc)
+        elif hi==0xe and (w&0xc0)!=0xc0:
+            size=SZ[(w>>6)&3];typ=(w>>3)&3
+            if (w&0x20) or typ!=1:raise ModelError('shift/rotate form %04x at %x'%(w,pc))
+            ins.update(op='lsl' if (w&0x100) else 'lsr',size=size,count=((w>>9)&7) or 8,reg=w&7,len=2)
+        else:raise ModelError('opcode %04x at %x'%(w,pc))
+        self.cache[pc]=ins;return ins
+    # ---- operands
+    def index_value(self,xr,xa,xl):
+        v=self.r[('a%d' if xa else 'd%d')%xr]
+        return v&M32 if xl else sext(v,2)
+    def resolve(self,d,size):
+        k=d[0]
+        if k=='dn':return ('reg','d%d'%d[1])
+        if k=='an':return ('reg','a%d'%d[1])
+        if k=='imm':return ('imm',d[1])
+        if k=='ind':return ('mem',self.r['a%d'%d[1]])
+        if k=='postinc':
+            n='a%d'%d[1];a=self.r[n];self.r[n]=(a+(2 if (d[1]==7 and size==1) else size))&M32;return ('mem',a)
+        if k=='predec':
+            n='a%d'%d[1];self.r[n]=(self.r[n]-(2 if (d[1]==7 and size==1) else size))&M32;return ('mem',self.r[n])
+        if k=='disp':return ('mem',(self.r['a%d'%d[1]]+d[2])&M32)
+        if k=='idx':return ('mem',(self.r['a%d'%d[1]]+d[2]+self.index_value(d[3],d[4],d[5]))&M32)
+        if k=='abs':return ('mem',d[1])
+        if k=='pcidx':return ('mem',(d[1]+d[2]+self.index_value(d[3],d[4],d[5]))&M32)
+        raise ModelError(k)
+    def get(self,loc,size):
+        if loc[0]=='reg':return self.r[loc[1]]&MASK[size]
+        if loc[0]=='imm':return loc[1]&MASK[size]
+        return self.mem_read(loc[1],size)
+    def put(self,loc,size,v):
+        v&=MASK[size]
+        if loc[0]=='reg':
+            n=loc[1]
+            if n[0]=='a':self.r[n]=sext(v,size)&M32 if size==2 else v;return
+            self.r[n]=(self.r[n]&~MASK[size])&M32|v;return
+        self.mem_write(loc[1],size,v)
+    def nz(self,v,size):self.cc.update(N=int(bool(v&SIGN[size])),Z=int(v&MASK[size]==0),V=0,C=0)
+    def push32(self,v):
+        self.r['a7']=(self.r['a7']-4)&M32;self.mem_write(self.r['a7'],4,v)
+    def pop32(self):
+        v=self.mem_read(self.r['a7'],4);self.r['a7']=(self.r['a7']+4)&M32;return v
+    def flag(self,n):
+        if self.cc[n] is None:raise NeedFlag([n])
+        return self.cc[n]
+    def cond(self,c):
+        f=self.flag
+        if c==2:return not (f('C') or f('Z'))
+        if c==3:return bool(f('C') or f('Z'))
+        if c==4:return not f('C')
+        if c==5:return bool(f('C'))
+        if c==6:return not f('Z')
+        if c==7:return bool(f('Z'))
+        if c==8:return not f('V')
+        if c==9:return bool(f('V'))
+        if c==10:return not f('N')
+        if c==11:return bool(f('N'))
+        if c==12:return f('N')==f('V')
+        if c==13:return f('N')!=f('V')
+        if c==14:return (not f('Z')) and f('N')==f('V')
+        if c==15:return bool(f('Z') or f('N')!=f('V'))
+        raise ModelError('cond %d'%c)
+    # ---- arithmetic with the CCR
+    def sub(self,d,s,size,x=True):
+        m=MASK[size];d&=m;s&=m;r=(d-s)&m;c=int(d<s)
+        self.cc.update(N=int(bool(r&SIGN[size])),Z=int(r==0),V=int(bool((d^s)&(d^r)&SIGN[size])),C=c)
+        if x:self.cc['X']=c
+        return r
+    def add(self,d,s,size):
+        m=MASK[size];d&=m;s&=m;r=(d+s)&m;c=int(d+s>m)
+        self.cc.update(X=c,N=int(bool(r&SIGN[size])),Z=int(r==0),V=int(bool((~(d^s))&(d^r)&SIGN[size])),C=c);return r
+    # ---- execution of one instruction at self.pc
+    def step(self):
+        pc=self.pc;ins=self.decode(pc);op_=ins['op'];nxt=(pc+ins['len'])&M32;r=self.r;self.exec_pcs.add(pc)
+        if op_=='move':
+            s=self.resolve(ins['src'],ins['size']);v=self.get(s,ins['size']);d=self.resolve(ins['dst'],ins['size']);self.put(d,ins['size'],v);self.nz(v,ins['size'])
+        elif op_=='movea':
+            s=self.resolve(ins['src'],ins['size']);v=self.get(s,ins['size']);r['a%d'%ins['dst'][1]]=sext(v,ins['size'])&M32
+        elif op_=='moveq':
+            v=sext(ins['imm'],1)&M32;r['d%d'%ins['reg']]=v;self.nz(v,4)
+        elif op_=='lea':
+            loc=self.resolve(ins['src'],4);r['a%d'%ins['reg']]=loc[1]
+        elif op_=='clr':
+            d=self.resolve(ins['dst'],ins['size']);self.put(d,ins['size'],0);self.cc.update(N=0,Z=1,V=0,C=0)
+        elif op_=='tst':
+            v=self.get(self.resolve(ins['src'],ins['size']),ins['size']);self.nz(v,ins['size'])
+        elif op_=='subq':
+            d=self.resolve(ins['dst'],ins['size']);v=self.get(d,ins['size'])
+            if d[0]=='reg' and d[1][0]=='a':raise ModelError('SUBQ to An')
+            self.put(d,ins['size'],self.sub(v,ins['imm'],ins['size']))
+        elif op_=='addi':
+            d=self.resolve(ins['dst'],ins['size']);v=self.get(d,ins['size']);self.put(d,ins['size'],self.add(v,ins['imm'],ins['size']))
+        elif op_=='andi':
+            d=self.resolve(ins['dst'],ins['size']);v=self.get(d,ins['size'])&ins['imm']&MASK[ins['size']];self.put(d,ins['size'],v);self.nz(v,ins['size'])
+        elif op_=='addq':
+            d=self.resolve(ins['dst'],ins['size'])
+            if d[0]=='reg' and d[1][0]=='a':r[d[1]]=(r[d[1]]+ins['imm'])&M32                   # ADDQ to An: the whole LONG, no flags
+            else:
+                v=self.get(d,ins['size']);self.put(d,ins['size'],self.add(v,ins['imm'],ins['size']))
+        elif op_=='and':
+            v=self.get(self.resolve(ins['src'],ins['size']),ins['size']);n='d%d'%ins['reg'];res=(r[n]&v)&MASK[ins['size']];self.put(('reg',n),ins['size'],res);self.nz(res,ins['size'])
+        elif op_=='mulu':
+            v=self.get(self.resolve(ins['src'],2),2);n='d%d'%ins['reg'];res=((r[n]&0xffff)*v)&M32;r[n]=res;self.cc.update(N=int(bool(res&0x80000000)),Z=int(res==0),V=0,C=0)
+        elif op_ in ('add','sub'):
+            v=self.get(self.resolve(ins['src'],ins['size']),ins['size']);n='d%d'%ins['reg'];d=r[n]&MASK[ins['size']]
+            self.put(('reg',n),ins['size'],self.add(d,v,ins['size']) if op_=='add' else self.sub(d,v,ins['size']))
+        elif op_ in ('add_mem','sub_mem'):
+            loc=self.resolve(ins['dst'],ins['size']);old=self.get(loc,ins['size']);v=r['d%d'%ins['reg']]&MASK[ins['size']]
+            self.put(loc,ins['size'],self.add(old,v,ins['size']) if op_=='add_mem' else self.sub(old,v,ins['size']))
+        elif op_ in ('adda','suba'):
+            v=sext(self.get(self.resolve(ins['src'],ins['size']),ins['size']),ins['size'])&M32;n='a%d'%ins['reg']
+            r[n]=(r[n]+v)&M32 if op_=='adda' else (r[n]-v)&M32
+        elif op_=='dbcc':
+            if ins['cond']!=1:raise ModelError('DBcc condition %d'%ins['cond'])                    # only DBRA (DBF) occurs
+            n='d%d'%ins['reg'];cnt=((r[n]&0xffff)-1)&0xffff;r[n]=(r[n]&~0xffff&M32)|cnt
+            if cnt!=0xffff:nxt=ins['target']
+        elif op_=='cmpi':
+            d=self.resolve(ins['dst'],ins['size']);v=self.get(d,ins['size']);self.sub(v,ins['imm'],ins['size'],x=False)
+        elif op_=='cmp':
+            v=self.get(self.resolve(ins['src'],ins['size']),ins['size']);self.sub(r['d%d'%ins['reg']],v,ins['size'],x=False)
+        elif op_=='cmpa':
+            v=self.get(self.resolve(ins['src'],ins['size']),ins['size']);v=sext(v,ins['size'])&M32;self.sub(r['a%d'%ins['reg']],v,4,x=False)
+        elif op_=='or':
+            v=self.get(self.resolve(ins['src'],ins['size']),ins['size']);n='d%d'%ins['reg'];res=(r[n]|v)&MASK[ins['size']];self.put(('reg',n),ins['size'],res);self.nz(res,ins['size'])
+        elif op_ in ('lsl','lsr'):
+            n='d%d'%ins['reg'];size=ins['size'];bits=8*size;v=r[n]&MASK[size];cnt=ins['count']
+            if op_=='lsl':
+                c=(v>>(bits-cnt))&1;res=(v<<cnt)&MASK[size]
+            else:
+                c=(v>>(cnt-1))&1;res=v>>cnt
+            self.put(('reg',n),size,res);self.cc.update(X=c,C=c,V=0,N=int(bool(res&SIGN[size])),Z=int(res==0))
+        elif op_=='scc':
+            d=self.resolve(ins['dst'],1);self.put(d,1,0xff if self.cond(ins['cond']) else 0)
+        elif op_ in ('bset','bclr','btst','bchg'):
+            d=self.resolve(ins['dst'],1);v=self.get(d,1);bit=(ins['bit'] if 'bit' in ins else r['d%d'%ins['bitreg']])%8;self.cc['Z']=int((v>>bit)&1==0)
+            if op_=='bset':self.put(d,1,v|(1<<bit))
+            elif op_=='bclr':self.put(d,1,v&~(1<<bit))
+            elif op_=='bchg':self.put(d,1,v^(1<<bit))
+        elif op_=='jsr':
+            loc=self.resolve(ins['src'],4);self.push32(nxt);nxt=loc[1]
+        elif op_=='jmp':
+            loc=self.resolve(ins['src'],4);nxt=loc[1]
+        elif op_=='bsr':self.push32(nxt);nxt=ins['target']
+        elif op_=='bra':nxt=ins['target']
+        elif op_=='bcc':
+            if self.cond(ins['cond']):nxt=ins['target']
+        elif op_=='rts':nxt=self.pop32()
+        elif op_=='trap':raise ModelError('TRAP executed at %x'%pc)
+        else:raise ModelError(op_)
+        self.pc=nxt
+
+
+def lead_of(M,pc):
+    regs=dict(M.r);regs['pc']=pc;return regs
+
+
+def replay_events(M,events,lo,hi):
+    """Replay the black-box events (all of them by PCs outside the F1c2 ranges): RAM writes and PVC register writes (bank tracking)."""
+    for e in events[lo:hi]:
+        if in_area(e['pc']):raise ModelError('F1c2-attributed event %s at %x inside a black-box slice'%(e['access'],e['pc']))
+        a,n=e['address'],e['size']
+        if e['region']=='ram' and e['access']=='write':M.put_ram(a,n,int(e['bytes'],16));M.bb_writes+=1
+        elif e['region']=='pvc' and e['access']=='write':M.pvc(a,int(e['bytes'],16))
+
+
+def bb_carry(M,entry):
+    """The carry the contract assigns to a black box (None = not consumed by F1c2): 289e (CMPI.L #270e,(A0); BEQ -> RTS, else ORI #1,CCR: C = 1 iff LONG (A0) <> 270e) and 28ae (success iff D0.W < WORD 104ca0 and A0 <> 0)."""
+    if entry==0x289e:return int(M.mem_read(M.r['a0'],4,log=False)!=0x270e)
+    if entry==0x28ae:
+        d0w=M.r['d0']&0xffff;count=int.from_bytes(M.ram[0x4ca0:0x4ca2],'big')
+        return 1 if (d0w<count and M.r['a0']!=0) else 0
+    return None
+
+
+def run_segment(M,p,nl,declared_stop):
+    events=p['events'];out=p['outgoing'];steps=0;prev=None
+    if not in_area(M.pc):                                              # entry outside F1c2: F1b / F1c1 code of the frame (477ee .. 478ec) or a resumed phase inside a black box (a wait of the sound routine ...)
+        hi=nl[0]['event_index'] if nl else len(events);replay_events(M,events,0,hi)
+        if not nl:
+            M.r.update({k:out[k] for k in KEYS+('a7',)});M.pc=out['pc'];return 'end-in-blackbox'
+        M.r.update({k:nl[0]['regs'][k] for k in KEYS+('a7',)});M.pc=nl[0]['pc'];M.cc=dict(X=None,N=None,Z=None,V=None,C=None)
+    while True:
+        pc=M.pc
+        if p['guard'] is None and not p['waiting'] and pc==declared_stop and (len(M.leads)>0 or prev is not None):return 'stop-at-declared-pc'
+        if not in_area(pc):
+            if pc==out['pc'] and pc not in BB_ENTRIES and p['guard'] is None:return 'stop-at-declared-pc'
+            if pc not in BB_ENTRIES:raise ModelError('control left the F1c2 ranges at %x (not a declared black-box entry)'%pc)
+            M.leads.append(lead_of(M,pc));e=len(M.leads)-1
+            if e>=len(nl) or nl[e]['pc']!=pc:raise ModelError('black-box entry %x: the native leaders do not align at lead %d'%(pc,e))
+            ret=M.mem_read(M.r['a7'],4,log=False);a7=M.r['a7'];carry=bb_carry(M,pc)
+            hi=nl[e+1]['event_index'] if e+1<len(nl) else len(events);replay_events(M,events,nl[e]['event_index'],hi)
+            if e+1<len(nl):
+                nxt=nl[e+1]
+                if nxt['pc']!=ret or nxt['regs']['a7']!=(a7+4)&M32:raise ModelError('black box %x returned to %x with A7 %x, the model expects %x / %x'%(pc,nxt['pc'],nxt['regs']['a7'],ret,(a7+4)&M32))
+                M.r.update({k:nxt['regs'][k] for k in KEYS+('a7',)});M.pc=nxt['pc'];M.cc=dict(X=None,N=None,Z=None,V=None,C=carry)
+                continue
+            M.r.update({k:out[k] for k in KEYS+('a7',)});M.pc=out['pc'];return 'end-in-blackbox'
+        if pc in START_SET:M.leads.append(lead_of(M,pc))
+        steps+=1
+        if steps>3000000:raise ModelError('model step limit')
+        prev=pc;M.step()
+
+
+def model_applicable(p):return bool(p['leads']) or in_area(p['incoming']['pc'])
+
+
+def check_model_phase(program,label,p,sr):
+    nl=[dict(pc=l['pc'],regs=l['regs'],event_index=l['event_index']) for l in p['leads']]
+    inc=p['incoming']
+    row=dict(label=label,kind='f1c2-model',start_pc=hex(inc['pc']),start_in_area=in_area(inc['pc']))
+    if not model_applicable(p):
+        row.update(equal=None,end='not-applicable',leaders=0,mismatches=[],note='no F1c2 instruction was executed in this phase (the F1b / F1c1 frame code is the F1b / F1c1 unit)');return row
+    M=FM(program,(p['bank_before'],p['ff8_before'],p['ff9_before']),p['ram_before'],inc,sr=sr)
+    if len(p['pcs'])==1 and not p['leads'] and p['outgoing']['pc']==inc['pc']:                 # zero-step: the stop PC is the entry PC, nothing executes
+        row.update(equal=p['ram_after']==p['ram_before'] and {k:inc[k] for k in KEYS+('a7','pc')}=={k:p['outgoing'][k] for k in KEYS+('a7','pc')} and not p['events'],end='zero-step',leaders=0,mismatches=[])
+        if not row['equal']:DISCREPANCIES.append(dict(label=label,kind='zero-step-changed-state'))
+        return row
+    declared_stop=p['step_stop_pc'] if p['step_stop_pc'] in START_SET else None
+    try:end=run_segment(M,p,nl,declared_stop)
+    except (ModelError,NeedFlag,AssertionError,KeyError) as e:
+        row.update(equal=False,model_error=repr(e));DISCREPANCIES.append(dict(label=label,kind='model-could-not-follow-native',detail=repr(e)));return row
+    ev=p['events'];out=p['outgoing'];bad=[]
+    ml=[(l['pc'],{k:v for k,v in l.items() if k!='pc'}) for l in M.leads];nlk=[(l['pc'],{k:v for k,v in l['regs'].items() if k!='pc'}) for l in nl]
+    if len(ml)!=len(nlk):bad.append(dict(what='leader count',model=len(ml),native=len(nlk)))
+    for i,(a,b) in enumerate(zip(ml,nlk)):
+        if a!=b:bad.append(dict(what='leader %d'%i,model_pc=hex(a[0]),native_pc=hex(b[0]),differing_registers={k:(hex(a[1][k]),hex(b[1][k])) for k in a[1] if a[1][k]!=b[1].get(k)}));break
+    nw=[(e['address'],e['size'],int(e['bytes'],16)) for e in ev if e['region']=='ram' and e['access']=='write' and in_area(e['pc'])]
+    if M.writes!=nw:
+        first=next((i for i,(x,y) in enumerate(zip(M.writes,nw)) if x!=y),min(len(M.writes),len(nw)))
+        bad.append(dict(what='ordered RAM writes',model_count=len(M.writes),native_count=len(nw),first_difference=first,model=M.writes[first:first+3],native=nw[first:first+3]))
+    nr=[(e['address'],e['size']) for e in ev if e['region']=='ram' and e['access']=='read' and in_area(e['pc'])]
+    if M.reads!=nr:
+        first=next((i for i,(x,y) in enumerate(zip(M.reads,nr)) if x!=y),min(len(M.reads),len(nr)))
+        bad.append(dict(what='ordered RAM reads',model_count=len(M.reads),native_count=len(nr),first_difference=first,model=M.reads[first:first+3],native=nr[first:first+3]))
+    nrom=[(e['address'],e['size'],e['region']) for e in ev if e['region'] in ('fixed','bank') and e['access']=='read' and in_area(e['pc'])]
+    if M.rom_reads!=nrom:bad.append(dict(what='ordered fixed/bank reads',model_count=len(M.rom_reads),native_count=len(nrom),model=M.rom_reads[:6],native=nrom[:6]))
+    np_=[(e['size'],e['address'],int(e['bytes'],16)) for e in ev if e['region'] in PORT_REGIONS and e['access']=='write' and in_area(e['pc'])]
+    if M.ports!=np_:bad.append(dict(what='ordered ports',model=M.ports,native=np_))
+    ext_=[(e['pc'],e['region']) for e in ev if e['region']=='external' and in_area(e['pc'])]
+    if ext_:bad.append(dict(what='external reads of F1c2 code (the contract says none)',native=ext_[:4]))
+    expect_end=out['pc']
+    if M.pc!=out['pc'] or M.pc!=expect_end:bad.append(dict(what='final PC',model=hex(M.pc),native=hex(out['pc']),end=end))
+    final=dict(M.r)
+    if final!={k:out[k] for k in final}:bad.append(dict(what='final registers',diff={k:(hex(final[k]),hex(out[k])) for k in final if final[k]!=out[k]}))
+    if bytes(M.ram)!=p['ram_after']:
+        diff=[i for i in range(0x10000) if M.ram[i]!=p['ram_after'][i]]
+        bad.append(dict(what='RAM image',count=len(diff),first=[dict(address=hex(0x100000+i),model=M.ram[i],native=p['ram_after'][i]) for i in diff[:8]]))
+    if M.bank!=p['modeled_bank']:bad.append(dict(what='bank',model=hex(M.bank),native=hex(p['modeled_bank'])))
+    row.update(equal=not bad,end=end,leaders=len(M.leads),leader_pcs_distinct=len({l['pc'] for l in M.leads}),ordered_ram_writes=len(M.writes),ordered_ram_reads=len(M.reads),ordered_rom_reads=len(M.rom_reads),ordered_ports=len(M.ports),
+        ram_bytes_compared=0x10000,blackbox_ram_writes=M.bb_writes,exec_pcs=sorted(M.exec_pcs),model_leader_pcs=sorted({hex(l['pc']) for l in M.leads}),mismatches=bad)
+    if bad:DISCREPANCIES.append(dict(label=label,kind='model-vs-native',mismatches=bad[:4]))
+    return row
+
+
+# ----------------------------------------------------------------------------------
+# Static checks of the contract (byte table, block starts, bundled branches, carry classes, flow-only blocks)
+# ----------------------------------------------------------------------------------
+FLOW_ONLY={'lea','movea','pea','jsr','jmp','bsr','bra','rts','movem','nop','btst','bset','bclr','bchg','beq','bne','bcc','bcs','bpl','bmi','bvc','bvs','bge','blt','bgt','ble','bhi','bls'}
+PRODUCES={'move':'NZVC','moveq':'NZVC','clr':'NZVC','tst':'NZVC','and':'NZVC','andi':'NZVC','or':'NZVC','mulu':'NZVC','subq':'XNZVC','subi':'XNZVC','addi':'XNZVC','add':'XNZVC','sub':'XNZVC','sub_mem':'XNZVC','add_mem':'XNZVC','lsl':'XNZVC','lsr':'XNZVC','cmp':'NZVC','cmpa':'NZVC','cmpi':'NZVC',
+    'bset':'Z','bclr':'Z','btst':'Z','bchg':'Z'}
+CONSUMES={2:'CZ',3:'CZ',4:'C',5:'C',6:'Z',7:'Z',8:'V',9:'V',10:'N',11:'N',12:'NV',13:'NV',14:'NVZ',15:'NVZ'}
+
+
+def block_extents(program):
+    """Blocks of the F1c2 ranges: from a block start to the next start (or range end)."""
+    starts=set(STARTS);blocks={};cur=None
+    M=FM(program,(0x200000,0xa0,0x1000),bytes(0x10000),dict(pc=0,**{k:0 for k in KEYS+('a7',)}))
+    for lo,hi in AREA_RANGES:
+        pc=lo
+        while pc<hi:
+            if pc in starts or cur is None or pc==lo:cur=pc;blocks[cur]=[]
+            ins=M.decode(pc);blocks[cur].append(ins);pc+=ins['len']
+        cur=None
+    return blocks
+
+
+def static_checks(program):
+    instr=AREA_INSTR
+    starts=set(STARTS);blocks=block_extents(program)
+    flow_rows={};consumers={};total_ins=0
+    for start in sorted(blocks):
+        ins=blocks[start];total_ins+=len(ins)
+        mnems=[AREA_INSTR[i['pc']]['mnemonic'].split('.')[0] for i in ins]
+        flow_rows[start]=dict(start=hex(start),instructions=len(ins),flow_only=all(m in FLOW_ONLY for m in mnems),mnemonics=sorted(set(mnems)))
+        defined=set();missing=set()
+        for i in ins:
+            if i['op']=='bcc':
+                need=set(CONSUMES[i['cond']])
+                missing|=need-defined
+            defined|=set(PRODUCES.get(i['op'],''))
+        if missing:consumers[start]=''.join(sorted(missing))
+    preserve_expected=set(PRESERVE);preserve_decoded={s for s,r in flow_rows.items() if r['flow_only']}
+    bundled_ok=[]
+    for pc in BUNDLED:
+        r=AREA_INSTR[pc];m=r['mnemonic'].split('.')[0]
+        bundled_ok.append(dict(pc=hex(pc),mnemonic=m,is_conditional_branch=(m in FLOW_ONLY and m.startswith('b') and m not in ('bra','bsr','btst','bset','bclr','bchg')) or m=='dbra',is_block_start=pc in starts))
+    traps=[hex(r['cpu_address']) for lo,hi in CONTRACT_RANGES for r in disassemble_range(program,lo,hi-lo,lo) if r['mnemonic'].startswith('trap')]
+    return dict(instructions_decoded=len(instr),block_starts=len(starts),starts_equal_decoded_leaders_callback_and_dbra_target=True,bundled_branches=bundled_ok,even_pcs=len(EVEN_PCS),interior_pcs=len(INTERIOR),
+        flow_only_blocks_decoded=sorted(hex(x) for x in preserve_decoded),flow_only_blocks_contract=sorted(hex(x) for x in preserve_expected),flow_only_equal_contract=preserve_decoded==preserve_expected,
+        flow_only_decoded_minus_contract=sorted(hex(x) for x in preserve_decoded-preserve_expected),flow_only_contract_minus_decoded=sorted(hex(x) for x in preserve_expected-preserve_decoded),
+        carry_consumers_computed={hex(k):v for k,v in sorted(consumers.items())},carry_consumers_contract=sorted(hex(x) for x in CONSUMERS),
+        carry_consumers_equal=set(consumers)==set(CONSUMERS) and all(v=='C' for v in consumers.values()),flow_rows=[flow_rows[k] for k in sorted(flow_rows)],bytes=TABLE,
+        blocks_total_instructions=total_ins,trap_instructions_in_contract_range=traps,black_box_entries=[hex(x) for x in BB_ENTRIES])
+
+# ----------------------------------------------------------------------------------
+# Storage: content-addressed payloads (blobs/<sha256>.bin / .json.gz), written atomically; the per-condition frame records are gzip files
+# ----------------------------------------------------------------------------------
+BLOBS=None
+BLOB_SEEN=set()
+
+
+def write_blob(data,suffix='.bin'):
+    digest=sha(data);name=digest+suffix
+    if name in BLOB_SEEN:return name
+    target=BLOBS/name
+    if not target.exists():
+        tmp=BLOBS/('.tmp.%d.%s'%(os.getpid(),digest[:12]))
+        tmp.write_bytes(data);os.replace(tmp,target)
+    BLOB_SEEN.add(name);return name
+
+
+def write_json_gz(path,obj):
+    data=gzip.compress((json.dumps(obj,sort_keys=True,separators=(',',':'),default=str)+'\n').encode(),9,mtime=0)
+    tmp=path.with_name('.tmp.%d.%s'%(os.getpid(),path.name));tmp.write_bytes(data);os.replace(tmp,path);return sha(data)
+
+
+def ports_blob(events):return b''.join(struct.pack('>BII',e['size'],e['address'],int(e['bytes'],16)) for e in events if e['region'] in PORT_REGIONS)
+
+
+
+# ----------------------------------------------------------------------------------
+# Declared steps: re-entry, host-write rules, release of waits, planning (one persistent probe CPU discovers the frames of a chain)
+# ----------------------------------------------------------------------------------
+def step_of(label,changes,stop,a7,expect,alts=(),**extra):
+    return dict(label=label,changes=list(changes),stop_pc=stop,checkpoints=[],a7=a7,expect=expect,alts=tuple(alts),**extra)
+
+
+def reentry_changes(callback):
+    return [fc.pc_to(callback,'declared direct re-entry at the installed callback LONG (A6): PC redirect only, registers / RAM are the previous native outputs (no scheduler, no children)'),
+        fc.a7_add(-4,'declared direct re-entry: A7 back to the dispatcher slot 1feffc'),W(S,4,FRAME_RET,'declared return LONG 2ac2 at (A7) (the value the previous frame popped)'),
+        W(0x104ca4,4,S+4,'declared dispatcher base A7 (the scheduler stores it before JSR (A0); 2a00 reloads A7 from it): the A7 after the popped return LONG')]
+
+
+def gate_effect(ram_after):
+    """The declared IRQ palette effect of the 72f0 gate (F1 decision 2, minimal form): the IRQ path cbe JSR 72fa clears BYTE 107ded bit7 (72fa..7302) unless WORD 107dea <> 0
+    (72fa TST.W -$216(A5); BNE.W 873a, a path that does not clear it)."""
+    b=ram_after[0x7ded];w=u16(ram_after,0x7dea)
+    if w!=0:return [],dict(kind='irq-palette-effect',clears_bit7=False,reason='WORD 107dea = %04x <> 0: the original IRQ path (72fa BNE.W 873a) leaves BYTE 107ded bit7 set'%w)
+    return [W(0x107ded,1,b&0x7f,'declared IRQ palette effect (72fa..7302 BCLR #7,-$213(A5)): BYTE 107ded %02x -> %02x'%(b,b&0x7f))],dict(kind='irq-palette-effect',clears_bit7=True,reason='WORD 107dea = 0')
+
+
+def release_changes(wait,ram_after=None):
+    if wait['pc']==0x3aea:return [W(0x104d74,2,0xffff,'declared release of the sound-ring wait: tail WORD 104d74 := ffff (<> D1.W)')],None
+    if wait['pc']==0xcda4:return [W(0x108d34,2,wait['compared_word'],'declared release of the sprite wait: WORD 108d34 := D4.W')],None
+    return gate_effect(ram_after)
+
+
+def r_after(n,writes):
+    def rule(done,ram,cb,o):return list(writes) if done==n else []
+    return rule
+
+
+def r_dd44(extra=(),value=0xff):
+    """Declared 10dd44 := ff (the area end object ST.B 5d44(A5)) in the first frame boundary at which the 47e70 poll is installed and 10dd44 is 0 (frame 188 for the natural seeds)."""
+    st=dict(fired=False)
+    def rule(done,ram,cb,o):
+        if st['fired'] or cb!=0x47e70 or ram[0xdd44]!=0:return []
+        st['fired']=True;return [W(0x10dd44,1,value,'declared host write: BYTE 10dd44 := %02x (the area end object, not executed)'%value)]+list(extra)
+    return rule
+
+
+def r_child62(delay=0,value=1):
+    """Declared completion of the child (62(A6) := value) after `delay` further waiting frames at the 4798e callback (the child 4fcb8 / 4fd0a / 4ff4c is never executed)."""
+    st=dict(waits=0,fired=False)
+    def rule(done,ram,cb,o):
+        if st['fired'] or cb!=0x4798e or ram[0xb92]!=0:return []
+        if st['waits']<delay:
+            st['waits']+=1;return []
+        st['fired']=True;return [W(0x100b92,1,value,'declared host write: child completion BYTE 62(A6) := %02x (the child callback object, not executed)'%value)]
+    return rule
+
+
+PLAN_PCS=[]                                                       # instruction PCs of every step of the last plan (the continuous probe run); the split checkpoints are derived from them
+
+
+def plan_frames(program,fx,label,setup=(),rules=(),max_frames=400,frames=None,first_stop=FRAME_RET,first_a7=('abs',S+4),end_alts=(FINAL_STOP,TRAP_STOP),allow_guard=False,gate_idem=0,gate_limit=3,hold=None,reenter=True,on_run=None):
+    """Interactive probe on ONE persistent CPU: frame 0 with the declared setup, then a declared release per wait and a declared re-entry per returned frame (callback LONG at (A6)),
+    host-write rules evaluated after every returned frame, until a boundary stop (47a94 / 4d824 / an alternative routed stop), `frames` frames, a persistent Waiting or a guard.  gate_idem: number of declared no-effect resumes of a 478de gate wait before the declared IRQ palette effect; gate_limit: Waitings after which a
+    gate whose effect does not clear it ends the chain.  Returns (steps, last_phase, frame_count)."""
+    o=AreaObserver(program,True);steps=[];frame=0;idem=0;stuck=0;PLAN_PCS.clear()
+    try:
+        o.prepare(dict(fx,stop_pc=first_stop,checkpoints=[],stop_alts=end_alts))
+        step=step_of('%s-frame0'%label,setup,first_stop,first_a7,'return',end_alts)
+        while True:
+            o.begin_step(step['stop_pc'],[]);o.alt_stops=frozenset(step['alts'])
+            o.apply(step['changes']);p=o.run(allow_guard=True);steps.append(step);PLAN_PCS.append(p['pcs'])
+            pc=p['outgoing']['pc']
+            g=p['guard']
+            if g is not None and g.get('problem')=='unsupported_code_target' and g.get('target') in end_alts and not in_ranges(g['target'],RANGES_ALL):
+                # probe only: the alternative boundary stop (4d824 / 4d7f0) is not routed, so the probe CPU reports it as the refused fetch; the declared step stops there
+                step['stop_pc']=g['target'];step['a7']=('abs',p['outgoing']['a7']);step['expect']='boundary';p=dict(p,guard=None)
+                if on_run:on_run(len(steps)-1,step,p)
+                return steps,p,frame+1
+            if on_run and not (g is None and not p['waiting'] and pc in end_alts and pc!=step['stop_pc']) and not (g is None and not p['waiting'] and pc==step['stop_pc']!=FRAME_RET):on_run(len(steps)-1,step,p)
+            if g is not None:
+                assert allow_guard,(label,g);step['expect']='guard';return steps,p,frame
+            if p['waiting']:
+                step['expect']='wait';w=p['wait']
+                if w['pc']==GATE_PC:
+                    if idem<gate_idem:
+                        idem+=1;step=step_of('%s-gate-resume-no-effect-%d'%(label,idem),[],first_stop,('abs',S+4),'wait',end_alts,declared_effect=dict(kind='no-effect-resume',reason='the gate stays blocked: a resume without any declared IRQ effect must return the same Waiting'));continue
+                    ch,eff=release_changes(w,p['ram_after'])
+                    if not ch:
+                        stuck+=1
+                        if stuck>=gate_limit:return steps,p,frame            # the gate stays blocked: the chain ends in the wait
+                    step=step_of('%s-gate-irq-effect-%d'%(label,len(steps)),ch,first_stop,('abs',S+4),'return' if ch else 'wait',end_alts,declared_effect=eff);continue
+                if w['pc']==0x3aea and hold is not None and not any(s.get('hold') for s in steps):
+                    step=step_of('%s-hold'%label,hold,first_stop,('abs',S+4),'wait',end_alts,hold=True);continue
+                step=step_of('%s-frame%d-release%d'%(label,frame,sum(1 for s in steps if s['label'].startswith('%s-frame%d-release'%(label,frame)))+1),release_changes(w)[0],first_stop,('abs',S+4),'return',end_alts);continue
+            if pc in end_alts and pc!=step['stop_pc']:
+                step['stop_pc']=pc;step['a7']=('abs',p['outgoing']['a7']);step['expect']='boundary'
+                if on_run:on_run(len(steps)-1,step,p)
+                return steps,p,frame+1
+            if pc==step['stop_pc']!=FRAME_RET:                                  # a declared routed boundary stop (the first-step stop 47a94 of the natural continuation, ...)
+                step['a7']=('abs',p['outgoing']['a7']);step['expect']='boundary'
+                if on_run:on_run(len(steps)-1,step,p)
+                return steps,p,frame+1
+            assert pc==step['stop_pc']==FRAME_RET,(label,hex(pc))
+            o_=p['outgoing'];assert o_['a6']==A6V or fx.get('free_a6'),(label,hex(o_['a6']));assert o_['a5']==A5V,(label,hex(o_['a5']))
+            ram=p['ram_after'];cb=u32(ram,o_['a6']&0xffff)
+            frame+=1
+            if frames is not None and frame>=frames:return steps,p,frame
+            if frame>=max_frames:raise AssertionError('too many frames '+label)
+            if not reenter:return steps,p,frame
+            host=[c for rule in rules for c in rule(frame-1,ram,cb,o_)]
+            step=step_of('%s-frame%d'%(label,frame),host+reentry_changes(cb),FRAME_RET,('abs',S+4),'return',end_alts)
+    finally:o.close()
+
+
+def clean_steps(steps):
+    for s in steps:s['alts']=();s.pop('found_stop',None)
+    return steps
+
+
+# ----------------------------------------------------------------------------------
+# Fixtures
+# ----------------------------------------------------------------------------------
+def apply_writes(ram,writes):
+    ram=bytearray(ram);rec=[]
+    for w in writes:
+        assert w['kind']=='ram'
+        ram[w['address']&0xffff:(w['address']&0xffff)+w['size']]=w['value'].to_bytes(w['size'],'big')
+        rec.append(dict(address=w['address'],size=w['size'],hex='%0*x'%(w['size']*2,w['value']),why=w['why']))
+    return bytes(ram),rec
+
+
+def derive_fx(base,label,writes=(),entry=None,regs=None,sr=None,a7=None,a5=None,stack_ret=True,stack_extra=(),ret=FRAME_RET,external=None,note='',bank=None):
+    """A declared fixture derived from a base fixture: declared initial RAM writes (recorded), declared initial registers / SR / A7 / A5 / entry PC."""
+    ram,rec=apply_writes(base['ram'],writes)
+    r=dict(base['regs']);r.update(regs or {})
+    if a5 is not None:r['a5']=a5
+    a7=base['initial_a7'] if a7 is None else a7
+    bstate,page=(base['bank_state'],base['pvc']) if bank is None else bank
+    fx=sc.make_fx(label,ram,{k:r[k] for k in KEYS14},(bstate,page),entry if entry is not None else base['entry_pc'],a7,dict(base['seed'],derived_from=base['label'],note=note),
+        list(base.get('initial_host_writes',[]))+rec,([(a7,ret.to_bytes(4,'big'))] if stack_ret else [])+list(stack_extra),external=base['external'] if external is None else external,role='declared fixture: '+note)
+    fx['regs']['a5']=r['a5'];fx['group']='f1c2'
+    if sr is not None:fx['sr']=sr
+    return fx
+
+
+def seed_fixture(index):
+    s=G['seeds'][index]
+    prov=dict(kind='stage_entry_body final ff000 RAM output (recorded original 47a94 body run)',observation_sha256=sc.STAGE_ENTRY_SHA,case_index=index,family=s['family'],phase=s['phase'],ram_file=s['ram_file'],ram_sha256=s['ram_sha256'],
+        bank=s['bank'],registers={k:hex(v) for k,v in s['regs'].items()})
+    fx=sc.make_fx('seed-%03d'%index,s['ram'],s['regs'],bc.pvc_for(s['bank']),0x47da4,S,prov,(),[(S,FRAME_RET.to_bytes(4,'big'))],
+        role='declared 47da4 direct entry: the recorded final RAM and registers of the original stage_entry_body run (SR 2000, A6 = 100b30, A5 = 108000), A7 = 1feffc with the declared dispatcher return LONG 2ac2 at (A7) (the original had ff000)')
+    fx['regs']['a5']=A5V;fx['group']='f1c2'
+    return fx
+
+
+G={}
+ITEMS=[]
+# ----------------------------------------------------------------------------------
+# Frame records
+# ----------------------------------------------------------------------------------
+def core_digest(p):
+    h=hashlib.sha256()
+    for key in ('incoming','outgoing','pvc_before','pvc_after','ram_before','ram_after','guard','waiting','wait','modeled_bank','bank_before','ff8_before','ff9_before','ff8_after','ff9_after'):
+        v=p[key];h.update(key.encode());h.update(v if isinstance(v,(bytes,bytearray)) else jdump(v))
+    h.update(struct.pack('>%dI'%len(p['pcs']),*p['pcs']));h.update(jdump(p['events']));h.update(jdump(lead_key(p)))
+    return h.hexdigest()
+
+
+def fresh_equal(program,fx,p,declared_sr):
+    """The C++ one-run-one-frame view: a FRESH CPU (SR 2000, CCR 0, no history) from the recorded input state of the frame must produce the identical native record."""
+    inc=p['incoming'];f=dict(fx)
+    f.update(ram=p['ram_before'],pvc=p['pvc_before'],regs={k:inc[k] for k in KEYS},initial_a7=inc['a7'],entry_pc=inc['pc'],bank_state=(p['bank_before'],p['ff8_before'],p['ff9_before']),stop_pc=p['step_stop_pc'],checkpoints=[],stop_alts=())
+    f.pop('sr',None)
+    if declared_sr is not None:f['sr']=declared_sr
+    o=AreaObserver(RUNPROGRAM[0],True)
+    try:
+        o.prepare(f);q=o.run(allow_guard=bool(p['guard']))
+    finally:o.close()
+    return core_digest(q)==core_digest(p)
+
+
+RUNPROGRAM=[None]
+
+
+def state_sha_parts(tag,ram,regs,pc,bank,ports):
+    h=hashlib.sha256();h.update(tag);h.update(ram);h.update(struct.pack('>16I',*[regs[k] for k in REG16]));h.update(struct.pack('>II',pc,bank))
+    h.update(struct.pack('>I',len(ports)//9));h.update(ports);return h.hexdigest()
+
+
+def state_sha(p,tag=b'F1C2-FRAME-STATE-v1'):
+    o=p['outgoing'];return state_sha_parts(tag,p['ram_after'],o,o['pc'],p['modeled_bank']>>20,ports_blob(p['events']))
+
+
+def hex_leads(p):return ['%x'%l['pc'] for l in p['leads']]
+
+
+def change_row(c):
+    if c['kind']=='ram':return ['ram','%x'%c['address'],c['size'],'%0*x'%(c['size']*2,c['value'])]
+    if c['kind']=='pc':return ['pc','%x'%c['to']]
+    return ['a7_add',c['delta']]
+
+
+def dump_blobs(p):
+    names=dict(ram_before=write_blob(p['ram_before']),ram_after=write_blob(p['ram_after']),pvc_before=write_blob(p['pvc_before']),pvc_after=write_blob(p['pvc_after']),ports=write_blob(ports_blob(p['events'])))
+    names['trace']=write_blob(gzip.compress((json.dumps(dict(pcs=p['pcs'],events=p['events'],guard=p['guard'],leaders=[dict(pc=l['pc'],regs=l['regs']) for l in p['leads']]),sort_keys=True,separators=(',',':'))+'\n').encode(),9,mtime=0),'.json.gz')
+    return names
+
+
+def want_fresh(spec,p):
+    if spec.get('fresh')=='all' or spec.get('dump')=='all':return True
+    return model_applicable(p) or p['step'] in BOUNDARY_FRAMES
+
+
+def frame_rows(program,spec,split,control,models,fresh):
+    fx=spec['fixture'];rows=[];nsplit=collections.Counter(p['step'] for p in split)
+    dump_all=spec.get('dump')=='all'
+    for j,p in enumerate(control):
+        inc=p['incoming'];o=p['outgoing'];ev=p['events']
+        step=spec['steps'][p['step']]
+        ports=ports_blob(ev)
+        row=dict(step=p['step'],label=step['label'],in_pc='%x'%inc['pc'],in_a7='%x'%inc['a7'],out_pc='%x'%o['pc'],out_a7='%x'%o['a7'],stop_kind=(p['stop_evidence']['kind'] if p['stop_evidence'] else ('guard:'+p['guard']['problem'] if p['guard'] else 'checkpoint')),
+            host_changes=[change_row(c) for c in p['host_changes']],instructions=len(p['pcs'])-1,split_phases=nsplit[p['step']],leaders=hex_leads(p),leader_regs_sha256=sha(jdump(lead_key(p))),
+            regs16={k:'%08x'%o[k] for k in REG16},pc='%x'%o['pc'],bank=p['modeled_bank']>>20,ff8='%x'%p['ff8_after'],ff9='%x'%p['ff9_after'],ram_sha256=sha(p['ram_after']),pvc_sha256=sha(p['pvc_after']),
+            ports_sha256=sha(ports),port_count=len(ports)//9,external_reads=sum(1 for e in ev if e['region']=='external'),trace_sha256=sha(jdump(dict(pcs=p['pcs'],events=ev))),state_sha256=state_sha(p),state_sha256_f1c1_definition=state_sha(p,b'F1C1-FRAME-STATE-v1'),
+            callback_after='%x'%u32(p['ram_after'],o['a6']&0xffff),w7a_after='%04x'%u16(p['ram_after'],(o['a6']+0x7a)&0xffff),waiting=p['waiting'],
+            area_instructions=sum(1 for pc in p['pcs'][:-1] if in_area(pc)),area_event_regions=dict(collections.Counter('%s/%s'%(e['region'],e['access']) for e in ev if in_area(e['pc']))),
+            fresh_equal=fresh[j],model_equal=models[j]['equal'] if models[j] is not None else None)
+        if p['guard'] is not None:row['guard']=p['guard']
+        if p['wait'] is not None:row['wait']=p['wait']
+        dumped=dump_all or (spec.get('dump')=='boundary' and p['step'] in BOUNDARY_FRAMES)
+        if dumped:row['dump']=dump_blobs(p)
+        rows.append(row)
+    return rows
+
+
+def process_item(program,number,spec):
+    t0=time.time()
+    RUNPROGRAM[0]=program
+    split,control,d_split,d_control=run_spec(program,spec)
+    fx=spec['fixture'];models=[None]*len(control);model_rows=[]
+    if spec.get('model'):
+        for j,p in enumerate(control):
+            declared=fx.get('sr') if (p['step']==0 and p['phase_in_step']==0) else None
+            row=check_model_phase(program,'%s#phase%d'%(spec['label'],j),p,declared)
+            models[j]=row;model_rows.append(row)
+    fresh=[]
+    for j,p in enumerate(control):
+        declared=fx.get('sr') if (p['step']==0 and p['phase_in_step']==0) else None
+        fresh.append(fresh_equal(program,fx,p,declared) if want_fresh(spec,p) else None)
+    rows=frame_rows(program,spec,split,control,models,fresh)
+    hits=collections.Counter(l['pc'] for q in control for l in q['leads'])
+    covered=set()
+    for q in control:covered.update(q['pcs'])
+    cfile=CONDDIR/('%04d-%s.json.gz'%(number,re.sub(r'[^A-Za-z0-9_.-]','_',spec['label'])))
+    steps_compact=[dict(label=s['label'],stop_pc='%x'%s['stop_pc'],a7=list(s['a7']) if s.get('a7') else None,expect=s.get('expect'),checkpoints=['%x'%c for c in s['checkpoints']],changes=[change_row(c) for c in s['changes']]) for s in spec['steps']]
+    fsha=write_json_gz(cfile,dict(label=spec['label'],steps=steps_compact,frames=rows))
+    last=control[-1]
+    facts=condition_facts(spec,control,rows)
+    unequal=[r['step'] for r in rows if r['fresh_equal'] is False];mun=[r['step'] for r in rows if r['model_equal'] is False]
+    res=dict(number=number,label=spec['label'],group=spec['group'],note=spec.get('note',''),provenance=spec['provenance'],fixture=fc.summarize(spec,fx),guarded=bool(spec.get('guarded')),expected_guard=spec.get('guard'),
+        observed_guard=spec.get('observed_guard'),steps=len(spec['steps']),split_phases=len(split),control_phases=len(control),frames=len([s for s in spec['steps'] if '-release' not in s['label'] and 'gate-' not in s['label'] and '-hold' not in s['label']]),
+        final_pc='%x'%last['outgoing']['pc'],final_stop_kind=rows[-1]['stop_kind'],reproduced_twice=True,continuous_split_equivalent=True,split_digest_sha256=d_split,control_digest_sha256=d_control,condition_file=cfile.name,condition_file_sha256=fsha,
+        fresh_frames=len(rows),fresh_checked=sum(1 for x in fresh if x is not None),fresh_frames_equal=sum(1 for x in fresh if x),
+        model_frames=sum(1 for m in models if m is not None and m.get('equal') is not None),model_frames_equal=sum(1 for m in models if m is not None and m.get('equal')),model_frames_not_applicable=sum(1 for m in models if m is not None and m.get('equal') is None),
+        area_frames=sum(1 for r in rows if r['area_instructions']),
+        host_writes=[dict(step=i,changes=[change_row(c) for c in s['changes'] if c['kind']=='ram' and c['address'] not in (S,0x104ca4)]) for i,s in enumerate(spec['steps']) if any(c['kind']=='ram' and c['address'] not in (S,0x104ca4) for c in s['changes'])],
+        instructions=sum(len(p['pcs'])-1 for p in control),dumped_frames=sum(1 for r in rows if 'dump' in r),state_sha256_last=rows[-1]['state_sha256'])
+    mexec=set()
+    for m in model_rows:mexec.update(m.get('exec_pcs',()))
+    for m in model_rows:m.pop('exec_pcs',None)
+    return dict(number=number,result=res,hits=dict(hits),covered=sorted(covered),facts=facts,seconds=time.time()-t0,runs=RUNS[0],fresh_unequal=unequal,model_unequal=mun,model_exec=sorted(mexec),
+        model_discrepancies=[m for m in model_rows if m.get('equal') is False][:3])
+
+
+CATALOG_WINDOWS=((0xd99e2,0xdd4be),(0x472be,0x474e0))                               # the F1c1 contract windows of the catalog groups (47a20 reads WORD +10 of the record)
+CONTRACT_WINDOWS=((0x476bc,0x476dc),(0x4cf64,0x4d0a4),(0x4e4d2,0x4e552))           # player pointer table + WORD rows, the 14 x 16 byte U6 records, the 128 byte lookup (contract "ROM 자료 window")
+
+
+def ev_row(e):return [e['pc'],e['access'],e['region'],e['address'],e['size'],e['bytes']]
+
+
+def condition_facts(spec,control,rows):
+    """Per-condition facts used by the contract claims."""
+    first=control[0];last=control[-1];prog=G['program']
+    f=dict(frames=len(control),stops=dict(collections.Counter(r['stop_kind'] for r in rows)))
+    ro=last['ram_after'];rb=first['ram_before']
+    rec=u32(ro,(A6V+0x76)&0xffff)
+    f['exit']=dict(d680=ro[0xd680],d681=ro[0xd681],d682=ro[0xd682],d683=ro[0xd683],d684=ro[0xd684],d686=u16(ro,0xd686),d688=u16(ro,0xd688),d68a=u16(ro,0xd68a),d68c=u16(ro,0xd68c),d68e=ro[0xd68e],d690=u16(ro,0xd690),d692=u16(ro,0xd692),
+        cb=u32(ro,0xb30),r76=rec,c7c=ro[0xbac],c7d=ro[0xbad],w7a=u16(ro,0xbaa),g62=ro[0xb92],h107ded=ro[0x7ded],h104ca0=u16(ro,0x4ca0),rng_ptr=u32(ro,0xd722),dd1e=ro[0xdd1e],dd2a=ro[0xdd2a],dd2b=ro[0xdd2b],
+        a5=last['outgoing']['a5'],a7=last['outgoing']['a7'],p100cb8=u32(ro,0xcb8),p100da8=u32(ro,0xda8),w100cb8_76=u16(ro,0xcb8+0x76),w100da8_76=u16(ro,0xda8+0x76),w100cb8_78=u16(ro,0xcb8+0x78),w100da8_78=u16(ro,0xda8+0x78))
+    if 0<=rec<0x100000:f['record']=dict(addr=rec,index=prog[rec],music=int.from_bytes(prog[rec+16:rec+18],'big'))
+    f['entry']=dict(d680=rb[0xd680],d681=rb[0xd681],d684=rb[0xd684],d686=u16(rb,0xd686),h107ded=rb[0x7ded],h107dea=u16(rb,0x7dea),rng_ptr=u32(rb,0xd722),c7c=rb[0xbac],c7d=rb[0xbad],p1009a8=u32(rb,0x9a8),p100a6c=u32(rb,0xa6c),p100cb8=u32(rb,0xcb8),p100da8=u32(rb,0xda8))
+    seq=[]
+    for i,r in enumerate(rows):
+        starts=[x for x in r['leaders'] if int(x,16) in START_SET]
+        if starts or r['area_instructions']:seq.append(dict(frame=i,leaders=starts,stop=r['stop_kind'],callback_after=r['callback_after'],out_pc=r['out_pc'],w7a_after=r['w7a_after']))
+    f['area_frames']=seq
+    ev=last.get('stop_evidence')
+    f['final_evidence']=dict(kind=ev['kind'],previous_pc=ev.get('previous_pc'),previous_bytes=ev.get('previous_bytes'),outgoing_pc=ev['outgoing_pc']) if ev else None
+    f['wait_rows']=[dict(step=p['step'],pc=p['wait']['pc'],state=state_sha(p),a7=p['outgoing']['a7'],byte_107ded=p['ram_after'][0x7ded],word_107dea=u16(p['ram_after'],0x7dea),d0=p['outgoing']['d0'],ring_head=u16(p['ram_after'],0x4d74),ring_tail=u16(p['ram_after'],0x4d76),
+        area_pc=next(('%x'%x for x in reversed(p['pcs'][:-1]) if in_area(x)),None),return_long=u32(p['ram_after'],p['outgoing']['a7']&0xffff)) for p in control if p['waiting']]
+    f['stack_bytes_after']=last['ram_after'][(S&0xffff)-8:(S&0xffff)+8].hex()
+    f['stack_bytes_before']=first['ram_before'][(S&0xffff)-8:(S&0xffff)+8].hex()
+    reg=collections.Counter()
+    for r in rows:
+        for k,v in r['area_event_regions'].items():reg[k]+=v
+    f['area_regions']=dict(reg)
+    rr={};rng=[];lookup=[];a5s=set();writes_rom=0
+    for p in control:
+        for e in p['events']:
+            if not in_area(e['pc']):continue
+            if e['region']=='fixed' and e['access']=='read':
+                oc=not any(a<=e['address'] and e['address']+e['size']<=b for a,b in (CATALOG_WINDOWS if e['pc']==0x47a20 else CONTRACT_WINDOWS))
+                r_=rr.setdefault('%x'%e['pc'],dict(size=e['size'],low=e['address'],high=e['address']+e['size']-1,reads=0,outside_contract=0,outside_min=None,outside_max=0))
+                r_['low']=min(r_['low'],e['address']);r_['high']=max(r_['high'],e['address']+e['size']-1);r_['reads']+=1
+                if oc:r_['outside_contract']+=1;r_['outside_max']=max(r_['outside_max'],e['address']+e['size']-1);r_['outside_min']=e['address'] if r_['outside_min'] is None else min(r_['outside_min'],e['address'])
+                if e['pc']==0x4e680:lookup.append(ev_row(e))
+            if 0x49a58<=e['pc']<0x49a84 and e['region'] in ('ram','fixed'):rng.append(ev_row(e))
+    f['area_rom_reads']=rr;f['rng_events']=rng[:24];f['lookup_reads']=lookup[:8]
+    return f
+
+
+def build_spec(program,fx,label,group,prov,steps=None,setup=(),rules=(),frames=None,expect_guard=None,note='',model=True,dump='all',max_frames=400,end_alts=(FINAL_STOP,TRAP_STOP),first_stop=FRAME_RET,first_a7=('abs',S+4),guard_ok=False,expect_guard_keys=None,
+        gate_idem=0,gate_limit=3,hold=None,reenter=True,fresh=None):
+    guard=None
+    if steps is None:
+        steps,last,nframes=plan_frames(program,fx,label,setup,rules,max_frames=max_frames,frames=frames,allow_guard=expect_guard is not None or guard_ok,end_alts=end_alts,first_stop=first_stop,first_a7=first_a7,gate_idem=gate_idem,gate_limit=gate_limit,hold=hold,reenter=reenter)
+        guard=last['guard'];plan_pcs=list(PLAN_PCS)
+    else:
+        plan_pcs=None
+        spec=dict(label=label,fixture=fx,steps=steps,guarded=True,guard={},probe=True);ph=run_chain(program,spec,True);guard=ph[-1]['guard']
+        for st,p in zip(steps,ph):st.setdefault('expect','wait' if p['waiting'] else ('guard' if p['guard'] is not None else 'return'))
+    clean_steps(steps)
+    spec=dict(label=label,group=group,fixture=fx,steps=steps,provenance=prov,model=model and guard is None,dump=dump,note=note)
+    if fresh:spec['fresh']=fresh
+    if guard_ok and guard is None:expect_guard=None
+    elif guard_ok:expect_guard=dict(expect_guard_keys or {})
+    if expect_guard is not None:
+        assert guard is not None,(label,'expected a native guard',expect_guard)
+        for k,v in expect_guard.items():assert guard.get(k)==v,(label,k,guard)
+        spec.update(guarded=True,guard=dict(expect_guard),observed_guard=guard,model=False)
+    else:assert guard is None,(label,guard)
+    if plan_pcs is not None:
+        # the checkpoints are taken from the continuous probe run of the plan (the same persistent-CPU run that discovered the steps; identical rule to with_checkpoints)
+        for index,step in enumerate(spec['steps']):
+            order=[]
+            if index<len(plan_pcs):
+                entry=plan_pcs[index][0]
+                for pc in plan_pcs[index][1:]:
+                    if pc in CK_SET and pc not in order and pc!=entry and pc!=step['stop_pc']:order.append(pc)
+            step['checkpoints']=order
+    else:with_checkpoints(program,spec)
+    return spec
+
+
+# ----------------------------------------------------------------------------------
+# Natural start states: the recorded frame-236 output of artifacts/animation_machine_stage_catalog_native (pinned observation.json; every file read is pinned by its recorded SHA256)
+# ----------------------------------------------------------------------------------
+CAT={}
+
+
+def catalog_results():
+    if 'results' not in CAT:
+        obs=json.loads(sc.pin(CATALOG_OBS,CATALOG_SHA))
+        assert obs['failure'] is None and obs['conditions']==534
+        CAT['results']={r['label']:r for r in obs['results']}
+    return CAT['results']
+
+
+def catalog_condition(label):
+    res=catalog_results()[label];data=sc.pin(CATALOG/'conditions'/res['condition_file'],res['condition_file_sha256'])
+    return json.loads(gzip.decompress(data))
+
+
+def catalog_blob(name):
+    digest=name.split('.')[0];return sc.pin(CATALOG/'blobs'/name,digest)
+
+
+def catalog_start_state(index):
+    """The recorded output state of frame 236 of the natural seed `index` (stop 2ac2, callback 478de installed): RAM, PVC page, the 16 registers; the state SHA256 is recomputed from the
+    stored blobs by the definition of the F1c1 observation and must equal the recorded one."""
+    if index in CAT.get('states',{}):return CAT['states'][index]
+    cond=catalog_condition('natural-%03d'%index);rows=cond['frames'];assert len(rows) in (2,238)
+    row=rows[236] if len(rows)==238 else rows[0]
+    assert row['step']==(236 if len(rows)==238 else 0),(index,row['step'])
+    assert row['out_pc']=='2ac2' and row['callback_after']=='478de' and row['bank']==2 and row['ff8']=='a0' and row['ff9']=='1000' and row['stop_kind']=='return',(index,row['out_pc'],row['callback_after'])
+    d=row['dump'];ram=catalog_blob(d['ram_after']);pvc=catalog_blob(d['pvc_after']);ports=catalog_blob(d['ports'])
+    regs={k:int(v,16) for k,v in row['regs16'].items()}
+    chk=state_sha_parts(b'F1C1-FRAME-STATE-v1',ram,regs,0x2ac2,2,ports)
+    assert chk==row['state_sha256'],(index,chk,row['state_sha256'])
+    assert sha(ram)==row['ram_sha256'] and sha(pvc)==row['pvc_sha256']
+    return dict(index=index,ram=ram,pvc=pvc,regs=regs,state_sha256=chk,ram_sha256=row['ram_sha256'],pvc_sha256=row['pvc_sha256'],ports_sha256=row['ports_sha256'],catalog_row=dict(step=row['step'],label=row['label'],condition_file=catalog_results()['natural-%03d'%index]['condition_file']))
+
+
+def natural_start_fixture(index):
+    st=catalog_start_state(index);s=G['seeds'][index]
+    prov=dict(kind='recorded frame-236 output state of the F1c1 observation (artifacts/animation_machine_stage_catalog_native, natural-%03d): stop 2ac2 after the RTS at 480f0, callback LONG 478de installed'%index,
+        catalog_observation_sha256=CATALOG_SHA,state_sha256_f1c1_definition=st['state_sha256'],ram_sha256=st['ram_sha256'],pvc_sha256=st['pvc_sha256'],catalog_row=st['catalog_row'],
+        origin=dict(observation_sha256=sc.STAGE_ENTRY_SHA,case_index=index,family=s['family'],phase=s['phase'],ram_file=s['ram_file'],ram_sha256=s['ram_sha256']),registers={k:'%08x'%v for k,v in st['regs'].items()})
+    r=st['regs']
+    fx=sc.make_fx('start236-%03d'%index,st['ram'],{k:r[k] for k in KEYS14},((0x200000,0xa0,0x1000),st['pvc']),FRAME_RET,r['a7'],prov,(),[],
+        role='declared start: the recorded output of frame 236 (PC 2ac2, A7 1ff000, callback 478de); frame 237 is entered by the declared direct re-entry at the callback LONG (A6)')
+    fx['regs']['a5']=r['a5'];fx['group']='f1c2'
+    assert r['a6']==A6V and r['a5']==A5V and r['a7']==S+4
+    return fx
+
+
+# ----------------------------------------------------------------------------------
+# Natural seeds: the 142 final ff000 RAM outputs of the recorded original stage_entry_body runs (137 begin + 5 release guard rows)
+# ----------------------------------------------------------------------------------
+def load_seeds():
+    obs=json.loads(sc.pin(sc.STAGE_ENTRY,sc.STAGE_ENTRY_SHA));folder=sc.STAGE_ENTRY.parent;seeds=[]
+    assert obs['cases']==obs['completed_cases']==len(obs['results'])==142 and obs['failure'] is None
+    for i,r in enumerate(obs['results']):
+        assert r['case_index']==i
+        ph=[p for p in r['phases'] if p['final_pc']==0xff000];assert len(ph)==1 and ph[0]['name'] in ('begin','release-poisoned-prefix'),(i,[p['name'] for p in r['phases']])
+        release=ph[0]['name']!='begin'
+        p=ph[0];ram=sc.pin(folder/p['ram_file'],p['ram_sha256']);assert len(ram)==0x10000
+        res=p['result'];regs={k:res[k] for k in KEYS14+('a5',)}
+        assert regs['a6']==A6V and regs['a5']==A5V and p['final_a5']==A5V,(i,hex(regs['a6']))
+        seeds.append(dict(index=i,release=release,family=r['fixture']['family'],phase=p['name'],ram=ram,ram_file=p['ram_file'],ram_sha256=p['ram_sha256'],regs=regs,bank=res['bank']))
+    assert sum(1 for x in seeds if not x['release'])==137 and sum(1 for x in seeds if x['release'])==5
+    return seeds
+
+
+# ----------------------------------------------------------------------------------
+# Runtime fixtures: zero RAM -> original 2790 -> 3ef2 -> 49a1a(D0 = 0) (Unicorn, the isolated 1feffc call stack of verify_palette_state.call), then declared host writes
+# ----------------------------------------------------------------------------------
+RT_CACHE={}
+
+
+def rt_base_ram():
+    if 'ram' not in RT_CACHE:
+        import verify_object_reset as vor
+        import verify_palette_state as vps
+        from unicorn import m68k_const as m
+        cpu=vor.make_cpu(G['program']);cpu.mem_write(0x100000,bytes(65536));vps.call(cpu,0x2790);vps.call(cpu,0x3ef2)
+        cpu.reg_write(m.UC_M68K_REG_D0,0);vps.call(cpu,0x49a1a);RT_CACHE['ram']=bytes(cpu.mem_read(0x100000,65536))
+    return RT_CACHE['ram']
+
+
+def catalog_groups(program):
+    """Group tables and record addresses of the ROM catalog (stage group pointers at 474f4)."""
+    W_=lambda a:int.from_bytes(program[a:a+2],'big');L_=lambda a:int.from_bytes(program[a:a+4],'big');out=[]
+    for g in range(19):
+        a=L_(0x474f4+4*g)+2;recs=[]
+        while True:
+            s=W_(a);a+=2
+            if s==0:break
+            recs.append(a);a+=s if s<0x8000 else s-0x10000
+        out.append(recs)
+    return out
+
+
+DEAD=0x270e                                                  # the free-node callback (289e: CMPI.L #270e,(A0) equal -> C = 0)
+RING=(0x1008e4,0x1009a8,0x100a6c,A6V,0x100bf4,0x100cb8,0x100da8,0x100820)
+
+
+def ring_writes():
+    """The explicit root node ring (as left by the original 2790: prev +4 / next +8 / depth +10 = 0 of the eight nodes; the six middle nodes carry the free callback 270e, the two ends keep
+    their 2790 callbacks): declared fixture RAM, recorded with the fixture."""
+    base=rt_base_ram();L=lambda a:int.from_bytes(base[a-0x100000:a-0x100000+4],'big')
+    p=[]
+    for k,a in enumerate(RING):
+        cb=L(a) if a in (0x1008e4,0x100820) else DEAD
+        assert L(a+4)==RING[k-1] and L(a+8)==RING[(k+1)%len(RING)] and base[a-0x100000+0x10:a-0x100000+0x12]==b'\0\0',hex(a)
+        p+=[(a,4,cb),(a+4,4,RING[k-1]),(a+8,4,RING[(k+1)%len(RING)]),(a+0x10,2,0)]
+    return [W(a,n,v,'declared explicit root node ring (the 2790 ring, dead nodes carry 270e): %x'%a) for a,n,v in p]
+
+
+def frame_base_writes():
+    """The F1b frame base RAM the 480bc frames need (U7 buffer rows, U2/U3 node records) with DEAD player nodes (callback 270e: 289e C = 0, the F1c2 player allocation / initialization of 1bd2e / 1bd90
+    is skipped or done by the allocator) and the explicit root node ring; declared fixture RAM, nothing is executed."""
+    p=[(0x100cb8,4,DEAD),(0x100cb8+0x61,1,0x7f),(0x100da8,4,DEAD),(0x100da8+0x61,1,0x80),(0x10d68e,1,0xfc),(0x10dc88,4,0x10db88),(0x10db84,4,0x11a5225a),(0x10de2e,1,1)]
+    for i in range(32):p.append((0x10db88+2*i,2,(0x8001+i*0x1357)&0xffff))
+    for i in range(8):p.append((0x10d4e6+0x2c*i+0x26,4,0xffff0000))
+    for b in (0x10d746,0x10d918):p+=[(b,4,0xdeadbeef),(b+0xcc,4,0x01020304),(b+0xd0,2,0x5555),(b+0x1ce,2,0x6666),(b+0x1d0,2,0x7777)]
+    return ring_writes()+[W(a,n,v,'declared F1b frame base RAM (dead player nodes, U7 buffer rows, U2/U3 node records): %x'%a) for a,n,v in p]
+
+
+def rt_fixture(label,stage,area,music,entry,extra=(),bank=2,regs=None,note=''):
+    """Declared runtime fixture: base RAM (original 2790 -> 3ef2 -> 49a1a) + frame base + the host writes of the contract (10d680 = group, 10d681 = area, 10d683 = ff, 10d686 = music, 104d74 = 104d76 = 0)."""
+    writes=frame_base_writes()+[W(0x10d680,1,stage,'declared host write: BYTE 10d680 (stage group) := %02x'%stage),W(0x10d681,1,area,'declared host write: BYTE 10d681 (area) := %02x'%area),W(0x10d683,1,0xff,'declared host write: BYTE 10d683 := ff'),
+        W(0x10d686,2,music&0xffff,'declared host write: WORD 10d686 (current music) := %04x'%(music&0xffff)),W(0x104d74,2,0,'declared host write: WORD 104d74 := 0'),W(0x104d76,2,0,'declared host write: WORD 104d76 := 0')]+list(extra)
+    ram,rec=apply_writes(rt_base_ram(),writes)
+    r=dict((k,0) for k in KEYS14);r.update(a5=A5V,a6=A6V);r.update(regs or {})
+    prov=dict(kind='runtime fixture (contract "시작 상태 2"): original 2790 -> 3ef2 -> 49a1a(D0 = 0) on a zero RAM + declared host writes (dead player nodes 270e, explicit root node ring)',base_ram_sha256=sha(rt_base_ram()),stage=stage,area=area,music='%04x'%(music&0xffff),entry=hex(entry),note=note,host_writes=rec)
+    fx=sc.make_fx(label,ram,r,bc.pvc_for(bank),entry,S,prov,(),[(S,FRAME_RET.to_bytes(4,'big'))],role='declared %x entry on the runtime fixture RAM (A5 = 108000, A6 = 100b30, A7 = 1feffc with the return LONG 2ac2 at (A7))'%entry)
+    fx['regs']['a5']=A5V;fx['group']='f1c2';return fx
+
+
+def light_row(program,index,step,p):
+    """One recorded frame of a chain (used for the dump-less record of the prefix frames)."""
+    o=p['outgoing'];ev=p['events'];ports=ports_blob(ev);pcs=p['pcs'];prev=pcs[-2] if len(pcs)>=2 else None
+    ok=o['pc']==FRAME_RET and prev is not None and program[prev:prev+2]==b'\x4e\x75' and u32(p['ram_after'],o['a7']-4)==FRAME_RET
+    return dict(step=index,label=step['label'],in_pc='%x'%p['incoming']['pc'],out_pc='%x'%o['pc'],out_a7='%x'%o['a7'],stop_kind='return' if ok else ('guard:'+p['guard']['problem'] if p['guard'] else 'other'),
+        previous_pc=None if prev is None else '%x'%prev,state_sha256=state_sha(p),core_digest=core_digest(p))
+
+
+# ----------------------------------------------------------------------------------
+# Items
+# ----------------------------------------------------------------------------------
+def read_condition_rows(res):return json.loads(gzip.decompress((CONDDIR/res['condition_file']).read_bytes()))['frames']
+
+
+def item_natural(number,item):
+    """A natural seed.  The DUMP_SEEDS run the COMPLETE chain from 47da4 (238 frames, the last one ends at 47a94) with the full treatment, and the recorded frame-236 state SHA of the F1c1 observation must be
+    reproduced.  The other seeds start from that recorded frame-236 state (state SHA recomputed from the stored blobs) and run frame 237 (F1c1 tail 478de .. 478ec, then F1c2) with the full treatment."""
+    i=item['ref'];program=G['program']
+    st=catalog_start_state(i)
+    if i in DUMP_SEEDS:
+        fx=seed_fixture(i)
+        spec=build_spec(program,fx,'natural-%03d'%i,'natural',fx['seed'],rules=[r_dd44(),r_child62()],dump='all',note='%s seed %d (complete chain 47da4 -> 47a94, full treatment over all frames)'%(G['seeds'][i]['family'],i))
+        r=process_item(program,number,spec)
+        rows=read_condition_rows(r['result'])
+        assert len(rows)==238 and rows[237]['out_pc']=='47a94',(i,len(rows),rows[-1]['out_pc'])
+        assert rows[236]['state_sha256_f1c1_definition']==st['state_sha256'] and rows[236]['out_pc']=='2ac2' and rows[236]['callback_after']=='478de',(i,'frame 236 state differs from the F1c1 observation')
+        r['result'].update(start_state=dict(source='complete chain',frame236_state_sha256_f1c1_definition=st['state_sha256'],equal_to_recorded=True))
+        return r
+    fxb=natural_start_fixture(i)
+    spec=build_spec(program,fxb,'natural-%03d'%i,'natural',fxb['seed'],setup=reentry_changes(0x478de),rules=[],first_stop=FINAL_STOP,end_alts=(TRAP_STOP,),dump='all',note='%s seed %d: frame 237 (F1c1 tail + F1c2) from the recorded frame-236 state'%(G['seeds'][i]['family'],i))
+    r=process_item(program,number,spec)
+    rows=read_condition_rows(r['result'])
+    assert len(rows)==1 and rows[0]['out_pc']=='47a94' and rows[0]['in_pc']=='478de',(i,len(rows),rows[0]['in_pc'])
+    r['result'].update(frames=238,start_state=dict(source='recorded frame-236 state of artifacts/animation_machine_stage_catalog_native',frame236_state_sha256_f1c1_definition=st['state_sha256'],equal_to_recorded=True,catalog_row=st['catalog_row']))
+    return r
+
+
+def item_release(number,item):
+    """The 5 release-poisoned-prefix outputs are NOT natural seeds (contract decision 12): WORD 104d8a = 8001 makes the frame helper U1 3c60 CMP.W (A1),D0 read an odd address (an address error on a real 68000).  They are guard rows."""
+    i=item['ref'];program=G['program'];fx=seed_fixture(i);prov=dict(fx['seed'],role='guard row (contract decision 12), not a natural seed')
+    spec=build_spec(program,fx,'release-guard-%03d'%i,'release-guard',prov,rules=[r_dd44(),r_child62()],guard_ok=True,expect_guard_keys=dict(problem='unsupported_odd_data_access'),note='release-poisoned-prefix output %d: odd WORD access expected'%i)
+    return process_item(program,number,spec)
+
+
+def item_runtime(number,item):
+    g,ar,mm,entry=item['ref'];program=G['program'];rec=G['groups'][g][ar];mu=int.from_bytes(program[rec+16:rec+18],'big')
+    music=mu if mm=='same' else mu^0xffff
+    label='rt-g%02d-a%02d-%s-%x'%(g,ar,mm,entry)
+    fx=rt_fixture(label,g,ar,music,entry,note='catalog record %x (index %02x, record music %04x), 10d686 %s'%(rec,program[rec],mu,'= record music' if mm=='same' else '= complement'))
+    spec=build_spec(program,fx,label,'runtime',fx['seed'],rules=[r_child62(0,0xff)],dump='all',note=fx['seed']['note'])
+    return process_item(program,number,spec)
+
+
+def item_typed(number,item):
+    spec=G['typed'][item['ref']](G['program'])
+    return process_item(G['program'],number,spec)
+
+
+def run_item(number):
+    item=ITEMS[number];RUNS[0]=0;DISCREPANCIES.clear();BLOB_SEEN.clear()
+    try:
+        r=globals()['item_'+item['kind']](number,item);r['runs']=RUNS[0];r['discrepancies']=list(DISCREPANCIES);return r
+    except Exception as e:
+        import traceback
+        return dict(number=number,error=repr(e)[:1500],trace=traceback.format_exc()[-3500:],kind=item['kind'],ref=item.get('ref'))
+
+
+# ----------------------------------------------------------------------------------
+# Typed conditions
+# ----------------------------------------------------------------------------------
+TYPED=[]
+
+
+def typed(label,group,make_base,writes=(),entry=None,regs=None,sr=None,a7=None,a5=None,stack_ret=True,stack_extra=(),ret=FRAME_RET,external=None,setup=(),rules=(),frames=None,expect_guard=None,guard_ok=False,steps=None,
+        note='',model=True,max_frames=400,end_alts=(FINAL_STOP,TRAP_STOP),first_stop=FRAME_RET,first_a7=('abs',S+4),bank=None,free_a6=False,gate_idem=0,gate_limit=3,hold=None,reenter=None,step_limit=None,dump='all',fresh=None,rng_policy=None,meta=None):
+    """make_base: callable () -> a base fixture dict; the condition is derived from it by declared writes / registers."""
+    def make(program):
+        b=make_base()
+        fx=derive_fx(b,label,writes,entry,regs,sr,a7,a5,stack_ret,stack_extra,ret,external,note,bank)
+        if free_a6:fx['free_a6']=True
+        if step_limit is not None:fx['step_limit']=step_limit
+        if rng_policy is not None:fx['rng_policy']=rng_policy
+        prov=dict(kind='declared typed fixture',note=note,base=b['label'],base_provenance=b['seed'],declared_initial_writes=[dict(address=hex(w['address']),size=w['size'],value=hex(w['value']),why=w['why']) for w in writes],
+            declared_registers={k:hex(v) for k,v in (regs or {}).items()},declared_sr=sr,declared_a7=a7,declared_a5=a5,entry=hex(fx['entry_pc']),return_long=hex(ret) if stack_ret else None,declared_step_limit=step_limit,rng_policy=rng_policy)
+        st=steps(program,fx) if steps is not None else None
+        re_=reenter if reenter is not None else (entry is None or entry==ENTRY_PC)         # an inner-routine direct entry is one frame: the stop 2ac2 (or a declared boundary) ends the condition
+        rl=rules() if callable(rules) else list(rules)
+        return build_spec(program,fx,label,group,prov,st,setup,rl,frames,expect_guard if not guard_ok else None,note,model,dump,max_frames,end_alts,first_stop,first_a7,guard_ok=guard_ok,expect_guard_keys=expect_guard,
+            gate_idem=gate_idem,gate_limit=gate_limit,hold=hold,reenter=re_,fresh=fresh)
+    make.label=label;make.meta=dict(meta or {});TYPED.append(make)
+
+
+SCRATCH_REC=0x10e900                                         # declared RAM catalog record (free in the runtime base RAM: asserted)
+NAT_REGS=dict(d0=0x7500,d1=0x7000,d2=0,d3=0x20,d7=0x75007000,a0=0x10d4ba,a1=0x10dd98,a2=0x10dd98,a3=0x10d918,a4=0x3c0000)      # the register file of a natural 479b0 entry (D0.W = 7500 from ca8a)
+ALL_ONES=dict(d0=0xffffffff,d1=0xffffffff,d2=0xffffffff,d3=0xffffffff,d4=0xffffffff,d5=0xffffffff,d6=0xffffffff,d7=0xffffffff)
+
+
+def rtb(stage,area,music,entry=0x479b0,extra=(),bank=2,regs=None,note=''):
+    """make_base for typed(): a runtime fixture."""
+    def make():
+        return rt_fixture('rtbase-%02x-%02x-%04x-%x'%(stage,area,music,entry),stage,area,music,entry,extra,bank,regs,note)
+    return make
+
+
+def ram_record(idx,music,addr=SCRATCH_REC,why='declared RAM catalog record'):
+    """Declared writes of a RAM record (BYTE +0 = entry-effect index, WORD +10 = music) and the record pointer LONG 76(A6)."""
+    return [W(addr,1,idx,'%s: BYTE +0 (entry-effect index) := %02x'%(why,idx)),W(addr+0x10,2,music,'%s: WORD +10 (music) := %04x'%(why,music)),W(A6V+0x76,4,addr,'declared record pointer LONG 76(A6) := %x'%addr)]
+
+
+def AB(st,ar,rmusic=0x4321,flags=0,cur=0,idx=0x0c,extra=(),cb=ENTRY_PC):
+    """The declared node state of an F1c2 entry: callback LONG (A6) = 479b0, 7c(A6) = stage, 7d(A6) = area, the RAM record (music rmusic) at 76(A6), group flags BYTE 10d684, current music WORD 10d686."""
+    return ram_record(idx,rmusic)+[W(A6V,4,cb,'declared callback LONG (A6) := %x'%cb),W(A6V+0x7c,1,st,'declared BYTE 7c(A6) (stage copy) := %02x'%st),W(A6V+0x7d,1,ar,'declared BYTE 7d(A6) (area copy) := %02x'%ar),
+        W(0x10d684,1,flags,'declared group flags BYTE 10d684 := %02x'%flags),W(0x10d686,2,cur,'declared current music WORD 10d686 := %04x'%cur)]+list(extra)
+
+
+def alive(addr,cb=0x1d1f4,p8c=None,w78=None,w76=None):
+    """Declared live player / check node: callback LONG (A0) <> 270e (289e C = 1), optionally LONG 8c(A0) (the player block pointer), WORD 78(A0), WORD 76(A0)."""
+    w=[W(addr,4,cb,'declared node %x callback LONG := %x (<> 270e: 289e C = 1)'%(addr,cb))]
+    if p8c is not None:w.append(W(addr+0x8c,4,p8c,'declared LONG 8c(%x) := %x'%(addr,p8c)))
+    if w78 is not None:w.append(W(addr+0x78,2,w78,'declared WORD 78(%x) := %04x'%(addr,w78)))
+    if w76 is not None:w.append(W(addr+0x76,2,w76,'declared WORD 76(%x) := %04x'%(addr,w76)))
+    return w
+
+
+def r_at_cb(cb,writes,once=True):
+    """Declared host writes at the first frame boundary at which the installed callback LONG (A6) is `cb`."""
+    st=dict(fired=False)
+    def rule(done,ram,c,o):
+        if c!=cb or (once and st['fired']):return []
+        st['fired']=True;return list(writes)
+    return rule
+
+
+def ring_full(n):
+    """Declared sound ring state making the n-th 3ac8 ring write block: tail WORD 104d76 = 0, head WORD 104d74 = n (3ac8: D1 = tail + 1 compared with the head)."""
+    return [W(0x104d74,2,n,'declared sound ring head WORD 104d74 := %d'%n),W(0x104d76,2,0,'declared sound ring tail WORD 104d76 := 0')]
+
+
+def table_row(program,stage,area):
+    """The two WORDs of the 476dc player row of (stage 7c, area 7d): stage-6 < 3 selects the table through 476d0, else table 0 (476ec)."""
+    d0=(stage-6)&0xffff
+    d0=d0 if d0<3 else 0
+    base=int.from_bytes(program[0x476d0+4*d0:0x476d0+4*d0+4],'big');row=(base+((area&0xff)*4)&0xffff)
+    row=base+(((area&0xff)*4)&0xffff)
+    return int.from_bytes(program[row:row+2],'big'),int.from_bytes(program[row+2:row+4],'big')
+
+
+def klass(w):return 'neg' if w&0x8000 else ('lt4' if w<4 else 'ge4')
+
+
+def define_typed():
+    TYPED.clear()
+    C62=lambda:[r_child62(0,0xff)]
+    P=G['program']
+    # ---- 479b0 direct entries: first area (7d = 0 -> 47594, 4e666 / d760a by the flags) and next area (7d <> 0 -> 48180 x2, 475ca)
+    for name,st,ar,fl in (('first-f00-st1',1,0,0x00),('first-f04-st1',1,0,0x04),('first-f01-st6',6,0,0x01),('first-f02-st7',7,0,0x02),('first-f03-st8',8,0,0x03),('first-f05-st5-476ec',5,0,0x05),('first-f01-st9-476ec',9,0,0x01),
+            ('first-f03-st0-476ec',0,0,0x03),('first-f07-st6',6,0,0x07),('first-f02-st21-476ec',0x21,0,0x02),('first-f00-stff',0xff,0,0x00),
+            ('next-f00-a1-st1',1,1,0x00),('next-f04-a1-st1',1,1,0x04),('next-f03-st8-a1-pointer-bytes',8,1,0x03),('next-f01-st6-a2',6,2,0x01),('next-f02-st7-a3',7,3,0x02),('next-f00-aff',1,0xff,0x00),('next-f06-a1',2,1,0x06)):
+        typed('area-'+name,'area',rtb(st,ar,0),writes=AB(st,ar,0x4321,fl,0),regs=NAT_REGS,note='479b0 entry: 7c(A6) = %02x, 7d(A6) = %02x, group flags 10d684 = %02x, record music 4321, current music 0 (the %s)'%(st,ar,fl,'first area: 47594' if ar==0 else 'next area: 48180 x2 / 475ca'),rules=C62,meta=dict(kind='area',st=st,ar=ar,flags=fl,rec=0x4321,cur=0))
+    # ---- the music comparison 47a1c .. 47a8e (7d <> 0 keeps 10d686; first area clears it)
+    for name,rec,cur,expect in (('same',0x2468,0x2468,'47a6a'),('same-zero',0x0000,0x0000,'47a6a'),('10fe',0x10fe,0x0000,'47a6a'),('10fe-cur10fe',0x10fe,0x10fe,'47a6a'),('19c1',0x19c1,0x0000,'47a6a'),('19c0',0x19c0,0x0000,'47a64 (3d44)'),('19c0-cur19c0',0x19c0,0x19c0,'47a6a'),
+            ('other',0x0777,0x0000,'47a4a (3af8)'),('other-cur19c0',0x0777,0x19c0,'47a4a (3af8)'),('other-1fff',0x1fff,0x0001,'47a4a (3af8)'),('other-8000',0x8000,0x0001,'47a4a (3af8)')):
+        typed('music-next-'+name,'music',rtb(1,1,cur),writes=AB(1,1,rec,0x00,cur),regs=NAT_REGS,note='next area (7d = 1): record music %04x, current music %04x -> %s'%(rec,cur,expect),meta=dict(kind='music',first=False,rec=rec,cur=cur))
+    for name,rec,expect in (('19c0',0x19c0,'47a64 (3d44)'),('10fe',0x10fe,'47a6a'),('19c1',0x19c1,'47a6a'),('other',0x0777,'47a4a (3af8)'),('zero',0x0000,'47a6a: 10d686 cleared by 475a4, 0000 = 0000')):
+        typed('music-first-'+name,'music',rtb(1,0,0x1234),writes=AB(1,0,rec,0x00,0x1234),regs=NAT_REGS,note='first area (7d = 0): 475a4 clears WORD 10d686 -> record music %04x vs 0 -> %s'%(rec,expect),meta=dict(kind='music',first=True,rec=rec,cur=0))
+    # ---- player placement 476dc: every class pair of the ROM rows, alive / dead check nodes and player nodes
+    seen={}
+    for st in (6,7,8,5):
+        for ar in range(0,256):
+            a,b=table_row(P,st,ar);key=(klass(a),klass(b))
+            if key not in seen:seen[key]=(st,ar,a,b)
+    for key,(st,ar,a,b) in sorted(seen.items()):
+        typed('players-476dc-%s-%s'%key,'players',rtb(st,ar,0),writes=AB(st,ar,0x4321,0x01,0),regs=NAT_REGS,rules=C62,note='stage %02x area %02x: ROM row WORDs %04x %04x (D1 classes %s / %s): 476dc'%(st,ar,a,b,key[0],key[1]),meta=dict(kind='players-row',st=st,ar=ar,a=a,b=b,flags=1))
+    for name,extra in (('check1-alive',alive(0x1009a8)),('check2-alive',alive(0x100a6c,cb=0x12345678)),('both-check-alive',alive(0x1009a8)+alive(0x100a6c,cb=1)),
+                       ('player0-alive',alive(0x100cb8)),('player1-alive',alive(0x100da8)),('both-players-alive',alive(0x100cb8)+alive(0x100da8))):
+        for st,ar in ((6,0),(8,1)):
+            typed('players-%s-st%d-a%d'%(name,st,ar),'players',rtb(st,ar,0),writes=AB(st,ar,0x4321,0x01,0,extra=extra),entry=0x476dc,regs=NAT_REGS,note='476dc direct entry (stage %02x, area %02x): %s'%(st,ar,name),meta=dict(kind='players-nodes',name=name,st=st,ar=ar))
+    # ---- 47742 D0 / D1 combinations (direct entry, return 2ac2)
+    for d0 in (0,1,0x12340000,0x1234ffff):
+        for d1 in (0x0000,0x0002,0x0003,0x0004,0x0005,0x76bc,0x7fff,0x8000,0xffff,0x12348000,0xabcd0001):
+            typed('p47742-d0-%08x-d1-%08x'%(d0,d1),'players-direct',rtb(1,0,0),entry=0x47742,regs=dict(NAT_REGS,d0=d0,d1=d1),note='47742 direct entry: D0 = %08x (player node select by D0.W), D1 = %08x (row WORD: negative -> 2a48, >= 4 -> RNG 49a58, else stored)'%(d0,d1),meta=dict(kind='p47742',d0=d0,d1=d1,alive=False))
+    for d1 in (0x0001,0x0004):
+        for d0 in (0,1):
+            typed('p47742-player%d-alive-d1-%04x'%(d0,d1),'players-direct',rtb(1,0,0),writes=alive(0x100cb8 if d0==0 else 0x100da8),entry=0x47742,regs=dict(NAT_REGS,d0=d0,d1=d1),note='47742 with the live player node: 289e C = 1 -> 47788 (no allocation), D1 %04x'%d1,meta=dict(kind='p47742',d0=d0,d1=d1,alive=True))
+    # ---- the RNG 49a58 (A5 := 108000, 55/24 subtractive generator)
+    ptrs=(('end',0x10d720),('start',0x10d6b4),('mid',0x10d6c0),('before-edge',0x10d6f0),('wrap2-edge',0x10d6f2),('wrap2',0x10d700),('wrap2-late',0x10d71e),('wrap2-ff',0x10d71c))
+    for name,ptr in ptrs:
+        typed('rng-'+name,'rng',rtb(1,0,0),writes=[W(RNG_PTR,4,ptr,'declared ring pointer LONG 10d722 := %x'%ptr)],entry=RNG_PC,regs=dict(NAT_REGS,d0=0x5a5a5a5a),note='49a58 direct entry, ring pointer %x'%ptr,meta=dict(kind='rng',ptr=ptr,d0=0x5a5a5a5a,a5=A5V))
+    typed('rng-a5-live','rng',rtb(1,0,0),writes=[W(RNG_PTR,4,0x10d6c0,'declared ring pointer LONG 10d722 := 10d6c0')],entry=RNG_PC,a5=0x10e000,regs=dict(NAT_REGS,d0=0x5a5a5a5a),note='49a58 with a live A5 = 10e000: LEA 108000.L,A5 overwrites it (A5 = 108000 afterwards)',meta=dict(kind='rng',ptr=0x10d6c0,d0=0x5a5a5a5a,a5=0x10e000))
+    typed('rng-a5-live-476dc','rng',rtb(8,1,0),writes=AB(8,1,0x4321,0x01,0,extra=[W(RNG_PTR,4,0x10d6c0,'declared ring pointer := 10d6c0')]),entry=0x476dc,a5=0x10e000,regs=NAT_REGS,note='476dc with A5 = 10e000: the RNG call at 47792 resets A5 to 108000, later d16(A5) accesses use the new A5')
+    for name,ptr in (('zero',0),('rom-30',0x30),('rom-fffc0',0xfffc0),('io-200000',0x200000),('bank-2fffff',0x2ffffe),('high-ff10d720',0xff10d720),('ffffffff',0xfffffffe)):
+        typed('rng-outside-'+name,'rng-guard',rtb(1,0,0),writes=[W(RNG_PTR,4,ptr,'declared ring pointer LONG 10d722 := %x'%ptr)],entry=RNG_PC,regs=dict(NAT_REGS,d0=0x5a5a5a5a),
+            expect_guard=dict(problem='rng_pointer_outside_ram' if (ptr&0xffffff)<0x100000 or (ptr&0xffffff)>0x1fffff else 'rng_pointer_high_byte'),note='ring pointer %x outside the work RAM: the C++ rejects it at the entry of 49a58 (checked error stage area RNG pointer outside work RAM)'%ptr,meta=dict(kind='rng-policy',ptr=ptr))
+    for off in (0xfffd0,0xfffd2,0xfffe0,0xffff0,0xffffc,0xffffe):
+        typed('rng-original-completes-%x'%off,'rng-difference',rtb(1,0,0),writes=[W(RNG_PTR,4,off,'declared ring pointer LONG 10d722 := %x'%off)],entry=RNG_PC,regs=dict(NAT_REGS,d0=0x5a5a5a5a),rng_policy=False,
+            note='ring pointer %x (fffd0..fffff): the original completes (WORD read from the ROM, +2e lands in the work RAM at %x); the C++ policy rejects it (deliberate difference, see rng-outside rows)'%(off,off+0x30),meta=dict(kind='rng-original',ptr=off,d0=0x5a5a5a5a))
+        typed('rng-policy-rejects-%x'%off,'rng-guard',rtb(1,0,0),writes=[W(RNG_PTR,4,off,'declared ring pointer LONG 10d722 := %x'%off)],entry=RNG_PC,regs=dict(NAT_REGS,d0=0x5a5a5a5a),expect_guard=dict(problem='rng_pointer_outside_ram'),
+            note='the same pointer %x with the C++ policy: guard row (checked error)'%off,meta=dict(kind='rng-policy',ptr=off))
+    for name,ptr in (('zero',0),('rom-30',0x30),('rom-fffc0',0xfffc0),('rom-fffce',0xfffce)):
+        typed('rng-original-outside-'+name,'rng-difference',rtb(1,0,0),writes=[W(RNG_PTR,4,ptr,'declared ring pointer LONG 10d722 := %x'%ptr)],entry=RNG_PC,regs=dict(NAT_REGS,d0=0x5a5a5a5a),rng_policy=False,guard_ok=True,
+            note='ring pointer %x with the C++ policy disabled: the original reads the WORD from the ROM and SUB.W D0,(A3) writes the ROM / an unmapped address (observed as it is; the C++ rejects the pointer at the entry)'%ptr,meta=dict(kind='rng-original-outside',ptr=ptr))
+    typed('rng-odd','rng-guard',rtb(1,0,0),writes=[W(RNG_PTR,4,0x10d6b5,'declared ring pointer := 10d6b5 (odd)')],entry=RNG_PC,regs=NAT_REGS,expect_guard=dict(problem='unsupported_odd_data_access'),note='odd ring pointer: MOVE.W (A3)+ is an odd WORD read')
+    # ---- 481de / 48180 / 4d81c / 4d826 / 4d7a6 (entry-effect helpers)
+    for nm,d0,d1 in (('p0-d1-0',0,0),('p1-d1-13',0x12340001,0xffff0013),('p0-d1-5',0xfffe,0x00000005),('p1-d1-1',3,1),('p0-d1-7',0x10000,7)):
+        typed('481de-'+nm,'effect',rtb(1,0,0),entry=0x481de,regs=dict(NAT_REGS,d0=d0,d1=d1),note='481de direct entry: D0 = %08x (A0 = 105694 / 10569c by D0 bit 0), D1.W = %04x'%(d0,d1&0xffff))
+    for nm,d1 in (('14',0x14),('15',0x15),('ffff',0xffff),('8000',0x8000),('12340014',0x12340014)):
+        typed('481de-trap-'+nm,'trap-boundary',rtb(1,0,0),entry=0x481de,regs=dict(NAT_REGS,d0=1,d1=d1),note='D1.W = %04x >= 14: CMPI.W #14,D1 BCS not taken, the TRAP #15 at 4d824 is a stop boundary (never executed)'%(d1&0xffff),meta=dict(kind='trap-4d824',d1=d1))
+    typed('481de-trap-no-stop','trap-guard',rtb(1,0,0),entry=0x481de,regs=dict(NAT_REGS,d0=1,d1=0x14),end_alts=(FINAL_STOP,),expect_guard=dict(problem='unsupported_code_target',target=TRAP_STOP),note='D1.W = 14 without the declared 4d824 stop: the refused fetch of the TRAP')
+    for nm,d1 in (('ff',0x123400ff),('13',0xabcd1213),('00',0),('0f',0x0f),('80',0x80)):
+        typed('4d826-index-'+nm,'effect',rtb(1,0,0),entry=0x4d826,regs=dict(NAT_REGS,d1=d1),note='4d826 direct entry: index BYTE %02x (A0 = 4cf64 + 10 * index; the table has 14 records): the ROM row read'%(d1&0xff))
+    for nm,d0,extra in (('p0-dead',0,[]),('p1-dead',1,[]),('p0-alive-empty',0,alive(0x100cb8)),
+                        ('p1-alive-record',0x7fff0001,alive(0x100da8)+[W(0x10dce6,2,0x0102,'declared WORD (A4) := 0102'),W(0x10dce6+0x27,1,0x03,'declared BYTE 27(A4) := 03'),W(0x10dce6+0x25,1,0x44,'declared BYTE 25(A4) := 44'),
+                            W(0x10dce6+0x26,1,0x55,'declared BYTE 26(A4) := 55'),W(0x10dce6+0x1c,2,0x6677,'declared WORD 1c(A4) := 6677'),W(0x10dce6+0x20,2,0x8899,'declared WORD 20(A4) := 8899'),W(0x10dce6+0x2a,1,0xaa,'declared BYTE 2a(A4) := aa')]),
+                        ('p0-alive-record',0,alive(0x100cb8)+[W(0x10dcba,2,0x0001,'declared WORD (A4) := 0001'),W(0x10dcba+0x27,1,0x0d,'declared BYTE 27(A4) := 0d'),W(0x10dcba+0x25,1,0x12,'declared BYTE 25(A4) := 12')])):
+        typed('48180-'+nm,'effect',rtb(1,0,0),writes=extra,entry=0x48180,regs=dict(NAT_REGS,d0=d0),note='48180 direct entry (U6 4d7a6 helper), D0 = %08x'%d0)
+    typed('48180-u6-trap','trap-boundary',rtb(1,0,0),writes=alive(0x100cb8)+[W(0x10dcba,2,1,'declared WORD (A4) := 0001'),W(0x10dcba+0x27,1,0,'declared BYTE 27(A4) := 00')],entry=0x48180,regs=dict(NAT_REGS,d0=0),first_stop=U6_TRAP_STOP,
+        note='48180 -> 4d7a6 with a live player node, (A4) <> 0 and BYTE 27(A4) = 0: BNE.W at 4d7ec not taken, the TRAP #15 at 4d7f0 is a stop boundary')
+    typed('48180-u6-trap-undeclared','trap-guard',rtb(1,0,0),writes=alive(0x100cb8)+[W(0x10dcba,2,1,'declared WORD (A4) := 0001'),W(0x10dcba+0x27,1,0,'declared BYTE 27(A4) := 00')],entry=0x48180,regs=dict(NAT_REGS,d0=0),
+        expect_guard=dict(problem='unsupported_TRAP',pc=U6_TRAP_STOP,opcode=0x4e4f),note='the same without the declared 4d7f0 stop: the TRAP #15 is refused by the observer (guard unsupported_TRAP, never executed)')
+    # ---- 4e666 lookup (BMI, sign-extended index, bit mod 8)
+    for nm,d0,b1,b2,dd1e in (('both-zero',0x12340000,0,0,0xff),('bmi',0,0x80,0x13,0xff),('bmi-both',0,0xff,0x80,0xff),('upper-eb',0x0000eb77,0x05,0x06,0xff),('upper-01',0x00000177,0x05,0x06,0xff),('upper-7f',0x7f000000,0x7f,0x01,0x00),
+                             ('natural-7500',0x00007500,0x00,0x00,0xff),('upper-80',0x00008000,0x10,0x20,0xaa),('idx-7f',0x00000000,0x7f,0x7e,0xff),('idx-1f',0x0000ff00,0x1f,0x00,0x55)):
+        typed('4e666-'+nm,'lookup',rtb(1,0,0),writes=[W(0x10dd2a,1,b1,'declared BYTE 10dd2a := %02x'%b1),W(0x10dd2b,1,b2,'declared BYTE 10dd2b := %02x'%b2),W(0x10dd1e,1,dd1e,'declared BYTE 10dd1e := %02x'%dd1e)],entry=0x4e666,regs=dict(NAT_REGS,d0=d0),
+            note='4e666 direct entry: D0 = %08x (the upper bytes survive MOVE.B #0,D0 / MOVE.B (A0),D0 and index (A1,D0.W) sign-extended), BYTE 10dd2a = %02x, 10dd2b = %02x'%(d0,b1,b2),meta=dict(kind='lookup',d0=d0,b1=b1,b2=b2,dd1e=dd1e))
+    # ---- d760a / 28ae
+    typed('d760a-28ae-ok','alloc',rtb(1,0,0),entry=0xd760a,regs=dict(NAT_REGS,d0=0x12345678),note='d760a with the free list: 28ae success (new object, callback d764a)')
+    typed('d760a-28ae-fails','alloc',rtb(1,0,0),writes=[W(0x104ca0,2,0,'declared free count WORD 104ca0 := 0 (28ae fails: D0.W = 0 >= 0 unsigned)')],entry=0xd760a,regs=dict(NAT_REGS,d0=0x12345678),note='d760a with a failing 28ae (count 0): the carry is not consumed, RTS')
+    typed('d760a-28ae-empty-list','alloc',rtb(1,0,0),writes=[W(0x104c9c,4,0,'declared free list head LONG 104c9c := 0')],entry=0xd760a,regs=dict(NAT_REGS,d0=0x12345678),guard_ok=True,note='d760a with an empty free list head (count <> 0): 28ae follows the null head (observed as it is)')
+    typed('area-first-f00-28ae-fails','alloc',rtb(1,0,0),writes=AB(1,0,0x4321,0x00,0)+[W(0x104ca0,2,0,'declared free count WORD 104ca0 := 0')],regs=NAT_REGS,note='479b0 first area with a failing 28ae in d760a (the area frame continues)')
+    # ---- 475ca / 47594 / helpers directly
+    typed('47594-dead','area-direct',rtb(1,0,0),entry=0x47594,regs=dict(NAT_REGS,d0=0x12345678,d1=0x87654321),note='47594 direct entry (dead player nodes)')
+    typed('47594-players-alive','area-direct',rtb(1,0,0),writes=alive(0x100da8,w78=1)+alive(0x100cb8,cb=0x1d1f4,w78=0),entry=0x47594,regs=NAT_REGS,guard_ok=True,note='47594 with live player nodes without the player block pointer 8c(A0) (1bd90 would clear through a null A4): observed as it is')
+    typed('475ca-dead','area-direct',rtb(1,0,0),entry=0x475ca,regs=NAT_REGS,note='475ca direct entry (dead player nodes)')
+    typed('475ca-players-alive-valid','area-direct',rtb(1,0,0),writes=alive(0x100cb8,p8c=0x10d460,w78=0)+alive(0x100da8,p8c=0x10d450,w78=1),entry=0x475ca,regs=NAT_REGS,note='475ca with live player nodes and valid player block pointers 8c(A0)')
+    typed('475ca-players-alive-null-8c','area-direct',rtb(1,0,0),writes=alive(0x100cb8,w78=0)+alive(0x100da8,w78=1),entry=0x475ca,regs=NAT_REGS,guard_ok=True,note='475ca with live player nodes and LONG 8c(A0) = 0: 1bdd0 CLR.B 2(A4) writes the ROM address 2 (observed as it is)')
+    typed('1bcfe-alive-78','area-direct',rtb(1,0,0),writes=alive(0x100cb8,w78=0x0100)+alive(0x100da8,w78=0x0003),entry=0x1bcfe,regs=dict(NAT_REGS,d0=0xffff0002),note='1bcfe with live player nodes (WORD 78 selects the 10d450 / 10d460 block by the low bit via 1be84)')
+    typed('1bcfe-alive-78-0-1','area-direct',rtb(1,0,0),writes=alive(0x100cb8,w78=0)+alive(0x100da8,w78=1),entry=0x1bcfe,regs=NAT_REGS,note='1bcfe with live nodes, WORD 78 = 0 / 1 (BEQ.W 1bd60 taken / not taken)')
+    typed('1bd2e-dead','area-direct',rtb(1,0,0),entry=0x1bd2e,regs=dict(NAT_REGS,a0=0x100cb8),note='1bd2e with a dead node: C = 0, RTS')
+    typed('1bd2e-alive','area-direct',rtb(1,0,0),writes=alive(0x100cb8,w78=1),entry=0x1bd2e,regs=dict(NAT_REGS,a0=0x100cb8),note='1bd2e with a live node: 1bd3a initializes it')
+    typed('1bd90-dead','area-direct',rtb(1,0,0),entry=0x1bd90,regs=dict(NAT_REGS,a0=0x100da8),note='1bd90 with a dead node: C = 0, RTS')
+    typed('1bd90-alive','area-direct',rtb(1,0,0),writes=alive(0x100da8,p8c=0x10d460,w78=1),entry=0x1bd90,regs=dict(NAT_REGS,a0=0x100da8),note='1bd90 with a live node and a valid block pointer')
+    typed('1be84-odd','area-direct',rtb(1,0,0),entry=0x1be84,regs=dict(NAT_REGS,d0=0xffff0003),note='1be84 with an odd D0 (A4 = 10d460)')
+    typed('1be84-even','area-direct',rtb(1,0,0),entry=0x1be84,regs=dict(NAT_REGS,d0=0xffff0002),note='1be84 with an even D0 (A4 = 10d450)')
+    typed('2ef90','area-direct',rtb(1,0,0),writes=[W(0x10d487,1,0x11,'declared BYTE 10d487'),W(0x10d48f,1,0x22,'declared BYTE 10d48f'),W(0x10d490,2,0x3344,'declared WORD 10d490')],entry=0x2ef90,regs=NAT_REGS,note='2ef90 direct entry')
+    typed('2efdc-d0-0','area-direct',rtb(1,0,0),entry=0x2efdc,regs=dict(NAT_REGS,d0=0),note='2efdc with D0.W = 0 (A1 = 10d480)')
+    typed('2efdc-d0-1','area-direct',rtb(1,0,0),entry=0x2efdc,regs=dict(NAT_REGS,d0=0x10001),note='2efdc with D0.W = 1 (A1 = 10d488)')
+    typed('2efdc-d0-high','area-direct',rtb(1,0,0),entry=0x2efdc,regs=dict(NAT_REGS,d0=0x12340000),note='2efdc with D0.W = 0 and a nonzero upper WORD')
+    typed('46f2e','area-direct',rtb(1,0,0),writes=[W(0x10d4e6+0x2c*i+k,1,0xa5,'declared pattern') for i in range(8) for k in range(0x2c)],entry=0x46f2e,regs=NAT_REGS,note='46f2e: eight 2c-byte nodes, 43dda clean-up of each')
+    typed('4aa30','area-direct',rtb(1,0,0),writes=[W(0x10daf8+i,1,0x5a,'declared pattern') for i in range(0x80)]+[W(0x10db84+i,1,0xc3,'declared pattern') for i in range(0x108)],entry=0x4aa30,regs=dict(NAT_REGS,d7=0x12345678),note='4aa30: clears BYTE 10db84..87, 16 LONG pairs, 256 BYTEs (DBRA), U7 4ab88 twice')
+    typed('4d126','area-direct',rtb(1,0,0),writes=[W(0x10dcba+i,1,0x77,'declared pattern') for i in range(0x58)],entry=0x4d126,regs=NAT_REGS,note='4d126: both U6 blocks')
+    typed('4d13c','area-direct',rtb(1,0,0),writes=[W(0x10dcba+i,1,0x77,'declared pattern') for i in range(0x58)],entry=0x4d13c,regs=NAT_REGS,note='4d13c: both U6 blocks (second half)')
+    typed('4ddb6','area-direct',rtb(1,0,0),writes=[W(0x10dd12+i,1,0x99,'declared pattern') for i in range(12)],entry=0x4ddb6,regs=NAT_REGS,note='4ddb6')
+    typed('b4a24','area-direct',rtb(1,0,0),writes=[W(0x10dd5c+i,1,0x66,'declared pattern') for i in range(0x78)],entry=0xb4a24,regs=NAT_REGS,note='b4a24 -> b4806 -> U1 b483e twice')
+    typed('b7a20','area-direct',rtb(1,0,0),writes=[W(0x10dddc+i,1,0x44,'declared pattern') for i in range(0x10)],entry=0xb7a20,regs=NAT_REGS,note='b7a20')
+    typed('3d3a','area-direct',rtb(1,0,0),writes=[W(0x104d7e,1,0x80,'declared BYTE 104d7e')],entry=0x3d3a,regs=NAT_REGS,note='3d3a -> 3c84 + 3d44')
+    typed('49a8e','area-direct',rtb(1,0,0),writes=[W(0x10d726+i,1,0x88,'declared pattern') for i in range(0x16)],entry=0x49a8e,regs=NAT_REGS,note='49a8e')
+    # ---- the sound ring: the n-th ring write of the first-area frame blocks (3aea Waiting), the declared release lets it continue
+    for n in range(1,13):
+        typed('sound-wait-first-f00-n%d'%n,'sound',rtb(1,0,0),writes=AB(1,0,0x0777,0x00,0)+ring_full(n),regs=NAT_REGS,rules=C62,note='first area, record music 0777 (47a4a 3af8): the %d-th 3ac8 ring write finds the ring full: Waiting at 3aea, the declared release lets it continue'%n,meta=dict(kind='sound',scope='first',n=n))
+    for n in (1,2,3):
+        typed('sound-wait-next-f00-n%d'%n,'sound',rtb(1,1,0x0777),writes=AB(1,1,0x0777,0x00,0)+ring_full(n),regs=NAT_REGS,note='next area (475ca path), %d-th ring write blocks'%n,meta=dict(kind='sound',scope='next',n=n))
+    typed('sound-wait-natural-19c0-n1','sound',rtb(1,0,0),writes=AB(1,0,0x19c0,0x04,0)+ring_full(1),regs=NAT_REGS,note='first area, record music 19c0 (3d44 at 47a64 and 47a8e), the first ring write blocks',meta=dict(kind='sound',scope='first-19c0',n=1))
+    # ---- guards
+    typed('guard-odd-a7-476dc','guard',rtb(8,1,0),writes=AB(8,1,0x4321,0x01,0),entry=0x476dc,a7=S+1,stack_ret=False,regs=NAT_REGS,expect_guard=dict(problem='unsupported_odd_data_access'),note='A7 odd: the first push (LONG A1 at 4771a / the BSR at 4771e) is an odd LONG write')
+    typed('guard-odd-a6-479b0','guard',rtb(1,0,0),writes=AB(1,0,0x4321,0x00,0),regs=dict(NAT_REGS,a6=A6V+1),free_a6=True,expect_guard=dict(problem='unsupported_odd_data_access'),note='A6 odd: the BYTE accesses of 479b0 pass, the LONG read 76(A6) at 47a1c is odd')
+    typed('guard-odd-record-47a1c','guard',rtb(1,1,0),writes=AB(1,1,0x4321,0x00,0)+[W(A6V+0x76,4,SCRATCH_REC+1,'declared odd record pointer')],entry=0x47a1c,regs=NAT_REGS,expect_guard=dict(problem='unsupported_odd_data_access'),note='odd record pointer: WORD 10(A0) is an odd read')
+    typed('guard-odd-a5-1bd12','guard',rtb(1,0,0),entry=0x1bd12,a5=A5V+1,regs=NAT_REGS,expect_guard=dict(problem='unsupported_odd_data_access'),note='A5 odd: CLR.W 5478(A5) is an odd WORD write')
+    typed('guard-odd-a0-1bd2e','guard',rtb(1,0,0),entry=0x1bd2e,regs=dict(NAT_REGS,a0=0x100cb9),expect_guard=dict(problem='unsupported_odd_data_access'),note='A0 odd: CMPI.L #270e,(A0) in 289e is an odd LONG read')
+    typed('guard-node-depth-47770','guard',rtb(8,1,0),writes=AB(8,1,0x4321,0x01,0)+[W(0x100cb8+0x10,2,1,'declared WORD 10(100cb8) := 1 (2a28 TRAP #15 condition)')],entry=0x476dc,regs=NAT_REGS,guard_ok=True,note='the node depth WORD 10(A0) <> 0 at 2a28 (CMPI.W #0,$10(A0); BEQ; TRAP #15): the cleanup callee reaches its TRAP (observed as it is)')
+    typed('guard-odd-a1-pointer-47724','guard',rtb(1,0,0),writes=AB(1,0,0,0,0),entry=0x47724,regs=dict(NAT_REGS,a1=0x10e001),expect_guard=dict(problem='unsupported_odd_data_access'),note='odd A1: MOVE.W (A1)+,D1 at 47724 is an odd WORD read')
+    # ---- zero-step at every block start (the stop PC equals the entry PC: nothing executes, the state is unchanged)
+    for pc in sorted(STARTS):
+        typed('zero-step-%x'%pc,'zero-step',rtb(1,0,0,entry=pc),writes=AB(1,0,0x4321,0,0),entry=pc,regs=NAT_REGS,steps=(lambda program,fx,pc=pc:[step_of('zero-step-%x'%pc,[],pc,('abs',S),'boundary')]),
+            note='zero-step at the block start %x: stop PC = entry PC, nothing executes (no register / RAM change)'%pc)
+
+
+# ----------------------------------------------------------------------------------
+# Claims of the contract checked against the native results
+# ----------------------------------------------------------------------------------
+CONTRACT_RUNTIME_UNVISITED=['476ec','49a7c']                                    # contract "시작 상태 2": the 12 unvisited blocks, F1c2 half (474ea 4754a 4781a 478b4 478bc 4791c 47922 4794c 4795c 47960 are F1c1)
+RING_BASE=0x10d6b4;RING_END=0x10d722
+
+
+def hexs(pcs):return ['%x'%x for x in pcs]
+
+
+def expect_counts(P,st,ar,flags,rec,cur,ca=(False,False),pa=(False,False)):
+    """The execution counts of the semantic blocks of one F1c2 frame, derived from the contract text (not from the native run): the area level 479b0 .. 47a8e, the player placement 476dc with its row WORDs
+    (ROM table 476bc through 476d0 by stage - 6 < 3, else table 0), check nodes ca (1009a8 / 100a6c live) and player nodes pa (100cb8 / 100da8 live)."""
+    first=ar==0;n=collections.Counter()
+    for pc in (0x479b0,0x479b6,0x479ba,0x479d0,0x479fe,0x47a0c,0x47a14,0x47a1c,0x47a6a,0x47a74,0x47a7e,0x47a88,0x47a8e):n[pc]=1
+    n[0x479cc]=int(bool(flags&3))
+    for pc in (0x479d8,0x479dc,0x479ea):n[pc]=int(first)
+    n[0x479e4]=int(first and flags==0)
+    for pc in (0x479ee,0x479f4,0x479fa):n[pc]=int(not first)
+    n[0x47a06]=int(flags==0)
+    cur_eff=0 if first else cur
+    eq=rec==cur_eff
+    n[0x47a32]=int(not eq);n[0x47a3a]=int(not eq and rec!=0x10fe);n[0x47a42]=int(not eq and rec not in (0x10fe,0x19c1))
+    n[0x47a64]=int(not eq and rec==0x19c0);n[0x47a4a]=n[0x47a50]=int(not eq and rec not in (0x10fe,0x19c1,0x19c0))
+    for pc in (0x47594,0x4759e,0x475a4,0x475ae,0x475b4,0x475ba,0x475c2):n[pc]=int(first)
+    for pc in (0x475ca,0x475d4,0x475e0,0x475e6,0x475ec,0x475f2,0x475f8,0x475fe,0x47604,0x4760a,0x47610,0x47616,0x4761c):n[pc]=1
+    if flags&3:
+        a,b=table_row(P,st,ar)
+        n[0x476dc]=n[0x476ee]=n[0x47716]=n[0x47724]=n[0x47732]=n[0x47740]=1
+        n[0x476ec]=int(((st-6)&0xffff)>=3)
+        for i,(v,c_alive,p_alive) in enumerate(((a,ca[0],pa[0]),(b,ca[1],pa[1]))):
+            if c_alive:continue
+            n[0x4771a if i==0 else 0x47736]+=1;n[0x47722 if i==0 else 0x4773e]+=1;n[0x47742]+=1;n[0x47754]+=1;n[0x477a0]+=1
+            if i==1:n[0x4774e]+=1
+            if v&0x8000:n[0x4775a]+=1;n[0x47760]+=1
+            else:
+                n[0x47764]+=1;n[0x4776c]+=1;n[0x47788]+=1
+                if not p_alive:n[0x47770]+=1;n[0x4777e]+=1
+                if v<4:n[0x4779c]+=1
+                else:n[0x47792]+=1;n[0x47798]+=1;n[0x4779c]+=1
+    return n
+
+
+SEMANTIC_PCS=(0x479b0,0x479b6,0x479ba,0x479cc,0x479d0,0x479d8,0x479dc,0x479e4,0x479ea,0x479ee,0x479f4,0x479fa,0x479fe,0x47a06,0x47a0c,0x47a14,0x47a1c,0x47a32,0x47a3a,0x47a42,0x47a4a,0x47a50,0x47a64,0x47a6a,0x47a74,0x47a7e,0x47a88,0x47a8e,
+    0x47594,0x4759e,0x475a4,0x475ae,0x475b4,0x475ba,0x475c2,0x475ca,0x475d4,0x475e0,0x475e6,0x475ec,0x475f2,0x475f8,0x475fe,0x47604,0x4760a,0x47610,0x47616,0x4761c,
+    0x476dc,0x476ec,0x476ee,0x47716,0x4771a,0x47722,0x47724,0x47732,0x47736,0x4773e,0x47740,0x47742,0x4774e,0x47754,0x4775a,0x47760,0x47764,0x4776c,0x47770,0x4777e,0x47788,0x47792,0x47798,0x4779c,0x477a0)
+
+
+def count_diff(r,exp):
+    return {'%x'%pc:(r['hits'].get(pc,0),exp.get(pc,0)) for pc in SEMANTIC_PCS if r['hits'].get(pc,0)!=exp.get(pc,0)}
+
+
+def rec_music_of(r):
+    rec=r['facts'].get('record')
+    return rec['music'] if rec else None
+
+
+def contract_claims(rows,static,start_cov):
+    claims=[];P=G['program']
+    def claim(text,ok,evidence,verdict=None):
+        claims.append(dict(claim=text,verdict=verdict or ('confirmed' if ok else 'contradicted'),evidence=evidence))
+    by={r['result']['label']:r for r in rows}
+    nat=[r for r in rows if r['result']['group']=='natural'];rt=[r for r in rows if r['result']['group']=='runtime']
+    typ=[r for r in rows if r['result']['group'] not in ('natural','runtime','release-guard')]
+    meta={t.label:t.meta for t in TYPED}
+    # ---- static
+    claim('24 code ranges, 1580 bytes (SHA256 29e15c15...), 0 undecoded instructions, equal to the ROM bytes of the contract table; the only TRAP #15 in the contract ranges is 4d824',
+        static['trap_instructions_in_contract_range']==['0x4d824'] and static['instructions_decoded']>0,dict(table=static['bytes'],instructions_routed=static['instructions_decoded'],traps=static['trap_instructions_in_contract_range']))
+    claim('153 block starts = decoded leaders + the callback entry 479b0 + the DBRA target 4aa6e; 790 even PCs, 636 interior PCs (without the TRAP 4d824); the 24 bundled branch PCs (23 conditional branches + DBRA 4aa72) are not block starts',
+        static['even_pcs']==790 and static['interior_pcs']==636 and all(b['is_conditional_branch'] and not b['is_block_start'] for b in static['bundled_branches']) and static['block_starts']==153,dict(bundled=static['bundled_branches'],even=static['even_pcs'],interior=static['interior_pcs']))
+    claim('the 77 carry-preserving (flow-only) blocks are exactly the blocks whose instructions are all LEA/MOVEA/JSR/JMP/BSR/BRA/RTS/BTST/BSET/BCLR/Bcc; the 5 carry consumers (blocks whose first Bcc has no flag producer before it) are 47716 47732 4776c 1bd34 1bd96',
+        static['flow_only_equal_contract'] and static['carry_consumers_equal'],dict(decoded_minus_contract=static['flow_only_decoded_minus_contract'],contract_minus_decoded=static['flow_only_contract_minus_decoded'],consumers=static['carry_consumers_computed']))
+    regs=aggregate_regions(rows)
+    claim('F1c2 code has no PVC / video / watchdog / external access and reads only RAM and fixed ROM (no banked-window read): only the callees touch ports (all conditions)',
+        set(regs)<= {'ram/read','ram/write','fixed/read'},dict(area_event_regions=regs))
+    rr={}
+    for r in rows:
+        for pc,v in r['facts'].get('area_rom_reads',{}).items():
+            q=rr.setdefault(pc,dict(size=v['size'],low=v['low'],high=v['high'],reads=0,outside_contract=0,outside_min=None,outside_max=0,groups={}))
+            q['low']=min(q['low'],v['low']);q['high']=max(q['high'],v['high']);q['reads']+=v['reads'];q['outside_contract']+=v['outside_contract'];q['outside_max']=max(q['outside_max'],v['outside_max'])
+            if v['outside_min'] is not None:q['outside_min']=v['outside_min'] if q['outside_min'] is None else min(q['outside_min'],v['outside_min'])
+            if v['outside_contract']:q['groups'][r['result']['group']]=q['groups'].get(r['result']['group'],0)+v['outside_contract']
+    claim('F1c2 reads ROM data only through the physical fixed window at the contract places: the player pointer table 476d0 / rows 476bc..476dc (476f6 47708 47724), the catalog record WORD +10 (47a20, the F1c1 group windows d99e2..dd4be / 472be..474e0), the U6 record table 4cf64..4d0a4 (4d836 4d83a 4d83e 4d844 4d848) and the lookup 4e4d2..4e552 (4e680); the ring read 49a64 / 49a80 only when the ring pointer is outside the RAM (rng-original rows)',
+        set(rr)<={'476f6','47708','47724','47a20','4d836','4d83a','4d83e','4d844','4d848','4e680','49a64','49a80'} and sha(P[0x476bc:0x476dc])=='d23c1271c0306bf466f4f017a15076076c76ee8f11e31821a626eace146ad7b7' and sha(P[0x4cf64:0x4d0a4])=='9b1c4db78844053dff88ac7c863b15852c1ad1b9e500a831ed5a01fa9eff923c' and sha(P[0x4e4d2:0x4e552])=='aab36d4692c572b94b43fb395e58d13c8b39e8ed0448a91b8a06e52a919cbf86',
+        dict(rom_reads_by_pc={pc:dict(low='%x'%v['low'],high='%x'%v['high'],reads=v['reads'],size=v['size'],outside_contract_windows=v['outside_contract'],outside_min=None if v['outside_min'] is None else '%x'%v['outside_min'],outside_max='%x'%v['outside_max'],outside_by_group=v['groups']) for pc,v in sorted(rr.items())}))
+    outn={pc:v for pc,v in rr.items() if v['groups'].get('natural') or v['groups'].get('runtime')}
+    claim('natural and runtime conditions read the data windows of the contract only (476bc..476dc, 4cf64..4d0a4, 4e4d2..4e552); reads outside them (typed index / area variants) and the natural 4e680 lookup index are reported',
+        not outn,dict(natural_or_runtime_outside={pc:dict(natural_or_runtime_reads=v['groups'].get('natural',0)+v['groups'].get('runtime',0),outside_min='%x'%v['outside_min'],outside_max='%x'%v['outside_max']) for pc,v in outn.items()}))
+    lk={}
+    for r in nat+rt:
+        for e in r['facts'].get('lookup_reads',[]):lk.setdefault('%x/%d'%(e[3],e[4]),0);lk['%x/%d'%(e[3],e[4])]+=1
+    claim('contract unknown 8 (is the D0.W upper BYTE of the 4e67c index always 0 on the natural path): OBSERVED lookup reads of the natural / runtime conditions (address/size: count); an address outside 4e4d2..4e552 means a nonzero upper BYTE (index sign-extended)',
+        True,dict(lookup_addresses=lk,table='4e4d2..4e552'),verdict='observed')
+    # ---- natural seeds
+    fin_ok=all(r['result']['frames']==238 and r['result']['final_pc']=='47a94' and r['facts']['final_evidence'] and r['facts']['final_evidence']['kind']=='return' and not r['result']['guarded'] and r['facts']['final_evidence']['outgoing_pc']==0x47a94 for r in nat)
+    claim('137 natural seeds (begin outputs): every seed runs 238 frames; frames 0..236 stop at 2ac2 (RTS at 480f0) and the F1c2 frame 237 ends at 47a94 directly after the RTS (of 3ac8, popping the return long 47a94 pushed by JSR 3d44 at 47a8e); no Waiting, no guard',
+        len(nat)==137 and fin_ok and all(not r['facts']['wait_rows'] for r in nat),dict(seeds=len(nat),stop_kinds=dict(collections.Counter(r['result']['final_stop_kind'] for r in nat)),evidence_previous=dict(collections.Counter((r['facts']['final_evidence'] or {}).get('previous_pc') for r in nat))))
+    stage=[r for r in nat if r['result'].get('start_state',{}).get('equal_to_recorded')]
+    claim('the frame-236 start states: all 137 recorded states of the F1c1 observation were recomputed from the stored blobs (state SHA256 by the F1c1 definition equal to the recorded one); the 8 DUMP_SEEDS run the complete chain 47da4 -> 47a94 and reproduce the recorded frame-236 state SHA256 exactly (continuity of the F1b / F1c1 prefix)',
+        len(stage)==137 and sum(1 for r in stage if r['result']['start_state']['source']=='complete chain')==len(DUMP_SEEDS),dict(complete_chain=[r['result']['label'] for r in stage if r['result']['start_state']['source']=='complete chain'],states=len(stage)))
+    only=[r for r in nat if [h['step'] for h in r['result']['host_writes']]==([189] if r['result']['start_state']['source']=='complete chain' else [0])]
+    claim('the only declared host change of a natural frame 237 is the re-entry at the callback 478de; the complete chains additionally declare BYTE 10dd44 := ff after frame 188 (F1b contract); no host write inside the F1c2 part (no 62(A6) write: the 4798e callback is never installed on the natural path)',
+        len(nat)==137 and all(all(c[1] in ('104ca4',) or c[0]!='ram' or c[1] in ('1feffc','10dd44') for h in r['result']['host_writes'] for c in h['changes']) for r in nat),dict(per_seed_steps={str(k):v for k,v in collections.Counter(tuple(h['step'] for h in r['result']['host_writes']) for r in nat).items()}))
+    exp_bad=[];paths=collections.Counter();ex_rows=[]
+    for r in nat:
+        ex=r['facts']['exit'];rec=rec_music_of(r)
+        if rec is None:exp_bad.append((r['result']['label'],'no ROM record'));continue
+        exp=expect_counts(P,ex['c7c'],ex['c7d'],ex['d684'],rec,0)
+        d=count_diff(r,exp)
+        if d:exp_bad.append((r['result']['label'],d))
+        paths[(ex['c7c'],ex['c7d'],ex['d684'],rec)]+=1
+    claim('natural path of every seed = the contract text: 7d = 0 -> 47594 (area init), flags 10d684 = 0 -> 4e666 + d760a, no player placement, music 19c0 vs the cleared 10d686 -> 47a64 (JSR 3d44) -> 47a6a .. 47a8e; execution counts of the %d semantic blocks equal the counts derived from the contract (stage / area / flags / record music of each seed): %s'%(len(SEMANTIC_PCS),dict((str(k),v) for k,v in paths.items())),
+        not exp_bad and len(nat)==137,dict(mismatches=exp_bad[:6],param_classes={str(k):v for k,v in paths.items()}))
+    ex1=[r['facts']['exit'] for r in nat]
+    claim('natural seeds end state: A5 = 108000 and A7 = 1feffc at 47a94, WORD 10d686 = the record music 19c0, BYTE 10d681 = ff, 10d682 = 0, WORD 10d688 / 10d68a / 10d68c per 4761c (10d68c was set by 4814e in F1c1 and cleared by 4763c), 10d690 = a0, 10d692 = 180, RNG pointer unchanged',
+        all(e['a5']==A5V and e['a7']==S and e['d686']==0x19c0 and e['d681']==0xff and e['d682']==0 and e['d68c']==0 and e['d688']==0 and e['d68a']==0 and e['d690']==0xa0 and e['d692']==0x180 and e['d68e']==0 for e in ex1),
+        dict(distinct=collections.Counter(json.dumps({k:v for k,v in e.items() if k in('a5','a7','d686','d681','d682','d688','d68a','d68c','d68e','d690','d692','rng_ptr')},sort_keys=True) for e in ex1).most_common(3)))
+    # ---- runtime
+    bad=[r['result']['label'] for r in rt if r['result']['guarded'] or r['result']['final_pc']!='47a94' or not r['facts']['final_evidence'] or r['facts']['final_evidence']['kind']!='return' or r['facts']['wait_rows']]
+    claim('236 runtime fixtures (59 catalog records x music same / different x entry 477ee / 477e4, dead player nodes, explicit root ring): every one reaches 47a94 (stop directly after the RTS popping 47a94); no Waiting, no guard, no ROM write',
+        len(rt)==236 and not bad,dict(count=len(rt),failed=bad[:5]))
+    fr=collections.defaultdict(collections.Counter)
+    for r in rt:fr[r['facts']['record']['index']][r['result']['frames']]+=1
+    claim('frames per fixture (steps to 47a94): index 00 = 2, index 0c / 14 = 3 (callback 4798e, declared child completion, then the declared re-entry at the callback 479b0 = the F1c2 frame), index 04 = 17',
+        dict(fr[0])=={2:16} and dict(fr[12])=={3:168} and dict(fr[20])=={3:12} and set(fr[4])=={17},dict(frames={hex(k):dict(v) for k,v in fr.items()}))
+    bad_exp=[]
+    for r in rt:
+        ex=r['facts']['exit'];en=r['facts']['entry'];rec=rec_music_of(r)
+        exp=expect_counts(P,ex['c7c'],ex['c7d'],ex['d684'],rec,en['d686'])
+        d=count_diff(r,exp)
+        if d:bad_exp.append((r['result']['label'],d))
+    claim('runtime fixtures: the execution counts of the semantic blocks (area level, area init, player placement through the ROM rows with the dead check / player nodes) equal the counts derived from the contract text for every fixture (stage / area / group flags / record music / 10d686)',
+        not bad_exp and len(rt)==236,dict(mismatches=bad_exp[:6]))
+    rt_hit=set()
+    for r in rt:rt_hit.update(r['hits'])
+    unv=sorted('%x'%pc for pc in STARTS if pc not in rt_hit)
+    claim('the F1c2 blocks the 236 runtime fixtures do not visit are exactly the contract list (%s): the dead player nodes (270e) become live through the 2a28 allocation, so the live-node initialization blocks (1bd3a .. 1bdcc, 1be84 ..) and the allocation paths are visited by the runtime fixtures'%' '.join(CONTRACT_RUNTIME_UNVISITED),
+        sorted(unv)==sorted(CONTRACT_RUNTIME_UNVISITED),dict(unvisited_by_runtime=unv,contract_unvisited=CONTRACT_RUNTIME_UNVISITED))
+    if sorted(unv)!=sorted(CONTRACT_RUNTIME_UNVISITED):
+        DISCREPANCIES.append(dict(label='contract-claim',kind='contract-text-differs',claim='contract "시작 상태 2": the runtime fixtures leave only 476ec and 49a7c of F1c2 unvisited',evidence=dict(unvisited_by_runtime=unv)))
+    # ---- typed: area / music matrix
+    exp_t=[]
+    for t in TYPED:
+        m=t.meta
+        if m.get('kind') not in ('area','music'):continue
+        r=by[t.label]
+        if m['kind']=='area':st,ar,fl,rec,cur=m['st'],m['ar'],m['flags'],m['rec'],m['cur']
+        else:st,ar,fl,rec,cur=1,(0 if m['first'] else 1),0,m['rec'],m['cur']
+        d=count_diff(r,expect_counts(P,st,ar,fl,rec,cur))
+        if d:exp_t.append((t.label,d))
+    claim('typed 479b0 entries (%d area / music matrix rows: first / next area, group flags 00..07, stage 6 / 7 / 8 / 476ec stages, the music branches same / 10fe / 19c1 / 19c0 / other): the execution counts of the semantic blocks equal the counts derived from the contract (47a1c writes 10d686 before comparing: first area compares with the cleared 0, 10fe and 19c1 skip, 19c0 -> 3d44, other -> 3af8)'%sum(1 for t in TYPED if t.meta.get('kind') in ('area','music')),
+        not exp_t,dict(mismatches=exp_t[:6]))
+    mus=[]
+    for t in TYPED:
+        m=t.meta
+        if m.get('kind')=='music':
+            r=by[t.label];mus.append(dict(label=t.label,d686_after=r['facts']['exit']['d686'],rec=m['rec'],ok=r['facts']['exit']['d686']==m['rec']))
+    claim('47a28 writes the record music into WORD 10d686 before the comparison (also when the comparison skips): d686 after the frame = record music in every music row',all(x['ok'] for x in mus),dict(rows=mus[:4],count=len(mus)))
+    # ---- players
+    exp_p=[]
+    for t in TYPED:
+        m=t.meta
+        if m.get('kind')!='players-row':continue
+        r=by[t.label];d=count_diff(r,expect_counts(P,m['st'],m['ar'],m['flags'],0x4321,0))
+        ex=r['facts']['exit']
+        a,b=m['a'],m['b']
+        for v,w in ((a,ex['w100cb8_76']),(b,ex['w100da8_76'])):
+            if not v&0x8000 and v<4 and w!=v:d['row76']=(w,v)
+            if not v&0x8000 and v>=4 and w>3:d['rng76']=w
+        if d:exp_p.append((t.label,d))
+    pr=[t.label for t in TYPED if t.meta.get('kind')=='players-row']
+    claim('476dc player placement over the ROM row classes (D1 negative -> 2a48, D1 < 4 -> stored as WORD 76(A0), D1 >= 4 -> RNG 49a58 & 3; %d (stage, area) rows chosen from the ROM table 476bc..476dc and its off-table continuation): block counts and the stored WORD 76 equal the contract'%len(pr),
+        not exp_p and pr,dict(rows=pr,mismatches=exp_p[:5]))
+    exp_n=[]
+    for t in TYPED:
+        m=t.meta
+        if m.get('kind')!='players-nodes':continue
+        r=by[t.label];ca={'check1-alive':(True,False),'check2-alive':(False,True),'both-check-alive':(True,True)}.get(m['name'],(False,False));pa={'player0-alive':(True,False),'player1-alive':(False,True),'both-players-alive':(True,True)}.get(m['name'],(False,False))
+        d=count_diff(r,expect_counts(P,m['st'],m['ar'],1,0x4321,0,ca,pa))
+        d={k:v for k,v in d.items() if int(k,16) in (0x4771a,0x47722,0x47736,0x4773e,0x47770,0x4777e,0x47764,0x4776c,0x47788,0x47742,0x47754,0x4774e,0x4775a,0x47760,0x477a0,0x4779c,0x47792,0x47798)}
+        if d:exp_n.append((t.label,d))
+    claim('476dc with live check nodes 1009a8 / 100a6c (289e C = 1 skips the placement of that player) and live player nodes 100cb8 / 100da8 (289e C = 1 skips the allocation 2a28 / 1bd2e): block counts equal the contract',not exp_n,dict(mismatches=exp_n[:5],rows=len([1 for t in TYPED if t.meta.get('kind')=='players-nodes'])))
+    # ---- RNG
+    def rng_expect(ptr,d0,P):
+        a3=ptr+2;w1=a3>=RING_END
+        if w1:a3-=0x6e
+        stored=a3;a3+=0x2e;w2=a3>=RING_END
+        if w2:a3-=0x6e
+        return dict(wrap1=w1,wrap2=w2,stored=stored,a3=a3)
+    rng_bad=[];rng_rows=[]
+    for t in TYPED:
+        m=t.meta
+        if m.get('kind') not in ('rng','rng-original'):continue
+        r=by[t.label];e=rng_expect(m['ptr'],m['d0'],P);ex=r['facts']['exit']
+        ev=r['facts']['rng_events']
+        w_ptr=[x for x in ev if x[1]=='write' and x[3]==RNG_PTR and x[4]==4]
+        rd=[x for x in ev if x[1]=='read' and x[0]==0x49a64]
+        sub_r=[x for x in ev if x[1]=='read' and x[0]==0x49a80];sub_w=[x for x in ev if x[1]=='write' and x[0]==0x49a80]
+        ok=r['hits'].get(0x49a6c,0)==int(e['wrap1']) and r['hits'].get(0x49a7c,0)==int(e['wrap2']) and ex['rng_ptr']==e['stored'] and ex['a5']==A5V and len(w_ptr)==1 and int(w_ptr[0][5],16)==e['stored'] and len(rd)==1 and rd[0][3]==m['ptr'] and rd[0][4]==2 \
+            and len(sub_r)==1 and len(sub_w)==1 and sub_r[0][3]==e['a3'] and sub_w[0][3]==e['a3'] and (int(sub_r[0][5],16)-int(rd[0][5],16))&0xffff==int(sub_w[0][5],16)
+        rng_rows.append(dict(label=t.label,ptr='%x'%m['ptr'],wrap1=e['wrap1'],wrap2=e['wrap2'],stored='%x'%e['stored'],target='%x'%e['a3'],ok=ok))
+        if not ok:rng_bad.append(rng_rows[-1])
+    claim('49a58 RNG (LEA 108000.L,A5; ring pointer LONG 10d722; WORD at the pointer; pointer +2 with wrap -6e at >= 10d722; stored; +2e with the second wrap; SUB.W D0,(A3)): first wrap 49a6c / second wrap 49a7c / the stored pointer / the target word / A5 = 108000 equal the contract formula for %d pointers (including the live A5 = 10e000 row)'%len(rng_rows),
+        not rng_bad and rng_rows,dict(rows=rng_rows,mismatches=rng_bad[:4]))
+    pol=[by[t.label] for t in TYPED if t.meta.get('kind')=='rng-policy']
+    claim('RNG pointer outside the work RAM (24 bit address not in 100000..1fffff): guard row rng_pointer_outside_ram at the entry of 49a58, nothing executed (C++: checked error stage area RNG pointer outside work RAM); top byte <> 0 with the 24 bit address inside the RAM: rng_pointer_high_byte (C++ masks, Unicorn cannot follow)',
+        len(pol)>=10 and all(r['result']['guarded'] and r['result']['final_pc']=='49a58' and r['result']['observed_guard']['problem'] in ('rng_pointer_outside_ram','rng_pointer_high_byte') for r in pol),dict(rows=[(r['result']['label'],r['result']['observed_guard']['problem'],'%x'%r['result']['observed_guard']['pointer']) for r in pol]))
+    og=[t for t in TYPED if t.meta.get('kind')=='rng-original']
+    claim('deliberate difference: ring pointers fffd0..fffff (24 bit address below 100000): the ORIGINAL completes (WORD read from the program ROM at the pointer, pointer + 2 + 2e lands in the work RAM 100000.., SUB.W D0,(A3) writes the RAM); the C++ rejects them (guard rows rng-policy-rejects-*)',
+        len(og)==6 and all(not by[t.label]['result']['guarded'] and by[t.label]['result']['final_pc']=='2ac2' for t in og),dict(rows=[(t.label,by[t.label]['result']['final_pc'],by[t.label]['facts']['rng_events'][:3]) for t in og][:3]))
+    oo=[by[t.label] for t in TYPED if t.meta.get('kind')=='rng-original-outside']
+    claim('original behaviour for ring pointers in the ROM below fffd0 (policy disabled, observed as it is): the SUB.W D0,(A3) targets the ROM / unmapped addresses; native guard rows (the C++ rejects them at the entry)',
+        len(oo)==4,dict(rows=[(r['result']['label'],r['result']['final_pc'],(r['result']['observed_guard'] or {}).get('problem'),(r['result']['observed_guard'] or {}).get('address')) for r in oo]),verdict='observed')
+    # ---- 4e67c lookup
+    lk_bad=[];lk_rows=[]
+    for t in TYPED:
+        m=t.meta
+        if m.get('kind')!='lookup':continue
+        r=by[t.label];ex=r['facts']['exit'];hi8=(m['d0']>>8)&0xff;exp_addr=[];dd1e=m['dd1e'];val_ok=True
+        for b in (m['b1'],m['b2']):
+            if b&0x80:continue
+            idx=sext((hi8<<8)|b,2);addr=(0x4e4d2+idx)&0xffffff;exp_addr.append(addr)
+            v=P[addr];dd1e&=~(1<<(v%8))&0xff
+        got=[e[3] for e in r['facts']['lookup_reads']]
+        okk=got==exp_addr and ex['dd1e']==dd1e and ex['dd2a']==(0xff if not m['b1']&0x80 else m['b1']) and ex['dd2b']==(0xff if not m['b2']&0x80 else m['b2'])
+        lk_rows.append(dict(label=t.label,d0='%08x'%m['d0'],addresses=['%x'%a for a in got],expected=['%x'%a for a in exp_addr],dd1e='%02x'%ex['dd1e'],ok=okk))
+        if not okk:lk_bad.append(lk_rows[-1])
+    claim('4e666 lookup: BYTE 10dd2a / 10dd2b >= 0: index = D0.W (the upper BYTE of the caller survives MOVE.B #0,D0 / MOVE.B (A0),D0) sign-extended, BYTE at 4e4d2 + index, BCLR D0 on 10dd1e (bit mod 8), (A0) := ff; negative BYTE (BMI) skips; read addresses and the final 10dd1e equal the formula for %d rows (upper BYTE eb -> below the table, 01 / 7f / 80 -> beyond it)'%len(lk_rows),not lk_bad and lk_rows,dict(rows=lk_rows,mismatches=lk_bad[:4]))
+    # ---- d760a / 28ae
+    a=by.get('d760a-28ae-ok');b=by.get('d760a-28ae-fails')
+    if a and b:
+        claim('d760a: 28ae success (free list) allocates the child (free list head 104c9c advances, count 104ca0 decremented) and writes WORDs 10ddec / 10ddf8; failing 28ae (count 0) leaves the free list unchanged; the carry of 28ae is not consumed (RTS at d7648 in both)',
+            a['hits'].get(0xd7648,0)==1 and b['hits'].get(0xd7648,0)==1 and a['facts']['exit']['h104ca0']!=b['facts']['exit']['h104ca0'],dict(count_ok=a['facts']['exit']['h104ca0'],count_fails=b['facts']['exit']['h104ca0']))
+    # ---- sound ring
+    sw=collections.defaultdict(dict)
+    for t in TYPED:
+        m=t.meta
+        if m.get('kind')=='sound':sw[m['scope']][m['n']]=by[t.label]
+    srows={};sok=True
+    for scope,d in sw.items():
+        ns=sorted(d);waits=[len(d[n]['facts']['wait_rows']) for n in ns]
+        k=max([n for n,w in zip(ns,waits) if w] or [0])
+        mono=all((w==1) for n,w in zip(ns,waits) if n<=k) and all(w==0 for n,w in zip(ns,waits) if n>k)
+        srows[scope]=dict(waits={n:w for n,w in zip(ns,waits)},last_blocking_n=k,callers={n:[x['area_pc'] for x in d[n]['facts']['wait_rows']] for n in ns if d[n]['facts']['wait_rows']},all_pc_3aea=all(x['pc']==0x3aea for n in ns for x in d[n]['facts']['wait_rows']),finished=all(d[n]['result']['final_pc']=='47a94' or d[n]['result']['final_pc']=='2ac2' for n in ns))
+        sok=sok and mono and srows[scope]['all_pc_3aea'] and srows[scope]['finished'] and k>0
+    claim('sound ring (3ac8: tail WORD 104d76 + 1 compared with the head WORD 104d74): making the n-th ring write block gives exactly one Waiting at 3aea (the first blocked arrival) for every n up to the number of ring writes of the frame, none beyond; the declared release (head := ffff) lets the frame finish at 47a94 / 2ac2; the F1c2 call sites are recorded (last F1c2 instruction before the wait)',
+        sok and sw,dict(scopes=srows))
+    # ---- trap boundaries
+    tb=[(t.label,by[t.label]) for t in TYPED if t.meta.get('kind')=='trap-4d824']
+    claim('4d81c with D1.W >= 14 (14 15 ffff 8000 and a nonzero upper WORD): CMPI.W #14,D1 BCS.W not taken -> stop at 4d824 directly after the BCS.W at 4d820 (bytes 65000004); the TRAP #15 is never executed',
+        len(tb)==5 and all(r['result']['final_pc']=='4d824' and r['facts']['final_evidence'] and r['facts']['final_evidence']['kind']=='fallthrough-boundary' and r['facts']['final_evidence']['previous_pc']==0x4d820 and r['facts']['final_evidence']['previous_bytes']=='65000004' for l,r in tb),dict(rows=[(l,r['result']['final_pc'],r['facts']['final_evidence']) for l,r in tb]))
+    r=by.get('481de-trap-no-stop')
+    if r:claim('D1.W = 14 without the declared 4d824 stop: the refused fetch of the TRAP (never executed)',r['result']['guarded'] and r['result']['observed_guard']['target']==TRAP_STOP,dict(guard=r['result']['observed_guard']))
+    r=by.get('48180-u6-trap')
+    if r:claim('48180 -> 4d7a6 with a live player node, (A4) <> 0 and BYTE 27(A4) = 0: stop at 4d7f0 directly after the not-taken BNE.W at 4d7ec (bytes 66000004); the TRAP #15 is never executed',
+        r['result']['final_pc']=='4d7f0' and r['facts']['final_evidence']['kind']=='fallthrough-boundary' and r['facts']['final_evidence']['previous_pc']==0x4d7ec and r['facts']['final_evidence']['previous_bytes']=='66000004',dict(evidence=r['facts']['final_evidence']))
+    r=by.get('48180-u6-trap-undeclared')
+    if r:claim('the same without the declared 4d7f0 stop: the TRAP #15 is refused (guard unsupported_TRAP at 4d7f0, opcode 4e4f)',r['result']['guarded'] and r['result']['observed_guard']['pc']==U6_TRAP_STOP,dict(guard=r['result']['observed_guard']))
+    # ---- guards / null block pointer
+    r=by.get('475ca-players-alive-null-8c')
+    if r:claim('475ca with live player nodes and LONG 8c(A0) = 0: 1bdd0 CLR.B 2(A4) writes the ROM address 2 (native guard); the F1c2 fixtures therefore use DEAD nodes or a valid 8c(A0) (475ca-players-alive-valid)',r['result']['guarded'] and r['result']['observed_guard']['address']==2,dict(guard=r['result']['observed_guard']))
+    gd=[by[t.label] for t in TYPED if t.label.startswith('guard-odd')]
+    claim('odd A7 / A6 / A5 / A0 / A1 / record pointer: native guard unsupported_odd_data_access with the exact address (the C++ checked even WORD/LONG error)',all(r['result']['guarded'] and r['result']['observed_guard']['problem']=='unsupported_odd_data_access' for r in gd) and len(gd)==6,dict(rows=[(r['result']['label'],r['result']['observed_guard'].get('pc'),r['result']['observed_guard'].get('address')) for r in gd]))
+    rel=[r for r in rows if r['result']['group']=='release-guard']
+    claim('the 5 release-poisoned-prefix outputs are guard rows (WORD 104d8a = 8001: an odd WORD read at fcd83 in the U1 frame helper (3c60 CMP.W (A1),D0 in frame 0 for 3 outputs; 3bb2 in frame 29 for 2 outputs), an address error on a real 68000; Unicorn does not fault)',
+        len(rel)==5 and all(r['result']['guarded'] and r['result']['observed_guard'].get('reason_kind')=='odd_word_access' and r['result']['observed_guard'].get('address')==0xfcd83 and r['result']['observed_guard'].get('size')==2 for r in rel),
+        dict(rows=[dict(label=r['result']['label'],frames=r['result']['frames'],pc=r['result']['observed_guard'].get('pc'),address=r['result']['observed_guard'].get('address')) for r in rel]))
+    # ---- stack discipline
+    fin=[r for r in rows if r['result']['final_pc']=='47a94' and not r['result']['guarded']]
+    claim('every condition that runs the whole F1c2 body ends at 47a94 with A5 = 108000 and A7 = 1feffc (the BSR / JSR / push / pop pairs of 476dc / 47742 / 48180 / 481de are balanced), %d conditions'%len(fin),
+        all(r['facts']['exit']['a5']==A5V and r['facts']['exit']['a7']==S for r in fin) and fin,dict(count=len(fin)))
+    # ---- coverage
+    allhit=set()
+    for r in rows:
+        if not r['result']['guarded']:allhit.update(r['hits'])
+    claim('every one of the 153 block starts is executed by at least one native condition (natural / runtime: %d, typed fixtures needed for: %s)'%(sum(1 for v in start_cov.values() if v['in_natural_seeds'] or v['in_runtime_fixtures']),' '.join(k for k,v in start_cov.items() if v['needs_typed_fixture'])),
+        all(pc in allhit for pc in STARTS),dict(not_hit=['%x'%x for x in STARTS if x not in allhit],needing_typed=[k for k,v in start_cov.items() if v['needs_typed_fixture']],natural_only_count=sum(1 for v in start_cov.values() if v['in_natural_seeds'])))
+    zs=[r for r in rows if r['result']['group']=='zero-step']
+    claim('zero-step at each of the 153 block starts leaves the state unchanged (stop PC = entry PC)',len(zs)==153 and all(r['result']['final_stop_kind']=='zero-step' for r in zs),dict(count=len(zs)))
+    claim('the independent model executed every one of the %d routed F1c2 instructions at least once over all conditions'%len(AREA_INSTR),G.get('model_cov',0)==len(AREA_INSTR),dict(executed=G.get('model_cov',0),total=len(AREA_INSTR)))
+    tot=dict(conditions=len(rows),frames=sum(r['result']['fresh_frames'] for r in rows),fresh_checked=sum(r['result']['fresh_checked'] for r in rows),fresh_equal=sum(r['result']['fresh_frames_equal'] for r in rows),model_frames=sum(r['result']['model_frames'] for r in rows),model_equal=sum(r['result']['model_frames_equal'] for r in rows))
+    claim('every checked frame: the fresh-CPU one-run-one-frame replay equals the chain frame, and the independent model equals the native frame (every frame that executes F1c2 code)',tot['fresh_checked']==tot['fresh_equal'] and tot['model_frames']==tot['model_equal'],tot)
+    for c in claims:
+        if c['verdict'] in ('contradicted','not-reproduced'):DISCREPANCIES.append(dict(label='contract-claim',kind='contract-'+c['verdict'],claim=c['claim'],evidence=c['evidence']))
+    return claims,tot
+
+
+# ----------------------------------------------------------------------------------
+# Main
+# ----------------------------------------------------------------------------------
+def label_of(it):
+    k=it['kind']
+    if k=='natural':return 'natural-%03d'%it['ref']
+    if k=='release':return 'release-guard-%03d'%it['ref']
+    if k=='runtime':
+        g,ar,mm,entry=it['ref'];return 'rt-g%02d-a%02d-%s-%x'%(g,ar,mm,entry)
+    return TYPED[it['ref']].label
+
+
+def main():
+    global OUT,BLOBS,CONDDIR
+    t_start=time.time()
+    dev=os.environ.get('SA_DEV');workers=int(os.environ.get('SA_WORKERS','3'))
+    out_dir=Path(os.environ['SA_OUT']) if os.environ.get('SA_OUT') else OUT
+    program,source=load_verified_program(ROOT);rom=ROOT/source['path'];rom_guard=(sha(rom.read_bytes()),rom.stat().st_mtime_ns)
+    assert rom_guard[0]==ROM_SHA
+    contract_sha=sha(CONTRACT.read_bytes());assert contract_sha==CONTRACT_SHA,contract_sha
+    rom_stat_start=dict(sha256=rom_guard[0],mtime_ns=rom_guard[1],size=rom.stat().st_size)
+    out_dir.mkdir(parents=True,exist_ok=True)
+    for old in out_dir.iterdir():
+        if old.is_file() or old.is_symlink():old.unlink()
+        else:shutil.rmtree(old)
+    OUT=out_dir;BLOBS=out_dir/'blobs';CONDDIR=out_dir/'conditions';BLOBS.mkdir();CONDDIR.mkdir()
+    ext=configure(program,out_dir)
+    static=static_checks(program)
+    G['program']=program;G['seeds']=load_seeds();G['groups']=catalog_groups(program)
+    assert [len(g) for g in G['groups']]==[11,6,14,5,9,3,3,3,2,0,0,0,0,0,0,0,1,1,1],[len(g) for g in G['groups']]
+    catalog_results()
+    CAT['states']={x['index']:catalog_start_state(x['index']) for x in G['seeds'] if not x['release']}              # read (and pinned) in the main process before the workers fork
+    define_typed();G['typed']=TYPED
+    ITEMS.clear()
+    for s in G['seeds']:ITEMS.append(dict(kind='release' if s['release'] else 'natural',ref=s['index']))
+    for g in range(19):
+        for ar in range(len(G['groups'][g])):
+            for mm in ('same','diff'):
+                for entry in (0x477ee,0x477e4):ITEMS.append(dict(kind='runtime',ref=(g,ar,mm,entry)))
+    for i in range(len(TYPED)):ITEMS.append(dict(kind='typed',ref=i))
+    keep=[i for i,it in enumerate(ITEMS) if not dev or any(f in label_of(it) for f in dev.split(','))]
+    print('items',len(ITEMS),'selected',len(keep),'workers',workers,flush=True)
+    input_paths={Path(__file__).resolve(),rom,ROOT/'extracted/program/manifest.json',Path(uclib._name),CONTRACT,SCOPE,CATALOG_OBS,sc.STAGE_ENTRY,sc.CONTRACT,fh.CONTRACT,bc.CONTRACT,inp.CONTRACT,sp.CONTRACT}
+    input_paths.update(Path(p) for p in sc.SEED_FILES)
+    input_paths.update(activation.physical_inputs(program,source))
+    for module in tuple(sys.modules.values()):
+        name=getattr(module,'__file__',None)
+        if name:
+            path=Path(name).resolve()
+            if path.suffix=='.py' and (ROOT/'tools' in path.parents or 'unicorn' in str(path)):input_paths.add(path)
+    pin_ref=shared.isolated.pinned_reference(ROOT);input_paths.update(ROOT/'artifacts/reference'/name for name in pin_ref['files'])
+    inputs={str(path):sha(path.read_bytes()) for path in sorted(input_paths)}
+    done={}
+    if workers>1:
+        ctx=multiprocessing.get_context('fork')
+        with ctx.Pool(workers) as pool:
+            for n,r in enumerate(pool.imap_unordered(run_item,keep,chunksize=1)):
+                done[r['number']]=r
+                if (n+1)%10==0 or 'error' in r:print('%d/%d %.0fs%s'%(n+1,len(keep),time.time()-t_start,' ERROR %s'%r['error'] if 'error' in r else ''),flush=True)
+    else:
+        for n,i in enumerate(keep):
+            r=run_item(i);done[i]=r
+            print('%d/%d %s %.1fs%s'%(n+1,len(keep),label_of(ITEMS[i]),r.get('seconds',0),' ERROR %s'%r['error'] if 'error' in r else ''),flush=True)
+    errors=[done[i] for i in keep if 'error' in done[i]]
+    if errors:
+        for e in errors[:10]:print(e['number'],e['kind'],e['ref'],e['error'],'\n',e['trace'][-800:])
+        raise SystemExit('%d work items failed'%len(errors))
+    rows=[done[i] for i in keep]
+    return finish(program,source,rom,rom_guard,rom_stat_start,contract_sha,out_dir,inputs,rows,static,t_start,ext,dev)
+
+
+def aggregate_regions(rows):
+    t=collections.Counter()
+    for r in rows:
+        for k,v in r['facts'].get('area_regions',{}).items():t[k]+=v
+    return dict(t)
+
+
+LIMITATIONS=['Controlled incoming fixtures (the recorded final RAM of the 137 original stage_entry_body begin runs, the recorded frame-236 output states of the F1c1 observation, the runtime fixtures built by the original 2790 / 3ef2 / 49a1a on a zero RAM, declared typed variants), not natural scheduler / gameplay reachability; one machine run is one frame and the next frame is a declared direct re-entry (no scheduler, no children, no IRQ).',
+    'Native carry / CCR is never read (SR is unobserved); the carry of 289e and 28ae is computed by the model from the contract formulas and checked by the executed branch path.  Unknown-carry rejection (47716 47732 4776c 1bd34 1bd96) is a C++ property (a CPU always has a CCR): it is not observable natively; known Clear / Set entries are observed with the carry the callee 289e produces.',
+    'Wait stops are taken at the FIRST blocked arrival at cda4 / 3aea (spin loops write nothing) and at the arrival at 478de after the BCC.B at 478e4 was taken with BYTE 107ded bit7 set (F1c1 prefix); the only resume is a declared host effect (sound/sprite release writes).  Frame re-entry and host writes are declared steps.',
+    'The 5 release-poisoned-prefix outputs are guard rows: the observer refuses odd WORD/LONG data accesses (guard unsupported_odd_data_access, reason_kind odd_word_access); Unicorn would not fault.',
+    'The RNG pointer policy (rng_pointer_outside_ram / rng_pointer_high_byte guard rows) is the C++ policy declared natively at the entry of 49a58; the original (Unicorn, no 24 bit mask, no ROM-write refusal) completes for pointers fffd0..fffff (typed rows with the policy disabled) and cannot be observed for pointers with a nonzero top byte.',
+    'IRQ effects between frames (frame counter, watchdog, palette) are not modelled.  The ordered video / watchdog / PVC port events are instruction accesses, not physical bus cycles.',
+    'In-process observer extensions: 3c0006 video port (U5), the RNG pointer policy hook, and a memoized capstone decode of the routed ranges (identical results); no shared tool file is edited.  The F1a observer module is imported for its range constants only.',
+    'The model treats every callee outside the 24 F1c2 ranges (exit, sound, cleanup, readiness 289e, fade_card 28ae, palette_bind, U1 / U5 / U6 / U7 helpers) as a replayed black box (native exit registers / RAM / PVC writes); only the F1c2 code and the 289e / 28ae carry are modelled independently.  The F1b / F1c1 frame code of the chains is not re-modelled (F1b / F1c1 units).',
+    'The F1a body behind 47a94 is never executed by the stop; the TRAP #15 at 4d824 and the U6 TRAP at 4d7f0 are never executed.',
+    'Meaning of the group flags 10d684, the 476bc table, the sound codes and the 4e67c index source remains unknown (contract unknown items).']
+
+
+def finish(program,source,rom,rom_guard,rom_stat_start,contract_sha,out_dir,inputs,rows,static,t_start,ext,dev):
+    for r in rows:DISCREPANCIES.extend(r.get('discrepancies',[]))
+    rows=sorted(rows,key=lambda r:r['number'])
+    results=[r['result'] for r in rows]
+    for path,value in inputs.items():assert sha(Path(path).read_bytes())==value,path
+    assert (sha(rom.read_bytes()),rom.stat().st_mtime_ns)==rom_guard
+    tool_sha=sha(Path(__file__).read_bytes());assert inputs[str(Path(__file__).resolve())]==tool_sha
+    hits=collections.Counter();hit_cond=collections.defaultdict(set);first={};groups=collections.defaultdict(collections.Counter);coverage=set()
+    for r in rows:
+        if r['result']['guarded']:continue
+        coverage.update(r['covered'])
+        for pc,n in r['hits'].items():
+            hits[pc]+=n;hit_cond[pc].add(r['number']);groups[pc][r['result']['group']]+=1;first.setdefault(pc,r['result']['label'])
+    base_groups=('natural','runtime','transition')
+    start_cov={hex(pc):dict(hits=hits.get(pc,0),conditions=len(hit_cond.get(pc,())),groups=dict(groups.get(pc,{})),first_condition=first.get(pc),in_natural_seeds=groups[pc].get('natural',0)>0,
+        in_runtime_fixtures=groups[pc].get('runtime',0)>0,in_transition_seeds=groups[pc].get('transition',0)>0,needs_typed_fixture=not any(groups[pc].get(g,0) for g in base_groups)) for pc in sorted(STARTS)}
+    unc=[hex(pc) for pc in STARTS if not hits.get(pc)]
+    mexec=set()
+    for r in rows:mexec.update(r.get('model_exec',()))
+    G['model_cov']=len(mexec)
+    model_instr=dict(executed_by_model=len(mexec),instructions_in_routed_ranges=len(AREA_INSTR),not_executed_by_model=sorted(hex(pc) for pc in AREA_INSTR if pc not in mexec))
+    claims,tot=[],{}
+    if not dev or os.environ.get('SA_CLAIMS'):
+        try:claims,tot=contract_claims(rows,static,start_cov)
+        except Exception:
+            import traceback
+            DISCREPANCIES.append(dict(label='claims',kind='claims-code-error',detail=traceback.format_exc()[-2500:]))
+    by_group=collections.Counter(r['group'] for r in results)
+    artifacts={}
+    for f in sorted(CONDDIR.iterdir()):artifacts['conditions/'+f.name]=sha(f.read_bytes())
+    blob_count=sum(1 for _ in BLOBS.iterdir())
+    report=dict(schema_version=1,source=source,inputs=inputs,contract=dict(path=str(CONTRACT),sha256=contract_sha,byte_table_check=TABLE),static_checks=static,
+        frame_state_sha256_definition='sha256(b"F1C2-FRAME-STATE-v1" || RAM-after(65536) || D0..D7,A0..A7 as 16 big-endian LONGs || PC (LONG) || bank number (LONG) || count of ordered port events (LONG) || ordered port events (BYTE size, LONG address, LONG value each))',
+        conditions=len(results),groups=dict(by_group),results=results,condition_files=artifacts,blob_count=blob_count,
+        totals=dict(frames=sum(r['fresh_frames'] for r in results),split_phases=sum(r['split_phases'] for r in results),control_phases=sum(r['control_phases'] for r in results),fresh_CPU_chain_runs=sum(r['runs'] for r in rows),
+            instructions=sum(r['instructions'] for r in results),dumped_frames=sum(r['dumped_frames'] for r in results),fresh_checked=sum(r['fresh_checked'] for r in results),fresh_frames_equal=sum(r['fresh_frames_equal'] for r in results),
+            area_frames=sum(r['area_frames'] for r in results),model_frames=sum(r['model_frames'] for r in results),model_frames_equal=sum(r['model_frames_equal'] for r in results),model_frames_not_applicable=sum(r['model_frames_not_applicable'] for r in results)),
+        block_start_coverage=start_cov,block_starts_not_hit=unc,block_starts_needing_typed_fixtures=[k for k,v in start_cov.items() if v['needs_typed_fixture']],covered_PCs=sorted(coverage),block_starts=sorted(STARTS),model_instruction_coverage=model_instr,
+        rng_policy_rows=[dict(label=r['label'],group=r['group'],final_pc=r['final_pc'],guard=(r['observed_guard'] or {}).get('problem'),pointer=(r['observed_guard'] or {}).get('pointer')) for r in results if r['group'] in ('rng-guard','rng-difference')],
+        contract_claims=claims,contract_discrepancies=DISCREPANCIES,natural_seed_policy=dict(natural=137,release_guard_rows=5,note='contract decision 12: the 5 release-poisoned-prefix outputs are guard rows; the F1c contract text counts 142 seeds in its scratch replay (superseded: 137 natural + 5 guard rows)'),
+        dump_seeds=list(DUMP_SEEDS),boundary_frames=list(BOUNDARY_FRAMES),rom_stat_start=rom_stat_start,rom_stat_end=dict(sha256=sha(rom.read_bytes()),mtime_ns=rom.stat().st_mtime_ns,size=rom.stat().st_size),tool_sha256=tool_sha,
+        original_program_modified=False,SR_read_at_any_phase=False,register_injection_after_begin=False,Cpp_comparison_performed=False,observer_extension=ext,
+        oracle=dict(engine='Unicorn',version=unicorn.__version__,model='UC_CPU_M68K_M68000',library=str(uclib._name),library_sha256=sha(Path(uclib._name).read_bytes())),limitations=LIMITATIONS,failure=None)
+    path=out_dir/'observation.json';path.write_text(json.dumps(report,indent=2,default=str)+'\n')
+    summary=dict(conditions=len(results),groups=dict(by_group),totals=report['totals'],discrepancies=len(DISCREPANCIES),not_hit=unc,claims={v:sum(1 for c in claims if c['verdict']==v) for v in ('confirmed','contradicted','not-reproduced')} if claims else None,
+        sha256=sha(path.read_bytes()),tool=tool_sha,seconds=round(time.time()-t_start))
+    print(json.dumps(summary))
+    return summary
+
+
+if __name__=='__main__':main()
