@@ -268,6 +268,9 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xe9548:case 0xe954c:case 0xe9550:case 0xe9554:case 0xe9576:case 0xe961c:case 0xe9626:case 0xe96a4:case 0xe96ac:case 0xe96b4:
     case 0xe96b8:case 0xe96c8:case 0xe96d6:case 0xe9720:case 0xe9722:case 0xe973e:case 0xe9754:case 0xe9790:case 0xe9794:case 0xe9798:
     case 0xe979c:case 0xe97a0:case 0xe97a4:case 0xe97a8:case 0xe97ac:case 0xe97b0:case 0xe97c4:case 0xe97c6:
+    // Scheduler shell (F2) blocks: only the RTS blocks 271a and 4fda4 keep C. 2aac (MOVE.L), 270e (TST), 2716 (ADDQ) and the
+    // 4fcce MOVE/MOVEA/ADDQ/CMPI/TST/NEG/ADD/ADDA/LSL/ADDI blocks stay Unknown. F2 has no carry consumer.
+    case 0x271a:case 0x4fda4:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -505,6 +508,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xe9350 && next.pc<0xe93da) || (next.pc>=0xe93f0 && next.pc<0xe9444) || (next.pc>=0xe94fe && next.pc<0xe957c) ||
                 (next.pc>=0xe958e && next.pc<0xe9768) || (next.pc>=0xe9774 && next.pc<0xe97c8)) &&
                 !stage_event_ops_trap(next.pc))ok=animation_stage_event_ops_block(c);
+            else if ((next.pc>=0x2aac && next.pc<0x2ab8) || (next.pc>=0x270e && next.pc<0x271c) ||
+                (next.pc>=0x4fcce && next.pc<0x4fd0a) || (next.pc>=0x4fd58 && next.pc<0x4fda6))ok=animation_scheduler_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

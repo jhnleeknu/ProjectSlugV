@@ -204,8 +204,11 @@ unsigned int chain(bool ok){
  // 10. Parent object re-entry (A6=OBJ): 480ac 62=ff -> 2a00 (type 0 -> 271c reset) -> 2ac2.
  {const std::uint32_t d0=s.d[0];Out o;assert(idle(ram,s,o)&&s.pc==RETURN&&clean(o)&&o.ports.size()==1&&o.ports[0].address==0x300001&&o.ports[0].value==(d0&255U));++n;
   assert(get(ram,OBJ,4)==0x270e&&get(ram,OBJ+0x62,1)==0&&s.a[6]==OBJ&&s.a[7]==SP+4&&get(ram,OBJ+8,4)==NEXT&&get(ram,0x104ca0,2)==2);}
- // The next object and scene are outside this unit: another re-entry stops at an unsupported PC.
- {Bytes r=ram;State t=s;inputs(r,0,0,0,0);t.pc=0x2ab8;reject(r,t,RETURN,"unsupported animation machine PC");}
+ // Another re-entry runs the reset callback 270e (F2 idle callback; formerly an unsupported PC): only the zombie WORD 104ca2
+ // counts a visit when the depth is not 0, and the dispatcher returns at 2ac2.
+ {Bytes r=ram;State t=s;inputs(r,0,0,0,0);t.pc=0x2ab8;Bytes want=r;const std::uint32_t z=get(r,0x104ca2,2),depth=get(r,OBJ+0x10,2);
+  put(want,0x104ca2,2,(z+(depth?1U:0U))&65535U);put(want,t.a[7]-4U,4,0x2ac2);Out o;
+  assert(run(r,t,RETURN,o)&&t.pc==RETURN&&t.a[6]==OBJ&&t.a[0]==0x270e&&clean(o)&&o.ports.empty()&&r==want);}
  // Menu text bytes untouched; the result frame record stays below the stack top.
  assert(get(ram,UP,4)==(ok?0xc214U:0xc232U)&&get(ram,STATUS,1)==(ok?0U:1U));
  return n;
