@@ -296,6 +296,11 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x1ab2e:case 0x1ab6a:case 0xb971a:case 0xb9720:case 0xb9746:case 0xb9752:case 0xb9756:case 0xb975c:case 0xc6a96:
     case 0xc6ad0:case 0xc6ad6:case 0xc6ada:case 0xc6b1a:case 0xc6b20:case 0xc6b24:case 0xc6b74:case 0xc6b7a:case 0xc6b7e:
     case 0xc6bf4:case 0xc6c12:
+    // Objects U04 (F4) blocks: BRA/RTS/LEA/JSR/JMP and the BNE d73ca (Z of the 287e CMP, recomputed) only. Every C consumer
+    // is a BCC/BCS in the block of its SUBQ/CMPI/CMP; no block produces a known C. MOVE/MOVEQ/CLR/TST/CMP/CMPA/ADD/ADDQ/SUB/
+    // SUBQ/SUBI/NEG/NOT/ANDI/ASR/LSL/SWAP/MULS/MULU blocks and the BSET/BCLR + MOVE blocks stay Unknown.
+    case 0xce44:case 0xce60:case 0x43ea4:case 0xd72fe:case 0xd730a:case 0xd731a:case 0xd73c4:case 0xd73ca:case 0xd73ce:
+    case 0xd7424:case 0xd748c:case 0xd74a2:case 0xd74d6:case 0xd7504:case 0xd75cc:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -547,6 +552,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             else if (next.pc>=0xe84d6 && next.pc<0xe88c6)ok=animation_objects_u03_block(c);
             else if ((next.pc>=0x1ab02 && next.pc<0x1ab80) || (next.pc>=0xb96c8 && next.pc<0xb975e) ||
                 (next.pc>=0xc6a96 && next.pc<0xc6c24))ok=animation_objects_u05_block(c);
+            else if ((next.pc>=0xce02 && next.pc<0xce62) || (next.pc>=0x43ea4 && next.pc<0x43ea8) ||
+                (next.pc>=0xd72f2 && next.pc<0xd75ce))ok=animation_objects_u04_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
