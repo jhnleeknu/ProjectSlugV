@@ -826,7 +826,7 @@ void interior(){
  // PC-relative data inside the routed range (never block starts).
  const std::uint32_t data[]={0x1a08e,0x1a092,0x1a09a,0x1a0a6,0x1a0b2,0x1a0b8};
  for(unsigned int i=0;i<6;++i){Bytes ram;State s;generic(data[i],ram,s);reject(ram,s,STOP,"unsupported animation script placement PC");}
- // Neighbours outside the ranges, the other 43e04 cleanup entry (43e34 is now routed to the F3a executor), 16ff0 next to
+ // Neighbours outside the ranges, the other 43e04 cleanup entry (43e34 is now a cleanup block start, called by F3a e9186), 16ff0 next to
  // 16fee and the unrouted 5f026; odd PCs are rejected first. 1a07a..1a086, 1a414..1a442, 19768..19772 and 19dee..19e60
  // (not reached by U5) are stage entry (F1a) ranges:
  // their interior PCs below fail there.

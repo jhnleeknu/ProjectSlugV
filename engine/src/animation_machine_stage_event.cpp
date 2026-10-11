@@ -83,8 +83,7 @@ bool sv_edge(AnimationMachineContext& c,std::uint32_t& d,std::uint32_t low,std::
 // e9204 class count and screen flags (e932c, e9298 with 48502), the main stream loop e9198..e91e2 with the e91e4 opcode
 // table (eight BRA.W slots), the opcode 00..07 handlers e9444..e94fe, the length advance e9768 and the expression
 // evaluator e97c8..e98ee with its e97e4 operator table (34 BRA.W slots), and the helpers 1a910 and 1a93e. Existing
-// executors called: cleanup 43e38 (through its 43e34 LEA entry, which the cleanup executor does not handle and which is
-// routed here), frame_helpers 49392 (known C, consumed by e9248/e9258) and input 4d7a6. e94fe (opcodes 08..0f, F3b) is a
+// executors called: cleanup 43e38 (through its 43e34 LEA entry), frame_helpers 49392 (known C, consumed by e9248/e9258) and input 4d7a6. e94fe (opcodes 08..0f, F3b) is a
 // boundary without an executor (e91ac BSR e94fe). The e91ba index is bounded by the original (e919c/e91a4) and followed
 // as the computed PC e91e4+D7.W; the e97e0 index has no upper bound and is followed as the computed PC e97e4+D1.W (F1
 // main decision 3: a target that is not a block start is unsupported; D1.W is a multiple of 4). The evaluator stack is a
@@ -132,8 +131,6 @@ bool animation_stage_event_block(AnimationMachineContext& c) {
            !am_write(c,r.a[6],4,SV_CALLBACK))return false;
         r.pc=0xe9176;return true;
     case 0xe9176:return am_call(c,0xe9204,0xe917a); // BSR e9204.
-    // 43e34 (called by e9186 JSR 43e34.L): LEA 2e(A6),A0, then the cleanup coordinate update 43e38.
-    case 0x43e34:r.a[0]=am_index(r.a[6],0x2e);r.pc=0x43e38;return true;
     // MOVE.L 53bc(A5),2e(A6); MOVE.L 53c0(A5),32(A6); JSR 43e34.L.
     case 0xe917a:
         if(!sv_read(c,0x53bc,4,value) || !sv_put(c,r.a[6],0x2e,4,value))return false;
