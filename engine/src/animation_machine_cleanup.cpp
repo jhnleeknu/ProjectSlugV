@@ -187,7 +187,8 @@ bool animation_cleanup_block(AnimationMachineContext& c) {
     case 0x43e34:r.a[0]=am_index(r.a[6],0x2e);r.pc=0x43e38;return true;
     // 43e08 (WORD entry): SWAP D0; SWAP D1; CLR.W D0; CLR.W D1 (D0/D1 = input WORD << 16), then as 43e22:
     // MOVE.L A1,16(A0); MOVEM.L D0-D1,(A0) (D0 at (A0), D1 at 4(A0)); MOVE.W #0,36(A0); BRA 43e38.
-    // 43e04 (LEA 2e(A6),A0 entry) stays unsupported.
+    // 43e04 (U08a 49290 JMP 43e04): LEA 2e(A6),A0, then the WORD entry 43e08.
+    case 0x43e04:r.a[0]=am_index(r.a[6],0x2e);r.pc=0x43e08;return true;
     case 0x43e08:case 0x43e22:
         if(r.pc==0x43e08) {am_swap(r.d[0]);am_swap(r.d[1]);am_word(r.d[0],0);am_word(r.d[1],0);}
         if(!am_write(c,r.a[0]+0x10U,4,r.a[1]) || !am_write(c,r.a[0],4,r.d[0]) || !am_write(c,r.a[0]+4U,4,r.d[1]) ||
