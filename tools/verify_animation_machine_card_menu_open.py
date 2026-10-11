@@ -42,10 +42,10 @@ CALLER_BCS = (0x9ba6, 0x9bcc, 0x9bea, 0x9c10, 0x9c36, 0x9c54, 0x9c76, 0x9c9c, 0x
 # negative any more (the errors depend on the entry register state); they stay stop-only boundaries of the native rows
 # and their rollback negatives are superseded (positive stop controls remain). 9fc4 (end of an open range) is an input block.
 BOUNDARY_PCS = (0x9e94, 0x9f36, 0xa2be, A406, A662, 0xa6da, 0xa70a, 0xa71a, 0xbd26, 0xe84d6, A63C)
-EXECUTED_BOUNDARIES = (0x9e94, 0x9f36, 0xa2be, A406, A662, 0xa6da, 0xa70a, 0xa71a, 0xbd26)
+EXECUTED_BOUNDARIES = (0x9e94, 0x9f36, 0xa2be, A406, A662, 0xa6da, 0xa70a, 0xa71a, 0xbd26, 0xe84d6)
 EXECUTED_RANGE_ENDS = (0x9fc4,)
-NEGATIVE_BOUNDARY_PCS = (0xe84d6, A63C, 0xc00468, 0xc0046e)      # c00468/c0046e BIOS: no executor anywhere
-SUPERSEDED_DIRECT_PCS = (0x1a73c,)      # routed by the scene core (U2) now: state-dependent bus error instead of an unsupported-PC rollback
+NEGATIVE_BOUNDARY_PCS = (A63C, 0xc00468, 0xc0046e)      # c00468/c0046e BIOS: no executor anywhere
+SUPERSEDED_DIRECT_PCS = (0x1a73c, 0xe84d6)      # scene core and U03 execute these API entries; exact later errors are checked below
 DEVICE_ADDR = 'unsupported program bus device address'
 SUPERSEDED_RECORDS = []
 STOP_BOUNDARIES = (0x9e94, 0xa2be, A406, A662, 0xa70a, 0xbd26, 0xe84d6, A63C, C2C8)
@@ -69,13 +69,17 @@ FLOW_ONLY = cc.FLOW_ONLY
 END_MNEMONICS = ('bra', 'jmp', 'rts', 'bsr', 'jsr', 'beq', 'bne', 'bcc', 'bcs', 'bmi', 'bpl', 'bvc', 'bvs', 'bhi', 'bls',
                  'bge', 'blt', 'bgt', 'ble', 'dbra', 'dbf')
 COND_BRANCH = ('beq', 'bne', 'bcc', 'bcs', 'bmi', 'bpl', 'bvc', 'bvs', 'bhi', 'bls', 'bge', 'blt', 'bgt', 'ble')
-# Native guards that stopped at a406 / c2c8 (no executor then): the input / close cores execute them now, so they are
-# recorded (observed C++ outcome), not counted as negatives.
-SUPERSEDED_GUARDS = ('guard-e5-0-without-stop', 'guard-e5-3-c2c8-without-stop')
+# Later input/close/U03 executors complete these API-only controls to 2ac2.
+# Their original stopped prefixes remain compared; native suffix equivalence is not claimed.
+SUPERSEDED_GUARDS = {
+    'guard-e5-0-without-stop': 0x2ac2,
+    'guard-e5-3-c2c8-without-stop': 0x2ac2,
+    'guard-d1-ge-10-without-stop': 0x2ac2,
+}
 GUARD_ERRORS = {
     'guard-odd-f2-A2': EVEN, 'guard-odd-ee-direct-a348': EVEN, 'guard-odd-descriptor-A3-a3ba': EVEN,
     'guard-odd-descriptor-A3-9b58': EVEN, 'guard-odd-A7': EVEN,
-    'guard-a63c-without-stop': UNSUPPORTED_MACHINE, 'guard-d1-ge-10-without-stop': UNSUPPORTED_MACHINE}
+    'guard-a63c-without-stop': UNSUPPORTED_MACHINE}
 # Rows whose last step ends at a boundary stop (native stop_pc) -> used for the other-stop rollback negatives.
 BOUNDARY_ROWS = {0x9e94: 'desc-flags-0001-9e94', 0xa2be: 'loop-older-f-bit0-byte4-a2be', A406: 'state-e5-0-a406',
                  A662: 'state-e5-2-a662', 0xa70a: 'callback-bf94-d0-3-a70a', 0xbd26: 'callback-c1c4-d0-3-bd26',
@@ -449,11 +453,13 @@ def compare_guards(exe, guards, resources):
             exe, OUT, 'guard_%s' % row['label'], ram, dict(state, carry=2), pvc, bank, resources,
             stop=stop, external=row['fixture']['external'])
         if row['label'] in SUPERSEDED_GUARDS:
-            assert error.strip() != UNSUPPORTED_MACHINE or result['pc'] != phase['outgoing']['pc'], row['label']
-            if not result['ok']:
-                assert {k: result[k] for k in common.STATE_KEYS} == dict(state, carry=2) and outgoing == ram
-            superseded.append(dict(label=row['label'], native_guard=phase['guard'], CPP_now_ok=result['ok'],
-                                   CPP_now_error=error.strip(), CPP_now_pc=hex(result['pc'])))
+            # Later card/U03 executors complete these API-only inputs to the requested stop.
+            # The native stopped prefix remains compared above; this is not native suffix equivalence.
+            assert result['ok'] and result['pc'] == SUPERSEDED_GUARDS[row['label']], (row['label'], result, error)
+            assert result['status'] == 0 and not error, (row['label'], result, error)
+            superseded.append(dict(label=row['label'], native_guard=phase['guard'], CPP_now_ok=True,
+                                   CPP_now_error='', CPP_now_pc=hex(result['pc']), CPP_now_status=0,
+                                   checked_API_only=True, native_suffix_equivalence_claimed=False))
             continue
         assert not result['ok'], (row['label'], 'C++ accepted the native guard input', hex(result['pc']))
         assert error.strip() == GUARD_ERRORS[row['label']], (row['label'], error)
@@ -485,6 +491,7 @@ def interior_pcs(instructions):
 def negatives(exe, rows, starts, instructions, push_end, resources):
     out = []
     base = push_end
+    SUPERSEDED_RECORDS.append(cm.glyph_entry_prefix(exe, OUT, base, resources))
     row_of = {r['label']: r for r in rows}
 
     def reject(label, start, changes=None, stop=0xff000, external=0, expected=None, carry=2):
@@ -511,9 +518,10 @@ def negatives(exe, rows, starts, instructions, push_end, resources):
     # 1a73c is routed by the scene core (U2) now: a direct entry runs its code and ends with a state-dependent bus error (device address) instead of an
     # unsupported-PC rollback. Checked as a failure with the observed error; former and observed errors are recorded (superseded, not deleted).
     for pc in SUPERSEDED_DIRECT_PCS:
-        reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=DEVICE_ADDR)
+        expected = DEVICE_ADDR if pc == 0x1a73c else cm.ODD_JSR
+        reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=expected)
         SUPERSEDED_RECORDS.append(dict(label='boundary_direct_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE,
-                                       observed_error=DEVICE_ADDR, all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
+                                       observed_error=expected, entry_executor=('scene core' if pc == 0x1a73c else 'objects U03'), all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
     ends_outside = sorted({high for _low, high in OPEN_RANGES} - set(BLOCK_STARTS) - set(BOUNDARY_PCS) - {C2C8}
                           - set(EXECUTED_RANGE_ENDS))
     for pc in ends_outside:

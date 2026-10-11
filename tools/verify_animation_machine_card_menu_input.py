@@ -23,6 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 import verify_animation_machine as common
 import verify_animation_machine_callers as helpers
 import verify_animation_machine_card_child as cc
+import verify_animation_machine_card_menu as cm
 from disassemble_program import load_verified_program
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,10 +50,10 @@ A662, BD26, H9000, HC2C0, HFFF00 = 0xa662, 0xbd26, 0x9000, 0xc2c0, 0xfff00
 BOUNDARY_PCS = (A662, BD26)
 # a662 is executed by the close core and bd26 by the save core now: they stay stop boundaries of the frozen native
 # observation (stop controls below) but are no longer unsupported-PC negatives. These PCs still have no executor.
-NEGATIVE_BOUNDARY_PCS = (0xe84d6, 0xa63c, 0xc00468, 0xc0046e)
+NEGATIVE_BOUNDARY_PCS = ( 0xa63c, 0xc00468, 0xc0046e)
 # 1a73c is routed by the scene core (U2) now: a direct entry from the card seed executes its code and ends with a state-dependent bus error
 # (observed: 'unsupported program bus device address'), no longer an unsupported-PC negative. Recorded as superseded, not deleted.
-SUPERSEDED_DIRECT_PCS = (0x1a73c,)
+SUPERSEDED_DIRECT_PCS = (0x1a73c, 0xe84d6)
 SUPERSEDED_RECORDS = []
 SUPERSEDED_GUARDS = ('guard-a662-without-stop', 'guard-bd26-without-stop')
 HOOK_STOP_PCS = (H9000, HC2C0, HFFF00)
@@ -674,6 +675,7 @@ def interior_pcs(instructions):
 
 def negatives(exe, base, starts, instructions, resources, neg_errors):
     out = []
+    SUPERSEDED_RECORDS.append(cm.glyph_entry_prefix(exe, OUT, base, resources))
 
     def reject(label, start, changes=None, stop=0xff000, external=0, ram_patch=None):
         r, s, p, b = start
@@ -702,10 +704,13 @@ def negatives(exe, base, starts, instructions, resources, neg_errors):
     for pc in SUPERSEDED_DIRECT_PCS:
         r, s, p, b = base
         result, outgoing, out_pvc, ports, error = run(exe, 'superseded_direct_%06x' % pc, r, dict(s, carry=2, pc=pc), p, b, resources, stop=0xff000, keep=True)
-        assert not result['ok'] and error.strip() == 'unsupported program bus device address', (hex(pc), error.strip())
+        expected = 'unsupported program bus device address' if pc == 0x1a73c else 'unaligned animation machine PC'
+        assert not result['ok'] and error.strip() == expected, (hex(pc), error.strip())
+        assert {key: result[key] for key in STATE_KEYS} == dict(s, carry=2, pc=pc)
+        assert result['external_reads'] == 0x12345678 and result['status'] == 1
         assert outgoing == r and out_pvc == p and ports == MARKER and result['bank_base'] == b
         SUPERSEDED_RECORDS.append(dict(label='boundary_direct_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE,
-                                       observed_error=error.strip(), all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
+                                       observed_error=error.strip(), entry_executor=('scene core' if pc == 0x1a73c else 'objects U03'), all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
     a662 = starts[('guard-a662-without-stop', 'guard')]
     bd26 = starts[('guard-bd26-without-stop', 'guard')]
     hook = starts[('guard-hook-target-without-stop', 'guard')]

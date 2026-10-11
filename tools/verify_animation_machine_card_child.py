@@ -488,6 +488,12 @@ def negatives(exe, rows, ends, resources, neg_errors):
                         native_exception_rollback_equivalence_claimed=False))
 
     base4 = (ram4, state4, pvc4, bank4)
+    # Import after module initialization to avoid the card-menu/child import cycle.
+    import verify_animation_machine_card_menu as menu
+    SUPERSEDED_NEGATIVES.append(menu.glyph_entry_prefix(exe, OUT, base4, resources))
+    SUPERSEDED_NEGATIVES.append(dict(label='e84d6_pc_has_no_executor', now='executed by objects U03',
+        former_expected_API_error='unsupported animation machine PC', observed_final_state_error='unaligned animation machine PC',
+        all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
     for pc in BOUND_BRANCH_PCS:
         reject('bound_branch_direct_entry_%06x' % pc, base4, {'pc': pc})
     reject('mid_block_direct_entry_de44a', base4, {'pc': 0xde44a})
@@ -586,7 +592,7 @@ NEG_ERRORS = {
     'mid_block_direct_entry_de44a': 'unsupported animation card child PC',
     'c2a8_flow_runs_to_c2f8_RTS_then_unaligned_PC': 'unaligned animation machine PC',
     'a63c_trap_pc_has_no_executor': 'unsupported animation machine PC',
-    'e84d6_pc_has_no_executor': 'unsupported animation machine PC',
+    'e84d6_pc_has_no_executor': 'unaligned animation machine PC',
     'c00468_bios_pc_has_no_executor': 'unsupported animation machine PC',
     'a29c_call_then_open_frame_with_stop_ff000_rolls_back': 'animation fade card odd JSR target',
     'a29c_call_then_open_frame_with_stop_a406_rolls_back': 'animation fade card odd JSR target',
@@ -602,7 +608,7 @@ def main():
     report_path = OUT / 'verification.json'
     report_path.unlink(missing_ok=True)
     inputs = helpers.dependencies(ROOT)
-    for name in ('tools/verify_animation_machine_card_child.py', 'tools/observe_animation_machine_card_child.py',
+    for name in ('tools/verify_animation_machine_card_child.py', 'tools/verify_animation_machine_card_menu.py', 'tools/observe_animation_machine_card_child.py',
                  'docs/analysis/animation-machine-card-child-contract.md',
                  'engine/src/animation_machine_card_child.cpp',
                  'engine/tests/animation_machine_card_child_test.cpp'):

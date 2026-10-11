@@ -17,6 +17,7 @@ import sys
 import verify_animation_machine as common
 import verify_animation_machine_callers as helpers
 import verify_animation_machine_card_child as cc
+import verify_animation_machine_card_menu as cm
 from disassemble_program import disassemble_range, load_verified_program
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -617,12 +618,13 @@ def expected_pc_error(close_instructions, pc):
 
 
 DEVICE_ADDR = 'unsupported program bus device address'
-SUPERSEDED_DIRECT_PCS = (0x1a73c,)
+SUPERSEDED_DIRECT_PCS = (0x1a73c, 0xe84d6)
 SUPERSEDED_RECORDS = []
 
 
 def negatives(exe, base, a698_starts, close_instructions, resources):
     out = []
+    SUPERSEDED_RECORDS.append(cm.glyph_entry_prefix(exe, OUT, base, resources))
 
     def reject(label, start, changes=None, stop=0xff000, external=0, expected=None, carry=2):
         r, s, p, b = start
@@ -644,14 +646,15 @@ def negatives(exe, base, a698_starts, close_instructions, resources):
         assert expected_pc_error(close_instructions, pc) == UNSUPPORTED_CLOSE
         reject('interior_direct_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_CLOSE)
     # a698/a69a/a6da are executed by the nested core now (superseded as unsupported-PC negatives); these still have none.
-    for pc in (0xa63c, 0xe84d6, 0xc00468, 0xc0046e):
+    for pc in (0xa63c, 0xc00468, 0xc0046e):
         reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_MACHINE)
     # 1a73c is routed by the scene core (U2) now: a direct entry runs its code and ends with a state-dependent bus error (device address) instead of an
     # unsupported-PC rollback. Checked as a failure with the observed error; former and observed errors are recorded (superseded, not deleted).
     for pc in SUPERSEDED_DIRECT_PCS:
-        reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=DEVICE_ADDR)
+        expected = DEVICE_ADDR if pc == 0x1a73c else 'unaligned animation machine PC'
+        reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=expected)
         SUPERSEDED_RECORDS.append(dict(label='boundary_direct_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE,
-                                       observed_error=DEVICE_ADDR, all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
+                                       observed_error=expected, entry_executor=('scene core' if pc == 0x1a73c else 'objects U03'), all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
     outside = (0x9ee6, 0xc2fa, 0xc2fc)
     for pc in outside:
         assert expected_pc_error(close_instructions, pc) == UNSUPPORTED_MACHINE

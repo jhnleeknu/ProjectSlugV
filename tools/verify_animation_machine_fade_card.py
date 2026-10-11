@@ -432,7 +432,8 @@ def compare_guards(exe, guards, resources):
 
 # Superseded expectations (final state): the successor 480bc / its callees are executable now (U1..U7), so these runs go on and end in a state-dependent
 # bus error instead of an unsupported-PC rollback. Labels are kept; former and observed errors are recorded in the report (superseded_negatives).
-SUPERSEDED_CAUSES = {'frame_helper_480bc_unsupported': 'unsupported program bus device address'}
+SUPERSEDED_CAUSES = {'frame_helper_480bc_unsupported': 'unsupported program bus device address',
+                     'dispatcher_entry_2aac_unsupported': 'unsupported animation machine PC'}
 SUPERSEDED_NEGATIVES = []
 
 
@@ -442,6 +443,22 @@ def negatives(exe, rows, ends, resources):
     ram, state, pvc, bank = ends[(chain['label'], 0)]
     ram157, state157, pvc157, bank157 = ends[(chain['label'], 157)]
     external = chain['fixture']['external']
+    # F2 executes this former unsupported entry. Pin its original prefix before
+    # checking the later unsupported callback failure with the unreached stop.
+    prefix_state = dict(state, pc=0x2aac, carry=2)
+    prefix, prefix_ram, prefix_pvc, prefix_ports, prefix_error = common.invoke(
+        exe, OUT, 'superseded_dispatcher_2aac_prefix', ram, prefix_state, pvc, bank, resources, stop=0x2ab8)
+    expected_ram = bytearray(ram)
+    common.native.put(expected_ram, 0x104ca4, 4, state['a7'])
+    expected_state = dict(prefix_state, pc=0x2ab8, a6=0x100820, carry=0)
+    assert prefix['ok'] and not prefix_error and prefix['status'] == 0
+    assert {k: prefix[k] for k in common.STATE_KEYS} == expected_state
+    assert prefix_ram == bytes(expected_ram) and prefix_pvc == pvc and not prefix_ports
+    assert prefix['bank_base'] == bank and prefix['external_reads'] == 0
+    SUPERSEDED_NEGATIVES.append(dict(label='dispatcher_entry_2aac_prefix',
+        former_expected_API_error='unsupported animation machine PC', executed_prefix_stop='0x2ab8',
+        a6='0x100820', saved_a7_address='0x104ca4', original_opcode_contract='scheduler shell F2',
+        full_prefix_state_checked=True, native_exception_rollback_equivalence_claimed=False))
 
     def reject(label, changes, causes, memory=(), base=(None,), selected=None, stop=0xff000):
         r, s, p, b = base if base != (None,) else (ram, state, pvc, bank)

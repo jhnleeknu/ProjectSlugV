@@ -369,9 +369,41 @@ def menu_interior_pcs(instructions):
     return pcs
 
 
+U03_PREFIX_RECORDS = []
+
+
+def glyph_entry_prefix(exe, folder, base, resources):
+    """Pin the original first U03 block from the actual legacy chain state."""
+    program, _source = load_verified_program(ROOT)
+    assert program[0xe84d6:0xe84e4].hex() == '48e77f7e1e100c0700de6600004e'
+    ram, state, pvc, bank = base
+    address = state['a0'] & 0xffffff
+    assert address < 0x100000 or 0x100000 <= address < 0x200000
+    byte = program[address] if address < 0x100000 else ram[address & 0xffff]
+    stop = 0xe84e4 if byte == 0xde else 0xe8530
+    incoming = dict(state, pc=0xe84d6, carry=2)
+    expected = dict(incoming, pc=stop, a7=(state['a7'] - 52) & 0xffffffff,
+                    d7=(state['d7'] & 0xffffff00) | byte, carry=0)
+    want_ram = bytearray(ram)
+    for index, register in enumerate(['d%d' % i for i in range(1, 8)] + ['a%d' % i for i in range(1, 7)]):
+        common.native.put(want_ram, expected['a7'] + index * 4, 4, state[register])
+    result, outgoing, out_pvc, ports, error = common.invoke(
+        exe, folder, 'superseded_u03_e84d6_prefix', ram, incoming, pvc, bank, resources, stop=stop)
+    assert result['ok'] and not error and result['status'] == 0
+    assert {key: result[key] for key in common.STATE_KEYS} == expected
+    assert outgoing == bytes(want_ram) and out_pvc == pvc and result['bank_base'] == bank
+    assert not ports and result['external_reads'] == 0
+    return dict(label='boundary_direct_entry_0e84d6_prefix',
+                former_expected_API_error='unsupported animation machine PC', original_cpu_pc='0xe84d6',
+                original_file_offset='0xe84d6', original_block_raw=program[0xe84d6:0xe84e4].hex(),
+                executed_prefix_stop=hex(stop), full_prefix_state_checked=True,
+                native_exception_rollback_equivalence_claimed=False)
+
+
 def negatives(exe, starts, instructions, resources, neg_errors):
     out = []
     base = starts[('connected-a29c-to-a370', 0)]
+    U03_PREFIX_RECORDS.append(glyph_entry_prefix(exe, OUT, base, resources))
 
     def reject(label, start, changes=None, stop=0xff000, external=0):
         r, s, p, b = start
@@ -466,6 +498,9 @@ SUPERSEDED_GUARDS = {
 class Errors(dict):
     """Exact pinned error strings; unknown labels fall back to the class expected for the label prefix."""
     def __missing__(self, label):
+        if label == 'boundary_direct_entry_0e84d6':
+            return ODD_JSR  # U03 executes the glyph entry; this fixture then reaches an odd dispatcher callback.
+
         if label == 'interior_direct_entry_003900':
             # RTS of block 38fe: the router range ends at 38fe, so the outer router (not the menu core) rejects it.
             return UNSUPPORTED_MACHINE
@@ -536,7 +571,7 @@ def main():
                   actual_CPP=dict(totals, matches=matches),
                   original_program_read_audit=program_reads,
                   native_guards_checked_API=guarded, native_guards_superseded_by_card_menu_open_core=superseded,
-                  negatives_superseded_by_later_card_menu_cores=dict(interior_direct_entry_a100='block of the card menu core (BSR 9e1a) now', outside_range_entry_a2be='executed by the close core', boundary_direct_entry_a662_9e94_c2c8_a406='executed by the input/close cores'),
+                  negatives_superseded_by_later_card_menu_cores=dict(u03_entry_prefix=U03_PREFIX_RECORDS, interior_direct_entry_a100='block of the card menu core (BSR 9e1a) now', outside_range_entry_a2be='executed by the close core', boundary_direct_entry_e84d6='executed by U03; this fixture later reaches an odd dispatcher callback (exact error and full rollback checked)', boundary_direct_entry_a662_9e94_c2c8_a406='executed by the input/close cores'),
                   native_continuous_control_phases_replayed=control_count,
                   negatives=negative, negative_count=len(negative) + len(guarded),
                   interior_PCs_rejected=interior_count, zero_step=zero, boundary_zero_step=boundary_zero,
@@ -550,7 +585,7 @@ def main():
                   limits=['Controlled fixtures; frame re-entry is a declared PC-only change, not a natural scheduler, IRQ or VBlank.',
                           'No banked descriptor exists in ROM (bank_descriptor_search of both 2/3 banks: 0 terminating descriptors); only banked strings (title/item pointers read through the current bank) are covered.',
                           'Carry is a source-opcode classification (native SR is never read), not a native C measurement; ADDA/SUBA are conservatively Unknown.',
-                          '38c8/38e2 (TRAP #f) are stop boundaries only, never executed; a370 (opening frame), 9b58 and c2c0 execute in the card menu open core (verify_animation_machine_card_menu_open.py) and are only normal stops here; a406..a5d0 (input), 9e94/a2be/a662/c2c8 (close), bd26/9f36/a71a (save) and a698.. (nested) are executed by later card menu cores; a63c, e84d6 and c00468 have no executor and are out of scope.',
+                          '38c8/38e2 (TRAP #f) are stop boundaries only, never executed; a370 (opening frame), 9b58 and c2c0 execute in the card menu open core (verify_animation_machine_card_menu_open.py) and are only normal stops here; a406..a5d0 (input), 9e94/a2be/a662/c2c8 (close), bd26/9f36/a71a (save) and a698.. (nested) are executed by later card menu cores; a63c and c00468 have no executor; e84d6 executes in U03, while the frozen native prefix retains its original stop.',
                           'Declared initial registers (A0/A5/A7/D0/D1/D3/D7), declared bank state and declared RAM fixtures are inputs, not original-measured preparation; the rest starts from the actual C++ card-child output.',
                           'Native observation artifacts are audited by hash/trace consistency, not re-executed here.',
                           'Checked failures preserve API outputs, not original CPU fault rollback; bundled-branch/interior direct entries have no native guard (API-only rejection).'])
