@@ -768,9 +768,10 @@ void errors(){
   if(listed(pc))continue;Bytes ram=zero_ram();reject(ram,state(pc),STOP,"unsupported animation motion walk PC");++interior;}}
  assert(bytes==3156&&interior==1208); // 1578 even PCs minus 370 block starts
  for(unsigned int i=0;i<14;++i){assert(!listed(BUNDLED[i]));Bytes ram=zero_ram();reject(ram,state(BUNDLED[i]),STOP,"unsupported animation motion walk PC");}
- // Neighbours outside the ranges (19768 and 19938 are now stage entry F1a block starts and 47da4 an area clear F1b
- // block start; the unrouted 5f002, outside every unit contract, and 477ee stand in for them); odd PCs are rejected first.
- const std::uint32_t outside[]={0x18c04,0x5f002,0x477ee};
+ // Neighbours outside the ranges (19768 and 19938 are now stage entry F1a block starts, 47da4 an area clear F1b and 477ee
+ // a stage catalog F1c1 block start; the unrouted 5f002 and 5f004, outside every unit contract, stand in for them); odd
+ // PCs are rejected first.
+ const std::uint32_t outside[]={0x18c04,0x5f002,0x5f004};
  for(unsigned int i=0;i<3;++i){Bytes ram=zero_ram();reject(ram,state(outside[i]),STOP,"unsupported animation machine PC");}
  {Bytes ram=zero_ram();reject(ram,state(0x18c07),STOP,"unaligned animation machine PC");}
 }

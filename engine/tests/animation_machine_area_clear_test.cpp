@@ -8,7 +8,7 @@
 // Stage controller F1b (area clear 47da4..47eac with 4b6e4/4b6ec, 1c5b0, 1bee4, ca48 and 9056) through
 // run_animation_machine only. A frame is one run from a callback PC to the dispatcher return 2ac2 (480bc -> 480f0 RTS);
 // the next frame is the declared direct re-entry A6=100b30, A5=108000, A7=10effc, LONG 10effc=2ac2, PC=LONG (A6) with the
-// other registers and C kept; the last frame stops at 477ee (F1c, no executor). Child completion 62(A6) and 10dd44 (and
+// other registers and C kept; the last frame stops at 477ee (now the F1c1 catalog). Child completion 62(A6) and 10dd44 (and
 // 10d68e in typed fixtures) change only through declared host writes between frames. All inputs are declared fixtures:
 // zero RAM plus the PUTS rows, declared registers and the return LONG at A7 (stack inside work RAM at 10effc). The 480bc
 // frames use the F1a frame base (player nodes, U7 buffer rows, U2/U3 records) and the 28ae allocator rows. Synthetic
@@ -303,7 +303,7 @@ const Phase PHASES[]={
 {1250,0,0,{0x19db,0xabcd0002,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x104d82,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x47e56,0,0,0x200000,"100f0f:42,104d82:19db,104d8d:02,10eff9:047e56",0,0x14650fb0739d0383ULL,"",0,NULL},
 {1254,0,0,{0x4,0xffffffff,0x0,0x0,0xabcd4400,0xabcd5500,0xabcd6666,0x0,0x1bec0,0x10d738,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x47de4,0,0,0x200000,"100967:ff,100b31:047de4,100bab:1e,100bf6:270e,100c06:ffff,100c0b:ff,100c12:ffff,100c4e:ffff,100c5f:ffffff0040,100d19:40,100d60:01,100e09:40,100e50:01,10d50c:ffff,10d511:02,10d735:01bec00001bec0,10db85:ff00ff,10efe1:046f2c,10efe6:c4,10efea:c3f8,10efee:272e,10eff2:2a5c0001bef000047dd8",1,0xb16f17b654c6c6b9ULL,"300001/1/0",0,NULL},
 {1314,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x47da4,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"animation cleanup original TRAP15: nonzero object type"},
-{1375,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x47e92,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"unsupported animation machine PC"},
+{1375,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x47e92,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"missing or ambiguous physical program bus ROM byte"},
 {1448,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b30,0x10effc},0x47de4,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"unsupported animation machine PC"},
 {1449,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b31,0x10effc},0x47dd8,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"invalid animation machine write size/alignment"},
 {1450,0,0,{0xabcd0000,0xabcd1111,0xabcd2222,0xabcd3333,0xabcd4444,0xabcd5555,0xabcd6666,0xabcd7777,0x10e000,0x10e100,0xa2a2a2a2,0xa3a3a3a3,0x10e300,0x108000,0x100b31,0x10effc},0x47de4,0,0,0x200000,"",0,0x0000000000000000ULL,"",0,"even WORD/LONG"},
@@ -674,7 +674,7 @@ void fixtures(){
 const Fixture& fixture_of(const char*name){for(unsigned int k=0;k<FIXTURE_COUNT;++k)if(std::strcmp(FIXTURES[k].name,name)==0)return FIXTURES[k];assert(false);return FIXTURES[0];}
 const Final& final_of(const char*name){for(unsigned int k=0;k<FIXTURE_COUNT;++k)if(std::strcmp(FIXTURES[k].name,name)==0)return finals[k];assert(false);return finals[0];}
 // Chains: frame by frame from 47da4 to 477ee. Every frame but the last stops at 2ac2; the last frame first rolls back with
-// stop 2ac2 (477ee has no executor) and then stops at 477ee. Declared host writes follow their frame, then the re-entry.
+// stop 2ac2 and then stops at 477ee. Declared host writes follow their frame, then the re-entry.
 std::vector<Bytes> chain_final;std::vector<State> chain_state;
 void chains(){
  assert(CHAIN_COUNT==5&&DIGEST_COUNT==CHAINS[CHAIN_COUNT-1].first_frame+CHAINS[CHAIN_COUNT-1].frames);
@@ -682,7 +682,7 @@ void chains(){
   State s=state_of(c.regs,0x47da4,0);Out o;o.dev.bank_base=c.bank;o.dev.pvc=pvc_for(c.bank);
   for(unsigned int f=0;f<c.frames;++f){const bool last=f+1==c.frames;
    assert(s.pc==(f==0?0x47da4U:get(ram,NODE,4))&&s.a[6]==NODE&&s.a[7]==SP&&get(ram,SP,4)==RET_FRAME);
-   if(last)reject(ram,s,RET_FRAME,"unsupported animation machine PC",o.dev.bank_base);
+   if(last)reject(ram,s,RET_FRAME,"missing or ambiguous physical program bus ROM byte",o.dev.bank_base);
    if(!run(ram,s,last?NEXT_AREA:RET_FRAME,o)){std::cerr<<c.name<<" frame "<<f<<"\n";assert(false);}
    assert(o.status==ms5::AnimationMachineReturned&&s.pc==(last?NEXT_AREA:RET_FRAME)&&s.a[7]==(last?SP:SP+4));
    if(digest(ram,s,o.dev.bank_base,o.reads,o.status,o.ports)!=DIGESTS[c.first_frame+f]){std::cerr<<c.name<<" frame "<<f<<" digest\n";assert(false);}
@@ -804,8 +804,10 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x47da5,0x4b6e5,0x1c5b1,0x1bee5,0xca49,0x9057};
  for(unsigned int i=0;i<6;++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
- // 47ea8 BRA 477ee without the 477ee stop rolls back the whole run (47e9a writes included).
- {Bytes ram;State s;generic(0x47e9a,ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
+ // 47ea8 BRA 477ee without the 477ee stop continues into the F1c1 catalog (animation_machine_stage_catalog_test), whose
+ // 474ec read of the 474f4 group table has no row in this test's synthetic ROM: the whole run rolls back (47e9a writes,
+ // the last chain frames and the stop-not-477ee row included).
+ {Bytes ram;State s;generic(0x47e9a,ram,s,2);reject(ram,s,STOP,"missing or ambiguous physical program bus ROM byte");}
 }
 }
 int main(){
