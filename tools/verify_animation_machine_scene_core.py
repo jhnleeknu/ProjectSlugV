@@ -5,7 +5,7 @@ main). Start states are rebuilt here: scene_frame_execution inputs from artifact
 recorded outputs) and stage_frame inputs from artifacts/stage_frame, each asserted equal to the SHA recorded in the observation's seed_provenance and
 to the fixture RAM SHA; the 154 stage_entry_body / re-entry fixtures are declared native states whose SHA256-pinned RAM is taken from the native
 artifacts (they are not rebuildable without re-running the original code and are reported as declared). C++ resumes only from the previous actual C++
-output plus the host changes recorded in the native step. 1a0b6, 1a470, 1a7a8, 19812, 19844, 19910 are stop boundaries only: never executed.
+output plus the host changes recorded in the native step. 1a0b6, 1a470, 1a7a8, 19812, 19844, 19910 are stop boundaries only in the frozen native observation (never executed by it); in the final state later units execute them (see superseded_guards / superseded_negatives).
 Native SR is never read: C is a source-opcode classification (1a2e0 is the computed known carry of CMP.W + EORI #1,CCR).
 """
 import collections
@@ -68,9 +68,15 @@ GUARD_ERRORS = {
     'guard-odd-A7-rts': EVEN, 'guard-rom-write-A5': WRITE_DEVICE, 'guard-rom-write-A7-push': RAM_MIRROR,
     'guard-cond-index-2000': UNSUPPORTED_MACHINE, 'guard-cond-index-odd-0001': UNALIGNED_PC,
     'guard-cond-index-negative-8000': UNSUPPORTED_MACHINE,
-    'guard-bad-stop-1a7a8-on-19844-seed': UNSUPPORTED_MACHINE, 'guard-bad-stop-19844-on-full-path-seed': UNSUPPORTED_MACHINE,
-    'guard-bad-stop-19812-on-19844-seed': UNSUPPORTED_MACHINE, 'guard-bad-stop-1a0b6-on-full-path-seed': UNSUPPORTED_MACHINE,
+    'guard-bad-stop-19844-on-full-path-seed': UNSUPPORTED_MACHINE, 'guard-bad-stop-1a0b6-on-full-path-seed': UNSUPPORTED_MACHINE,
     'guard-bad-stop-1a470-on-full-path-seed': UNSUPPORTED_MACHINE}
+# Superseded by later units (final state): the 19844 seed now runs on through the later cores and reaches these stops without error (observed: ok, pc == stop).
+# The native guard records are unchanged; the former expectation is kept here and recorded in the report (superseded_guards), not silently deleted.
+SUPERSEDED_GUARDS = {'guard-bad-stop-1a7a8-on-19844-seed': UNSUPPORTED_MACHINE, 'guard-bad-stop-19812-on-19844-seed': UNSUPPORTED_MACHINE}
+SUPERSEDED_RECORDS = []
+SUPERSEDED_NEGATIVES = []
+OUTSIDE_EXECUTED_NOW = (0x19830, 0x19850, 0x1a40e, 0x1a7a8)
+OUTSIDE_NEW_ERRORS = {0x19820: 'unsupported animation motion walk PC', 0x198ec: 'unsupported animation motion walk PC', 0x19920: 'unsupported animation motion walk PC'}
 VERIFIED_ARTIFACTS = set()
 RUN_DIR = None
 WORKERS = 8
@@ -741,6 +747,10 @@ def compare_guards(exe, guards, resources):
         for kind, r, s, p, b, stp in cases:
             s = dict(s, carry=2)
             result, outgoing, out_pvc, ports, error = inv('guard_%s_%s' % (label, kind), exe, r, s, p, b, resources, stop=stp, external=fx['external'])
+            if label in SUPERSEDED_GUARDS:
+                assert result['ok'] and not error.strip() and result['pc'] == stp and result['status'] == 0, (label, kind, error.strip())
+                entry[kind] = dict(ok=True, pc=hex(result['pc']), error='')
+                continue
             assert not result['ok'], (label, kind)
             if error.strip() != GUARD_ERRORS[label]:
                 mismatches.append((label, kind, error.strip()))
@@ -748,10 +758,15 @@ def compare_guards(exe, guards, resources):
             assert outgoing == r and out_pvc == p and result['bank_base'] == b
             assert ports == MARKER and result['external_reads'] == 0x12345678 and result['status'] == 1
             entry[kind] = error.strip()
+        if label in SUPERSEDED_GUARDS:
+            SUPERSEDED_RECORDS.append(dict(label=label, native_guard=phase['guard'], former_expected_API_error=SUPERSEDED_GUARDS[label],
+                                           observed_final_state=entry, native_fault_rollback_equivalence_claimed=False))
+            continue
         rows.append(dict(label=label, native_guard=phase['guard'], checked_API_errors=entry, all_API_outputs_preserved=True,
                          native_fault_rollback_equivalence_claimed=False))
     assert not mismatches, mismatches
     assert sorted(GUARD_ERRORS) == sorted(r['label'] for r in rows)
+    assert sorted(SUPERSEDED_GUARDS) == sorted(r['label'] for r in SUPERSEDED_RECORDS)
     return rows
 
 
@@ -780,13 +795,27 @@ def negatives(exe, base, starts_by_label, st, resources):
     operand = [pc for low, high in st['ranges'] for pc in range(low, high, 2) if pc not in instructions and pc not in start_set]
     for pc in operand:
         reject('operand_word_direct_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_CORE)
+    def supersede(label, start, changes, former, stop=0xff000):
+        # superseded negative (later units execute this PC now): pin and record the observed final-state result instead of a failure
+        r, s, p, b = start
+        s = dict(s, carry=2)
+        s.update(changes)
+        result, outgoing, out_pvc, ports, error = inv('superseded_' + label, exe, r, s, p, b, resources, stop=stop, external=0)
+        assert result['ok'] and not error.strip() and result['pc'] == stop and result['status'] == 0, (label, error.strip())
+        SUPERSEDED_NEGATIVES.append(dict(label=label, former_expected_API_error=former, observed_final_state=dict(ok=True, pc=hex(result['pc'])),
+                                         native_exception_rollback_equivalence_claimed=False))
+
     for pc in BOUNDARY_PCS:
-        reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
+        supersede('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, UNSUPPORTED_MACHINE)
     outside = (0x19820, 0x19830, 0x19850, 0x198ec, 0x19920, 0x199d4, 0x199d6, 0x19a3e, 0x19b50, 0x19b94, 0x19dee, 0x1a3a6, 0x1a3ac, 0x1a3c8,
                0x1a40e, 0x1a440, 0x1a5a4, 0x1a73a, 0x1a7a8)
     for pc in outside:
         if not in_ranges(pc, st['ranges']):
-            reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
+            if pc in OUTSIDE_EXECUTED_NOW:
+                supersede('outside_range_entry_%06x' % pc, base, {'pc': pc}, UNSUPPORTED_MACHINE)
+            else:
+                # 19820/198ec/19920 are routed to the motion walk executor now (checked error with that executor's message)
+                reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=OUTSIDE_NEW_ERRORS.get(pc, UNSUPPORTED_MACHINE))
     # unknown carry at the eight consumers (stop at the clear branch target: the error comes first)
     for pc in sorted(CONSUMERS_U2):
         r, s, p, b = base
@@ -811,7 +840,11 @@ def negatives(exe, base, starts_by_label, st, resources):
     # non-boundary stops on the full-path start (reaches 1a7a8): full rollback
     full = starts_by_label['natural-scene-full-path-0036']
     for stop in (0xff000, 0x19812, 0x19844, 0x19910, 0x1a0b6, 0x1a470, 0x1a73e, 0x1a2c2):
-        reject('full_path_start_with_stop_%06x' % stop, full, stop=stop, error_expected=UNSUPPORTED_MACHINE)
+        if stop == 0xff000:
+            # superseded: with no reachable stop the full path now runs through the later cores and reaches PC ff000 without error
+            supersede('full_path_start_with_stop_%06x' % stop, full, {}, UNSUPPORTED_MACHINE, stop=stop)
+        else:
+            reject('full_path_start_with_stop_%06x' % stop, full, stop=stop, error_expected=UNSUPPORTED_MACHINE)
     # positive control: the same start with the matching boundary stop
     s = dict(full[1], carry=0)
     result, out_ram, out_pvc, ports, error = inv('control_full_path_stop_1a7a8', exe, full[0], s, full[2], full[3], resources, stop=0x1a7a8)
@@ -925,7 +958,7 @@ def run(report_path):
         cpp_case_labels=dict(cpp_not_in_contract_block_starts=[hex(p) for p in cpp_not_contract],
                              contract_block_starts_without_cpp_case=[hex(p) for p in contract_not_cpp]),
         actual_CPP=dict(totals, matches=matches), original_program_read_audit=program_reads,
-        native_guards_checked_API=guarded, native_continuous_control_phases_replayed=totals['control'],
+        native_guards_checked_API=guarded, superseded_guards=SUPERSEDED_RECORDS, superseded_negatives=SUPERSEDED_NEGATIVES, native_continuous_control_phases_replayed=totals['control'],
         negatives=negative, negative_count=len(negative) + len(guarded), interior_PCs_rejected=interior_count,
         operand_word_PCs_rejected=operand_count, API_controls=controls,
         zero_step_count=len(zero), zero_step_blocks=len(st['starts']), zero_step_carries=[0, 1, 2], boundary_zero_step=boundary_zero,
@@ -936,7 +969,7 @@ def run(report_path):
                 'return-LONG variants), not natural scheduler, IRQ or gameplay reachability.',
                 'The 154 stage_entry_body (42) and declared re-entry (112) start states are native states SHA-pinned in the native artifacts; they are '
                 'not rebuilt here (they need the original code run).',
-                '1a0b6, 1a470, 1a7a8, 19812, 19844, 19910 are stop boundaries only, never executed; their bodies (U3, U4, U5) are unverified.',
+                '1a0b6, 1a470, 1a7a8, 19812, 19844, 19910 are stop boundaries of the native observation, never executed there; later units (U3..U7) execute them in the final state and are verified by their own verifiers (direct entries and no-stop negatives are recorded as superseded).',
                 'Carry is a source-opcode classification (native SR is never read).',
                 'Checked failures preserve API outputs, not original CPU fault rollback; interior / operand / boundary direct entries and the Unknown-carry '
                 'consumer entries have no native counterpart (API-only rejection).',

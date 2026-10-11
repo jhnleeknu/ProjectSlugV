@@ -49,7 +49,11 @@ A662, BD26, H9000, HC2C0, HFFF00 = 0xa662, 0xbd26, 0x9000, 0xc2c0, 0xfff00
 BOUNDARY_PCS = (A662, BD26)
 # a662 is executed by the close core and bd26 by the save core now: they stay stop boundaries of the frozen native
 # observation (stop controls below) but are no longer unsupported-PC negatives. These PCs still have no executor.
-NEGATIVE_BOUNDARY_PCS = (0xe84d6, 0xa63c, 0xc00468, 0xc0046e, 0x1a73c)
+NEGATIVE_BOUNDARY_PCS = (0xe84d6, 0xa63c, 0xc00468, 0xc0046e)
+# 1a73c is routed by the scene core (U2) now: a direct entry from the card seed executes its code and ends with a state-dependent bus error
+# (observed: 'unsupported program bus device address'), no longer an unsupported-PC negative. Recorded as superseded, not deleted.
+SUPERSEDED_DIRECT_PCS = (0x1a73c,)
+SUPERSEDED_RECORDS = []
 SUPERSEDED_GUARDS = ('guard-a662-without-stop', 'guard-bd26-without-stop')
 HOOK_STOP_PCS = (H9000, HC2C0, HFFF00)
 INPUT_BLOCK_STARTS = (
@@ -695,6 +699,13 @@ def negatives(exe, base, starts, instructions, resources, neg_errors):
         reject('interior_direct_entry_%06x' % pc, base, {'pc': pc})
     for pc in NEGATIVE_BOUNDARY_PCS + (HFFF00, ):
         reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc})
+    for pc in SUPERSEDED_DIRECT_PCS:
+        r, s, p, b = base
+        result, outgoing, out_pvc, ports, error = run(exe, 'superseded_direct_%06x' % pc, r, dict(s, carry=2, pc=pc), p, b, resources, stop=0xff000, keep=True)
+        assert not result['ok'] and error.strip() == 'unsupported program bus device address', (hex(pc), error.strip())
+        assert outgoing == r and out_pvc == p and ports == MARKER and result['bank_base'] == b
+        SUPERSEDED_RECORDS.append(dict(label='boundary_direct_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE,
+                                       observed_error=error.strip(), all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
     a662 = starts[('guard-a662-without-stop', 'guard')]
     bd26 = starts[('guard-bd26-without-stop', 'guard')]
     hook = starts[('guard-hook-target-without-stop', 'guard')]
@@ -882,7 +893,7 @@ def main():
                                  equals_native_w7e_after_each_frame=True),
                   native_guards_checked_API=guarded,
                   native_guards_superseded_by_later_card_menu_cores=guards_superseded,
-                  negatives_superseded_by_later_card_menu_cores=dict(direct_entry_pcs=[hex(A662), hex(BD26)], reached_with_other_stops=['a662_reached_with_stop_*', 'bd26_reached_with_stop_*']),
+                  negatives_superseded_by_later_card_menu_cores=dict(direct_entry_pcs=[hex(A662), hex(BD26)], reached_with_other_stops=['a662_reached_with_stop_*', 'bd26_reached_with_stop_*'], scene_core_routed_direct_entries=SUPERSEDED_RECORDS),
                   negatives=negative, positive_controls=controls, negative_count=len(negative) + len(guarded),
                   interior_PCs_rejected=interior_count, zero_step=zero, boundary_zero_step=boundary_zero,
                   carry=dict(

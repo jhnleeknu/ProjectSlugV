@@ -215,6 +215,12 @@ def compare_guards(exe, guards, resources):
     return rows
 
 
+# Superseded expectations (final state): the successor 480bc / its callees are executable now (U1..U7), so these runs go on and end in a state-dependent
+# bus error instead of an unsupported-PC rollback. Labels are kept; former and observed errors are recorded in the report (superseded_negatives).
+SUPERSEDED_CAUSES = {'whole_upper_ports_before_unsupported_stop': 'program bus requires even WORD/LONG address'}
+SUPERSEDED_NEGATIVES = []
+
+
 def negatives(exe, records, resources, program):
     rows = []
     base = next(fx for selection, fx, phases in records if fx['entry_pc'] == 0x4e286)
@@ -230,6 +236,10 @@ def negatives(exe, records, resources, program):
                                fx['pvc'], fx['bank_base'], resources if selected is None else selected,
                                stop=0xff000, external=fx['external'])
         result, outgoing, pvc, ports, error = actual
+        if label in SUPERSEDED_CAUSES:
+            SUPERSEDED_NEGATIVES.append(dict(label=label, former_expected_API_error=cause, observed_final_state_error=SUPERSEDED_CAUSES[label],
+                                             all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
+            cause = SUPERSEDED_CAUSES[label]
         assert not result['ok'] and cause in error, (label, error)
         assert {key: result[key] for key in common.STATE_KEYS} == state
         assert outgoing == ram and pvc == fx['pvc'] and ports == marker
@@ -338,7 +348,7 @@ def main():
                   native_observation_sha256=NATIVE_SHA, native_tool_sha256=NATIVE_TOOL_SHA,
                   actual_CPP=matches, native_guards_checked_API=guarded,
                   native_continuous_control_phases_replayed=control_count,
-                  negatives=negative, negative_count=len(negative) + len(guarded), zero_step=zero,
+                  superseded_negatives=SUPERSEDED_NEGATIVES, negatives=negative, negative_count=len(negative) + len(guarded), zero_step=zero,
                   harness_JSON_keys=22, normalized_reference_paths=len(unique),
                   compile_command=command, failure=None, ROM_unchanged=True,
                   limits=['Controlled original HUD/palette/rectangle/counter/upper fixtures; no natural gameplay or scheduler reachability claim.',

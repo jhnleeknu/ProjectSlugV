@@ -68,17 +68,20 @@ EVEN_WRITE = 'invalid animation machine write size/alignment'
 WRITE_DEVICE = 'unsupported animation machine write device'
 RAM_MIRROR = 'program bus write requires RAM mirror units'
 UNALIGNED_PC = 'unaligned animation machine PC'
+DEVICE_ADDR = 'unsupported program bus device address'
 # Exact checked errors of the stored guards (derived from the C++ dispatch / bus rules, not from a first run):
 #   JSR (A1) with an odd target -> the loop head rejects the odd PC; a target with a nonzero top BYTE, a RAM address or a ROM address outside every executor
 #   matches no executor range (80000049 is odd: the loop head rejects it); 49b30 lies in the input range but is no block start; the bus rules give the odd / ROM write messages; the two bad-stop rows
-#   and the TRAP row run on into the U1 code at 480cc (stop never reached) and end at the first PC without an executor (4aa88); the TRAP row stops at 4d7f0.
+#   and the TRAP row run on into the U1 code at 480cc (stop never reached). Aligned to the final state (480bc frame helpers U1..U7 executable): the two bad-stop rows now run through that
+#   code and end with a device-address bus error (null-path state), the TRAP row still ends at the first PC without an executor; the rom-outside-unit rows (JSR (A1) with A1 = 4aa88, now an executed
+#   boundary) execute the U7 code and end with an odd-address bus error (superseded negative: the native guard record is unchanged and no fault-rollback equivalence is claimed).
 GUARD_ERRORS = {
     'guard-odd-target': UNALIGNED_PC, 'guard-top-byte-01049e34': UNSUPPORTED_MACHINE, 'guard-top-byte-ff049e34': UNSUPPORTED_MACHINE,
-    'guard-top-byte-80000049': UNALIGNED_PC, 'guard-ram-target': UNSUPPORTED_MACHINE, 'guard-rom-outside-unit': UNSUPPORTED_MACHINE,
+    'guard-top-byte-80000049': UNALIGNED_PC, 'guard-ram-target': UNSUPPORTED_MACHINE, 'guard-rom-outside-unit': EVEN,
     'guard-mid-instruction': UNSUPPORTED_INPUT,
     'guard-odd-A5': EVEN, 'guard-odd-A7-entry': EVEN, 'guard-rom-write-A7': RAM_MIRROR, 'guard-odd-A0-49de6': EVEN, 'guard-odd-A6-1d5e2': EVEN,
     'guard-odd-A1-49afe': EVEN, 'guard-odd-A1-49bb4': EVEN, 'guard-rom-write-49bb4': WRITE_DEVICE, 'guard-rom-write-49c20': WRITE_DEVICE,
-    'guard-odd-slot-write-49c20': EVEN_WRITE, 'guard-bad-stop-49b2e-null-path': UNSUPPORTED_MACHINE, 'guard-bad-stop-4d7f0-null-path': UNSUPPORTED_MACHINE,
+    'guard-odd-slot-write-49c20': EVEN_WRITE, 'guard-bad-stop-49b2e-null-path': DEVICE_ADDR, 'guard-bad-stop-4d7f0-null-path': DEVICE_ADDR,
     'guard-trap-reached-without-stop': UNSUPPORTED_MACHINE}
 SUBSTEP_BLOCKS = (0x49bb0, 0x49ad6)
 VARIANT_PREFIX = 'target-non-block-start-49e36'      # native: executes the RTS inside the unit; C++: checked rejection (deliberate difference)
@@ -890,7 +893,7 @@ def negatives(exe, base, st, resources):
             res, out_ram, out_pvc, ports, error = inv('producer_%06x_%d' % (pc, carry), exe, bytes(ram2), dict(s, pc=pc, a7=a7, carry=carry), p, b, resources, stop=0x49b2e)
             assert res['ok'] and not error and res['pc'] == 0x49b2e and res['carry'] == want_carry and res['a7'] == s['a7'] and out_ram == bytes(ram2)
             producers.append(dict(pc=hex(pc), incoming=CARRY_NAME[carry], outgoing=CARRY_NAME[res['carry']]))
-    # unreached stops: the run continues into the U1 code at 480cc and ends at the first PC without an executor (4aa88)
+    # unreached stops: the run continues into the U1 code at 480cc and (final state, U1..U7 executable) still ends in an unsupported-PC rollback at the first PC without an executor; the stops stay unreached
     for stop in (0x49b0e, 0x49b2e, 0x4d7f0, 0x49e34):
         reject(exe, 'unreached_stop_%06x_from_49b0c' % stop, base, {}, stop, UNSUPPORTED_MACHINE, out, resources)
     return out, len(interior), len(operand), controls, producers

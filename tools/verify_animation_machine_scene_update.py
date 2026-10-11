@@ -78,6 +78,7 @@ GUARD_ERRORS = {
     'guard-bad-stop-1a6a2-on-frame-seed': UNSUPPORTED_MACHINE,        # RTS to 1a78c runs the U2 tail to the RTS into ff000 (no executor)
     'guard-bad-stop-1a78c-on-init-entry': UNSUPPORTED_MACHINE}        # RTS to 1a6a2 (no executor)
 VERIFIED_ARTIFACTS = set()
+SUPERSEDED_NEGATIVES = []      # negatives whose PC is executed by a later unit in the final state (recorded, not silently deleted)
 RUN_DIR = None
 WORKERS = 8
 DEBUG_ROWS = int(os.environ.get('SCENE_UPDATE_DEBUG_ROWS', '0'))     # development switch only: the reported run is always the full set
@@ -716,6 +717,13 @@ def negatives(exe, base, st, resources):
     # neighbours just outside the seven code ranges (own executors or none)
     outside = (0x17290 + 4, 0x172a0, 0x1a910, 0x1a912, 0x1a07a, 0x1a07c, 0x18702 + 0x2000, 0x43eb8, 0x43eba, 0x1b128, 0x1b12a, 0x1a470, 0x1a6a2, 0x1a69e)
     for pc in outside:
+        if pc == 0x1a470:
+            # 1a470 is executed by a later unit now (superseded negative): observe and pin the final-state result instead of an unsupported-PC rollback
+            result, outgoing, out_pvc, ports, error = inv('superseded_outside_range_entry_%06x' % pc, exe, r0, dict(s0, carry=2, pc=pc), p0, b0, resources, stop=0xff000, external=0)
+            assert result['ok'] and not error.strip() and result['pc'] == 0xff000 and result['status'] == 0, (hex(pc), error.strip())
+            SUPERSEDED_NEGATIVES.append(dict(label='outside_range_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE,
+                                             observed_final_state=dict(ok=True, pc=hex(result['pc'])), native_exception_rollback_equivalence_claimed=False))
+            continue
         reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
     # odd PCs (alignment is checked before routing)
     for pc in (0x1a7a9, 0x19e8b, 0x1b0e1, 0x18657):
@@ -847,7 +855,7 @@ def run(report_path):
         actual_CPP=dict(totals, matches=matches), original_program_read_audit=program_reads,
         declared_native_starts_not_reproduced_by_cpp_chain=not_reproduced, declared_native_starts_reproduced_by_cpp_chain=reproduced,
         native_guards_checked_API=guarded, native_continuous_control_phases_replayed=totals['control'],
-        negatives=negative, negative_count=len(negative) + len(guarded), interior_PCs_rejected=interior_count,
+        superseded_negatives=SUPERSEDED_NEGATIVES, negatives=negative, negative_count=len(negative) + len(guarded), interior_PCs_rejected=interior_count,
         operand_word_PCs_rejected=operand_count, API_controls=controls,
         zero_step_count=len(zero), zero_step_blocks=len(st['starts']), zero_step_carries=[0, 1, 2], boundary_zero_step=boundary_zero,
         carry_check='C++ carry equals the source-opcode walk over native-executed PCs (ORI/ANDI CCR known, flow-only preserved, else Unknown; the U2 '

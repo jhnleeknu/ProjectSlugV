@@ -2028,3 +2028,8 @@
 - 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
 - 4aa88/4b784 sprite buffer, e8a48/e8ad0/e8af4 cue, 2986/298e wrapper(결정 1 option A)를 연결했다(`engine/src/animation_machine_buffer_cue.cpp`). stage_frame 96 frame 480bc→480f0 일치, cda4/3aea 대기.
 - 단위 커밋 상태에서 해당 검증기 통과(보고서 `34ca867c…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0247. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U1~U7 최종 상태 검증기 정렬과 전체 회귀
+
+- U7까지 적용한 상태에서 이전 검증기 15개의 음성·guard 기대값을 정렬했다(엔진·native 비교 불변, superseded 기록 유지). 기존 검증기 28개 전부 PASS, `make -j4 all test` exit0. 상세는 리뷰 0248.
+- 진행 중(worktree `metalslug-input` WIP, 단위별 native 관측·C++ 검증 진행): stage controller F1a·F1b·F1c1·F1c2(검증 통과), event interpreter F3a·F3b, scheduler shell F2(22 seed가 기록된 모든 frame에서 native와 일치), F4 객체 callback 범위 분석(U01~U47) 및 U01. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.

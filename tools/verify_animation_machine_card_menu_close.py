@@ -616,6 +616,11 @@ def expected_pc_error(close_instructions, pc):
     return UNSUPPORTED_MACHINE
 
 
+DEVICE_ADDR = 'unsupported program bus device address'
+SUPERSEDED_DIRECT_PCS = (0x1a73c,)
+SUPERSEDED_RECORDS = []
+
+
 def negatives(exe, base, a698_starts, close_instructions, resources):
     out = []
 
@@ -639,8 +644,14 @@ def negatives(exe, base, a698_starts, close_instructions, resources):
         assert expected_pc_error(close_instructions, pc) == UNSUPPORTED_CLOSE
         reject('interior_direct_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_CLOSE)
     # a698/a69a/a6da are executed by the nested core now (superseded as unsupported-PC negatives); these still have none.
-    for pc in (0xa63c, 0xe84d6, 0xc00468, 0xc0046e, 0x1a73c):
+    for pc in (0xa63c, 0xe84d6, 0xc00468, 0xc0046e):
         reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_MACHINE)
+    # 1a73c is routed by the scene core (U2) now: a direct entry runs its code and ends with a state-dependent bus error (device address) instead of an
+    # unsupported-PC rollback. Checked as a failure with the observed error; former and observed errors are recorded (superseded, not deleted).
+    for pc in SUPERSEDED_DIRECT_PCS:
+        reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=DEVICE_ADDR)
+        SUPERSEDED_RECORDS.append(dict(label='boundary_direct_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE,
+                                       observed_error=DEVICE_ADDR, all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
     outside = (0x9ee6, 0xc2fa, 0xc2fc)
     for pc in outside:
         assert expected_pc_error(close_instructions, pc) == UNSUPPORTED_MACHINE
@@ -775,6 +786,7 @@ def main():
                   close_frames=frames,
                   original_program_read_audit=program_reads,
                   native_guards_checked_API=guarded, native_guards_superseded_by_nested_core=guards_superseded,
+                  negatives_superseded_by_scene_core_routing=SUPERSEDED_RECORDS,
                   negatives_superseded_by_nested_core=['boundary_direct_entry_a698', 'outside_range_entry_a69a', 'outside_range_entry_a6da', 'a698_reached_via_*_with_other_stops'],
                   declared_register_changes_asserted_against_record=[list(x) for x in registers_seen],
                   negatives=negative, negative_count=len(negative) + len(guarded),

@@ -911,6 +911,11 @@ def compare(exe, rows, resources, st, scene_in, stage_in, base_rams, base182, pr
     return out_rows, totals, guards, starts_by_label, dict(program_reads), extras, oors, visited, never_first
 
 
+SUPERSEDED_GUARDS = ('guard-bad-stop-1a7a8-on-scene-0237',)
+SUPERSEDED_RECORDS = []
+SUPERSEDED_NEGATIVES = []
+
+
 def compare_guards(exe, guards, resources, st):
     rows, mismatches = [], []
     for row, phase, ram, state, pvc, bank, step_start in guards:
@@ -924,6 +929,11 @@ def compare_guards(exe, guards, resources, st):
         for kind, r, s, p, b, stp in cases:
             s = dict(s, carry=2)
             result, outgoing, out_pvc, ports, error = inv('guard_%s_%s' % (label, kind), exe, r, s, p, b, resources, stop=stp, external=fx['external'])
+            if label in SUPERSEDED_GUARDS:
+                # superseded: the 1a7a8 stop is reached without error in the final state (executed by later units); former expectation recorded
+                assert result['ok'] and not error.strip() and result['pc'] == stp and result['status'] == 0, (label, kind, error.strip())
+                entry[kind] = dict(ok=True, pc=hex(result['pc']), error='')
+                continue
             assert not result['ok'], (label, kind)
             if error.strip() != want:
                 mismatches.append((label, kind, error.strip(), want))
@@ -931,11 +941,15 @@ def compare_guards(exe, guards, resources, st):
             assert outgoing == r and out_pvc == p and result['bank_base'] == b
             assert ports == MARKER and result['external_reads'] == 0x12345678 and result['status'] == 1
             entry[kind] = error.strip()
+        if label in SUPERSEDED_GUARDS:
+            SUPERSEDED_RECORDS.append(dict(label=label, native_guard=phase['guard'], former_expected_API_error=want, observed_final_state=entry,
+                                           native_fault_rollback_equivalence_claimed=False))
+            continue
         rows.append(dict(label=label, native_guard=phase['guard'], expected_error=want, checked_API_errors=entry, all_API_outputs_preserved=True,
                          native_fault_rollback_equivalence_claimed=False))
     assert not mismatches, mismatches
-    assert len(rows) == 30 and len(set(r['label'] for r in rows)) == 30
-    assert set(r['label'] for r in rows) == set(GUARD_ERRORS) | set(GUARD_OOR_PCS)
+    assert len(rows) + len(SUPERSEDED_RECORDS) == 30 and len(set(r['label'] for r in rows)) == len(rows)
+    assert set(r['label'] for r in rows) | set(SUPERSEDED_GUARDS) == set(GUARD_ERRORS) | set(GUARD_OOR_PCS)
     return rows
 
 
@@ -957,6 +971,16 @@ def negatives(exe, base, starts_by_label, st, resources, oors, visited):
         assert result['external_reads'] == 0x12345678 and result['status'] == 1
         out.append(dict(label=label, error=error.strip(), all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
 
+    def supersede(label, start, former, stop=0xff000, changes=None):
+        # superseded negative (later units execute this path now): pin and record the observed final-state result instead of a failure
+        r, s, p, b = start
+        s = dict(s, carry=2)
+        s.update(changes or {})
+        result, outgoing, out_pvc, ports, error = inv('superseded_' + label, exe, r, s, p, b, resources, stop=stop, external=0)
+        assert result['ok'] and not error.strip() and result['pc'] == stop and result['status'] == 0, (label, error.strip())
+        SUPERSEDED_NEGATIVES.append(dict(label=label, former_expected_API_error=former, observed_final_state=dict(ok=True, pc=hex(result['pc'])),
+                                         native_exception_rollback_equivalence_claimed=False))
+
     # interior instruction addresses and operand words inside the nine contract ranges: every even PC that is not a block start
     interior = [pc for pc in st['inside'] if pc not in start_set]
     for pc in interior:
@@ -968,7 +992,12 @@ def negatives(exe, base, starts_by_label, st, resources, oors, visited):
     outside = (0x18c04, 0x19768, 0x19772, 0x197d8, 0x19938, 0x1993c, 0x19944, 0x1996e, 0x19976)
     for pc in outside:
         assert not in_ranges(pc, st['ranges'])
-        reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
+        if pc == 0x19772:
+            supersede('outside_range_entry_%06x' % pc, base, UNSUPPORTED_MACHINE, changes={'pc': pc})      # executed by a later unit now
+        else:
+            # 197d8 is routed to the script placement executor now (its checked error); the others still have no executor
+            reject('outside_range_entry_%06x' % pc, base, {'pc': pc},
+                   error_expected='unsupported animation script placement PC' if pc == 0x197d8 else UNSUPPORTED_MACHINE)
     # former boundary PCs are ordinary block starts now: stop == entry is a zero-step, any other run executes (checked in the native comparison)
     # computed out-of-range types: running on from the dispatcher (no stop at the computed PC) fails with the exact error
     computed = 0
@@ -1005,7 +1034,10 @@ def negatives(exe, base, starts_by_label, st, resources, oors, visited):
     seen = visited[label]
     for stop in (0xff000, 0x1a0b6, 0x1a470, 0x19758, 0x1a73e, 0x1a2c2, 0x18c9a):
         assert stop not in seen, hex(stop)
-        reject('full_path_start_with_unreached_stop_%06x' % stop, full, stop=stop, error_expected=UNSUPPORTED_MACHINE)
+        if stop == 0xff000:
+            supersede('full_path_start_with_unreached_stop_%06x' % stop, full, UNSUPPORTED_MACHINE, stop=stop)      # now runs on and reaches ff000
+        else:
+            reject('full_path_start_with_unreached_stop_%06x' % stop, full, stop=stop, error_expected=UNSUPPORTED_MACHINE)
     s = dict(full[1], carry=0)
     for stop in (0x19812, 0x19844, 0x19910, 0x1972a, 0x19764, 0x1a7a8):
         assert stop in seen, hex(stop)
@@ -1187,7 +1219,7 @@ def run(report_path):
         cpp_static_audit=audit,
         actual_CPP=dict(totals, matches=matches), original_program_read_audit=program_reads,
         extra_range_19938_19978=dict(role='declared extra range outside the contract (U5 caller); expected-unsupported in C++', rows=extras),
-        native_guards_checked_API=guarded, native_continuous_control_phases_replayed=totals['control'],
+        native_guards_checked_API=guarded, superseded_guards=SUPERSEDED_RECORDS, superseded_negatives=SUPERSEDED_NEGATIVES, native_continuous_control_phases_replayed=totals['control'],
         negatives=negative, negative_count=len(negative) + len(guarded), interior_PCs_rejected=interior_count,
         operand_word_PCs_rejected=operand_count, computed_pc_run_on_rejected=computed_count, API_controls=controls,
         zero_step_count=len(zero), zero_step_blocks=len(st['starts']), zero_step_carries=[0, 1, 2], boundary_zero_step=boundary_zero,

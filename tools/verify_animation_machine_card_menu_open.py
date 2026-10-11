@@ -44,7 +44,10 @@ CALLER_BCS = (0x9ba6, 0x9bcc, 0x9bea, 0x9c10, 0x9c36, 0x9c54, 0x9c76, 0x9c9c, 0x
 BOUNDARY_PCS = (0x9e94, 0x9f36, 0xa2be, A406, A662, 0xa6da, 0xa70a, 0xa71a, 0xbd26, 0xe84d6, A63C)
 EXECUTED_BOUNDARIES = (0x9e94, 0x9f36, 0xa2be, A406, A662, 0xa6da, 0xa70a, 0xa71a, 0xbd26)
 EXECUTED_RANGE_ENDS = (0x9fc4,)
-NEGATIVE_BOUNDARY_PCS = (0xe84d6, A63C, 0xc00468, 0xc0046e, 0x1a73c)      # c00468/c0046e BIOS, 1a73c: no executor anywhere
+NEGATIVE_BOUNDARY_PCS = (0xe84d6, A63C, 0xc00468, 0xc0046e)      # c00468/c0046e BIOS: no executor anywhere
+SUPERSEDED_DIRECT_PCS = (0x1a73c,)      # routed by the scene core (U2) now: state-dependent bus error instead of an unsupported-PC rollback
+DEVICE_ADDR = 'unsupported program bus device address'
+SUPERSEDED_RECORDS = []
 STOP_BOUNDARIES = (0x9e94, 0xa2be, A406, A662, 0xa70a, 0xbd26, 0xe84d6, A63C, C2C8)
 OPEN_RANGES = ((0x9b26, 0x9b58), (0x9b58, 0x9bbc), (0x9bbc, 0x9cd4), (0x9cd4, 0x9d3a), (0x9d3a, 0x9e1a), (0x9e1a, 0x9e94),
                (0x9f7c, 0x9fc4), (0xa008, 0xa080), (0xa216, 0xa280), (0xa348, 0xa370), (0xa370, 0xa3e2),
@@ -505,6 +508,12 @@ def negatives(exe, rows, starts, instructions, push_end, resources):
         reject('%s_direct_entry_%06x' % (kind, pc), base, {'pc': pc}, expected=expected_pc_error(instructions, pc))
     for pc in sorted(NEGATIVE_BOUNDARY_PCS):
         reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_MACHINE)
+    # 1a73c is routed by the scene core (U2) now: a direct entry runs its code and ends with a state-dependent bus error (device address) instead of an
+    # unsupported-PC rollback. Checked as a failure with the observed error; former and observed errors are recorded (superseded, not deleted).
+    for pc in SUPERSEDED_DIRECT_PCS:
+        reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=DEVICE_ADDR)
+        SUPERSEDED_RECORDS.append(dict(label='boundary_direct_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE,
+                                       observed_error=DEVICE_ADDR, all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
     ends_outside = sorted({high for _low, high in OPEN_RANGES} - set(BLOCK_STARTS) - set(BOUNDARY_PCS) - {C2C8}
                           - set(EXECUTED_RANGE_ENDS))
     for pc in ends_outside:
@@ -655,6 +664,7 @@ def main():
                   open_frames_C_plus_plus=frames,
                   original_program_read_audit=program_reads,
                   native_guards_checked_API=guarded, native_guards_superseded_by_later_card_menu_cores=guards_superseded,
+                  negatives_superseded_by_scene_core_routing=SUPERSEDED_RECORDS,
                   negatives_superseded_by_later_card_menu_cores=dict(direct_entry_pcs=[hex(x) for x in sorted(set(EXECUTED_BOUNDARIES) | {C2C8})], range_end_pcs=[hex(x) for x in EXECUTED_RANGE_ENDS], boundary_rollback_with_other_stops=[hex(x) for x in sorted(set(EXECUTED_BOUNDARIES))]),
                   native_continuous_control_phases_replayed=control_count,
                   negatives=negative, negative_count=len(negative) + len(guarded),

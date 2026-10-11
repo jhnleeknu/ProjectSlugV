@@ -75,6 +75,13 @@ def compare(exe, folder, records, resources):
                 branch_results=branches, external_reads=reads, ports=ports_count, matches=rows)
 
 
+# Superseded expectations (final state): the successor 480bc / its callees are executable now (U1..U7), so these runs go on and end in a state-dependent
+# bus error instead of an unsupported-PC rollback. Labels are kept; former and observed errors are recorded in the report (superseded_negatives).
+SUPERSEDED_CAUSES = {'known_branch_late_unsupported_successor_1': 'program bus requires even WORD/LONG address',
+                     'whole_activation_readiness_late_unsupported_successor': 'program bus requires even WORD/LONG address'}
+SUPERSEDED_NEGATIVES = []
+
+
 def negatives(exe, folder, records, resources):
     rows = []
     base = records[0][1]
@@ -89,6 +96,10 @@ def negatives(exe, folder, records, resources):
                                fx['pvc'], fx['bank_base'], resources if selected is None else selected,
                                stop=stop, external=fx['external'])
         result, outgoing, pvc, ports, error = actual
+        if label in SUPERSEDED_CAUSES:
+            SUPERSEDED_NEGATIVES.append(dict(label=label, former_expected_API_error=cause, observed_final_state_error=SUPERSEDED_CAUSES[label],
+                                             all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
+            cause = SUPERSEDED_CAUSES[label]
         assert not result['ok'] and cause in error, (label, error)
         assert {key: result[key] for key in common.STATE_KEYS} == state
         assert outgoing == ram and pvc == fx['pvc'] and ports == marker
@@ -287,7 +298,7 @@ def main():
     report = dict(schema_version=1, source=source, inputs=inputs, artifacts=refs,
                   native_observation_sha256=NATIVE_SHA, native_tool_sha256=NATIVE_TOOL_SHA,
                   native_split_phases_replayed=matches['phases'], native_continuous_control_phases_replayed=control_phases,
-                  actual_CPP=matches, negatives=negative_rows, negative_count=len(negative_rows),
+                  actual_CPP=matches, superseded_negatives=SUPERSEDED_NEGATIVES, negatives=negative_rows, negative_count=len(negative_rows),
                   zero_step=zero_rows, harness_JSON_keys=22, normalized_reference_paths=len(unique),
                   compile_command=command, failure=None, ROM_unchanged=True,
                   limits=['Controlled originalreadiness helper/caller/sharedstack fixtures; natural gameplay not proved.',

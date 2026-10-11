@@ -6,8 +6,8 @@ declared by the observation: they are reconstructed here from tools/verify_stage
 and artifacts/stage_frame (never copied from the observation) and asserted equal to the recorded
 seed SHAs, fixture RAM/PVC SHAs, registers and bank state. C++ resumes only from the previous
 actual C++ output plus the host changes recorded in the native step (declared PC redirect, return
-LONG and RAM fixtures). 1a73c/49b0c/4aa88/e8a48 and 4939c (TRAP #f) are stop boundaries only:
-never executed. Native SR is never read: C is a source-opcode classification.
+LONG and RAM fixtures). 1a73c/49b0c/4aa88/e8a48 and 4939c (TRAP #f) have no native instructions in this observation
+(boundary stops there; later units execute 1a73c/49b0c/4aa88/e8a48 in the final state, see superseded_negatives); 4939c (TRAP #f) stays a stop boundary. Native SR is never read: C is a source-opcode classification.
 """
 import json
 from pathlib import Path
@@ -489,12 +489,21 @@ def compare_guards(exe, guards, resources, guard_errors):
             s = dict(s, carry=2)
             result, outgoing, out_pvc, ports, error = common.invoke(exe, OUT, 'guard_%s_%s' % (label, kind), r, s, p, b,
                                                                     resources, stop=stp, external=fx['external'])
+            if label in SUPERSEDED_GUARDS:
+                # superseded negative: the stop is now reached (JSR 1a73c is routed by U2); record the observed result, assert nothing about a failure
+                entry[kind] = dict(ok=bool(result['ok']), pc=hex(result['pc']), error=error.strip(), observed_final_state_only=True)
+                assert result['ok'] and not error.strip() and result['pc'] == stp, (label, kind, error.strip())
+                continue
             assert not result['ok'], (label, kind)
             assert error.strip() == guard_errors[label], (label, kind, error.strip())
             assert {k: result[k] for k in common.STATE_KEYS} == s
             assert outgoing == r and out_pvc == p and result['bank_base'] == b
             assert ports == MARKER and result['external_reads'] == 0x12345678 and result['status'] == 1
             entry[kind] = error.strip()
+        if label in SUPERSEDED_GUARDS:
+            SUPERSEDED_RECORDS.append(dict(label=label, native_guard=phase['guard'], former_expected_API_error=SUPERSEDED_GUARDS[label],
+                                           observed_final_state=entry, native_fault_rollback_equivalence_claimed=False))
+            continue
         rows.append(dict(label=label, native_guard=phase['guard'], checked_API_errors=entry,
                          all_API_outputs_preserved=True, native_fault_rollback_equivalence_claimed=False))
     return rows
@@ -545,13 +554,18 @@ def negatives(exe, base, starts, instructions, block_starts, resources, neg_erro
                             native_exception_rollback_equivalence_claimed=False))
     # non-boundary stops: full rollback
     reject('natural_480bc_with_stop_ff000', starts['natural-seed0-bank2'], error_expected=UNSUPPORTED_MACHINE)
-    reject('natural_480bc_with_stop_49b0c', starts['natural-seed0-bank2'], stop=B49B0C, error_expected=UNSUPPORTED_MACHINE)
-    reject('natural_480bc_with_stop_4aa88', starts['natural-seed0-bank2'], stop=B4AA88, error_expected=UNSUPPORTED_MACHINE)
+    # superseded negatives: 49b0c / 4aa88 are executable now (U3..U7). natural 480bc with these stops runs through the post-1a73c shell and stops there without error
+    for label, stop in (('natural_480bc_with_stop_49b0c', B49B0C), ('natural_480bc_with_stop_4aa88', B4AA88)):
+        r, s, p, b = starts['natural-seed0-bank2']
+        result, outgoing, out_pvc, ports, error = common.invoke(exe, OUT, 'superseded_' + label, r, dict(s, carry=2), p, b, resources, stop=stop, external=0)
+        assert result['ok'] and not error.strip() and result['pc'] == stop and result['status'] == 0, (label, error.strip())
+        SUPERSEDED_RECORDS.append(dict(label=label, former_expected_API_error=UNSUPPORTED_MACHINE, observed_final_state=dict(
+            ok=True, pc=hex(result['pc']), a7=hex(result['a7']), error='', RAM_changed=outgoing != r), native_exception_rollback_equivalence_claimed=False))
     reject('natural_480bc_with_stop_4939c', starts['natural-seed0-bank2'], stop=T4939C, error_expected=UNSUPPORTED_MACHINE)
     reject('direct_6f1c2_with_stop_ff000', starts[SIX_F1C2_LABEL], error_expected=UNSUPPORTED_MACHINE)
     reject('a5_not_108000_49392_with_stop_ff000', starts['boundary-a5-not-108000-direct-49392'], error_expected=UNSUPPORTED_MACHINE)
     reject('a5_not_108000_via_b4a2a_with_stop_ff000', starts['boundary-a5-not-108000-via-b4a2a'], error_expected=UNSUPPORTED_MACHINE)
-    # API-only positive controls: the post-1a73c shell reaches 49b0c, 4aa88 and e8a48 with matching stops and executes nothing there
+    # API-only positive controls: the post-1a73c shell reaches 49b0c, 4aa88 and e8a48 with matching stops (stop checked at the loop head, nothing executed there by these controls)
     controls = []
     for entry_pc, stop in ((0x480c6, B49B0C), (0x480cc, B4AA88), (0x480e4, BE8A48), (0x480d2, 0xb4a2a), (0x480ea, 0x2efa6)):
         s = dict(s0, pc=entry_pc, carry=2, a7=s0['a7'] - 4)
@@ -601,7 +615,10 @@ GUARD_ERRORS = {
     'guard-odd-A7-6f1c2-rts': EVEN, 'guard-odd-A7-3c44-push': EVEN, 'guard-odd-A7-jsr-push': EVEN,
     'guard-rom-write-b4a2a-a5-0': WRITE_DEVICE, 'guard-rom-write-4701e-a5-0': WRITE_DEVICE,
     'guard-rom-write-b481e-a5-8000': WRITE_DEVICE, 'guard-odd-A5-b4a2a': EVEN_WRITE,
-    'guard-stop-not-boundary-2ac2': UNSUPPORTED_MACHINE, 'guard-ret-1a73c-boundary-via-direct': UNSUPPORTED_MACHINE}
+    'guard-ret-1a73c-boundary-via-direct': UNSUPPORTED_MACHINE}
+# Superseded by U2 (JSR 1a73c is executed from here on): the native guard record is unchanged; the C++ now runs to the 2ac2 stop without error.
+SUPERSEDED_GUARDS = {'guard-stop-not-boundary-2ac2': UNSUPPORTED_MACHINE}
+SUPERSEDED_RECORDS = []
 NEG_ERRORS = {}
 
 
@@ -677,6 +694,7 @@ def main():
                                        native_block_starts_without_cpp_case=[hex(p) for p in native_not_cpp]),
                   actual_CPP=dict(totals, matches=matches),
                   original_program_read_audit=program_reads,
+                  superseded_negatives=SUPERSEDED_RECORDS,
                   native_guards_checked_API=guarded, native_continuous_control_phases_replayed=control_count,
                   negatives=negative, negative_count=len(negative) + len(guarded),
                   interior_PCs_rejected=interior_count, API_only_boundary_stop_controls=controls,
@@ -684,7 +702,7 @@ def main():
                   carry_check='C++ carry equals source-opcode walk over native-executed PCs (ORI/ANDI CCR and ANDI.W #1,D0 known, 289e equal-branch Clear, flow-only preserved, else Unknown); native SR never read',
                   normalized_reference_paths=len(unique), compile_command=command, failure=None, ROM_unchanged=True,
                   limits=['Controlled stage-frame seeds with declared RAM/register/PC/return-LONG fixtures, not natural scheduler, IRQ or gameplay reachability.',
-                          '1a73c, 49b0c, 4aa88, e8a48 bodies and 4939c (TRAP #f) are stop boundaries only, never executed; 49b0c/4aa88/e8a48 stops are API-only controls with no native counterpart.',
+                          'This observation never executed 1a73c/49b0c/4aa88/e8a48 or 4939c (TRAP #f); in the final state later units execute 1a73c/49b0c/4aa88/e8a48 (stop-not-boundary-2ac2 and natural 49b0c/4aa88 stops are recorded as superseded_negatives), 4939c remains a stop boundary; 49b0c/4aa88/e8a48 stops are API-only controls with no native counterpart.',
                           'Carry is a source-opcode classification (native SR is never read).',
                           'Checked failures preserve API outputs, not original CPU fault rollback; interior/boundary direct entries have no native guard (API-only rejection).',
                           'X-bin overflow past 10d665 is observed native behavior (writes reach 10d67c at x1=06a0); hazard cases that fault natively are guards here.',
