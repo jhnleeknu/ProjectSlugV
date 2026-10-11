@@ -504,7 +504,7 @@ void dump_regs(const State&s,const std::uint32_t*want){
 struct Final {Bytes ram;State s;bool ok;};
 std::vector<Final> finals;
 unsigned int success_count=0,error_count=0,kept_c=0,boundary_rows=0;
-const std::uint32_t BOUNDARIES[]={0x44ade,0x5ff40,0x45b12,0x5fe14,0x1,0x5fa14,0x4b8e8,0x4bce0,0x1}; // 469d8 (U09), 492c8 (U12), 47288 (U11), 4662e (U15a) and 4578a (U15b) are routed now (0x1, 5fa14, 5fe14 and 5ff40 never match a stop).
+const std::uint32_t BOUNDARIES[]={0x44ade,0x5ff40,0x10fe00,0x5fe14,0x1,0x5fa14,0x4b8e8,0x4bce0,0x1}; // 469d8 (U09), 492c8 (U12), 47288 (U11), 4662e (U15a) 4578a (U15b) and 45b12 (U15c) are routed now (0x1, 5fa14, 5fe14, 5ff40 and 10fe00 never match a stop).
 void fixtures(){
  finals.assign(FIXTURE_COUNT,Final());
  for(unsigned int k=0;k<FIXTURE_COUNT;++k){const Fixture&f=FIXTURES[k];finals[k].ok=false;
@@ -575,8 +575,8 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u08b PC");++inside;}
  assert(even==754&&inside==589);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- const std::uint32_t outside[]={0x44ade,0x5ff44,0x45b12,0x5fe18,0x5fa18, // 469d8 is U09 now, 492c8 is U12 now, 4662e is U15a now, 4578a is U15b now
- 0x4b8e8,0x4bce0,0x461ea,0x461f2,0x46370,0x5fe1c, // 4683a is inside the U15a range 4662e..4683c now
+ const std::uint32_t outside[]={0x44ade,0x5ff44,0x10fe04,0x5fe18,0x5fa18, // 469d8 is U09 now, 492c8 is U12 now, 4662e is U15a now, 4578a is U15b now, 45b12 is U15c now
+ 0x4b8e8,0x4bce0,0x10fe08,0x461f2,0x46370,0x5fe1c, // 4683a is inside the U15a range 4662e..4683c now, 461ea is inside U15c now
   0x46994,0x4bb20,0x4bb52,0x4bc42,0x4bca0,0x4be32,0x4be50,0x4be68,0x4be80,0x4bfa4};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x461ed,0x461f1,0x46373,0x4662d,0x4683d,0x46993,0x4bb23,0x4bb51,0x4bc45,0x4bc9f,0x4be35,0x4be4f,0x4be83,0x4bfa3};

@@ -442,6 +442,20 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x458bc:case 0x458c0:case 0x458c4:case 0x458c8:case 0x458cc:case 0x458d0:case 0x458d4:case 0x458d8:case 0x458dc:
     case 0x458e0:case 0x458e4:case 0x458e8:case 0x458ec:case 0x458f0:case 0x458f4:case 0x458f8:case 0x458fc:case 0x45900:
     case 0x45904:case 0x45908:case 0x4590c:case 0x45910:case 0x45914:case 0x45918:case 0x4591c:case 0x45930:case 0x45b10:
+    // Objects U15c (F4) blocks: the 45b28 JMP (computed PC) and the 96 BRA.W table entries 45b2c..45ca8. U15c has no carry consumer
+    // across blocks and no known-carry producer. The CMPI/TST+Bcc entry blocks 45b12 45b1a 45b22 and the ORI.W+MOVE.W+RTS target
+    // bodies stay Unknown.
+    case 0x45b28:case 0x45b2c:case 0x45b30:case 0x45b34:case 0x45b38:case 0x45b3c:case 0x45b40:case 0x45b44:case 0x45b48:
+    case 0x45b4c:case 0x45b50:case 0x45b54:case 0x45b58:case 0x45b5c:case 0x45b60:case 0x45b64:case 0x45b68:case 0x45b6c:
+    case 0x45b70:case 0x45b74:case 0x45b78:case 0x45b7c:case 0x45b80:case 0x45b84:case 0x45b88:case 0x45b8c:case 0x45b90:
+    case 0x45b94:case 0x45b98:case 0x45b9c:case 0x45ba0:case 0x45ba4:case 0x45ba8:case 0x45bac:case 0x45bb0:case 0x45bb4:
+    case 0x45bb8:case 0x45bbc:case 0x45bc0:case 0x45bc4:case 0x45bc8:case 0x45bcc:case 0x45bd0:case 0x45bd4:case 0x45bd8:
+    case 0x45bdc:case 0x45be0:case 0x45be4:case 0x45be8:case 0x45bec:case 0x45bf0:case 0x45bf4:case 0x45bf8:case 0x45bfc:
+    case 0x45c00:case 0x45c04:case 0x45c08:case 0x45c0c:case 0x45c10:case 0x45c14:case 0x45c18:case 0x45c1c:case 0x45c20:
+    case 0x45c24:case 0x45c28:case 0x45c2c:case 0x45c30:case 0x45c34:case 0x45c38:case 0x45c3c:case 0x45c40:case 0x45c44:
+    case 0x45c48:case 0x45c4c:case 0x45c50:case 0x45c54:case 0x45c58:case 0x45c5c:case 0x45c60:case 0x45c64:case 0x45c68:
+    case 0x45c6c:case 0x45c70:case 0x45c74:case 0x45c78:case 0x45c7c:case 0x45c80:case 0x45c84:case 0x45c88:case 0x45c8c:
+    case 0x45c90:case 0x45c94:case 0x45c98:case 0x45c9c:case 0x45ca0:case 0x45ca4:case 0x45ca8:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -729,6 +743,7 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             else if ((next.pc>=0xb0106 && next.pc<0xb0150) || (next.pc>=0xb0206 && next.pc<0xb0228) || (next.pc>=0xb02c8 && next.pc<0xb02ec) ||
                 (next.pc>=0xbbe12 && next.pc<0xbbf04) || (next.pc>=0xf1a0e && next.pc<0xf1a3a))ok=animation_objects_u16_block(c);
             else if (next.pc>=0x4578a && next.pc<0x45b12)ok=animation_objects_u15b_block(c);
+            else if (next.pc>=0x45b12 && next.pc<0x461ec)ok=animation_objects_u15c_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

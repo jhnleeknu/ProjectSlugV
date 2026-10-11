@@ -2057,3 +2057,10 @@
 - 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
 - 479b0~47a94 area 초기화, player 배치, RNG 49a58, 음악 갱신을 연결했다(`engine/src/animation_machine_stage_area.cpp`, 153 block, TRAP 4d824 경계). RNG 포인터가 work RAM 밖이면 checked 오류(의도된 차이).
 - 단위 커밋 상태에서 해당 검증기 통과(보고서 `4adc0955…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 F1c2 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0252. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — Claude 착수 범위 통합 작업 시작 (진행 중)
+- 사용자 요청 범위: U15b/U15c 마무리, 기존 F2/F3/F4 U01~U16 통합, 통합 버전 원본 비교와 전체 회귀 검증까지만 수행한다. U17 이후·새 R 단위·전체 게임 확장은 착수하지 않는다. 기존 전체 Goal의 완료 기준과 누적 진행 기록은 유지한다.
+- 기존 main `6346ef3`, input WIP `1aa80c8`, U15b `c2a90ec`, U15c 미커밋 소스·시험을 별도 `codex/claude-integration` 브랜치에서 통합한다. 원래 작업 디렉터리와 Claude의 검증 산출물은 보존한다.
+- U15b/U16 충돌 4개는 양쪽의 등록·라우팅·시험을 함께 보존해 해결했다(`ade4f04`). main과 WIP 병합(`e0657a2`)에서는 확장된 실행부와 이동한 음성 경계를 보존하고 main의 검증·분석 기록을 합쳤다.
+- 내부 작업자 3개 모두 `gpt-6.1-sol` / `medium`: U15b/c 검토·카드 회귀, F2/F3 검증기 통합, F4 원본 비교. 메인은 의미 검토·통합·나머지 회귀를 맡는다. AGENTS.md와 docs/GOAL.md에도 이미 6.1 모델 규칙이 적용되어 있다.
+- 현재 빌드·원본 회귀 검증 실행 중이다. 단위 WIP PASS를 최종 통합 PASS로 대신하지 않으며, 완료 결과는 후속 기록에서 확정한다. 원본 ROM은 수정하지 않으며 생성 데이터는 Git에 추가하지 않는다.
