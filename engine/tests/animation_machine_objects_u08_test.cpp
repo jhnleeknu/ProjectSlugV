@@ -305,7 +305,6 @@ const Fixture FIXTURES[]={
  {"error-table-boundary",0x4483a,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x2a0,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","unsupported animation machine PC",{0},0,0ULL},
  {"error-table-before",0x4483a,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0xfff8,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","unsupported animation objects u08 PC",{0},0,0ULL},
  {"error-table-self",0x4483a,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0xfffc,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","animation machine block budget exceeded",{0},0,0ULL},
- {"error-boundary-47288",0x447da,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","unsupported animation machine PC",{0},0,0ULL},
  {"error-odd-stack",0x447ee,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f001},"","program bus requires even WORD/LONG address",{0},0,0ULL},
  {"error-odd-object",0x43ecc,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e401,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","program bus requires even WORD/LONG address",{0},0,0ULL},
  {"error-map-rom",0x18be8,0xff000,0,{0x0,0x0,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0xe7000,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","missing or ambiguous physical program bus ROM byte",{0},0,0ULL},
@@ -566,7 +565,6 @@ void dump_regs(const State&s,const std::uint32_t*want){
 struct Final {Bytes ram;State s;bool ok;};
 std::vector<Final> finals;
 unsigned int success_count=0,error_count=0,kept_c=0,table_rows=0;
-const Fixture& fixture_of(const char*name){for(unsigned int k=0;k<FIXTURE_COUNT;++k)if(std::strcmp(FIXTURES[k].name,name)==0)return FIXTURES[k];assert(false);return FIXTURES[0];}
 void fixtures(){
  finals.assign(FIXTURE_COUNT,Final());
  for(unsigned int k=0;k<FIXTURE_COUNT;++k){const Fixture&f=FIXTURES[k];finals[k].ok=false;
@@ -629,7 +627,8 @@ void zero_step(){
    o.status==ms5::AnimationMachineReturned&&o.dev.bank_base==0x200000&&o.dev.pvc==pvc_base());}
 }
 // Every other even PC of the 5 routed ranges (the BRA.W displacement WORDs included) is rejected by the U08a executor; the
-// boundary 47288, the next table function 44ade and the range neighbours by the routing; odd PCs first.
+// next table function 44ade and the range neighbours by the routing (47288 is an objects U11 block start since the U11 merge and
+// the unrouted 5f802 stands in for it); odd PCs first.
 void interior(){
  unsigned int even=0,inside=0;
  for(unsigned int r=0;r<RANGE_COUNT;++r)for(std::uint32_t pc=RANGES[r][0];pc<RANGES[r][1];pc+=2){++even;
@@ -637,16 +636,16 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u08 PC");++inside;}
  assert(even==472&&inside==291);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- const std::uint32_t outside[]={0x47288,0x44ade,0x44ae0,0x18be6,0x1aa38,0x1aa40,0x447bc,0x4929e,0x492c8,0x3c83e};
+ const std::uint32_t outside[]={0x5f802,0x44ade,0x44ae0,0x18be6,0x1aa38,0x1aa40,0x447bc,0x4929e,0x492c8,0x3c83e};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x18be9,0x18c05,0x1aa3b,0x43eb9,0x43ef9,0x447bf,0x4483b,0x4483f,0x449bf,0x44add,0x49275,0x4929d};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
-// The boundary stops when it is the stop PC and otherwise rolls the whole run back.
+// The former boundary 47288 (an objects U11 block start since the U11 merge): only the stop at that PC is asserted (F4 unit test
+// boundary convention; the former rollback rows are removed).
 void boundaries(){
  const char* names[]={"447be-other","447da","flow-447da-2"};
- for(unsigned int i=0;i<3;++i){const Fixture&f=fixture_of(names[i]);assert(final_of(names[i]).s.pc==0x47288);
-  Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
+ for(unsigned int i=0;i<3;++i)assert(final_of(names[i]).s.pc==0x47288);
  // Every table index with every incoming C reaches its transcribed target in one call (stop at the target).
  for(unsigned int k=0;k<96;++k)for(unsigned int c=0;c<3;++c){Bytes ram;State s;generic(0x4483a,ram,s,c);s.d[7]=0xabcd0000U|(4U*k);Out o;
   assert(run(ram,s,TARGETS[k],o)&&s.pc==TARGETS[k]&&s.carry==carry_of(c)&&s.d[7]==(0xabcd0000U|(4U*k)));}

@@ -295,8 +295,8 @@ void errors(){
  // Neighbours outside the ranges and the TRAP boundary (U2..U7 now execute; 49ab2 is the U6 default mask data before
  // 49ab4; 47640 2efa4 2efdc b4a28 b481c 46f50 are now stage area F1c2 PCs, and the unrouted 5f006 5f00a 5f00c 5f00e 5f010
  // 5f012, outside every unit contract, stand in for them; 4706c is an objects U09 block start and the unrouted 5f500 stands in
- // for it); odd PCs are rejected first.
- const std::uint32_t outside[]={0x480f2,0x5f006,0x6f1c0,0x6f1c4,0x5f00a,0x5f00c,0x3c42,0x3c7c,0x5f00e,0xb4ab0,0x49390,0x4939c,0x493bc,
+ // for it; 49390 is inside the objects U11 block 4938c and the unrouted 5f800 stands in for it); odd PCs are rejected first.
+ const std::uint32_t outside[]={0x480f2,0x5f006,0x6f1c0,0x6f1c4,0x5f00a,0x5f00c,0x3c42,0x3c7c,0x5f00e,0xb4ab0,0x5f800,0x4939c,0x493bc,
   0x1c026,0x1c052,0x4d9d4,0x4da08,0x5f010,0xb4850,0x5f012,0x5f500,0x49ab2};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0x47657,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
