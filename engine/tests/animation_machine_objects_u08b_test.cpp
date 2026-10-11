@@ -504,7 +504,7 @@ void dump_regs(const State&s,const std::uint32_t*want){
 struct Final {Bytes ram;State s;bool ok;};
 std::vector<Final> finals;
 unsigned int success_count=0,error_count=0,kept_c=0,boundary_rows=0;
-const std::uint32_t BOUNDARIES[]={0x44ade,0x4578a,0x45b12,0x4662e,0x1,0x492c8,0x4b8e8,0x4bce0,0x47288}; // 469d8 is a U09 entry since the U09 merge (0x1 never matches a stop).
+const std::uint32_t BOUNDARIES[]={0x44ade,0x4578a,0x45b12,0x4662e,0x1,0x492c8,0x4b8e8,0x4bce0,0x1}; // 469d8 is a U09 entry since the U09 merge and 47288 a U11 entry since the U11 merge (0x1 never matches a stop).
 void fixtures(){
  finals.assign(FIXTURE_COUNT,Final());
  for(unsigned int k=0;k<FIXTURE_COUNT;++k){const Fixture&f=FIXTURES[k];finals[k].ok=false;
