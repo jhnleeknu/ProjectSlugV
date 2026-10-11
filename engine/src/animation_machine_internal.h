@@ -76,5 +76,6 @@ bool animation_objects_u02_block(AnimationMachineContext& c);
 bool animation_objects_u03_block(AnimationMachineContext& c);
 bool animation_objects_u05_block(AnimationMachineContext& c);
 bool animation_objects_u04_block(AnimationMachineContext& c);
+bool animation_objects_u06_block(AnimationMachineContext& c);
 }
 #endif

@@ -882,8 +882,9 @@ void boundaries(){
  assert(interior==493&&bundled==54); // 644 even PCs in the routed ranges minus 151 block starts
  // 4d7f0 (TRAP #f) and neighbours outside the ranges have no executor (1bee4 is now an area clear F1b block start; the
  // 1bef8 data after it stands in; 4d81c and 49a8e are now stage area F1c2 block starts, and the unrouted 5f014 and 5f016,
- // outside every unit contract, stand in for them); odd PCs are rejected first.
- const std::uint32_t outside[]={0x4d7f0,0x49ab0,0x49ab2,0x49bca,0x49c1e,0x49c38,0x49c64,0x49c6c,0x49d86,0x1d8ca,0x1d8ce,0xe73f0,0xe73f8,
+ // outside every unit contract, stand in for them; e73f8 is now an objects U06 block start and the unrouted 5f200 stands in for
+ // it); odd PCs are rejected first.
+ const std::uint32_t outside[]={0x4d7f0,0x49ab0,0x49ab2,0x49bca,0x49c1e,0x49c38,0x49c64,0x49c6c,0x49d86,0x1d8ca,0x1d8ce,0xe73f0,0x5f200,
   0x1bebe,0x1bef8,0x1d5aa,0x1d5c4,0x1d5e0,0x1d5fc,0x1d618,0x1d63a,0x1d662,0x1d698,0x1d6c0,0x1d6fa,0x1da5e,0x1daba,0x4836c,0x48384,
   0x4d7a4,0x5f014,0x5f016,0x49cc2};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}

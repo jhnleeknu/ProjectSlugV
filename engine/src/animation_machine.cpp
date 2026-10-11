@@ -301,6 +301,15 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // SUBQ/SUBI/NEG/NOT/ANDI/ASR/LSL/SWAP/MULS/MULU blocks and the BSET/BCLR + MOVE blocks stay Unknown.
     case 0xce44:case 0xce60:case 0x43ea4:case 0xd72fe:case 0xd730a:case 0xd731a:case 0xd73c4:case 0xd73ca:case 0xd73ce:
     case 0xd7424:case 0xd748c:case 0xd74a2:case 0xd74d6:case 0xd7504:case 0xd75cc:
+    // Objects U06 (F4) blocks: LEA/JSR/BSR/BRA/RTS, MOVEA.L (A7)+,A0+RTS, Dn BTST+BEQ (Z only) and the consumers e742c (C returned
+    // by the input 4836e) and e7916 (C returned by the interpreter 49fc6). U06 has no known-carry producer. MOVE/MOVEQ/MOVEA+MOVE/
+    // CLR/TST/CMP/CMPI/AND/ANDI/OR/ADD/ADDI/ADDQ/SUBQ/LSL/LSR blocks, the ADDQ.L An blocks eb7bc/eba78 and the PVC blocks stay Unknown.
+    case 0x49be6:case 0x49bec:case 0xe73f8:case 0xe7426:case 0xe742c:case 0xe743a:case 0xe744e:case 0xe7462:case 0xe7478:
+    case 0xe7486:case 0xe74a0:case 0xe74d6:case 0xe74ea:case 0xe74ec:case 0xe755e:case 0xe7792:case 0xe77dc:case 0xe77e2:
+    case 0xe786c:case 0xe7888:case 0xe78a8:case 0xe78c0:case 0xe78d6:case 0xe78f4:case 0xe7910:case 0xe7916:case 0xe7944:
+    case 0xeb83e:case 0xeb84e:case 0xeb852:case 0xeb862:case 0xeb866:case 0xeb87c:case 0xeb880:case 0xeb896:case 0xeb8ae:
+    case 0xeb8ba:case 0xeb8c6:case 0xeb8d2:case 0xeb8f2:case 0xeb910:case 0xeb928:case 0xeb92c:case 0xeb942:case 0xeb96e:
+    case 0xeb98e:case 0xeb9b8:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -554,6 +563,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xc6a96 && next.pc<0xc6c24))ok=animation_objects_u05_block(c);
             else if ((next.pc>=0xce02 && next.pc<0xce62) || (next.pc>=0x43ea4 && next.pc<0x43ea8) ||
                 (next.pc>=0xd72f2 && next.pc<0xd75ce))ok=animation_objects_u04_block(c);
+            else if ((next.pc>=0x49be0 && next.pc<0x49bf2) || (next.pc>=0xe73f8 && next.pc<0xe74f8) || (next.pc>=0xe7546 && next.pc<0xe7562) ||
+                (next.pc>=0xe7792 && next.pc<0xe7946) || (next.pc>=0xeb7b6 && next.pc<0xeb9ba) ||
+                (next.pc>=0xeba3e && next.pc<0xeba9e))ok=animation_objects_u06_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
