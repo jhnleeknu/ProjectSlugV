@@ -303,7 +303,8 @@ const unsigned int FIXTURE_COUNT=sizeof(FIXTURES)/sizeof(FIXTURES[0]);
 const unsigned int BLOCK_COUNT=sizeof(BLOCKS)/sizeof(BLOCKS[0]);
 const unsigned int REACH_COUNT=sizeof(REACH)/sizeof(REACH[0]);
 // Contract lists: FLOW_ONLY (60, plus the 43e34 LEA entry), carry consumers (2), bundled PCs (22; e94c0 is the F3a one of the six
-// Z-consuming PCs of F3 main decision 3), the other five Z-consuming PCs (F3b, no executor yet) and the seven routed ranges.
+// Z-consuming PCs of F3 main decision 3), the other five Z-consuming PCs (bundled PCs of the F3b executor) and the seven routed
+// ranges.
 const std::uint32_t FLOW[]={0x43e34,0x4855a,0xe9176,0xe9194,0xe9196,0xe91ac,0xe91be,0xe91e4,0xe91e8,0xe91ec,0xe91f0,0xe91f4,0xe91f8,
  0xe91fc,0xe9200,0xe9236,0xe923a,0xe9248,0xe9258,0xe9296,0xe932a,0xe9488,0xe9498,0xe94a4,0xe94b4,0xe94b8,0xe97e4,0xe97e8,0xe97ec,
  0xe97f0,0xe97f4,0xe97f8,0xe97fc,0xe9800,0xe9804,0xe9808,0xe980c,0xe9810,0xe9814,0xe9818,0xe981c,0xe9820,0xe9824,0xe9828,0xe982c,
@@ -486,8 +487,11 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation stage event PC");++inside;if(in_list(BUNDLED,BUNDLED_COUNT,pc))++bundled;}
  assert(even==562&&inside==428&&bundled==22);
  for(unsigned int i=0;i<BUNDLED_COUNT;++i)assert(!is_start(BUNDLED[i])&&in_ranges(BUNDLED[i]));
- for(unsigned int i=0;i<5;++i){Bytes ram;State s;generic(Z_F3B[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
- const std::uint32_t outside[]={0xe94fe,0xe9350,0xe9362,0xe914e,0xe9774,0xe97c6,0xe98ee,0x48500,0x4855c,0x1a91a,0x1a93c,0x1a952,0xe9428,0xe939a,
+ for(unsigned int i=0;i<5;++i){Bytes ram;State s;generic(Z_F3B[i],ram,s,2);reject(ram,s,STOP,"unsupported animation stage event ops PC");}
+ // 1a93c (the 1a92c RTS) is an F3b interior PC; the former neighbours e94fe e9350 e9362 e9774 e97c6 e9428 e939a are F3b block
+ // starts (animation_machine_stage_event_ops_test) and the unrouted 5f028..5f034, outside every unit contract, stand in for them.
+ {Bytes ram;State s;generic(0x1a93c,ram,s,2);reject(ram,s,STOP,"unsupported animation stage event ops PC");}
+ const std::uint32_t outside[]={0x5f028,0x5f02a,0x5f02c,0xe914e,0x5f02e,0x5f030,0xe98ee,0x48500,0x4855c,0x1a91a,0x1a952,0x5f032,0x5f034,
   0x43e04,0x43e36};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   reject(ram,s,STOP,"unsupported animation machine PC");}
@@ -496,18 +500,22 @@ void interior(){
 }
 // Computed PCs: e91b8 JSR e91e4(PC,D7.W) after LSL.W #2 (bounded by e919c/e91a4 in the original, any D7.W on direct entry) and
 // e97d8 JMP e97e4(PC,D1.W) with D1.W = (D0.W - 80) << 2 (no upper bound). A target that is a block start runs; a target inside
-// the routed ranges is unsupported by this executor; any other target has no executor. D1.W/D7.W << 2 is never odd.
+// the routed ranges is unsupported by this executor; a target inside the F3b ranges (e9350..e93da, e958e..e9768) is unsupported by
+// the F3b executor except its block start e9350 (the only F3b start among these targets), which runs; any other target has no
+// executor. D1.W/D7.W << 2 is never odd.
 unsigned int computed_ok=0,computed_bad=0;
+bool f3b_target(std::uint32_t pc){return (pc>=0xe9350&&pc<0xe93da)||(pc>=0xe958e&&pc<0xe9768);}
 void computed_target(std::uint32_t entry,unsigned int reg,std::uint32_t value,std::uint32_t target,bool pushes){
  Bytes ram;State s;generic(entry,ram,s,2);s.d[reg]=(s.d[reg]&0xffff0000U)|value;
- if(is_start(target)){Out o;assert(run(ram,s,target,o)&&s.pc==target);if(pushes)assert(s.a[7]==GEN_SP-4&&get(ram,GEN_SP-4,4)==0xe91be);else assert(s.a[7]==GEN_SP);++computed_ok;}
- else{reject(ram,s,STOP,in_ranges(target)?"unsupported animation stage event PC":"unsupported animation machine PC");++computed_bad;}}
+ if(is_start(target)||target==0xe9350){Out o;assert(run(ram,s,target,o)&&s.pc==target);if(pushes)assert(s.a[7]==GEN_SP-4&&get(ram,GEN_SP-4,4)==0xe91be);else assert(s.a[7]==GEN_SP);++computed_ok;}
+ else{reject(ram,s,STOP,in_ranges(target)?"unsupported animation stage event PC":
+  (f3b_target(target)?"unsupported animation stage event ops PC":"unsupported animation machine PC"));++computed_bad;}}
 void computed(){
  for(std::uint32_t k=0;k<0x60;++k)computed_target(0xe91b8,7,k,0xe91e4+k*4U,true);
  const std::uint32_t wraps[]={0x3fff,0x4000,0x4001,0x7ffe,0xbfff,0xffff};
  for(unsigned int i=0;i<6;++i){const std::uint32_t d=(wraps[i]<<2)&65535U;computed_target(0xe91b8,7,wraps[i],0xe91e4U+((d&0x8000U)?(d|0xffff0000U):d),true);}
  for(std::uint32_t op=0x80;op<0x100;++op)computed_target(0xe97d8,0,op,0xe97e4+(op-0x80U)*4U,false);
- // D0.W below 80 on direct entry: (D0.W - 80) << 2 is negative (79 -> e97c8 start, 7f -> e97e0, 00 -> e95e4 in F3b).
+ // D0.W below 80 on direct entry: (D0.W - 80) << 2 is negative (79 -> e97c8 start, 7f -> e97e0, 00 -> e95e4 F3b interior).
  const std::uint32_t low[]={0x79,0x7a,0x7f,0x00,0x8000};
  for(unsigned int i=0;i<5;++i){const std::uint32_t d=((low[i]-0x80U)<<2)&65535U;computed_target(0xe97d8,0,low[i],0xe97e4U+((d&0x8000U)?(d|0xffff0000U):d),false);}
  assert(computed_ok+computed_bad==0x60+6+0x80+5);

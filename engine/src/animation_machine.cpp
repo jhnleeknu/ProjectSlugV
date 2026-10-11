@@ -259,10 +259,23 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xe97f8:case 0xe97fc:case 0xe9800:case 0xe9804:case 0xe9808:case 0xe980c:case 0xe9810:case 0xe9814:case 0xe9818:case 0xe981c:
     case 0xe9820:case 0xe9824:case 0xe9828:case 0xe982c:case 0xe9830:case 0xe9834:case 0xe9838:case 0xe983c:case 0xe9840:case 0xe9844:
     case 0xe9848:case 0xe984c:case 0xe9850:case 0xe9854:case 0xe9858:case 0xe985c:case 0xe9860:case 0xe9864:case 0xe9868:case 0xe9878:
+    // Stage event ops (F3b) blocks: BSR/JSR/JMP/BRA/RTS/LEA/MOVEA/BTST/BSET/BCLR and conditional branches only, including
+    // the three e941c, the eight e9538 and the nine e9790..e97b0 BRA.W blocks. e936e (288c/289e) and e9576 (2986) are the
+    // carry consumers; 2898 sets its known C (ORI CCR) inside the block. MOVE/MOVEQ/CMP/CMPI/CMPA/SUBQ/SUBI/ADDQ/ADD/SUB/
+    // LSL/LSR/MULU/SWAP/PEA blocks, the ADDA blocks e97b2 e97b8 e97be and the MOVE stack blocks stay Unknown.
+    case 0xe9362:case 0xe9368:case 0xe936e:case 0xe9372:case 0xe9390:case 0xe939a:case 0xe93b0:case 0xe93c6:case 0xe93f6:case 0xe941c:
+    case 0xe9420:case 0xe9424:case 0xe950a:case 0xe9514:case 0xe9516:case 0xe951a:case 0xe9538:case 0xe953c:case 0xe9540:case 0xe9544:
+    case 0xe9548:case 0xe954c:case 0xe9550:case 0xe9554:case 0xe9576:case 0xe961c:case 0xe9626:case 0xe96a4:case 0xe96ac:case 0xe96b4:
+    case 0xe96b8:case 0xe96c8:case 0xe96d6:case 0xe9720:case 0xe9722:case 0xe973e:case 0xe9754:case 0xe9790:case 0xe9794:case 0xe9798:
+    case 0xe979c:case 0xe97a0:case 0xe97a4:case 0xe97a8:case 0xe97ac:case 0xe97b0:case 0xe97c4:case 0xe97c6:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
     }
+}
+// The eight F3b TRAP #15 sites are boundaries without an executor (F3 main decision 4).
+bool stage_event_ops_trap(std::uint32_t pc) {
+    return pc==0xe93d8 || pc==0xe9528 || pc==0xe9530 || pc==0xe957a || pc==0xe96d4 || pc==0xe9702 || pc==0xe9780 || pc==0xe9788;
 }
 std::uint32_t pvc_word(const AnimationMachineDevice& device,unsigned int index) {
     return (static_cast<std::uint32_t>(device.pvc[index*2])<<8)|device.pvc[index*2+1];
@@ -488,6 +501,10 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xe9768 && next.pc<0xe9774) || (next.pc>=0xe97c8 && next.pc<0xe98ee) ||
                 (next.pc>=0x48502 && next.pc<0x4855c) || (next.pc>=0x1a910 && next.pc<0x1a91a) ||
                 (next.pc>=0x1a93e && next.pc<0x1a952))ok=animation_stage_event_block(c);
+            else if (((next.pc>=0x288c && next.pc<0x289e) || (next.pc>=0x1a92c && next.pc<0x1a93e) || (next.pc>=0x49a84 && next.pc<0x49a8e) ||
+                (next.pc>=0xe9350 && next.pc<0xe93da) || (next.pc>=0xe93f0 && next.pc<0xe9444) || (next.pc>=0xe94fe && next.pc<0xe957c) ||
+                (next.pc>=0xe958e && next.pc<0xe9768) || (next.pc>=0xe9774 && next.pc<0xe97c8)) &&
+                !stage_event_ops_trap(next.pc))ok=animation_stage_event_ops_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

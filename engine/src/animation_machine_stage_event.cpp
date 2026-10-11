@@ -83,8 +83,8 @@ bool sv_edge(AnimationMachineContext& c,std::uint32_t& d,std::uint32_t low,std::
 // e9204 class count and screen flags (e932c, e9298 with 48502), the main stream loop e9198..e91e2 with the e91e4 opcode
 // table (eight BRA.W slots), the opcode 00..07 handlers e9444..e94fe, the length advance e9768 and the expression
 // evaluator e97c8..e98ee with its e97e4 operator table (34 BRA.W slots), and the helpers 1a910 and 1a93e. Existing
-// executors called: cleanup 43e38 (through its 43e34 LEA entry), frame_helpers 49392 (known C, consumed by e9248/e9258) and input 4d7a6. e94fe (opcodes 08..0f, F3b) is a
-// boundary without an executor (e91ac BSR e94fe). The e91ba index is bounded by the original (e919c/e91a4) and followed
+// executors called: cleanup 43e38 (through its 43e34 LEA entry), frame_helpers 49392 (known C, consumed by e9248/e9258) and input 4d7a6. e94fe (opcodes 08..0f) is the
+// F3b executor (animation_machine_stage_event_ops.cpp, reached by e91ac BSR e94fe). The e91ba index is bounded by the original (e919c/e91a4) and followed
 // as the computed PC e91e4+D7.W; the e97e0 index has no upper bound and is followed as the computed PC e97e4+D1.W (F1
 // main decision 3: a target that is not a block start is unsupported; D1.W is a multiple of 4). The evaluator stack is a
 // BYTE stack on A7 (MOVE.B -(A7)/(A7)+ move A7 by 2 and touch one BYTE). e98ea pops the result BYTE into D0 and the
