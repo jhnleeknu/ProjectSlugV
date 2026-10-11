@@ -60,16 +60,10 @@ bool ou6_show(AnimationMachineContext& c,std::uint32_t return_pc) {
 bool ou6_mode(AnimationMachineContext& c,std::uint32_t value,std::uint32_t return_pc) {
     am_byte(c.s.d[0],value);if(!ou6_put(c,c.s.a[6],0x8a,1,value))return false;return am_call(c,0x101c,return_pc);
 }
-// MOVE.W #value,2ffff0/2ffff2 (the bank select words). The resulting bank (MAME PVC equation on the live words with this
-// write applied) must be one the declared model has (200000 or 300000); otherwise the write is a checked error (F4 main
-// decision 7: PVC bank 4 stays a guard).
+// MOVE.W #value,2ffff0/2ffff2 (the bank select words). Plain WORD write through the shared PVC model (am_write -> pvc_effects ->
+// bus bank_base): any bank the MAME equation produces is accepted at write time; a banked read past the 8 MiB image is the shared
+// program bus error (F4 main decision: guard removed, native evidence animation-machine-pvc-banks.md).
 bool ou6_pvc(AnimationMachineContext& c,std::uint32_t address,std::uint32_t value) {
-    const std::vector<std::uint8_t>& pvc=c.device.pvc;
-    std::uint32_t ff8=(static_cast<std::uint32_t>(pvc[0x1ff0])<<8)|pvc[0x1ff1];
-    std::uint32_t ff9=(static_cast<std::uint32_t>(pvc[0x1ff2])<<8)|pvc[0x1ff3];
-    if(address==0x2ffff0)ff8=value&65535U;else ff9=value&65535U;
-    const std::uint32_t bank=0x100000U+((ff8>>8)|(ff9<<8));
-    if(bank!=0x200000U && bank!=0x300000U)return am_error(c,"objects u06 PVC bank outside model");
     return am_write(c,address,2,value&65535U);
 }
 }
@@ -79,8 +73,9 @@ bool ou6_pvc(AnimationMachineContext& c,std::uint32_t address,std::uint32_t valu
 // installed callback eb81e and the list length eba3e. e742c consumes the C returned by the input executor 4836e, e7916 the C
 // returned by the interpreter 49fc6; U06 produces no known C. The callees 3ed2, e7562, eb9ba, eb9e4 and 101c have no executor;
 // e74ac dispatches the live A0+D0.W through the routing (e74f8/e7562 have no executor). eba3e selects the bank (80(A6) AND 7)+2:
-// every PVC bank word write is checked against the declared banks 200000/300000 before it is made, then the bank window
-// LONG 200004+D2.W and its LONG list are read through the live bus with the new bank_base. The eb7bc/eba78 list walks and the
+// every PVC bank word write goes through the shared PVC model (any bank the equation produces), then the bank window
+// LONG 200004+D2.W and its LONG list are read through the live bus with the new bank_base; a read past the 8 MiB image is
+// the shared program bus error. The eb7bc/eba78 list walks and the
 // e748a/e74b0 script loop have no extra limit (block budget only).
 bool animation_objects_u06_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0,other=0;
