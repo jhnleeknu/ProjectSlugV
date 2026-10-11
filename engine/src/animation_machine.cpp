@@ -411,6 +411,17 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x16efc:case 0x16f06:case 0x16f0c:case 0x49260:case 0x4926e:case 0x50cca:case 0x50cce:case 0x50d2c:case 0x50d44:
     case 0x50d58:case 0x50d94:case 0x50dac:case 0x514bc:case 0x51668:case 0x5169a:case 0x51720:case 0x51758:case 0x51766:
     case 0x5176e:case 0x5177a:case 0x51798:case 0x5179e:case 0x51fda:case 0x51ff2:case 0x5205c:case 0x614d4:
+    // Objects U15a (F4) blocks: JSR/BSR/BRA/RTS/LEA, LEA+JSR, BSET+JSR, BSET (Z only), BTST+Bcc (Z only), ST/SF (Scc keeps the CCR)
+    // and the seven consumers af150 af42a (C returned by the U16 boundary b0106), af452 af4c4 (b0206), af27a (287e), af2e6 (4b54e) and
+    // b05ca (1ab02). 49542 4c260 (ANDI CCR Clear) and 49548 4c25a (ORI CCR Set) set their known C inside the block. MOVE/MOVEQ/MOVEA+
+    // MOVE/CLR/TST/CMP/CMPI/ADD/ADDI/SUB/SUBI/SUBQ/SUBX/ANDI/ORI/LSL/SWAP/EXT/EXG/MOVEM blocks, the MOVE.L #imm,(A6) blocks and the stack
+    // MOVE blocks stay Unknown.
+    case 0x46640:case 0x46670:case 0x46674:case 0x4671a:case 0x46748:case 0x4674c:case 0x4950e:case 0x4951a:case 0x49534:
+    case 0x4c1ee:case 0x4c244:case 0x4c29a:case 0xaf092:case 0xaf146:case 0xaf150:case 0xaf1e4:case 0xaf1ea:case 0xaf22a:
+    case 0xaf274:case 0xaf27a:case 0xaf2b8:case 0xaf2dc:case 0xaf2e0:case 0xaf2e6:case 0xaf2ee:case 0xaf2fe:case 0xaf3de:
+    case 0xaf3ea:case 0xaf3f0:case 0xaf3f8:case 0xaf3fe:case 0xaf402:case 0xaf408:case 0xaf41e:case 0xaf422:case 0xaf426:
+    case 0xaf42a:case 0xaf452:case 0xaf466:case 0xaf46c:case 0xaf47a:case 0xaf488:case 0xaf48c:case 0xaf492:case 0xaf4c4:
+    case 0xaf4e0:case 0xb0062:case 0xb05be:case 0xb05ca:case 0xb05dc:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -692,6 +703,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x50cca && next.pc<0x50cd2) || (next.pc>=0x50d2c && next.pc<0x50dae) || (next.pc>=0x51482 && next.pc<0x51574) ||
                 (next.pc>=0x51634 && next.pc<0x517a0) || (next.pc>=0x51fcc && next.pc<0x51ff4) || (next.pc>=0x51ffa && next.pc<0x5205e) ||
                 (next.pc>=0x614d4 && next.pc<0x614da) || (next.pc>=0x7086a && next.pc<0x7087e))ok=animation_objects_u14_block(c);
+            else if ((next.pc>=0x4662e && next.pc<0x4683c) || (next.pc>=0x4950e && next.pc<0x4954e) || (next.pc>=0x4c1de && next.pc<0x4c266) ||
+                (next.pc>=0x4c29a && next.pc<0x4c2c4) || (next.pc>=0xaf078 && next.pc<0xaf096) || (next.pc>=0xaf146 && next.pc<0xaf302) ||
+                (next.pc>=0xaf3de && next.pc<0xaf4ee) || (next.pc>=0xb0062 && next.pc<0xb0106) || (next.pc>=0xb05be && next.pc<0xb05de))ok=animation_objects_u15_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
