@@ -340,7 +340,8 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u04 PC");++inside;}
  assert(even==416&&inside==347);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- const std::uint32_t outside[]={0xce62,0xce64,0xd727a,0xd72b6,0xd72f0,0xd75ce,0xd75d0,0x16ede,0x16ee8,0x16eee,0x43eb8};
+ // The unrouted 5f4c2 replaces the former neighbour 43eb8 (now an objects U08a block start).
+ const std::uint32_t outside[]={0xce62,0xce64,0xd727a,0xd72b6,0xd72f0,0xd75ce,0xd75d0,0x16ede,0x16ee8,0x16eee,0x5f4c2};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0xce03,0xce45,0xce61,0x43ea5,0x43ea7,0xd72f3,0xd73cb,0xd7425,0xd75cd};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
