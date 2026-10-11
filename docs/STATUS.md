@@ -2039,3 +2039,9 @@
 - 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
 - 47a94 진입 본문, 72f0 palette gate(47af0 Waiting, 선언 IRQ 효과), 47b06 표, 47b5c/47bfc callback, 활성화와 helper를 연결했다(`engine/src/animation_machine_stage_entry.cpp`, 145 block). TRAP e909c는 stop 경계, dispatcher 재진입은 선언(A6/A5/(A7)/104ca4).
 - 단위 커밋 상태에서 해당 검증기 통과(보고서 `572ba869…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 F1c2 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0249. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — stage controller F1b: area clear
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 47da4 area clear 39 block을 frame 단위(2ac2 stop+선언 재진입)로 연결했다(`engine/src/animation_machine_area_clear.cpp`). 자연 seed 137개가 237 frame 뒤 477ee에 닿는다(5 release 출력은 홀수 WORD 읽기 guard).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `fe0de167…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 F1c2 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0250. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.

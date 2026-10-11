@@ -65,5 +65,6 @@ bool animation_script_placement_block(AnimationMachineContext& c);
 bool animation_input_block(AnimationMachineContext& c);
 bool animation_buffer_cue_block(AnimationMachineContext& c);
 bool animation_stage_entry_block(AnimationMachineContext& c);
+bool animation_area_clear_block(AnimationMachineContext& c);
 }
 #endif
