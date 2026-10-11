@@ -411,6 +411,12 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x16efc:case 0x16f06:case 0x16f0c:case 0x49260:case 0x4926e:case 0x50cca:case 0x50cce:case 0x50d2c:case 0x50d44:
     case 0x50d58:case 0x50d94:case 0x50dac:case 0x514bc:case 0x51668:case 0x5169a:case 0x51720:case 0x51758:case 0x51766:
     case 0x5176e:case 0x5177a:case 0x51798:case 0x5179e:case 0x51fda:case 0x51ff2:case 0x5205c:case 0x614d4:
+    // Objects U16 (F4) blocks: JSR/MOVEA+JSR/LEA+JSR/JMP/RTS blocks and the two consumers b020c (C returned by the U15 boundary 4950e)
+    // and bbe86 (C returned by U01 4b54e). b011a (ANDI.W Clear), b0144 (ORI CCR Set), b0210 (ORI CCR Set) and b021c (ANDI CCR Clear)
+    // set their known C inside the block; the RTS blocks b014e/b0226 return it to the U15 consumers. MOVE/MOVEQ/SUB/ADDI/CLR/TST/LSR/
+    // ASR/SUBI/NEG/ADDQ/SUBQ/BTST+MOVE blocks and the MOVE.L #imm,(A6) blocks stay Unknown.
+    case 0xb0122:case 0xb014e:case 0xb0206:case 0xb020c:case 0xb0226:case 0xbbe12:case 0xbbe74:case 0xbbe7a:case 0xbbe80:
+    case 0xbbe86:case 0xbbef2:case 0xbbefc:case 0xbbf02:case 0xf1a22:case 0xf1a34:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -692,6 +698,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x50cca && next.pc<0x50cd2) || (next.pc>=0x50d2c && next.pc<0x50dae) || (next.pc>=0x51482 && next.pc<0x51574) ||
                 (next.pc>=0x51634 && next.pc<0x517a0) || (next.pc>=0x51fcc && next.pc<0x51ff4) || (next.pc>=0x51ffa && next.pc<0x5205e) ||
                 (next.pc>=0x614d4 && next.pc<0x614da) || (next.pc>=0x7086a && next.pc<0x7087e))ok=animation_objects_u14_block(c);
+            else if ((next.pc>=0xb0106 && next.pc<0xb0150) || (next.pc>=0xb0206 && next.pc<0xb0228) || (next.pc>=0xb02c8 && next.pc<0xb02ec) ||
+                (next.pc>=0xbbe12 && next.pc<0xbbf04) || (next.pc>=0xf1a0e && next.pc<0xf1a3a))ok=animation_objects_u16_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
