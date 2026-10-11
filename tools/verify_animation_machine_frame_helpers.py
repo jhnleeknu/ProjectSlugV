@@ -530,8 +530,13 @@ def negatives(exe, base, starts, instructions, block_starts, resources, neg_erro
         assert {k: result[k] for k in common.STATE_KEYS} == s
         assert outgoing == r and out_pvc == p and ports == MARKER and result['bank_base'] == b
         assert result['external_reads'] == 0x12345678 and result['status'] == 1
-        out.append(dict(label=label, error=error.strip(), all_API_outputs_preserved=True,
-                        native_exception_rollback_equivalence_claimed=False))
+        row = dict(label=label, error=error.strip(), all_API_outputs_preserved=True,
+                   native_exception_rollback_equivalence_claimed=False)
+        if label == 'outside_range_entry_04706c':
+            row.update(former_expected_API_error=UNSUPPORTED_MACHINE, superseded_by='F4 U09',
+                       API_only_control=True, native_execution_equivalence_claimed=False,
+                       reason='U09 contract routes 4706c (MOVEQ D0/D1, then slot registration); the frozen input now reaches a checked bus alignment error')
+        out.append(row)
 
     interior = interior_pcs(instructions, block_starts)
     for pc in interior:
@@ -539,7 +544,10 @@ def negatives(exe, base, starts, instructions, block_starts, resources, neg_erro
     for pc in BOUNDARY_PCS:
         reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
     for pc in (0x480f2, 0x47672, 0x6f1c4, 0x2efdc, 0x3c7c, 0xb4ab0, 0x493bc, 0x1c052, 0x4da08, 0xb4850, 0x4706c, 0x480ba):
-        reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
+        # U09 contract's 4706c..470e6 range supersedes this one outside probe.
+        # Keep the old address/label and pin the full-run API error, including rollback.
+        expected = EVEN if pc == 0x4706c else UNSUPPORTED_MACHINE
+        reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=expected)
     # unknown carry at the three BCC consumers
     for pc in sorted(CONSUMERS):
         r, s, p, b = base

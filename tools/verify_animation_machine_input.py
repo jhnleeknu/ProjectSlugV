@@ -857,10 +857,19 @@ def negatives(exe, base, st, resources):
     # 4d7f0: stop-only boundary (the TRAP #15 has no executor); the zero-step is checked in boundary_zero_step
     reject(exe, 'trap_4d7f0_direct_entry', base, {'pc': TRAP_PC}, 0xff000, UNSUPPORTED_MACHINE, out, resources)
     reject(exe, 'trap_4d7f0_direct_entry_stop_4d7f2', base, {'pc': TRAP_PC}, 0x4d7f2, UNSUPPORTED_MACHINE, out, resources)
-    # data windows and the setter / initializer gap between the ranges: no executor
+    # Historical outside-PC inventory: data/gaps remain rejected; four later-unit starts are explicit API-only controls.
     for pc in (0x49ab0, 0x49ab2, 0x49bca, 0x49be0, 0x49c1e, 0x49c38, 0x49c6c, 0x4cf64, 0x4d81c, 0x1d8ce, 0xe73f8, 0x1bee4, 0x1d5c4, 0x1d5fc, 0x1d63a, 0x1d698,
                0x1d6fa, 0x1daba, 0x48384, 0x4d7a4, 0x49d86):
         assert not in_ranges(pc, ranges)
+        if pc in SUPERSEDED_OUTSIDE:
+            # F1b/F1c2/F4 U06 route these starts; success is fixed for this frozen input. The old label is retained.
+            sr, ss, sp, sb = base
+            actual = inv('superseded_outside_entry_%06x' % pc, exe, sr, dict(ss, carry=2, pc=pc), sp, sb, resources, stop=0xff000, external=0)
+            assert actual[0]['ok'] and not actual[4].strip() and actual[0]['pc'] == 0xff000 and actual[0]['status'] == 0, (hex(pc), actual[0], actual[4].strip())
+            out.append(dict(label='outside_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE, observed_final_state_error=None, observed_ok=True,
+                            observed_pc=hex(actual[0]['pc']), observed_status=actual[0]['status'], API_only_control=True, native_execution_equivalence_claimed=False, superseded_by=SUPERSEDED_OUTSIDE[pc],
+                            native_exception_rollback_equivalence_claimed=False))
+            continue
         reject(exe, 'outside_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, out, resources)
     # odd PCs (alignment is checked before routing)
     for pc in (0x49b0d, 0x49ab5, 0x4d7a7, 0x1d8cd, 0x49e35, 0x1d665, 0x4836f):
@@ -924,6 +933,12 @@ def boundary_zero_step(exe, base, resources):
             assert result['ok'] and not error and {k: result[k] for k in common.STATE_KEYS} == s and out_ram == ram and out_pvc == pvc and not ports
             rows.append(dict(pc=hex(pc), carry=CARRY_NAME[carry], ok=True))
     return rows
+
+
+# U06 contract scope and the 49be0/e73f8 block tables supersede the input contract's closure-only exclusion.
+# 49be0: TST.B D0, select A5+5726/572c and RTS. e73f8: LEA e6ed2,A0; JSR 8da2, then its declared callback chain.
+# These are API-only controls to ff000, not a native suffix equivalence claim.
+SUPERSEDED_OUTSIDE = {0x4d81c: 'F1c2', 0x1bee4: 'F1b', 0x49be0: 'F4 U06', 0xe73f8: 'F4 U06'}
 
 
 def older_verifier_49b0c_negatives():

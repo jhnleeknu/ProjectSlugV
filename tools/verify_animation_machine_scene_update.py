@@ -78,6 +78,8 @@ GUARD_ERRORS = {
     'guard-bad-stop-1a6a2-on-frame-seed': UNSUPPORTED_MACHINE,        # RTS to 1a78c runs the U2 tail to the RTS into ff000 (no executor)
     'guard-bad-stop-1a78c-on-init-entry': UNSUPPORTED_MACHINE}        # RTS to 1a6a2 (no executor)
 VERIFIED_ARTIFACTS = set()
+SUPERSEDED_GUARDS = ('guard-bad-stop-1a78c-on-init-entry',)
+SUPERSEDED_GUARD_RECORDS = []
 SUPERSEDED_NEGATIVES = []      # negatives whose PC is executed by a later unit in the final state (recorded, not silently deleted)
 RUN_DIR = None
 WORKERS = 8
@@ -671,6 +673,13 @@ def compare_guards(exe, guards, resources):
         for kind, r, s, p, b, stp in cases:
             s = dict(s, carry=2)
             result, outgoing, out_pvc, ports, error = inv('guard_%s_%s' % (label, kind), exe, r, s, p, b, resources, stop=stp, external=fx['external'])
+            if label in SUPERSEDED_GUARDS:
+                # superseded by F1a (the init entry / its return target is executable now): the bad stop is reached without a checked error; native guard record kept, observation pinned
+                assert result['ok'] and not error.strip() and result['pc'] == stp and result['status'] == 0, (label, kind, result, error)
+                SUPERSEDED_GUARD_RECORDS.append(dict(label=label, kind=kind, former_expected_API_error=GUARD_ERRORS[label], observed_final_state=dict(ok=True, pc=hex(result['pc'])),
+                                                     native_fault_rollback_equivalence_claimed=False))
+                entry[kind] = 'superseded: ok, pc %x' % result['pc']
+                continue
             assert not result['ok'], (label, kind)
             if error.strip() != GUARD_ERRORS[label]:
                 mismatches.append((label, kind, error.strip()))
@@ -678,7 +687,7 @@ def compare_guards(exe, guards, resources):
             assert outgoing == r and out_pvc == p and result['bank_base'] == b
             assert ports == MARKER and result['external_reads'] == 0x12345678 and result['status'] == 1
             entry[kind] = error.strip()
-        rows.append(dict(label=label, native_guard=phase['guard'], checked_API_errors=entry, all_API_outputs_preserved=True,
+        rows.append(dict(label=label, native_guard=phase['guard'], checked_API_errors=entry, all_API_outputs_preserved=not any(v.startswith('superseded') for v in entry.values()),
                          native_fault_rollback_equivalence_claimed=False))
     assert not mismatches, mismatches
     assert sorted(GUARD_ERRORS) == sorted(r['label'] for r in rows)
@@ -716,15 +725,27 @@ def negatives(exe, base, st, resources):
         reject('data_table_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
     # neighbours just outside the seven code ranges (own executors or none)
     outside = (0x17290 + 4, 0x172a0, 0x1a910, 0x1a912, 0x1a07a, 0x1a07c, 0x18702 + 0x2000, 0x43eb8, 0x43eba, 0x1b128, 0x1b12a, 0x1a470, 0x1a6a2, 0x1a69e)
+    # API-only controls for these frozen inputs; no native execution equality claim.
+    successful_outside = (0x1a910, 0x1a07a, 0x43eb8, 0x1a470, 0x1a6a2)
+    outside_errors = {0x17294: 'unsupported animation stage entry PC', 0x172a0: 'unsupported animation stage entry PC', 0x1a07c: 'unsupported animation stage entry PC', 0x1a702: 'unsupported animation stage entry PC', 0x1a69e: 'unsupported animation stage entry PC', 0x1a912: 'unsupported animation stage event PC', 0x43eba: 'unsupported animation objects u08 PC'}
     for pc in outside:
-        if pc == 0x1a470:
-            # 1a470 is executed by a later unit now (superseded negative): observe and pin the final-state result instead of an unsupported-PC rollback
-            result, outgoing, out_pvc, ports, error = inv('superseded_outside_range_entry_%06x' % pc, exe, r0, dict(s0, carry=2, pc=pc), p0, b0, resources, stop=0xff000, external=0)
-            assert result['ok'] and not error.strip() and result['pc'] == 0xff000 and result['status'] == 0, (hex(pc), error.strip())
-            SUPERSEDED_NEGATIVES.append(dict(label='outside_range_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE,
-                                             observed_final_state=dict(ok=True, pc=hex(result['pc'])), native_exception_rollback_equivalence_claimed=False))
+        if pc not in successful_outside and pc not in outside_errors:
+            reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
             continue
-        reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
+        state = dict(s0, carry=2, pc=pc)
+        result, outgoing, out_pvc, ports, error = inv('superseded_outside_range_entry_%06x' % pc, exe, r0, state, p0, b0, resources, stop=0xff000, external=0)
+        row = dict(label='outside_range_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE,
+                   API_only_control=True, native_execution_equivalence_claimed=False, native_exception_rollback_equivalence_claimed=False)
+        if pc in outside_errors:
+            assert not result['ok'] and error.strip() == outside_errors[pc], (hex(pc), error.strip(), result)
+            assert {k: result[k] for k in common.STATE_KEYS} == state
+            assert outgoing == r0 and out_pvc == p0 and ports == MARKER and result['bank_base'] == b0
+            assert result['external_reads'] == 0x12345678 and result['status'] == 1
+            row.update(observed_final_state_error=error.strip(), all_API_outputs_preserved=True)
+        else:
+            assert result['ok'] and not error.strip() and result['pc'] == 0xff000 and result['status'] == 0, (hex(pc), error.strip(), result)
+            row.update(observed_final_state=dict(ok=True, pc=hex(result['pc'])))
+        SUPERSEDED_NEGATIVES.append(row)
     # odd PCs (alignment is checked before routing)
     for pc in (0x1a7a9, 0x19e8b, 0x1b0e1, 0x18657):
         reject('odd_pc_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNALIGNED_PC)
@@ -855,7 +876,7 @@ def run(report_path):
         actual_CPP=dict(totals, matches=matches), original_program_read_audit=program_reads,
         declared_native_starts_not_reproduced_by_cpp_chain=not_reproduced, declared_native_starts_reproduced_by_cpp_chain=reproduced,
         native_guards_checked_API=guarded, native_continuous_control_phases_replayed=totals['control'],
-        superseded_negatives=SUPERSEDED_NEGATIVES, negatives=negative, negative_count=len(negative) + len(guarded), interior_PCs_rejected=interior_count,
+        superseded_negatives=SUPERSEDED_NEGATIVES, superseded_guards=SUPERSEDED_GUARD_RECORDS, negatives=negative, negative_count=len(negative) + len(guarded), interior_PCs_rejected=interior_count,
         operand_word_PCs_rejected=operand_count, API_controls=controls,
         zero_step_count=len(zero), zero_step_blocks=len(st['starts']), zero_step_carries=[0, 1, 2], boundary_zero_step=boundary_zero,
         carry_check='C++ carry equals the source-opcode walk over native-executed PCs (ORI/ANDI CCR known, flow-only preserved, else Unknown; the U2 '

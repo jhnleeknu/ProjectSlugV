@@ -999,9 +999,10 @@ def negatives(ctx, base, st):
     jobs = []
     for pc in st['interior']:
         jobs.append((ctx, 'interior_direct_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_AREA))
-    # TRAP boundaries are stops only; dead code and neighbours that are not routed to any executor (contract: dead code / other routines)
+    # Historical neighbours include three PCs routed by F3b; keep each old label and full rollback check.
     for pc in UNROUTED_NEIGHBOURS:
-        jobs.append((ctx, 'unrouted_neighbour_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE))
+        expected = SUPERSEDED_NEIGHBOUR_ERRORS.get(pc, UNSUPPORTED_MACHINE)
+        jobs.append((ctx, 'unrouted_neighbour_%06x' % pc, base, {'pc': pc}, 0xff000, expected))
     jobs.append((ctx, 'trap_4d824_direct_entry_without_stop', base, {'pc': TRAP_STOP}, 0xff000, UNSUPPORTED_MACHINE))
     jobs.append((ctx, 'u6_4d7f0_direct_entry_without_stop', base, {'pc': U6_TRAP_STOP}, 0xff000, UNSUPPORTED_MACHINE))
     for low, high in F1C2_RANGES:
@@ -1013,6 +1014,11 @@ def negatives(ctx, base, st):
         jobs.append((ctx, 'out_of_range_entry_%x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE))
     # the boundary 4d824 is reachable only as a declared stop: 481de with D1.W = 14 without that stop rolls back
     out = run_parallel(reject_one, jobs)
+    for row in out:
+        pc = int(row['label'].removeprefix('unrouted_neighbour_'), 16) if row['label'].startswith('unrouted_neighbour_') else None
+        if pc in SUPERSEDED_NEIGHBOUR_ERRORS:
+            row.update(pc=hex(pc), former_expected_error=UNSUPPORTED_MACHINE, API_only=True,
+                       superseded_by='F3b routing: block start executes; interior PCs use the ops executor error')
     for pc in CONSUMERS:
         s0 = dict(state, pc=pc, carry=0)
         actual = inv(ctx, 'unknown_carry_%06x' % pc, ram, s0, pvc, bank, 0xff000, 0)
@@ -1031,8 +1037,35 @@ def negatives(ctx, base, st):
     return out, controls
 
 
-# Non-routed PCs next to the F1c2 ranges (dead code or data between ranges, and range ends that belong to no executor).  Each is verified to give `unsupported animation machine PC`.
+# Historical outside-PC inventory is retained; exactly three expectations changed when F3b routed 49a84..49a8e.
+SUPERSEDED_NEIGHBOUR_ERRORS = {0x49a84: RNG_ERROR, 0x49a86: 'unsupported animation stage event ops PC',
+                               0x49a8c: 'unsupported animation stage event ops PC'}
 UNROUTED_NEIGHBOURS = (0x47a54, 0x47a56, 0x47a5c, 0x47a62, 0x49a84, 0x49a86, 0x49a8c, 0xb7a28, 0xb7a2a, 0xb7a2c, 0x4d84e, 0x4ddde, 0x4e68e, 0xb481e, 0xb4a2a, 0x46f52, 0x1bdde, 0x2eff4, 0x4aa86)
+
+
+def f3b_neighbour_prefix(ctx, base, program):
+    """Bounded API control: original MOVE.W D0,D7; BSR.S 49a58, before the RNG body."""
+    pc, stop, ret = 0x49a84, 0x49a58, 0x49a88
+    assert program[pc:ret].hex() == '3e0061d0'  # ROM word move; signed -48 displacement from 49a88.
+    assert ret + struct.unpack('b', program[pc + 3:ret])[0] == stop
+    ram, state, pvc, bank = base
+    incoming = dict(state, pc=pc, carry=2)
+    result, out_ram, out_pvc, ports, error = inv(ctx, 'f3b_neighbour_prefix_049a84', ram, incoming, pvc, bank, stop, 0)
+    expected = dict(incoming, pc=stop, a7=(incoming['a7'] - 4) & M32, carry=0)
+    expected['d7'] = (incoming['d7'] & 0xffff0000) | (incoming['d0'] & 0xffff)
+    expected_ram = bytearray(ram)
+    offset = expected['a7'] & 0xffff
+    assert offset + 4 <= len(expected_ram)
+    expected_ram[offset:offset + 4] = ret.to_bytes(4, 'big')
+    assert result['ok'] and not error and result['status'] == 0
+    assert out_state(result) == expected and out_ram == bytes(expected_ram)
+    assert out_pvc == pvc and result['bank_base'] == bank and result['external_reads'] == 0 and not ports
+    return dict(pc=hex(pc), stop=hex(stop), ROM_bytes=program[pc:ret].hex(), return_LONG=hex(ret),
+                incoming_RAM_sha256=sha(ram), incoming_PVC_sha256=sha(pvc), incoming_state=incoming,
+                expected_state=expected, all_state_RAM_PVC_ports_bank_status_external_reads_checked=True,
+                API_only=True, native_continuation_equivalence_claimed=False,
+                original_evidence='MOVE.W D0,D7; BSR.S 49a58; stop before RNG entry checks',
+                carry_note='MOVE sets flags: the public block classification is Unknown')
 
 
 def zero_step_one(args):
@@ -1229,6 +1262,7 @@ def run(report_path):
     guard_labels = sorted(g['label'] for g in guards)
     # ------------------------------------------------------------------------------ API-only
     negative, consumer_controls = negatives(ctx, base, st)
+    f3b_prefix = f3b_neighbour_prefix(ctx, base, program)
     zero = run_parallel(zero_step_one, [(ctx, base, pc, carry) for pc in st['starts'] + [TRAP_STOP] for carry in (0, 1, 2)])
     rng_api = rng_api_checks(ctx, base)
     cases, cpp_carry, cpp_ranges = cpp_static(st)
@@ -1263,6 +1297,7 @@ def run(report_path):
                         native_completes_cpp_rejects_rows=[g['label'] for g in guards if g['label'] in RNG_ORIGINAL_COMPLETES], native_completes_cpp_rejects_count=len([g for g in guards if g['label'] in RNG_ORIGINAL_COMPLETES]),
                         native_ROM_write_cpp_policy_rejects_rows=[g['label'] for g in guards if g['label'] in RNG_ORIGINAL_OUTSIDE],
                         high_byte_row=[g for g in guards if g['label'] == RNG_HIGH_BYTE], api_pointer_checks=rng_api),
+        superseded_F3b_neighbour_prefix=f3b_prefix,
         negatives=negative, negative_count=len(negative), consumer_controls=consumer_controls, zero_step_count=len(zero), zero_step_blocks=len(st['starts']), zero_step_carries=[0, 1, 2],
         zero_step_extra_stop_only_PCs=[hex(TRAP_STOP)],
         harness_equivalence_cases=equivalence,

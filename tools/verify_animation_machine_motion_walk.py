@@ -7,7 +7,8 @@ stack writes; each is asserted equal to the SHA recorded in the observation. The
 declared native states whose SHA256-pinned RAM is taken from the native artifacts (not rebuildable without re-running the original code). C++ resumes
 only from the previous actual C++ output plus the host changes recorded in the native step. Native SR is never read: C is a source-opcode
 classification (1a2e0 is the computed known carry of CMP.W + EORI #1,CCR; U3: TST.W at 19710/1971c and AND.W at 1938e/19596 give known Clear).
-19938..19978 (an extra range observed outside the contract, U5 caller) is expected-unsupported in C++ and is not part of the comparison.
+19938..19978 (an extra range observed outside the contract, U5 caller) was expected-unsupported in C++ and is not part of the comparison; since F1a it is executable, so the 4 flow-19938 rows
+are pinned as superseded (run reaches the declared stop, recorded under extra_range_19938_19978).
 """
 import collections
 import concurrent.futures
@@ -46,6 +47,7 @@ A5V = 0x108000
 ENTRY_1A73C = 0x1a73c
 U2_BOUNDARY_PCS = (0x1a0b6, 0x1a470, 0x1a7a8)
 FORMER_BOUNDARY_PCS = (0x19812, 0x19844, 0x19910)
+STAGE_ENTRY_ERROR = 'unsupported animation stage entry PC'      # F1a stage entry executor's checked error for entries that reach it
 EXTRA_RANGE = (0x19938, 0x19978)
 CONSUMERS_U2 = (0x1a756, 0x1a2c6, 0x1a302, 0x1a30e, 0x1a320, 0x1a32c, 0x1a344, 0x1a352)
 CONSUMERS_OTHER = (0x4765c, 0xb4a38, 0xb4a6c)
@@ -659,14 +661,17 @@ def run_row(row, ctx):
         ram2, state2, kinds = apply_changes(ram, state, phase0['host_changes'], entry)
         result, out_ram, out_pvc, ports, error = inv('c%05d_extra' % row['_uid'], exe, ram2, dict(state2, carry=2), pvc, bank, resources,
                                                      stop=row['steps'][0]['stop_pc'], external=fx['external'])
-        assert not result['ok'] and error.strip() == UNSUPPORTED_MACHINE, (row['label'], error)
-        assert {k: result[k] for k in common.STATE_KEYS} == dict(state2, carry=2) and out_ram == ram2 and out_pvc == pvc
-        assert ports == MARKER and result['bank_base'] == bank and result['external_reads'] == 0x12345678 and result['status'] == 1
+        # These four frozen F1a controls must execute to their declared stop.
+        # Accepting the former unsupported error here would hide lost routing.
+        assert result['ok'] and not error.strip(), (row['label'], error)
+        assert result['pc'] == row['steps'][0]['stop_pc'] and result['status'] == 0, (row['label'], hex(result['pc']), result['status'])
+        superseded = dict(former_expected_API_error=UNSUPPORTED_MACHINE, observed_final_state=dict(ok=True, pc=hex(result['pc'])),
+                          API_only_control=True, native_execution_equivalence_claimed=False)
         executed = [pc for ph in row['phases'] for pc in ph['_trace']['pcs'][:-1]]
         assert any(EXTRA_RANGE[0] <= pc < EXTRA_RANGE[1] for pc in executed)
-        totals['extra_range_rows_expected_unsupported'] += 1
-        acc['extra'] = dict(index=row['index'], label=row['label'], entry_pc=hex(fx['entry_pc']), error=error.strip(), all_API_outputs_preserved=True,
-                            native_phases_executing_extra_range=len(row['phases']))
+        totals['extra_range_rows_superseded_executable_F1a'] += 1
+        acc['extra'] = dict(index=row['index'], label=row['label'], entry_pc=hex(fx['entry_pc']), error=error.strip(), all_API_outputs_preserved=False,
+                            native_phases_executing_extra_range=len(row['phases']), superseded_by_F1a=superseded)
         unload_row(row)
         return acc
     expected_pvc, expected_bank = pvc, bank
@@ -977,9 +982,21 @@ def negatives(exe, base, starts_by_label, st, resources, oors, visited):
         s = dict(s, carry=2)
         s.update(changes or {})
         result, outgoing, out_pvc, ports, error = inv('superseded_' + label, exe, r, s, p, b, resources, stop=stop, external=0)
+        errors = {0x1a470: UNSUPPORTED_MACHINE, 0x18c04: 'unsupported animation objects u08 PC',
+                  0x197d8: 'unsupported animation script placement PC', 0x1993c: STAGE_ENTRY_ERROR, 0x19976: STAGE_ENTRY_ERROR}
+        expected_error = errors.get(s['pc'])
+        if expected_error is not None:
+            assert not result['ok'], (label, 'expected rejection')
+            # F1a stage entry executor: the entry ends in its checked error (state preserved); pin the exact string
+            assert error.strip() == expected_error, (label, error.strip(), expected_error)
+            assert {k: result[k] for k in common.STATE_KEYS} == s and outgoing == r and out_pvc == p and ports == MARKER and result['bank_base'] == b
+            assert result['external_reads'] == 0x12345678 and result['status'] == 1
+            SUPERSEDED_NEGATIVES.append(dict(label=label, former_expected_API_error=former, observed_final_state_error=error.strip(), all_API_outputs_preserved=True,
+                                             native_exception_rollback_equivalence_claimed=False, API_only_control=True, native_execution_equivalence_claimed=False))
+            return
         assert result['ok'] and not error.strip() and result['pc'] == stop and result['status'] == 0, (label, error.strip())
         SUPERSEDED_NEGATIVES.append(dict(label=label, former_expected_API_error=former, observed_final_state=dict(ok=True, pc=hex(result['pc'])),
-                                         native_exception_rollback_equivalence_claimed=False))
+                                         native_exception_rollback_equivalence_claimed=False, API_only_control=True, native_execution_equivalence_claimed=False))
 
     # interior instruction addresses and operand words inside the nine contract ranges: every even PC that is not a block start
     interior = [pc for pc in st['inside'] if pc not in start_set]
@@ -992,12 +1009,7 @@ def negatives(exe, base, starts_by_label, st, resources, oors, visited):
     outside = (0x18c04, 0x19768, 0x19772, 0x197d8, 0x19938, 0x1993c, 0x19944, 0x1996e, 0x19976)
     for pc in outside:
         assert not in_ranges(pc, st['ranges'])
-        if pc == 0x19772:
-            supersede('outside_range_entry_%06x' % pc, base, UNSUPPORTED_MACHINE, changes={'pc': pc})      # executed by a later unit now
-        else:
-            # 197d8 is routed to the script placement executor now (its checked error); the others still have no executor
-            reject('outside_range_entry_%06x' % pc, base, {'pc': pc},
-                   error_expected='unsupported animation script placement PC' if pc == 0x197d8 else UNSUPPORTED_MACHINE)
+        supersede('outside_range_entry_%06x' % pc, base, UNSUPPORTED_MACHINE, changes={'pc': pc})
     # former boundary PCs are ordinary block starts now: stop == entry is a zero-step, any other run executes (checked in the native comparison)
     # computed out-of-range types: running on from the dispatcher (no stop at the computed PC) fails with the exact error
     computed = 0

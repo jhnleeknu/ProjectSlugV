@@ -78,6 +78,7 @@ def compare(exe, folder, records, resources):
 # Superseded expectations (final state): the successor 480bc / its callees are executable now (U1..U7), so these runs go on and end in a state-dependent
 # bus error instead of an unsupported-PC rollback. Labels are kept; former and observed errors are recorded in the report (superseded_negatives).
 SUPERSEDED_CAUSES = {'known_branch_late_unsupported_successor_1': 'program bus requires even WORD/LONG address',
+                     'known_branch_late_unsupported_successor_2': 'unsupported program bus device address',   # F1a..F1c2 state (stage controller executable): carry 2 ends at a device address
                      'whole_activation_readiness_late_unsupported_successor': 'program bus requires even WORD/LONG address'}
 SUPERSEDED_NEGATIVES = []
 

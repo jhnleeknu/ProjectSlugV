@@ -75,7 +75,9 @@ GUARD_ERRORS = {
 SUPERSEDED_GUARDS = {'guard-bad-stop-1a7a8-on-19844-seed': UNSUPPORTED_MACHINE, 'guard-bad-stop-19812-on-19844-seed': UNSUPPORTED_MACHINE}
 SUPERSEDED_RECORDS = []
 SUPERSEDED_NEGATIVES = []
-OUTSIDE_EXECUTED_NOW = (0x19830, 0x19850, 0x1a40e, 0x1a7a8)
+OUTSIDE_EXECUTED_NOW = (0x19830, 0x19850, 0x1a40e, 0x1a7a8, 0x199d4, 0x19b50, 0x19b94, 0x19dee, 0x1a3c8, 0x1a5a4,
+                        0x199d6, 0x1a440, 0x1a73a)    # beyond the first four, F1a executes them (stage controller scene / init blocks); the last three end in the stage entry executor's checked error (OUTSIDE_STAGE_ENTRY)
+OUTSIDE_STAGE_ENTRY = (0x199d6, 0x1a440, 0x1a73a)      # observed final-state error 'unsupported animation stage entry PC' (F1a stage entry executor)
 OUTSIDE_NEW_ERRORS = {0x19820: 'unsupported animation motion walk PC', 0x198ec: 'unsupported animation motion walk PC', 0x19920: 'unsupported animation motion walk PC'}
 VERIFIED_ARTIFACTS = set()
 RUN_DIR = None
@@ -800,10 +802,22 @@ def negatives(exe, base, starts_by_label, st, resources):
         r, s, p, b = start
         s = dict(s, carry=2)
         s.update(changes)
+        changes_pc = changes.get('pc')
         result, outgoing, out_pvc, ports, error = inv('superseded_' + label, exe, r, s, p, b, resources, stop=stop, external=0)
+        expected_error = 'unsupported animation stage entry PC' if changes_pc in OUTSIDE_STAGE_ENTRY else None
+        if expected_error is not None:
+            assert not result['ok'], (label, 'expected rejection')
+            # F1a executes this PC too, but the run ends in a state-dependent checked error (another executor's message / a bus error): pin the observed string, require full preservation
+            assert error.strip() == 'unsupported animation stage entry PC', (label, error.strip())
+            assert changes_pc not in OUTSIDE_STAGE_ENTRY or error.strip() == 'unsupported animation stage entry PC', (label, error.strip())
+            assert {k: result[k] for k in common.STATE_KEYS} == s and outgoing == r and out_pvc == p and ports == MARKER and result['bank_base'] == b
+            assert result['external_reads'] == 0x12345678 and result['status'] == 1
+            SUPERSEDED_NEGATIVES.append(dict(label=label, former_expected_API_error=former, observed_final_state_error=error.strip(), all_API_outputs_preserved=True,
+                                             native_exception_rollback_equivalence_claimed=False, API_only_control=True, native_execution_equivalence_claimed=False))
+            return
         assert result['ok'] and not error.strip() and result['pc'] == stop and result['status'] == 0, (label, error.strip())
         SUPERSEDED_NEGATIVES.append(dict(label=label, former_expected_API_error=former, observed_final_state=dict(ok=True, pc=hex(result['pc'])),
-                                         native_exception_rollback_equivalence_claimed=False))
+                                         native_exception_rollback_equivalence_claimed=False, API_only_control=True, native_execution_equivalence_claimed=False))
 
     for pc in BOUNDARY_PCS:
         supersede('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, UNSUPPORTED_MACHINE)

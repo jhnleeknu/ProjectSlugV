@@ -800,6 +800,9 @@ def full_frames(exe, resources, scene_in, report, chains, chain_rows):
 
 
 # ----------------------------------------------------------------------------------------------------------------- API-only checks
+SUPERSEDED_NEGATIVES = []      # negatives whose PC is executed by a later unit in the final state (recorded, not silently deleted)
+
+
 def negatives(exe, base, st, resources, cpp_text, instructions):
     out = []
     r0, s0, p0, b0 = base
@@ -838,8 +841,27 @@ def negatives(exe, base, st, resources, cpp_text, instructions):
         cleanup_interior.append((pc, error.strip()))
     # neighbours just outside every routed range (own executors or none) and the unrouted gaps
     outside = (0x3db2, 0x3db4, 0x16ff0, 0x19768, 0x1976a, 0x1a07a, 0x1a414, 0x1a416, 0xe89f8, 0xe8a0c, 0xe8a0e, 0x1a5a4)
+    # API-only controls for these frozen inputs; no native execution equality claim.
+    successful_outside = (0x1a07a, 0x1a414)
+    outside_errors = {0x1976a: 'unsupported animation stage entry PC', 0x1a416: 'unsupported animation stage entry PC', 0x19768: 'program bus requires even WORD/LONG address', 0x1a5a4: 'unaligned animation machine PC'}
     for pc in outside:
-        reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
+        if pc not in successful_outside and pc not in outside_errors:
+            reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
+            continue
+        state = dict(s0, carry=2, pc=pc)
+        result, outgoing, out_pvc, ports, error = inv('superseded_outside_range_entry_%06x' % pc, exe, r0, state, p0, b0, resources, stop=0xff000, external=0)
+        row = dict(label='outside_range_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE,
+                   API_only_control=True, native_execution_equivalence_claimed=False, native_exception_rollback_equivalence_claimed=False)
+        if pc in outside_errors:
+            assert not result['ok'] and error.strip() == outside_errors[pc], (hex(pc), error.strip(), result)
+            assert {k: result[k] for k in common.STATE_KEYS} == state
+            assert outgoing == r0 and out_pvc == p0 and ports == MARKER and result['bank_base'] == b0
+            assert result['external_reads'] == 0x12345678 and result['status'] == 1
+            row.update(observed_final_state_error=error.strip(), all_API_outputs_preserved=True)
+        else:
+            assert result['ok'] and not error.strip() and result['pc'] == 0xff000 and result['status'] == 0, (hex(pc), error.strip(), result)
+            row.update(observed_final_state=dict(ok=True, pc=hex(result['pc'])))
+        SUPERSEDED_NEGATIVES.append(row)
     # odd PCs (alignment is checked before routing)
     for pc in (0x1a0b7, 0x1a471, 0x3d7f, 0x16fef, 0x19773, 0xe89fb, 0x43e09, 0x1a0bd):
         reject('odd_pc_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNALIGNED_PC)
@@ -994,7 +1016,7 @@ def run(report_path):
         full_frame_integration=dict(summary=frame_summary, rows=frame_rows,
                                     compared_fields='ordered port stream (bytes), 14 result registers, final PC/A7, final bank, RAM outside the stack window vs the recorded '
                                                     'original flat-map run; full 64KiB image and ports vs the native machine-style full-frame record'),
-        negatives=negative, negative_count=len(negative) + len(guarded), interior_PCs_rejected=interior_count,
+        superseded_negatives=SUPERSEDED_NEGATIVES, negatives=negative, negative_count=len(negative) + len(guarded), interior_PCs_rejected=interior_count,
         cleanup_interior_PCs_checked_errors=cleanup_interior,
         zero_step_count=len(zero), zero_step_blocks=len(st['starts']), zero_step_carries=[0, 1, 2],
         former_unsupported_PCs_now_routed=former, older_verifier_negatives_using_these_PCs_not_changed=older_verifier_negatives(),

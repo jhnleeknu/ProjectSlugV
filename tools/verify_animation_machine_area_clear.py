@@ -442,11 +442,13 @@ GUARD_EXPECTED = {
     'observe-odd-a6-byte-47e22': UNSUPPORTED_MACHINE,
     'guard-odd-child-a0-47e12': EVEN_WRITE, 'guard-odd-child-a0-47e40': EVEN_WRITE, 'guard-rom-child-a0-47e12': WRITE_DEVICE, 'guard-rom-a6-47dd8': WRITE_DEVICE,
     'guard-odd-a7-47da4': EVEN, 'guard-a5-zero-47da4': WRITE_DEVICE,
-    'guard-stop-not-477ee': UNSUPPORTED_MACHINE, 'guard-no-2ac2-stop-d72fe': UNSUPPORTED_MACHINE, 'guard-no-2ac2-stop-e4234': UNSUPPORTED_MACHINE,
+    'guard-stop-not-477ee': UNSUPPORTED_MACHINE, 'guard-no-2ac2-stop-d72fe': 'program bus write requires RAM mirror units', 'guard-no-2ac2-stop-e4234': UNSUPPORTED_MACHINE,
     'guard-bad-return-long': UNSUPPORTED_MACHINE,
     'guard-28ae-pool-null-47e30': WRITE_DEVICE}
+SUPERSEDED_GUARDS = {'guard-stop-not-477ee': UNSUPPORTED_MACHINE}     # original expectation kept for the record
 # Guards whose native reason and C++ error are not the same check; every one is a rejection at the same split-segment (native_split_phases - 1 == C++ phases before the error).
 GUARD_NOTES = {
+    'guard-no-2ac2-stop-d72fe': ('superseded_by_F4_U04', 'The frozen observer stops before d72fe. U04 now executes this callback; the combined run later rejects a RAM-mirror write. The original prefix is retained, d72fe LEA is checked separately, and no native suffix or fault rollback equivalence is claimed.'),
     'transition-case77-partial': ('contract_claim_contradicted_by_native', 'contract decision 6 (partial run 47da4 -> 47de4 of the recorded case 77) does not hold: the recorded RAM has WORD 100c04 = f2ee, so 2a48 reaches TRAP #15 at 2a52 (native guard '
                                   'unsupported_TRAP, C++ checked error TRAP15); with the declared WORD 100c04 := 0 (transition-case77-partial-type0) the run completes at 47de4 and is compared normally'),
     'transition-case77-full': ('contract_claim_contradicted_by_native', 'same as transition-case77-partial for the full frame'),
@@ -655,6 +657,24 @@ def replay_condition(ctx, report, result):
 
 def guard_row(ctx, acc, result, row, step, ram, state_in, pvc, bank, cont, phases, how, stop, external, trace):
     label = result['label']
+    if label in SUPERSEDED_GUARDS:
+        # superseded by F1c1 (477ee is now an executable frame start): the frame no longer refuses at 477ee, it runs on to the declared frame return 2ac2 without a checked error
+        res, out_ram, out_pvc, out_ports, error = cont
+        assert res['ok'] and not error and res['pc'] == stop == FRAME_RET and res['status'] == 0 and how == 'stop', (label, how, error, hex(res['pc']))
+        others = {}
+        for carry in (0, 1, 2):
+            if carry == state_in['carry']:
+                continue
+            again = inv(ctx, 'c%03d_guard_carry%d' % (result['number'], carry), ram, dict(state_in, carry=carry), pvc, bank, stop, external)
+            assert again[0]['ok'] and not again[4] and again[0]['pc'] == FRAME_RET, (label, carry)
+            others[CARRY_NAME[carry]] = 'reaches 2ac2 without error'
+        acc['guard'] = dict(label=label, group=result['group'], native_guard=row['guard'], native_guard_reason=row['guard'].get('reason'), checked_API_error=None,
+                            expected_API_error=SUPERSEDED_GUARDS[label], cpp_error_matches_expected=False, continuous_run_error=None, split_chain_error=None,
+                            cpp_phases_before_error=None, native_split_phases=row['split_phases'], all_API_outputs_preserved=False, native_fault_rollback_equivalence_claimed=False,
+                            state_with_other_carries=others, same_split_segment_as_native=False, cpp_run_reaches_stop='%x' % res['pc'],
+                            classification='superseded_by_F1c1_frame_reaches_2ac2', rule='the native refusal at BRA.W 477ee (47ea8) was recorded before F1c1; 477ee is now a routed '
+                            'F1c1 frame start, so the frame run with stop 2ac2 only completes there without error (positive check, native guard record kept)')
+        return
     error = check_preserved(cont, ram, state_in, pvc, bank)
     first_failed = None
     for index, p in enumerate(phases):
@@ -681,6 +701,19 @@ def guard_row(ctx, acc, result, row, step, ram, state_in, pvc, bank, cont, phase
         reach = inv(ctx, 'c%03d_guard_reach' % result['number'], ram, state_in, pvc, bank, native['target'], external)
         assert reach[0]['ok'] and not reach[4] and reach[0]['pc'] == native['target'] and reach[0]['status'] == 0, (label, 'C++ does not reach the native transfer target')
         entry['cpp_reaches_native_transfer_target_with_stop'] = '%x' % native['target']
+        if label == 'guard-no-2ac2-stop-d72fe':
+            assert native['target'] == 0xd72fe
+            program, unused_source = load_verified_program(ROOT)
+            assert program[0xd72fe:0xd7302] == bytes.fromhex('41faffb6')
+            prefix_ram, prefix_state, prefix_pvc, prefix_bank = reach[1], out_state(reach[0]), reach[2], reach[0]['bank_base']
+            one = inv(ctx, 'c%03d_U04_LEA_prefix' % result['number'], prefix_ram, prefix_state, prefix_pvc, prefix_bank, 0xd7302, external)
+            want = dict(prefix_state, a0=0xd72b6, pc=0xd7302)
+            assert one[0]['ok'] and not one[4] and one[0]['status'] == 0
+            assert out_state(one[0]) == want and one[1] == prefix_ram and one[2] == prefix_pvc
+            assert one[0]['bank_base'] == prefix_bank and one[0]['external_reads'] == 0 and not one[3]
+            entry['former_expected_API_error'] = UNSUPPORTED_MACHINE
+            entry['new_callback_first_block_verified'] = 'd72fe LEA d72b6(PC),A0 -> d7302'
+            entry['native_suffix_equivalence_claimed'] = False
     note = GUARD_NOTES.get(label)
     entry['classification'] = note[0] if note else 'same_check_class'
     entry['rule'] = note[1] if note else None
@@ -822,8 +855,12 @@ def reject_one(args):
     s = dict(state, carry=2)
     s.update(changes)
     actual = inv(ctx, 'neg_' + label, ram, s, pvc, bank, stop, 0)
+    assert actual[4].strip() == expected, (label, expected, actual[4].strip())
     check_preserved(actual, ram, s, pvc, bank, expected)
-    return dict(label=label, error=expected, all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False)
+    row = dict(label=label, error=expected, all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False)
+    if label == 'boundary_477ee_without_stop_from_47e9a':
+        row.update(former_expected_API_error=UNSUPPORTED_MACHINE, classification='superseded_by_F4_U04', API_only_control=True)
+    return row
 
 
 def run_parallel(function, items):
@@ -846,8 +883,9 @@ def negatives(ctx, base, st):
         jobs.append((ctx, 'odd_pc_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNALIGNED_PC))
     for pc in (0x0, 0xffffffe, 0x1000000, 0xdeadbee):
         jobs.append((ctx, 'out_of_range_entry_%x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE))
-    # the F1c boundary 477ee is reachable only as a declared stop: 47e9a without that stop rolls back
-    jobs.append((ctx, 'boundary_477ee_without_stop_from_47e9a', base, {'pc': 0x47e9a}, 0xff000, UNSUPPORTED_MACHINE))
+    # The integrated U04 continuation now reaches a RAM-mirror write rejection.
+    # This API-only control pins that exact error and complete output rollback.
+    jobs.append((ctx, 'boundary_477ee_without_stop_from_47e9a', base, {'pc': 0x47e9a}, 0xff000, 'program bus write requires RAM mirror units'))
     out = run_parallel(reject_one, jobs)
     for pc in CONSUMERS:
         s0 = dict(state, pc=pc, carry=0)
