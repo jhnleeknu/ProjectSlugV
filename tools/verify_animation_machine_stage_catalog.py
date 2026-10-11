@@ -647,11 +647,15 @@ def initial_from_fixture(cond, ctx):
 
 
 # ----------------------------------------------------------------------------------------------------------------- condition replay
+SUPERSEDED_GUARDS = ('guard-undeclared-cut-479b0',)
+
+
 class Acc(object):
     def __init__(self):
         self.totals = collections.Counter()
         self.deliberate = []
         self.guards = []
+        self.superseded_guards = []
         self.first_pcs = collections.Counter()
         self.preserved = {}
         self.consumer_flips = collections.Counter()
@@ -815,6 +819,18 @@ def run_step(label, si, ctx, acc, cond_row, result, frame, trace, step_in, raw, 
         phase_in = (ram, dict(state), pvc, bank)
         actual = inv('c%04d_%03d_%03d' % (result['number'], si, j), exe, ram, state, pvc, bank, resources, stop=target, external=external)
         res, out_ram, out_pvc, out_ports, err = actual
+        if last_guard_step and j + 1 >= n_native and label in SUPERSEDED_GUARDS:
+            # This historical guard must succeed now; an old unsupported error is a regression.
+            assert j + 1 == n_native, (label, si, 'superseded guard phase', j + 1, n_native)
+            assert res['ok'] and not err.strip() and res['status'] == 0 and res['pc'] == target, (label, si, res, err)
+            if trace is not None and phases:
+                compare_trace(label, si, ctx, acc, frame, trace, phases, checkpoints, stop, boundary_index, state0, ram0, result['number'], guarded_frame=True)
+            # superseded by F1c2: 479b0 is an executable block start now, so the native 'undeclared cut' guard phase runs through without a checked error in C++ (native guard record kept)
+            acc.superseded_guards.append(dict(label=label, step=si, phase=j, stop=hex(target), former_expected='checked API error (unsupported animation machine PC at the cut)',
+                                              observed_final_state=dict(ok=True, pc=hex(res['pc']), status=res['status']), native_guard=frame.get('guard'),
+                                              native_fault_rollback_equivalence_claimed=False))
+            acc.totals['guard_rows_superseded_by_F1c2'] += 1
+            return dict(error='superseded: C++ runs through the undeclared cut %x without a checked error' % target, end=None, count=j + 1, digest=digest.digest())
         if not res['ok']:
             error = check_preserved(actual, ram, state, pvc, bank)
             err_row = dict(label=label, step=si, phase=j, stop=hex(target), error=error, native_phases=n_native, state_pc=hex(state['pc']))
@@ -1241,12 +1257,14 @@ def run(report_path):
         raise AssertionError('%d conditions failed' % len(failures))
     totals = collections.Counter()
     rows, guards, waits, leader_failed = [], [], [], []
+    superseded_guards = []
     first_pcs, flips, windows, wait_carry, carry_hist = collections.Counter(), collections.Counter(), collections.Counter(), collections.Counter(), collections.Counter()
     slots, probe_seen = {}, set()
     for (acc, row) in outs:
         totals.update(acc.totals)
         rows.append(row)
         guards.extend(acc.guards)
+        superseded_guards.extend(acc.superseded_guards)
         waits.extend(acc.waits)
         leader_failed.extend(acc.leader_failed)
         first_pcs.update(acc.first_pcs)
@@ -1335,7 +1353,7 @@ def run(report_path):
         window_probe=window_rows, targeted_carry_probes=targeted_rows, leader_alignment_failed_frames=sorted(leader_failed),
         flow_only_not_probed_by_observed_phases=[hex(p) for p in unprobed],
         deliberate_differences=deliberate, condition_groups=dict(sorted(collections.Counter(r['group'] for r in rows).items())),
-        guards=list(guard_table.values()), guard_error_histogram={'%s -> %s' % k: v for k, v in sorted(guard_errors.items())},
+        guards=list(guard_table.values()), superseded_guards=superseded_guards, guard_error_histogram={'%s -> %s' % k: v for k, v in sorted(guard_errors.items())},
         negatives=dict(count=len(negative), rows=negative), consumer_controls=consumer_controls, zero_step_start_pcs_x_3_carries=zero_count, zero_step_boundary_entries=zero_boundary,
         conditions=rows, cpp_static=dict(case_labels=len(cpp_cases), routing_ranges=[[hex(a), hex(b)] for a, b in cpp_ranges], carry_preserving_in_unit=len(cpp_carry_table)),
         static=dict(block_starts=len(st['starts']), bundled=len(st['bundled']), flow_only=len(st['preserving']), interior=len(st['interior']), even_pcs=st['even_pcs'],
