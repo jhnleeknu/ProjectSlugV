@@ -437,7 +437,7 @@ void boundaries(){
  assert(final_of("39be-trap").s.pc==0x39c6&&final_of("39fc-trap").s.pc==0x3a0c&&final_of("8ebe-trap").s.pc==0x8ec8&&final_of("8ebe-trap-ff").s.pc==0x8ec8);
  {const Fixture&f=fixture_of("3a0e");Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);s.a[1]=0x3651;
   reject(ram,s,STOP,"unaligned animation machine PC");s.a[1]=0x10e900;reject(ram,s,STOP,"unsupported animation machine PC");
-  s.a[1]=0xe84d6;reject(ram,s,STOP,"unsupported animation machine PC");}
+  s.a[1]=0x5f0fe;reject(ram,s,STOP,"unsupported animation machine PC");} // e84d6 is U03 now; 5f0fe is unrouted.
  {const Fixture&f=fixture_of("3a60");Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);s.a[1]=0xe84c9;
   reject(ram,s,STOP,"unaligned animation machine PC");}
  const char* consumers[]={"3a7e-clear","3a7e-set","e56ac-clear","e56ac-set"};

@@ -73,5 +73,6 @@ bool animation_stage_event_ops_block(AnimationMachineContext& c);
 bool animation_scheduler_block(AnimationMachineContext& c);
 bool animation_objects_u01_block(AnimationMachineContext& c);
 bool animation_objects_u02_block(AnimationMachineContext& c);
+bool animation_objects_u03_block(AnimationMachineContext& c);
 }
 #endif
