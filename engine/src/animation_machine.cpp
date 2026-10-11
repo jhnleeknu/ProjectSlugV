@@ -290,6 +290,12 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // Objects U03 (F4) blocks: BRA/LEA only and e88c0 (MOVEM.L (A7)+ and RTS keep the CCR). U03 has no carry consumer or
     // known-carry producer; every CMPI/MOVE/ADDQ/ADDI/SUBI/ANDI/OR/LSL/SWAP/TST block (the ADDQ.W #6,A1 block e8866 too) stays Unknown.
     case 0xe856a:case 0xe85b2:case 0xe85c2:case 0xe868c:case 0xe869c:case 0xe86da:case 0xe8706:case 0xe8856:case 0xe88c0:
+    // Objects U05 (F4) blocks: BRA/JSR/JMP/RTS/LEA+JSR, MOVEM.L D0-D1,-(A7)+BSR (c6a96) and the BCC consumers b9752 (C returned
+    // by 1ab02: 1ab7a ANDI CCR Clear set inside that block, U01 1aafc ORI CCR Set) and c6ad6/c6b20/c6b7a (C returned by the 497a6
+    // boundary). MOVE/MOVEA/CMP/CMPI/TST/SUBQ/ADD/NEG/SWAP blocks, the ADDA.W block c6bf6 and the ADDQ.L #4,A1 block c6c1a stay Unknown.
+    case 0x1ab2e:case 0x1ab6a:case 0xb971a:case 0xb9720:case 0xb9746:case 0xb9752:case 0xb9756:case 0xb975c:case 0xc6a96:
+    case 0xc6ad0:case 0xc6ad6:case 0xc6ada:case 0xc6b1a:case 0xc6b20:case 0xc6b24:case 0xc6b74:case 0xc6b7a:case 0xc6b7e:
+    case 0xc6bf4:case 0xc6c12:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -539,6 +545,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x443d2 && next.pc<0x443ea) || (next.pc>=0xe5086 && next.pc<0xe5292) || (next.pc>=0xe5614 && next.pc<0xe56c0) ||
                 (next.pc>=0xe5724 && next.pc<0xe583c))ok=animation_objects_u02_block(c);
             else if (next.pc>=0xe84d6 && next.pc<0xe88c6)ok=animation_objects_u03_block(c);
+            else if ((next.pc>=0x1ab02 && next.pc<0x1ab80) || (next.pc>=0xb96c8 && next.pc<0xb975e) ||
+                (next.pc>=0xc6a96 && next.pc<0xc6c24))ok=animation_objects_u05_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
