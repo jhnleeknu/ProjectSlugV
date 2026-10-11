@@ -301,6 +301,11 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // SUBQ/SUBI/NEG/NOT/ANDI/ASR/LSL/SWAP/MULS/MULU blocks and the BSET/BCLR + MOVE blocks stay Unknown.
     case 0xce44:case 0xce60:case 0x43ea4:case 0xd72fe:case 0xd730a:case 0xd731a:case 0xd73c4:case 0xd73ca:case 0xd73ce:
     case 0xd7424:case 0xd748c:case 0xd74a2:case 0xd74d6:case 0xd7504:case 0xd75cc:
+    // Objects U07 (F4) blocks: LEA/BRA/JSR/JMP/RTS only, including the BCC consumer 4e1a2 (C returned by readiness 289e: Clear when
+    // the LONG at A0 is 270e, else ORI CCR Set). U07 has no known-carry producer (every 4e186 caller sets its own flags);
+    // MOVE/MOVEA+MOVE/MOVEQ/TST/CMP/CMPI/ADDI/SUBI/SUB/ADD/NEG/ASR/ANDI/CLR blocks stay Unknown.
+    case 0x4e18c:case 0x4e196:case 0x4e19c:case 0x4e1a2:case 0xe5872:case 0xe5878:case 0xe596c:case 0xe5986:case 0xe5a7a:
+    case 0xe5af8:case 0xe5b2c:case 0xe5b48:case 0xe5ba6:case 0xe5bac:case 0xe5bae:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -554,6 +559,7 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xc6a96 && next.pc<0xc6c24))ok=animation_objects_u05_block(c);
             else if ((next.pc>=0xce02 && next.pc<0xce62) || (next.pc>=0x43ea4 && next.pc<0x43ea8) ||
                 (next.pc>=0xd72f2 && next.pc<0xd75ce))ok=animation_objects_u04_block(c);
+            else if ((next.pc>=0x4e186 && next.pc<0x4e1cc) || (next.pc>=0xe585c && next.pc<0xe5bb0))ok=animation_objects_u07_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
