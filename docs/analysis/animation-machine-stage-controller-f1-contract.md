@@ -82,7 +82,7 @@ Claude Opus 5.5 / high 분석 작업자가 canonical BE ROM(SHA256 `29112a94b5c0
 
 - (a) 새 실행부 파일 제안: `engine/src/animation_machine_stage_entry.cpp`(`animation_stage_entry_block`). routing 22 범위(아래)이며 `e909c`는 제외한다.
 - (b) `17292` unrolled clear는 한 block으로 둔다. `A1=A0+80`, `D0=0`이고, 오름차순 LONG 쓰기 2048개(8 KiB)를 수행한다. 하나라도 쓰기에 실패하면 전체 rollback이다. 끝 상태는 `A1=A0+2080`, D0=0이다.
-- (c) dispatcher 재진입 선언: F2(scheduler) 전이므로 `47af0`/`47b5c`/`47bfc` 진입은 A6=`100b30`, A5=`108000`, `(A7)`=복귀 LONG `2ac2`로 선언한 직접 진입으로 둔다.
+- (c) dispatcher 재진입 선언: F2(scheduler) 전이므로 `47af0`/`47b5c`/`47bfc` 진입은 A6=`100b30`, A5=`108000`, `(A7)`=복귀 LONG `2ac2`로 선언한 직접 진입으로 둔다. (F1a native 관측 보정) index `18` 경로(`47b1e`→`480b6`→`2a00`)의 `2a02 MOVEA.L -335c(A5),A7`가 dispatcher 기준 LONG `104ca4`를 읽으므로 재진입 선언에 `104ca4`=`1ff000`(직접 진입 A7 기준값)도 포함한다. 선언하지 않으면 frame이 A7=0으로 `2ac2`에 닿는다(관측 finding fixture).
 - (d) 무한 루프 가능 지점(`1a65a..1a6aa`, `1a422..1a440`, `e908a..e90aa`, `362a..364e`)은 U5 결정 5처럼 원본대로 두고, 기존 block budget만 한계로 둔다.
 
 ## F1a 원본 바이트 근거

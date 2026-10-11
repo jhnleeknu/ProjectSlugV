@@ -1953,3 +1953,107 @@
 - 카드 자식 c2a2 JSR a29c에서 메뉴 프레임 push(107efe), 항목 폭 측정(escape·TRAP 경계 38c8/38e2), 폭·높이 갱신, c2a8→a2b8 renderer e84c8 설정, c2ba JSR a370 경계까지 live RAM/A7으로 연결했다(`engine/src/animation_machine_card_menu.cpp`). 기존 host 메뉴 API는 바꾸지 않았다.
 - Native 정상85조건 split2301/control111·guard10, C++ 95조건 split2405/continuous111·음성132·zero-step123 일치. `make -j4 all test` exit0 Python257/경고0, 기존 회귀 15개 통과. 상세는 계약·`animation-machine-card-menu-push-execution.md`·리뷰0234.
 - 다음: a370 열림 프레임(a5d2/a348/9b58 상자, a5ea 첫 전체 그리기·9e1a/9d3a/3918/e84c8→3650, callback c1c4/bf94·a216 커서·3af8 효과음, 계약 `animation-machine-card-menu-open-contract.md`) → a406 입력 프레임·bf2c 자동 선택 타이머(계약 `animation-machine-card-menu-input-contract.md`) → a662 닫기·bd26 BIOS 카드. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-10 — 카드 메뉴 첫 프레임(a370 열림→a5ea 첫 전체 그리기·callback)
+
+- Baseline `34814b7`, branch `codex/animation-machine-card-menu-open`. 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high core는 별도 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기). Codex Astra/Sol 미사용(호출 불가).
+- a370 열림 프레임(a348/9b58 상자, a018 가림 known C), a5ea 첫 전체 그리기(9e1a/9d3a/3918, e84c8→3650), callback c1c4/bf94·a216 커서·3af8 효과음, c2c0/c2c6을 live RAM/A7로 연결했다(`engine/src/animation_machine_card_menu_open.cpp`).
+- Native 정상79·guard9 split14493, C++ 88조건 split14969·음성365·zero-step606 일치. `make -j4 all test` exit0 Python257/경고0, 기존 회귀 16개 통과. 상세는 계약·`animation-machine-card-menu-open-execution.md`·리뷰0235.
+- 진행 중(작업 트리 밖 worktree에 리뷰 완료 core, 검증 대기): 0236 입력·bf2c 타이머, 0237 닫기·자식/부모 종료, 0238 YES 카드 저장(BIOS 경계 3회), 0239 중첩 복귀, 480bc U1 helper, U2 장면 core(`animation-machine-480bc-scope.md`). 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 카드 메뉴 입력 프레임(a406)·bf2c 타이머·선택
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기). Codex Astra/Sol 미사용(호출 불가).
+- a406 입력 프레임, bf2c 7e 카운트다운·사건 3, 10fdb6/10fdb7 mask, 입력 edge bit 순서, 사건 전달 a44e/a5aa, a70a 효과음→a1ee -e5=2를 live RAM/A7로 연결했다(`engine/src/animation_machine_card_menu_input.cpp`).
+- Native 정상92·guard7 split35786, C++ 99조건 split35779·음성128·zero-step180 일치(보고서 `383e7d4f…`). 단위 커밋에서는 해당 검증기만 실행했고 이전 검증기 경계 이동·전체 회귀는 0239 뒤 정렬 커밋에 기록한다. 리뷰 0236.
+
+## 2026-10-11 — 카드 메뉴 닫기(a662/a2be/9e94)와 자식·부모 종료
+
+- 같은 작업자 구성. a662 높이 축소(6(A2)<<6), 행 지우기(a018 known C), 9e94, a67e pop, c2c8 페이드·7e=14 타이머, 부모 62=ff·2a00 제거를 연결했다(`engine/src/animation_machine_card_menu_close.cpp`). a344 ADDQ는 source 분류에 맞춰 carry Unknown.
+- Native 정상71·guard11, C++ 82조건 split7886·음성98·zero-step93 일치(보고서 `8f4255c5…`). 2a00 cleanup은 선언 fixture(1d/6c/104ca4)가 필요하다. 리뷰 0237.
+
+## 2026-10-11 — 카드 메뉴 YES: 카드 저장 bd26(BIOS 경계 3회)·결과 메뉴
+
+- 같은 작업자 구성. bbb8 이름 복사, bb74 checksum, BIOS c00468×2·c0046e 경계(실행하지 않음, 선언 재개 PC=복귀/A7+=4/10fdc6), be0c known C→c1ea, 9f36→a71a→a0a0 중첩 push, 효과음 1adb를 연결했다(`engine/src/animation_machine_card_menu_save.cpp`).
+- Native 정상66·guard13, C++ 79조건 split4038·BIOS 재개71·음성95·zero-step87 일치(보고서 `8c403230…`). 리뷰 0238. BIOS 내부·카드 기록 결과는 미확인.
+
+## 2026-10-11 — 결과 하위 메뉴와 중첩 복귀(a698/a6da)
+
+- 같은 작업자 구성. 결과 메뉴 열림·입력·닫기, a698 중첩 복귀(부모 커서 callback D0=7/0), a6da 재그리기, 부모 bf2c→a70a→닫기→c2c8→2a00까지 연결했다(`engine/src/animation_machine_card_menu_nested.cpp`).
+- Native 정상57·guard5 split11605(자연 73프레임 체인 2갈래), C++ 64 row split12293·음성32·zero-step33 일치(보고서 `081d476c…`). 리뷰 0239.
+
+## 2026-10-11 — 카드 메뉴 최종 상태 검증기 정렬과 전체 회귀
+
+- 0236~0239 최종 상태에서 이전 카드 메뉴 검증기의 경계 음성·superseded 기록을 정렬했다(엔진·native 비교 코드 불변). card_child/card_menu/open/input/close/save/nested와 이전 회귀 14종 통과, `make -j4 all test` exit0. 상세는 리뷰 0240.
+- 다음: 480bc 프레임 helper U1~U7 통합(각 단위 검증 완료), F1a stage entry(core 완료, native 관측 중), F1b(core·관측 진행), F1c1/F1c2·F2/F3 계약. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U1 프레임 shell·가벼운 helper
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 480bc shell, 47642/47656 player flags, 6f1c2, b4a2a region boxes, 4701e/46f52 spatial bins, 2efa6/3c44 loop sound을 live RAM/A7로 연결했다(`engine/src/animation_machine_frame_helpers.cpp`). 경계 1a73c/49b0c/4aa88/e8a48, TRAP #15 4939c.
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `737f1c0d…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0241. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U2 장면 core
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 1a73c 장면 core, 1a2b4 조건, 1a26a/1a442 gate, 1a526, 카메라 19b96/19a40/19ac8, 19d08/19d98, 19978, 1a3d6, motion null 경로를 연결했다(`engine/src/animation_machine_scene_core.cpp`).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `c2c62cc2…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0242. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U3 motion walk
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 1972a/196ac/196de/19710/1971c와 motion type dispatcher 5개(18c0a 18cae 18efe 18fd6 192c8)를 연결했다(`engine/src/animation_machine_motion_walk.cpp`). TST/AND known Clear 규칙(19710/1971c/19372/1957a).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `6ede7539…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0243. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U4 장면 갱신
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 1a7a8, 1724c/1726c(ADD.B→SUBX), 1728c/43ea8, 43e08/43e22, 1afda, 19e64 path handler 8개, 18656을 연결했다(`engine/src/animation_machine_scene_update.cpp`).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `db6f1aec…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0244. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U5 script·배치
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 1a0b6 script opcode 20개, 19772, 1a086/1a09e/19e60, 3d7e, e89fa, 1a470을 연결했다(`engine/src/animation_machine_script_placement.cpp`). C++가 scene_frame 594 frame 1a73c→RTS 전체를 native와 일치시켰다.
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `bdb51d12…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0245. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U6 입력
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 49b0c 입력 core와 알려진 callback(JSR (A1))을 연결했다(`engine/src/animation_machine_input.cpp`). 상위 BYTE가 0이 아닌 JSR (A1) 대상과 내부 49e36은 checked 오류(의도된 차이).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `f74a5d8e…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0246. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U7 buffer·cue
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약 초안·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 4aa88/4b784 sprite buffer, e8a48/e8ad0/e8af4 cue, 2986/298e wrapper(결정 1 option A)를 연결했다(`engine/src/animation_machine_buffer_cue.cpp`). stage_frame 96 frame 480bc→480f0 일치, cda4/3aea 대기.
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `34ca867c…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 U7 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0247. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — 480bc U1~U7 최종 상태 검증기 정렬과 전체 회귀
+
+- U7까지 적용한 상태에서 이전 검증기 15개의 음성·guard 기대값을 정렬했다(엔진·native 비교 불변, superseded 기록 유지). 기존 검증기 28개 전부 PASS, `make -j4 all test` exit0. 상세는 리뷰 0248.
+- 진행 중(worktree `metalslug-input` WIP, 단위별 native 관측·C++ 검증 진행): stage controller F1a·F1b·F1c1·F1c2(검증 통과), event interpreter F3a·F3b, scheduler shell F2(22 seed가 기록된 모든 frame에서 native와 일치), F4 객체 callback 범위 분석(U01~U47) 및 U01. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — stage controller F1a: 진입 본문·palette gate·활성화
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 47a94 진입 본문, 72f0 palette gate(47af0 Waiting, 선언 IRQ 효과), 47b06 표, 47b5c/47bfc callback, 활성화와 helper를 연결했다(`engine/src/animation_machine_stage_entry.cpp`, 145 block). TRAP e909c는 stop 경계, dispatcher 재진입은 선언(A6/A5/(A7)/104ca4).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `572ba869…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 F1c2 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0249. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — stage controller F1b: area clear
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 47da4 area clear 39 block을 frame 단위(2ac2 stop+선언 재진입)로 연결했다(`engine/src/animation_machine_area_clear.cpp`). 자연 seed 137개가 237 frame 뒤 477ee에 닿는다(5 release 출력은 홀수 WORD 읽기 guard).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `fe0de167…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 F1c2 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0250. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — stage controller F1c1: stage catalog
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 477e4/477ee catalog·area 목록, 음악 비교 3d58/3d6e(BYTE push), 478a8 진입 효과 표, 478de gate를 연결했다(`engine/src/animation_machine_stage_catalog.cpp`, 67 block, TRAP 478a6 경계). 계약 자료 window의 group 4 끝은 dd4be가 아니라 dd4d0이다(리뷰 기록).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `ce76d283…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 F1c2 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0251. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.
+
+## 2026-10-11 — stage controller F1c2: area 초기화·player 배치·음악 갱신
+
+- 메인 Claude Opus 5.5, Claude 작업자(Opus5.5/high 계약·core는 worktree, Sonnet5.5/high 원본관측, Sonnet5.5/medium 검증기는 단위 커밋 고정 worktree). Codex Astra/Sol 미사용(호출 불가).
+- 479b0~47a94 area 초기화, player 배치, RNG 49a58, 음악 갱신을 연결했다(`engine/src/animation_machine_stage_area.cpp`, 153 block, TRAP 4d824 경계). RNG 포인터가 work RAM 밖이면 checked 오류(의도된 차이).
+- 단위 커밋 상태에서 해당 검증기 통과(보고서 `4adc0955…`, 두 번 동일). 이전 검증기 경계 이동·전체 회귀는 F1c2 뒤 정렬 커밋에 기록한다. 상세는 계약·실행 문서·리뷰 0252. 자연 scheduler·IRQ/timing·일반CCR·직접플레이·전체 Goal은 미완료이며 active다.

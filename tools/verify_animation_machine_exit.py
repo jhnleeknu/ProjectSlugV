@@ -244,6 +244,9 @@ def compare_guards(exe, guards, resources):
     return rows
 
 
+SUPERSEDED_NEGATIVES = []
+
+
 def negatives(exe, records, resources, program):
     rows = []
     base = records[0][1]
@@ -307,8 +310,13 @@ def negatives(exe, records, resources, program):
            memory=((0x10fd8c, 1, 0),), selected=selected)
     whole = next(fx for selection, fx, phases in records
                  if fx['entry_pc'] == 0x47f4a and not any(p['waiting'] for p in phases))
+    # superseded expectation: the successor 480bc is executable now (U1..U7), so the whole pipeline runs on into it and ends in a state-dependent
+    # bus error (device address) instead of an unsupported-PC rollback; the label is kept, the former and observed errors are recorded.
     reject('whole_exit_pipeline_before_unsupported_successor', {},
-           'unsupported animation machine PC', fx=whole)
+           'unsupported program bus device address', fx=whole)
+    SUPERSEDED_NEGATIVES.append(dict(label='whole_exit_pipeline_before_unsupported_successor', former_expected_API_error='unsupported animation machine PC',
+                                     observed_final_state_error='unsupported program bus device address', all_API_outputs_preserved=True,
+                                     native_exception_rollback_equivalence_claimed=False))
     return rows
 
 
@@ -365,7 +373,7 @@ def main():
                   native_observation_sha256=NATIVE_SHA, native_tool_sha256=NATIVE_TOOL_SHA,
                   actual_CPP=matches, native_guards_checked_API=guarded,
                   native_continuous_control_phases_replayed=control_count,
-                  negatives=negative, negative_count=len(negative) + len(guarded), zero_step=zero,
+                  superseded_negatives=SUPERSEDED_NEGATIVES, negatives=negative, negative_count=len(negative) + len(guarded), zero_step=zero,
                   harness_JSON_keys=22, normalized_reference_paths=len(unique),
                   compile_command=command, failure=None, ROM_unchanged=True,
                   limits=['Controlled original exit/helper/palette fixtures; no natural gameplay or scheduler reachability claim.',

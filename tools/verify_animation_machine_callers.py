@@ -171,6 +171,9 @@ def compare_guards(exe, folder, records, resources):
     return rows
 
 
+CALLER_BOUNDARY_ERRORS = {0x47cec: 'program bus requires even WORD/LONG address', 0x47f04: 'unsupported program bus device address'}
+
+
 def caller_boundary_failures(exe, folder, records, resources):
     rows = []
     for entry, expected_return in ((0x47cec, 0x47d20), (0x47f04, 0x47f0a)):
@@ -181,14 +184,16 @@ def caller_boundary_failures(exe, folder, records, resources):
                                fx['ram'], state, fx['pvc'], fx['bank_base'], resources,
                                stop=expected_return + 2, external=fx['external'])
         result, ram, pvc, ports, error = actual
-        assert not result['ok'] and 'unsupported animation machine PC' in error
+        # superseded expectation: the code past the original caller (480bc frame helpers) is executable now (U1..U7), so these runs end in a
+        # state-dependent bus error instead of an unsupported-PC rollback (former error recorded in the row)
+        assert not result['ok'] and error.strip() == CALLER_BOUNDARY_ERRORS[entry], (hex(entry), error.strip())
         assert {k: result[k] for k in common.STATE_KEYS} == state
         assert ram == fx['ram'] and pvc == fx['pvc']
         assert ports == struct.pack('>BII', 1, 0xdeadbeef, 0x87)
         assert result['bank_base'] == fx['bank_base']
         assert result['external_reads'] == 0x12345678 and result['status'] == 1
         rows.append(dict(entry=entry, original_caller_return=expected_return,
-                         stop=expected_return + 2, error=error,
+                         stop=expected_return + 2, error=error, former_expected_error='unsupported animation machine PC',
                          all_API_outputs_preserved=True))
     return rows
 

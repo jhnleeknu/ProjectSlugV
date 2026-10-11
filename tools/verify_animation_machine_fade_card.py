@@ -390,6 +390,10 @@ def compare(exe, rows, resources, instructions):
     return out_rows, totals, ends, guards
 
 
+SUPERSEDED_GUARD_CAUSES = {'guard-callback-480bc': ('unsupported program bus device address',)}
+SUPERSEDED_GUARDS = []
+
+
 def compare_guards(exe, guards, resources):
     rows = []
     for row, phase, ram, state, pvc, bank, step in guards:
@@ -402,6 +406,11 @@ def compare_guards(exe, guards, resources):
             causes = ('program bus requires even WORD/LONG address', 'even WORD/LONG')
         elif problem == 'unsupported_code_target' and guard['target'] & 1:
             causes = ('animation fade card odd JSR target',)
+        elif problem == 'unsupported_code_target' and row['label'] in SUPERSEDED_GUARD_CAUSES:
+            # superseded: the target (480bc) is executable now (U1..U7); the run ends in a state-dependent bus error instead of an unsupported-PC rollback
+            causes = SUPERSEDED_GUARD_CAUSES[row['label']]
+            SUPERSEDED_GUARDS.append(dict(label=row['label'], former_expected_API_error='unsupported animation machine PC',
+                                          expected_final_state_causes=list(causes), native_fault_rollback_equivalence_claimed=False))
         elif problem == 'unsupported_code_target':
             causes = ('unsupported animation machine PC',)
         else:
@@ -419,6 +428,12 @@ def compare_guards(exe, guards, resources):
         rows.append(dict(label=row['label'], native_guard=guard, checked_API_error=error,
                          all_API_outputs_preserved=True, native_fault_rollback_equivalence_claimed=False))
     return rows
+
+
+# Superseded expectations (final state): the successor 480bc / its callees are executable now (U1..U7), so these runs go on and end in a state-dependent
+# bus error instead of an unsupported-PC rollback. Labels are kept; former and observed errors are recorded in the report (superseded_negatives).
+SUPERSEDED_CAUSES = {'frame_helper_480bc_unsupported': 'unsupported program bus device address'}
+SUPERSEDED_NEGATIVES = []
 
 
 def negatives(exe, rows, ends, resources):
@@ -439,6 +454,10 @@ def negatives(exe, rows, ends, resources):
         result, outgoing, out_pvc, ports, error = common.invoke(
             exe, OUT, 'negative_' + label, r, s, p, b, resources if selected is None else selected,
             stop=stop, external=external)
+        if label in SUPERSEDED_CAUSES:
+            SUPERSEDED_NEGATIVES.append(dict(label=label, former_expected_API_error=list(causes), observed_final_state_error=SUPERSEDED_CAUSES[label],
+                                             all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
+            causes = (SUPERSEDED_CAUSES[label],)
         assert not result['ok'] and any(c in error for c in causes), (label, error)
         assert {k: result[k] for k in common.STATE_KEYS} == s
         assert outgoing == r and out_pvc == p and ports == MARKER and result['bank_base'] == b
@@ -538,9 +557,9 @@ def main():
                   native_observation_sha256=NATIVE_SHA, native_tool_sha256=NATIVE_TOOL_SHA,
                   actual_CPP=dict(totals, matches=matches),
                   original_program_read_audit=program_reads,
-                  native_guards_checked_API=guarded,
+                  native_guards_checked_API=guarded, superseded_guards=SUPERSEDED_GUARDS,
                   native_continuous_control_phases_replayed=control_count,
-                  negatives=negative, negative_count=len(negative) + len(guarded), zero_step=zero,
+                  superseded_negatives=SUPERSEDED_NEGATIVES, negatives=negative, negative_count=len(negative) + len(guarded), zero_step=zero,
                   source_classified_carry_writers=carry_writers,
                   carry_check='C++ carry equals source-opcode walk over native-executed PCs (ORI/ANDI CCR known, flow-only preserved, else Unknown); native SR never read',
                   normalized_reference_paths=len(unique), compile_command=command, failure=None,
