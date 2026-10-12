@@ -23,7 +23,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 NAT = ROOT / 'artifacts/animation_machine_scheduler_rng_native'
-OUT = ROOT / 'artifacts/animation_machine_scheduler_rng_f4_execution'
+OUT = Path(os.environ['OUTDIR']) if os.environ.get('OUTDIR') else ROOT / 'artifacts/animation_machine_scheduler_rng_f4_execution'
 OBS_SHA = '413052978cbf85fa1eedbaaa0ca93bc20b9996c131bba032a6e8db22bc27d6d7'
 TOOL_SHA = '659f8636fa82311b757bbcd72190b8874906ad6dbe0baddf638eb5a641e7848b'
 ROM_SHA = '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f'
@@ -370,25 +370,35 @@ def boundary_native(argument):
     import unicorn
     doc = load_doc(directory,result['case'])
     frame = result['cpp_stop']['frame']
-    kind = 'pass-end' if frame else 'seed-start'
-    captured = [row for row in doc['dumps'] if row['kind']==kind and (not frame or row['frame']==frame-1)]
-    assert len(captured)==1
-    initial = captured[0]
+    # Start from the dump of the immediately preceding pass end (frame-1) when recorded; otherwise (the record dumps only boundary frames)
+    # replay from the latest recorded pass-end dump before the stop frame, or from the seed start, requiring every intermediate pass digest to equal
+    # the native per-pass MS5-SCHED-STATE-1 end digest.
+    exact = [row for row in doc['dumps'] if row['kind']=='pass-end' and row['frame']==frame-1] if frame else [row for row in doc['dumps'] if row['kind']=='seed-start']
+    if exact:
+        assert len(exact)==1
+        initial = exact[0]; replay_from = 'frame-1-dump' if frame else 'seed-start'; first_frame = frame
+    else:
+        earlier = sorted((row for row in doc['dumps'] if row['kind']=='pass-end' and row['frame']<frame-1), key=lambda row: row['frame'])
+        if earlier:
+            initial = earlier[-1]; first_frame = initial['frame']+1; replay_from = 'pass-end-dump-%d' % initial['frame']
+        else:
+            initial = [row for row in doc['dumps'] if row['kind']=='seed-start'][0]; first_frame = 0; replay_from = 'seed-start'
     ram = (NAT/'blobs'/(initial['ram']+'.bin')).read_bytes()
     assert sha(ram)==initial['ram']
     assert state_digest(ram,initial['regs'],initial['pc'],initial['bank'])==initial['state']
     snapshot = dict(ram=ram,regs=dict(initial['regs']),pc=0x2ac2,bank=initial['bank'])
-    if frame:
+    if first_frame:
         snapshot['regs'].update(a6=0x1008e4,a7=0x1ff000)
     run = observer.RngRun(observer.G['program'],observer.G['fixed'],observer.G['levels'],snapshot,
                           'continuous',1,extend=False,answer=doc['answer'])
-    run.frame=frame
+    run.frame=first_frame
     machine=run.build(snapshot)
     machine.cpu.reg_write(observer.UC_REG['sr'],0x2000)
+    active=[False]
     missing=[]
     atomic_palette=[False]
     def hook(cpu,pc,size,unused):
-        if pc==BIOS: return
+        if pc==BIOS or not active[0]: return
         # Earlier completed nodes have frozen entry/exit/ports equality; their
         # internal instruction PCs need not be public dispatcher starts.
         cur=run.cur
@@ -404,7 +414,20 @@ def boundary_native(argument):
             missing.append(pc)
             run.request_stop('current-unrouted-PC',pc=pc)
     machine.cpu.hook_add(unicorn.UC_HOOK_CODE,hook,begin=0,end=0xffffff)
-    reason,walk,start,waits,ports0=run.run_pass()
+    replayed_equal=0
+    for f in range(first_frame,frame+1):
+        run.frame=f
+        if f>first_frame:
+            machine.cpu.reg_write(observer.UC_REG['sr'],0x2000);machine.cpu.reg_write(observer.UC_REG['pc'],0x2ac2)
+            machine.cpu.reg_write(observer.UC_REG['a6'],0x1008e4);machine.cpu.reg_write(observer.UC_REG['a7'],0x1ff000)
+        active[0]=(f==frame)
+        reason,walk,start,waits,ports0=run.run_pass()
+        assert start==doc['passes'][f]['start'],('native replay start',f)
+        if f<frame:
+            es=machine.state();es['pc']=reason['pc']
+            assert reason['reason']=='frame-head',(result['case'],f,reason)
+            assert state_digest(es['ram'],es['regs'],es['pc'],es['bank'])==doc['passes'][f]['end'],('replayed pass digest',result['case'],f)
+            replayed_equal+=1
     native_pass=doc['passes'][frame]
     assert start==native_pass['start'],('native replay start',frame)
     cur=run.cur
@@ -421,7 +444,8 @@ def boundary_native(argument):
     approved=(reason['reason']=='current-unrouted-PC' and bool(missing) and same_node and prefix_equal
               and stop['preserved'] and stop['error']==UNROUTED_ERROR and result['pass_equal']==frame
               and not result['mismatches'] and result['chain_unequal']==0)
-    return dict(approved=approved,current_first_missing_PC=missing[0] if missing else None,
+    return dict(approved=approved,replay_from=replay_from,replayed_equal_passes=replayed_equal,first_replayed_frame=first_frame,
+                observer_first_unrouted=result['first_unrouted'],current_first_missing_PC=missing[0] if missing else None,
                 native_reason=reason,frame=frame,callback=cur['cb'] if cur else None,
                 node_entry_sha256=entry,node_entry_matches_frozen_native=entry is not None,
                 completed_native_node_prefix_equal=prefix_equal,completed_native_nodes=len(run.pass_nodes),
@@ -444,7 +468,7 @@ def audit_current_boundaries(rows,variants):
             result['current_boundary_evidence']=evidence if ok else dict(approved=False,native_replay_aborted=True)
             if ok and evidence['approved']:
                 result['historical_first_unrouted']=result['first_unrouted']
-                result['classification']='checked-current-first-unrouted-PC'
+                result['classification']='checked-current-first-unrouted-PC' if evidence['replayed_equal_passes']==0 else 'checked-current-first-unrouted-PC-replayed'
             else:
                 result['classification']='cpp-error-other'
 

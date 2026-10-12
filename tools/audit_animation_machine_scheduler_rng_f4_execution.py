@@ -57,8 +57,10 @@ def main():
     normal = {'complete':61,'checked-current-first-unrouted-PC':75,
               'cpp-error-at-native-end:animation fade card odd JSR target':5,
               'cpp-error-at-native-end:unaligned animation machine PC':1}
-    assert dict(collections.Counter(row['classification'] for row in rows))==normal
-    assert dict(collections.Counter(row['classification'] for row in variants))=={'complete':2,'checked-current-first-unrouted-PC':4}
+    # '-replayed' = stop frame without a frame-1 dump: replayed from the seed start / latest earlier dump with every pass digest equal (same rule, explicit class)
+    fold = lambda name: 'checked-current-first-unrouted-PC' if name.startswith('checked-current-first-unrouted-PC') else name
+    assert dict(collections.Counter(fold(row['classification']) for row in rows))==normal
+    assert dict(collections.Counter(fold(row['classification']) for row in variants))=={'complete':2,'checked-current-first-unrouted-PC':4}
     assert (report['totals']['passes_equal'],report['totals']['nodes_equal']) == (24646,169037)
     assert (report['variants_answer00']['totals']['passes_equal'],report['variants_answer00']['totals']['nodes_equal']) == (844,6116)
     for row in rows+variants:
@@ -66,13 +68,14 @@ def main():
         assert row['node_compared']==row['node_equal']
         if row['cpp_stop']:
             assert row['cpp_stop']['preserved'] is True
-        if row['classification']=='checked-current-first-unrouted-PC':
+        if row['classification'].startswith('checked-current-first-unrouted-PC'):
             evidence=row['current_boundary_evidence']
             assert evidence['approved'] and evidence['node_entry_matches_frozen_native']
             assert evidence['completed_native_node_prefix_equal']
             assert evidence['current_first_missing_PC'] == evidence['native_reason']['pc']
             assert evidence['callback'] == row['cpp_stop']['node_cb']
             assert evidence['frame'] == row['cpp_stop']['frame'] == row['pass_equal']
+            assert evidence['replayed_equal_passes'] == (evidence['frame']-evidence['first_replayed_frame'] if evidence['replay_from'].startswith('pass-end-dump') or evidence['replay_from']=='seed-start' else 0)
     anchor_path = ROOT/'build/sanitize-u15review/verification.json'
     anchor = json.loads(anchor_path.read_text())
     headers = {path:value for path,value in anchor['inputs'].items() if path.endswith('.h')}
