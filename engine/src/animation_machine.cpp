@@ -701,6 +701,20 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x7b158:case 0x7b15e:case 0x7b162:case 0x7b168:case 0x7b17a:case 0x7b17c:case 0x7b182:case 0x7b1a2:case 0x7b200:case 0x7b206:
     case 0x7b20a:case 0x7b22a:case 0x7b238:case 0x7b242:case 0x7b274:case 0x7b27e:case 0x7b282:case 0x7b28c:case 0x7b570:case 0x7b59a:
     case 0x7b5a6:case 0x7b7c2:case 0x7b7cc:
+    // Objects N18 (F4) blocks: JSR/BSR/JMP/BRA/RTS, the 27 BRA.W slots of the 862a0 table, LEA+JSR 86352 b78a2, LEA 8689a 868a2,
+    // BTST/BSET (Z only, +Bcc) blocks and the 7 BCC/BCS consumers 86260 (C returned by 4b54e), 8635c (1ab02), 871d0 (49fc6), b6536
+    // (28ae), b6600 (b7e5c), b7898 (288c), b78ac (1aa7e). b6544 (ORI CCR) sets a known C. The MOVE/MOVEQ/CLR/TST/CMP/CMPI/ADD/SUB/SUBI/
+    // SUBQ/ADDQ/NEG/LSL/LSR/ASR/ANDI/EOR blocks, MOVE.L #imm,(A6), the 28ae child block, the animation blocks and 86298 stay Unknown.
+    case 0x8625a:case 0x86260:case 0x86274:case 0x8627e:case 0x86282:case 0x862a4:case 0x862a8:case 0x862ac:case 0x862b0:case 0x862b4:
+    case 0x862b8:case 0x862bc:case 0x862c0:case 0x862c4:case 0x862c8:case 0x862cc:case 0x862d0:case 0x862d4:case 0x862d8:case 0x862dc:
+    case 0x862e0:case 0x862e4:case 0x862e8:case 0x862ec:case 0x862f0:case 0x862f4:case 0x862f8:case 0x862fc:case 0x86300:case 0x86304:
+    case 0x86308:case 0x8630c:case 0x8631a:case 0x86352:case 0x8635c:case 0x86370:case 0x864b6:case 0x86584:case 0x865da:case 0x865e0:
+    case 0x865e8:case 0x865f2:case 0x865fa:case 0x86600:case 0x86608:case 0x8661e:case 0x86624:case 0x8662c:case 0x86632:case 0x8663a:
+    case 0x86640:case 0x866ca:case 0x866d0:case 0x86708:case 0x8684e:case 0x86852:case 0x86858:case 0x86866:case 0x86882:case 0x8689a:
+    case 0x868a2:case 0x868bc:case 0x868d6:case 0x868e6:case 0x86f50:case 0x86f88:case 0x86fb0:case 0x86fb6:case 0x86fc6:case 0x87192:
+    case 0x871c4:case 0x871ca:case 0x871d0:case 0x871da:case 0x871ea:case 0xb6318:case 0xb6536:case 0xb659e:case 0xb65f0:case 0xb65f6:
+    case 0xb65fc:case 0xb6600:case 0xb660a:case 0xb7874:case 0xb787a:case 0xb7892:case 0xb7898:case 0xb78a2:case 0xb78ac:case 0xb78b6:
+    case 0xdbea2:case 0xdbea4:case 0xdbee0:case 0xdbeea:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1061,6 +1075,11 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x7aa6e && next.pc<0x7abc2) || (next.pc>=0x7afa6 && next.pc<0x7b11a) || (next.pc>=0x7b140 && next.pc<0x7b1da) ||
                 (next.pc>=0x7b200 && next.pc<0x7b28e) || (next.pc>=0x7b570 && next.pc<0x7b5a8) || (next.pc>=0x7b740 && next.pc<0x7b75e) ||
                 (next.pc>=0x7b786 && next.pc<0x7b79a) || (next.pc>=0x7b7ae && next.pc<0x7b7d4))ok=animation_objects_n17_block(c);
+            else if ((next.pc>=0x8625a && next.pc<0x86348) || (next.pc>=0x8634e && next.pc<0x86372) ||
+                (next.pc>=0x864b6 && next.pc<0x86560) || (next.pc>=0x86564 && next.pc<0x86742) || (next.pc>=0x86814 && next.pc<0x868ea) ||
+                (next.pc>=0x86f1c && next.pc<0x86fca) || (next.pc>=0x8715e && next.pc<0x871ee) || (next.pc>=0xb630e && next.pc<0xb631c) ||
+                (next.pc>=0xb6506 && next.pc<0xb660e) || (next.pc>=0xb780c && next.pc<0xb78b8) ||
+                (next.pc>=0xdbe98 && next.pc<0xdbeec))ok=animation_objects_n18_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
