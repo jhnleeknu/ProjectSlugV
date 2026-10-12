@@ -394,7 +394,6 @@ const Fixture FIXTURES[]={
  {"error-table-target-interior",0x45176,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x184,0x10e600,0x10e700,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","unsupported animation objects u11 PC",{0},0,0ULL},
  {"error-table-odd",0x45176,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x181,0x10e600,0x10e700,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","unaligned animation machine PC",{0},0,0ULL},
  {"error-table-far",0x45176,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x8000,0x10e600,0x10e700,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","unsupported animation machine PC",{0},0,0ULL},
- {"error-table-before",0x45176,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0xfffa,0x10e600,0x10e700,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","unsupported animation machine PC",{0},0,0ULL},
  {"error-table-self",0x45176,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0xfffc,0x10e600,0x10e700,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","animation machine block budget exceeded",{0},0,0ULL},
  {"error-odd-node",0xbe8a4,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e600,0x10e700,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e001,0x10f000},"","program bus requires even WORD/LONG address",{0},0,0ULL},
  {"error-node-write",0x496c2,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e600,0x10e700,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10,0x10f000},"","unsupported animation machine write device",{0},0,0ULL},
@@ -793,10 +792,12 @@ void interior(){
 // The TRAP 4937c stops when it is the stop PC and otherwise rolls the whole run back. Boundary callees of other units (4941e,
 // 44c62): only the stop at that PC is asserted (later units route them). Rollback through an unrouted PC uses 5f810 as the return
 // LONG of runs that end in a U11 RTS. The 6 consumers reject an Unknown C. Every table index with every incoming C reaches its
-// transcribed target in one call (stop at the target).
+// transcribed target in one call (stop at the target). D7.W fffa moves 45176 to 4517a-6 = 45174 (objects U20 now; the former
+// error row error-table-before is a stop-only check).
 void boundaries(){
  {const Fixture&f=fixture_of("49370-trap");assert(f.stop==0x4937c&&final_of("49370-trap").s.pc==0x4937c);
   Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
+ {Bytes ram;State s;generic(0x45176,ram,s,1);s.d[7]=0xfffa;Out o;assert(run(ram,s,0x45174,o)&&s.pc==0x45174&&s.carry==carry_of(1));}
  const char* names[]={"497c8","497dc","45302-set","t5d-1"};
  const std::uint32_t want[]={0x4941e,0x4941e,0x44c62,0x44c62};
  for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(f.stop==want[i]&&final_of(names[i]).s.pc==want[i]);}

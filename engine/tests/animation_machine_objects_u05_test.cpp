@@ -343,7 +343,8 @@ void zero_step(){
    o.status==ms5::AnimationMachineReturned&&o.dev.bank_base==0x200000);}
 }
 // Every other even PC of the 3 routed ranges (the bundled BMI PCs 1ab20/1ab5c among them) is rejected by the U05 executor; the
-// boundary callee 497a6, the installed callbacks b975e/b97c0 and the range neighbours by the routing; odd PCs first.
+// installed callbacks b975e/b97c0, the range neighbours and the RAM probe 10fe1c by the routing (497a6 is an objects U20 block
+// start now); odd PCs first.
 void interior(){
  unsigned int even=0,inside=0,bundled=0;
  for(unsigned int r=0;r<RANGE_COUNT;++r)for(std::uint32_t pc=RANGES[r][0];pc<RANGES[r][1];pc+=2){++even;
@@ -351,17 +352,17 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u05 PC");++inside;if(in_list(BUNDLED,2,pc))++bundled;}
  assert(even==337&&inside==266&&bundled==2);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- const std::uint32_t outside[]={0x497a6,0xb975e,0xb97c0,0x1ab80,0x1ab82,0xb96c6,0xb96c4,0xb9760,0xc6c24,0xc6c28,0xc6e08};
+ const std::uint32_t outside[]={0x10fe1c,0xb975e,0xb97c0,0x1ab80,0x1ab82,0xb96c6,0xb96c4,0xb9760,0xc6c24,0xc6c28,0xc6e08};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x1ab03,0x1ab7b,0x1ab7f,0xb96c9,0xb971b,0xb975d,0xc6a97,0xc6bf7,0xc6c23};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
-// The 497a6 boundary stops when it is the stop PC and otherwise rolls the whole run back; the consumers reject an Unknown C (error
-// rows of the fixture table, and below with the success inputs).
+// The former boundary 497a6 (an objects U20 block start now): only the stop at that PC is asserted (F4 unit test boundary
+// convention; the former rollback rows are removed). The consumers reject an Unknown C (error rows of the fixture table, and below
+// with the success inputs).
 void boundaries(){
  const char* names[]={"c6ad0","c6b1a","c6b74","c6aa6-34","c6aa6-60","c6aa6-5d"};
- for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(final_of(names[i]).s.pc==0x497a6);
-  Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
+ for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(f.stop==0x497a6&&final_of(names[i]).s.pc==0x497a6);}
  const char* consumers[]={"b9752-clear","b9752-set","c6ad6-clear","c6ad6-set","c6b20-clear","c6b20-set","c6b7a-clear","c6b7a-set"};
  for(unsigned int i=0;i<8;++i){const Fixture&f=fixture_of(consumers[i]);Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,0);
   reject(ram,s,f.stop,"objects u05 caller requires known carry");}
