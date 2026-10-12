@@ -362,8 +362,8 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u01 PC");++inside;if(in_list(BUNDLED,2,pc))++bundled;}
  assert(even==525&&inside==420&&bundled==2);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- // 5f1a0/5f1a4 replace 1ab02/c6a96 (now objects U05 block starts).
- const std::uint32_t outside[]={0xb4db0,0xb4db2,0xb4dc0,0xb4e46,0xb4e58,0xb4d88,0xb4d92,0xb4d9c,0xb4dca,0xb4dee,0xb4e6c,0x482c0,0xdd574,
+ // 5f1a0/5f1a4 replace 1ab02/c6a96 (now objects U05 block starts); 10fe0c replaces 482c0 (now an objects U17 block start).
+ const std::uint32_t outside[]={0xb4db0,0xb4db2,0xb4dc0,0xb4e46,0xb4e58,0xb4d88,0xb4d92,0xb4d9c,0xb4dca,0xb4dee,0xb4e6c,0x10fe0c,0xdd574,
   0x1aa7c,0x5f1a0,0x48294,0x482aa,0x4b50a,0xb4d7c,0xb4fd2,0xb503e,0xc6a8e,0x5f1a4,0xd6d20,0xd6d36,0xdd4ce};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x1aa7f,0x48297,0x4b50d,0x4b6e3,0xb4d7f,0xb4dc3,0xb4df9,0xb4e5b,0xb4fd5,0xc6a91,0xd6d23,0xdd4d1,0xdd513};
@@ -371,10 +371,11 @@ void interior(){
 }
 const Fixture& fixture_of(const char*name){for(unsigned int k=0;k<FIXTURE_COUNT;++k)if(std::strcmp(FIXTURES[k].name,name)==0)return FIXTURES[k];assert(false);return FIXTURES[0];}
 // TRAP #15 boundaries stop when they are the stop PC (fixtures b4d7e-trap*, b4e3a-null) and otherwise roll the whole run back; the
-// callees b4e6c/482c0 and the callback dd574 have no executor; the consumers reject an Unknown C.
+// callee b4e6c and the callback dd574 have no executor (482c0 is U17 now: stop only); the consumers reject an Unknown C.
 void boundaries(){
- const char* names[]={"b4d7e-trap","b4d7e-trap-ffff","b4e3a-null","b4e22","dd4e2-expire"};
- for(unsigned int i=0;i<5;++i){const Fixture&f=fixture_of(names[i]);Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);
+ // dd4e2-expire stops at 482c0 (its fixture stop); 482c0 is an objects U17 block start now, so it is not a rollback probe here.
+ const char* names[]={"b4d7e-trap","b4d7e-trap-ffff","b4e3a-null","b4e22"};
+ for(unsigned int i=0;i<4;++i){const Fixture&f=fixture_of(names[i]);Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);
   reject(ram,s,STOP,"unsupported animation machine PC");}
  {const Fixture&f=fixture_of("dd512-far");Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,0);Out o;
   assert(run(ram,s,STOP,o));s.pc=get(ram,NODE,4);put(ram,SP,4,STOP);s.a[7]=SP;assert(s.pc==0xdd574);reject(ram,s,STOP,"unsupported animation machine PC");}
