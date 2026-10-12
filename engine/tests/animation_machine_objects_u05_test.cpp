@@ -352,7 +352,7 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u05 PC");++inside;if(in_list(BUNDLED,2,pc))++bundled;}
  assert(even==337&&inside==266&&bundled==2);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- const std::uint32_t outside[]={0x10fe1c,0xb975e,0xb97c0,0x1ab80,0x1ab82,0xb96c6,0xb96c4,0xb9760,0xc6c24,0xc6c28,0xc6e08};
+ const std::uint32_t outside[]={0x10fe1c,0xb975e,0xb97c0,0x10fe52,0x10fe54,0xb96c6,0xb96c4,0xb9760,0xc6c24,0xc6c28,0xc6e08};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x1ab03,0x1ab7b,0x1ab7f,0xb96c9,0xb971b,0xb975d,0xc6a97,0xc6bf7,0xc6c23};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
