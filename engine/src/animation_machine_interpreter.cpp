@@ -150,8 +150,9 @@ bool callback(AnimationMachineContext& c,bool wide) {
     if(!am_fetch(c,4,r.a[0]) || !am_push(c,4,r.a[1]))return false;
     r.a[1]=r.d[7];if(wide)r.d[0]=r.a[0];
     if(!read_offset(c,5,0x8010,2,v) || !am_push(c,2,v) || !am_zero_bank(c))return false;
-    // eb752/eb766: the command callback table 4a6dc handlers routed by objects N04.
-    if(r.a[1]!=0x3679e && r.a[1]!=0x2b3e8 && r.a[1]!=0x2b3fa && r.a[1]!=0x47672 && r.a[1]!=0xeb752 && r.a[1]!=0xeb766)
+    // eb752/eb766: the command callback table 4a6dc handlers routed by objects N04; 52e78/53ad0: commands 30/31 (4a5c0/4a5c4), N12.
+    if(r.a[1]!=0x3679e && r.a[1]!=0x2b3e8 && r.a[1]!=0x2b3fa && r.a[1]!=0x47672 && r.a[1]!=0xeb752 && r.a[1]!=0xeb766 &&
+        r.a[1]!=0x52e78 && r.a[1]!=0x53ad0)
         return am_error(c,"unsupported animation callback target");
     return am_call(c,r.a[1],wide?0x4a354:0x4a43e);
 }

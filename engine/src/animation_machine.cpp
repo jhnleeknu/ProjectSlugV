@@ -605,6 +605,20 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // 1ab02). N10 has no known-carry producer; the MOVE/TST/CMPI/ADD blocks and MOVE.L #imm,(A6) stay Unknown.
     case 0xc58d4:case 0xc58e2:case 0xc58f8:case 0xc5902:case 0xc5908:case 0xc590c:case 0xc5912:case 0xc5916:case 0xc5928:
     case 0xc5932:case 0xc5936:case 0xc593c:
+    // Objects N12 (F4) blocks: JSR/BSR/BRA/JMP/RTS, LEA+JSR 52ea2, BTST/BSET/BCLR (Z only)+Bcc and ST blocks and the 12 consumers 53130
+    // (C returned by 5317c), 53184 5318e (SCS, C returned by 49392; their MOVEQ/OR.B leave an Unknown C), 53232 5328a 53abe 53c2c 53cfe
+    // 53e0e 53e50 (49fc6) and 53aee 53b3c (28ae). 53196 (ORI CCR Set) and 5319c (ANDI CCR Clear) set their known C before RTS. The
+    // MOVE/MOVEQ/MOVEA+MOVE/CLR/TST/CMP/CMPI/ADD/ADDQ/SUB/SUBQ/NEG/ASR/ANDI/SWAP/OR blocks, MOVE.L #imm,(A6), the 28ae child and
+    // animation blocks and ADDQ.W #4,A7+RTS 53b4c stay Unknown.
+    case 0x52e62:case 0x52e9a:case 0x52e9c:case 0x52ea2:case 0x52ebe:case 0x52ec4:case 0x52f4a:case 0x52f66:case 0x52f7c:
+    case 0x52f88:case 0x52f8e:case 0x52f94:case 0x52f96:case 0x52fa8:case 0x52fb2:case 0x52fb6:case 0x52fc0:case 0x52fd8:
+    case 0x52fe2:case 0x53050:case 0x53122:case 0x5312c:case 0x53130:case 0x5316c:case 0x53172:case 0x53178:case 0x53184:
+    case 0x5318e:case 0x531c2:case 0x531dc:case 0x531e2:case 0x53208:case 0x53222:case 0x5322c:case 0x53232:case 0x53260:
+    case 0x5327a:case 0x53284:case 0x5328a:case 0x539e4:case 0x539ea:case 0x539f0:case 0x539f6:case 0x53a8a:case 0x53ab2:
+    case 0x53ab8:case 0x53abe:case 0x53ac8:case 0x53ace:case 0x53aee:case 0x53b3c:case 0x53bf2:case 0x53c06:case 0x53c20:
+    case 0x53c26:case 0x53c2c:case 0x53c3a:case 0x53c40:case 0x53cc4:case 0x53cd8:case 0x53cf2:case 0x53cf8:case 0x53cfe:
+    case 0x53d0c:case 0x53d12:case 0x53dac:case 0x53db2:case 0x53db8:case 0x53dd4:case 0x53de8:case 0x53e02:case 0x53e08:
+    case 0x53e0e:case 0x53e2c:case 0x53e44:case 0x53e4a:case 0x53e50:case 0x53e6e:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -937,6 +951,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xb0260 && next.pc<0xb02c8) || (next.pc>=0xb02ec && next.pc<0xb04cc) ||
                 (next.pc>=0xb057e && next.pc<0xb05be))ok=animation_objects_n09_block(c);
             else if (next.pc>=0xc5896 && next.pc<0xc593e)ok=animation_objects_n10_block(c);
+            else if ((next.pc>=0x52e4a && next.pc<0x52e64) || (next.pc>=0x52e78 && next.pc<0x531a2) || (next.pc>=0x531c2 && next.pc<0x532a0) ||
+                (next.pc>=0x539e4 && next.pc<0x53b50) || (next.pc>=0x53b70 && next.pc<0x53ee0))ok=animation_objects_n12_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
