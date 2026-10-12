@@ -514,6 +514,12 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x85a86:case 0x85a8c:case 0x85aa0:case 0x85b16:case 0x85b2e:case 0x85b34:case 0x85b3a:case 0x85b6c:case 0x85b76:
     case 0x85b7c:case 0x85b80:case 0x85b86:case 0x85b9a:case 0x85bcc:case 0x85bd6:case 0x85bdc:case 0x85be0:case 0x85be6:
     case 0x85bec:case 0x85bf0:case 0x85c00:case 0x85c48:case 0x85c52:case 0x85c58:case 0x85c5c:case 0x85c62:case 0x85c68:
+    // Objects N01 (F4) blocks: JSR/JMP/BRA/RTS blocks, MOVEA+ST+JMP e5f22 e5fae (Scc keeps the CCR) and the two consumers e5c12 e5e06
+    // (C returned by 49fc6). N01 has no known-carry producer. MOVE/MOVEQ/MOVEA+TST/CLR/CMP/CMPI/ADD/ADDI/ADDQ/SUBQ/LSL blocks, the
+    // MOVE.L #imm,(A6) blocks and the banked animation blocks stay Unknown.
+    case 0x52136:case 0x5213c:case 0xe5c06:case 0xe5c0c:case 0xe5c12:case 0xe5c72:case 0xe5cdc:case 0xe5ce2:case 0xe5d70:
+    case 0xe5dfa:case 0xe5e00:case 0xe5e06:case 0xe5e7e:case 0xe5eb2:case 0xe5f18:case 0xe5f22:case 0xe5f30:case 0xe5f5c:
+    case 0xe5f74:case 0xe5f90:case 0xe5f96:case 0xe5f9e:case 0xe5fae:case 0xe5fbc:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -819,6 +825,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x497a6 && next.pc<0x497b6))ok=animation_objects_u20_block(c);
             else if ((next.pc>=0x849f4 && next.pc<0x84a14) || (next.pc>=0x858d8 && next.pc<0x8597c) ||
                 (next.pc>=0x85980 && next.pc<0x85c6c))ok=animation_objects_u20b_block(c);
+            else if ((next.pc>=0x5208a && next.pc<0x52156) || (next.pc>=0xe5bb0 && next.pc<0xe5e80) ||
+                (next.pc>=0xe5ea0 && next.pc<0xe5fbe))ok=animation_objects_n01_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

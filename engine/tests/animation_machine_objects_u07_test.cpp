@@ -400,7 +400,8 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u07 PC");++inside;}
  assert(even==461&&inside==376);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- const std::uint32_t outside[]={0x48256,0x4e1cc,0x4e1ce,0xe583c,0xe585a,0xe5bb0,0xe5bb2,0xe5ea0,0xe5c74,0xe5d72,0xe5d86};
+ // e5bb0 e5bb2 e5ea0 e5c74 e5d72 e5d86 are now N01 PCs (F4 N01); the unrouted probes use work RAM PCs 10fe00..10fefe instead.
+ const std::uint32_t outside[]={0x48256,0x4e1cc,0x4e1ce,0xe583c,0xe585a,0x10fe80,0x10fe82,0x10fe84,0x10fe86,0x10fe88,0x10fe8a};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x4e187,0x4e1a3,0x4e1cb,0xe585d,0xe5879,0xe59f7,0xe5baf};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
