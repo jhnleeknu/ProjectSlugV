@@ -94,5 +94,6 @@ bool animation_objects_u17_block(AnimationMachineContext& c);
 bool animation_objects_u18_block(AnimationMachineContext& c);
 bool animation_objects_u19_block(AnimationMachineContext& c);
 bool animation_objects_u20_block(AnimationMachineContext& c);
+bool animation_objects_u20b_block(AnimationMachineContext& c);
 }
 #endif
