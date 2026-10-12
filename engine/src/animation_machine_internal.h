@@ -102,5 +102,7 @@ bool animation_objects_n05_block(AnimationMachineContext& c);
 bool animation_objects_n06_block(AnimationMachineContext& c);
 bool animation_objects_n07_block(AnimationMachineContext& c);
 bool animation_objects_n08_block(AnimationMachineContext& c);
+bool animation_objects_n09_block(AnimationMachineContext& c);
+bool animation_objects_n10_block(AnimationMachineContext& c);
 }
 #endif
