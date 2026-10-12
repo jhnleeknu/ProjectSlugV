@@ -576,7 +576,7 @@ void interior(){
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
  const std::uint32_t outside[]={0x10fe1c,0x5ff44,0x10fe04,0x5fe18,0x5fa18, // 44ade is U20 now, 469d8 is U09 now, 492c8 is U12 now, 4662e is U15a now, 4578a is U15b now, 45b12 is U15c now
  0x4b8e8,0x4bce0,0x10fe08,0x461f2,0x46370,0x5fe1c, // 4683a is inside the U15a range 4662e..4683c now, 461ea is inside U15c now
-  0x46994,0x4bb20,0x4bb52,0x4bc42,0x4bca0,0x10fe0c,0x4be50,0x4be68,0x4be80,0x10fe18}; // 4be32 is U18, 4bfa4 is U17 now
+  0x46994,0x4bb20,0x4bb52,0x10fe14,0x4bca0,0x10fe0c,0x4be50,0x4be68,0x4be80,0x10fe18}; // 4be32 is U18, 4bfa4 is U17 now, 4bc42 is inside N04 now
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x461ed,0x461f1,0x46373,0x4662d,0x4683d,0x46993,0x4bb23,0x4bb51,0x4bc45,0x4bc9f,0x4be35,0x4be4f,0x4be83,0x4bfa3};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
