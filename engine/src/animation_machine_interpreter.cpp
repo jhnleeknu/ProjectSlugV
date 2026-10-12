@@ -196,6 +196,14 @@ bool animation_interpreter_block(AnimationMachineContext& c) {
             !write_offset(c,0,6,2,r.d[0]))return false;
         r.carry=AnimationCarryClear;
         return am_return(c);
+    // Second entry 49f96 (A0 = the animation block given by the caller; no LEA 26(A6),A0 and no MOVE.B #0,18(A6)).
+    case 0x49f96:
+        if(!am_zero_bank(c))return false;
+        if(r.a[5]!=0x108000U)return am_error(c,"unsupported original animation initializer TRAP15");
+        if(!am_write(c,r.a[0],4,r.a[1]) || !write_offset(c,0,4,2,0) ||
+            !write_offset(c,0,6,2,r.d[0]))return false;
+        r.carry=AnimationCarryClear;
+        return am_return(c);
     case 0x49fc6:
         r.a[0]=r.a[6]+0x26U;if(!am_zero_bank(c) || !am_read(c,r.a[0],4,r.d[7]))return false;
         if(r.d[7]==0) {r.carry=AnimationCarrySet;return am_return(c);}
