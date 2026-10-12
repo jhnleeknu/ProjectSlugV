@@ -100,5 +100,6 @@ bool animation_objects_n03_block(AnimationMachineContext& c);
 bool animation_objects_n04_block(AnimationMachineContext& c);
 bool animation_objects_n05_block(AnimationMachineContext& c);
 bool animation_objects_n06_block(AnimationMachineContext& c);
+bool animation_objects_n07_block(AnimationMachineContext& c);
 }
 #endif
