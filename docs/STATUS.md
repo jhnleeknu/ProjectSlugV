@@ -2082,3 +2082,9 @@
 - 통합 빌드 `make -j4 all test`: C++ 실행 파일 204개·Python 시험 257개 통과, U15b/c UBSan 진단 없음. F2/F3 및 F4 별도 원본 비교·엄격한 인수 감사도 통과했다. F4의 4,657개 실행 일치/77개 rollback 경계/8개 원본 step limit/1개 입력 전제 위반 분류를 유지한다. API-only 결과를 원본 이후 실행 동등성으로 세지 않았다.
 - 메인이 소스 diff와 실제 검증 결과를 리뷰했다. 내부 작업자 3개 모두 `gpt-6.1-sol` / `medium`을 사용했고 새 외부 Claude 작업자는 생성하지 않았다. 검증·제약·실행 사고 기록은 `docs/reviews/0256-claude-integration.md`, 전체 보고서/도구 해시는 `docs/reviews/0256-regression-manifest.json`에 있다.
 - 이번 제한 작업은 여기서 종료한다. 다음 작업은 사용자 지시에 따른다. U17 이후·새 R 단위·직접 플레이·자연 부팅/IRQ·전체 게임 완료는 이번 인수 범위가 아니며, 기존 전체 Goal은 계속 일시중지 상태다. ROM과 추출 게임 데이터는 Git에 추가하지 않았다.
+
+## 2026-10-12 — F4 U17 이후 재개
+
+- 사용자 지시("계속 진행해")로 Codex 통합 인수(`9682aed`, U01~U16·F2/F3·회귀 35/35) 위에서 F4 객체 callback 단위를 U17부터 이어 간다. 기존 전체 Goal과 완료 기준은 그대로이며 작업 브랜치는 `codex/f4-continue`다.
+- 메인 Claude Opus 5.5가 범위·결정·리뷰·통합을 맡고, 단위마다 Claude Opus 5.5/high 작업자가 계약과 C++ core를 별도 worktree에서 작성한다(U17, U18 동시 진행). 검증 기준은 단위 시험·실제 ROM 차분·기본 frame-pass 비교·RNG 400 frame 비교이며, 묶음 단위로 독립 원본 관측과 C++ 검증을 덧붙인다.
+- 시험의 "실행부 없음" rollback 탐침은 이후 단위(U36/U37)와 겹치는 5f6xx~5ffxx 대신 work RAM PC(10fe00..10fefe)를 쓴다. 기존 5fxxx 탐침은 U36/U37 전에 옮긴다.
