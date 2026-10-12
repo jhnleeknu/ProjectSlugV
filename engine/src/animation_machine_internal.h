@@ -112,5 +112,6 @@ bool animation_objects_n15_block(AnimationMachineContext& c);
 bool animation_objects_n16_block(AnimationMachineContext& c);
 bool animation_objects_n17_block(AnimationMachineContext& c);
 bool animation_objects_n18_block(AnimationMachineContext& c);
+bool animation_objects_n20_block(AnimationMachineContext& c);
 }
 #endif
