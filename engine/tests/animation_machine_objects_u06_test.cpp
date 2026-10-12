@@ -499,7 +499,7 @@ void interior(){
  assert(even==675&&inside==540);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
  const std::uint32_t outside[]={0x3ed2,0xe7562,0xeb9ba,0xeb9e4,0x101c,0xe74f8,0xe7504,0xe750c,0xe7534,0x49bca,0x49bde,0x49bf2,0x49c00,
-  0xe7544,0xe7570,0xe7790,0xe7946,0xeb7b4,0xeba3c,0xeba9e,0xebaa0};
+  0xe7544,0xe7570,0xe7790,0xe7946,0x10fe24,0xeba3c,0xeba9e,0xebaa0};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x49be1,0x49bf1,0xe73f9,0xe74f7,0xe7547,0xe7793,0xe7945,0xeb7b7,0xeb9b9,0xeba3f,0xeba9d};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
