@@ -514,6 +514,13 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x85a86:case 0x85a8c:case 0x85aa0:case 0x85b16:case 0x85b2e:case 0x85b34:case 0x85b3a:case 0x85b6c:case 0x85b76:
     case 0x85b7c:case 0x85b80:case 0x85b86:case 0x85b9a:case 0x85bcc:case 0x85bd6:case 0x85bdc:case 0x85be0:case 0x85be6:
     case 0x85bec:case 0x85bf0:case 0x85c00:case 0x85c48:case 0x85c52:case 0x85c58:case 0x85c5c:case 0x85c62:case 0x85c68:
+    // Objects N03 (F4) blocks: RTS, JSR, BRA, JMP, LEA+JSR, MOVEA+JSR, MOVEA, BTST+BEQ and BCHG blocks, the pass-through c637c
+    // (BCC.W to the next instruction) and the consumer c63aa (C returned by 1ab02). N03 has no known-carry producer; the MOVE/MOVEQ/
+    // CLR/TST/CMP/CMPI/CMPA/ADD/ADDI/ADDQ/SUBQ/ANDI/LSL blocks, MOVE.L #imm,(A6), MOVEM+MOVE.B and ADDQ.L #4,A1 stay Unknown.
+    case 0x4b878:case 0xc603a:case 0xc6150:case 0xc61f4:case 0xc61fa:case 0xc6230:case 0xc6238:case 0xc6246:case 0xc624e:
+    case 0xc6252:case 0xc6268:case 0xc6278:case 0xc6296:case 0xc629a:case 0xc629e:case 0xc62b2:case 0xc62be:case 0xc62ca:
+    case 0xc62e2:case 0xc6308:case 0xc6336:case 0xc634e:case 0xc6354:case 0xc637c:case 0xc6380:case 0xc6398:case 0xc63a0:
+    case 0xc63aa:case 0xc63ae:case 0xc63b4:case 0xc6428:case 0xc642c:case 0xc647e:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -819,6 +826,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x497a6 && next.pc<0x497b6))ok=animation_objects_u20_block(c);
             else if ((next.pc>=0x849f4 && next.pc<0x84a14) || (next.pc>=0x858d8 && next.pc<0x8597c) ||
                 (next.pc>=0x85980 && next.pc<0x85c6c))ok=animation_objects_u20b_block(c);
+            else if ((next.pc>=0x4b82e && next.pc<0x4b8a2) || (next.pc>=0xc603a && next.pc<0xc63b6) ||
+                (next.pc>=0xc63be && next.pc<0xc644a) || (next.pc>=0xc647e && next.pc<0xc64a0))ok=animation_objects_n03_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
