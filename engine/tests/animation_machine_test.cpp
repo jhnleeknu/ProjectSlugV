@@ -79,4 +79,49 @@ void late_source_and_write() {
     put(ram,0x6002,4,0x300000);rejection(ram,s,device,physical);
 }
 }
-int main(){boundaries_and_rollback();late_source_and_write();std::cout<<"animation_machine_test PASS\n";}
+// Command callback (4a30c wide, 4a408 narrow): original 4a352/4a43c is a plain JSR (A1);
+// the target comes from table 4a500 and routing decides (no interpreter allow list).
+std::string callback_run(bool wide,std::uint32_t target,std::uint32_t stop,ms5::AnimationMachineState& out,Bytes& out_ram) {
+    Bytes ram(65536,0);std::vector<ms5::PhysicalRomResource> physical;
+    ms5::PhysicalRomResource table;table.source_rom_offset=0x4a500;
+    table.data.assign(16,0);
+    for(unsigned int i=0;i<4;++i)table.data[4+i]=static_cast<std::uint8_t>(target>>(24-8*i));
+    physical.push_back(table);
+    if(wide){ // WORD: skipped byte, selector WORD, 4a76c selector WORD, LONG A0
+        ms5::PhysicalRomResource sel;sel.source_rom_offset=0x4a76c;sel.data.assign(4,0);physical.push_back(sel);
+    }
+    const unsigned char narrow[]={0,1,0x00,0x12,0x34,0x56};
+    const unsigned char widescript[]={0,1,0,0,0x00,0x12,0x34,0x56};
+    if(wide)for(unsigned int i=0;i<sizeof(widescript);++i)ram[0x6000+i]=widescript[i];
+    else for(unsigned int i=0;i<sizeof(narrow);++i)ram[0x6000+i]=narrow[i];
+    ms5::AnimationMachineState s=state(wide?0x4a30c:0x4a408);s.a[1]=wide?0x105fff:0x106001;
+    s.a[7]=0x10effc;
+    ms5::AnimationMachineDevice device;ms5::ProgramBusState bus;bus.physical_rom=&physical;
+    std::vector<ms5::FixedDataResource> windows;std::vector<ms5::VideoPortWrite> ports;
+    std::uint32_t reads=0;ms5::AnimationMachineStatus status=ms5::AnimationMachineWaiting;std::string error;
+    const Bytes before=ram;const ms5::AnimationMachineState before_s=s;
+    if(ms5::run_animation_machine(ram,windows,bus,s,device,stop,255,reads,status,ports,error)) {
+        assert(error.empty()&&status==ms5::AnimationMachineReturned);out=s;out_ram=ram;return "";
+    }
+    assert(ram==before&&equal(s,before_s)); // checked failure rolls back
+    return error;
+}
+void callback_routing() {
+    for(unsigned int w=0;w<2;++w) {
+        ms5::AnimationMachineState s;Bytes ram;
+        // Formerly allow-listed and any other routed target alike: stop at the target succeeds
+        // with the call frame pushed exactly as the original (A0, A1, bank WORD, return PC).
+        assert(callback_run(w!=0,0x3679e,0x3679e,s,ram).empty());
+        assert(s.pc==0x3679e&&s.a[7]==0x10effcU-14U);
+        const unsigned int slot=0xf000U-18U;
+        const std::uint32_t ret=(static_cast<std::uint32_t>(ram[slot])<<24)|(static_cast<std::uint32_t>(ram[slot+1U])<<16)|
+            (static_cast<std::uint32_t>(ram[slot+2U])<<8)|ram[slot+3U];
+        assert(ret==(w?0x4a354U:0x4a43eU));
+        // Targets formerly rejected by the allow list now reach routing.
+        assert(callback_run(w!=0,0x10fe00,0xff000,s,ram)=="unsupported animation machine PC");
+        assert(callback_run(w!=0,0x2b3ea,0xff000,s,ram)=="unsupported animation interpreter PC"); // owning-unit interior
+        assert(callback_run(w!=0,0x367a0,0xff000,s,ram)=="unsupported animation machine PC");
+        assert(callback_run(w!=0,0x10fe01,0xff000,s,ram)=="unaligned animation machine PC");
+    }
+}
+int main(){boundaries_and_rollback();late_source_and_write();callback_routing();std::cout<<"animation_machine_test PASS\n";}

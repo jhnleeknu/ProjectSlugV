@@ -362,3 +362,5 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 4. [U] 고아 설치 `71d48` `ab226`과 N15 `71032`의 본문은 N04 밖이다(재범위 결정 3).
 
 작업자 scratch: `/Users/start/Workspce/ms5-scratch/n04/`(`n04blocks.py` block·범위 계산, `n04info.py` 범위 SHA·수, `n04dis.py`, `n04route.py` routing 확인, `n04reach.py` 자연 도달·기대 완주, `n04callers.py` 호출자 다음 명령; 저장소 밖).
+
+- (메인, 2026-10-13) 결정 5a 갱신: 인터프리터 명령 callback의 허용 목록은 제거됐다. 원본 `4a352`/`4a43c` `JSR (A1)`에 거르는 코드가 없으므로 C++도 `am_call(c,A1,…)`로 routing에 맡긴다(홀수는 unaligned, 미연결은 unsupported animation machine PC). `eb752`/`eb766` 개별 허용은 더 이상 필요 없다.
