@@ -575,6 +575,12 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x9bfd4:case 0x9bfda:case 0x9c03a:case 0x9c06c:case 0x9c0b2:case 0xbbc0c:case 0xbbc60:case 0xbbca6:case 0xbbcec:
     case 0xbbd32:case 0xbbd3c:case 0xbbd42:case 0xbbd52:case 0xbbd58:case 0xbbd60:case 0xbbd74:case 0xbbd86:case 0xbbd90:
     case 0xbbda8:case 0xbbdb6:case 0xbbdbe:
+    // Objects N08 (F4) blocks: JSR 4945e, BTST+BEQ (Z only) 49842 4b4da, RTS 49876 (returns the C of 4984e / 49862) and LEA 4b4e6.
+    // N08 has no carry consumer. 494a6 494ac (ANDI CCR Clear) and 494b4 (ORI CCR Set) set their known C before RTS; 4984e (CMP.W+BCC:
+    // taken Clear, fall-through Set) and 49862 (CMP.W unsigned borrow) set the known C that 49876 returns. MOVE/MOVEQ/MOVEA/TST/CLR/
+    // CMP/CMPI/ADD/SUB/SUBI/NEG/ASR/LSR/LSL/AND/OR/SWAP blocks, the DBRA blocks, the MOVEQ+BSR 4ad6c candidate blocks, MOVE.L+JSR 4b4ea
+    // and the result MOVE+RTS 4b4fa stay Unknown.
+    case 0x4945e:case 0x49842:case 0x49876:case 0x4b4da:case 0x4b4e6:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -900,6 +906,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xeb774 && next.pc<0xeb7b6))ok=animation_objects_n06_block(c);
             else if ((next.pc>=0x9ad06 && next.pc<0x9ad34) || (next.pc>=0x9baf2 && next.pc<0x9bc74) || (next.pc>=0x9bf1e && next.pc<0x9c0b6) ||
                 (next.pc>=0xbbb9e && next.pc<0xbbdc0))ok=animation_objects_n07_block(c);
+            else if ((next.pc>=0x4945e && next.pc<0x494c0) || (next.pc>=0x4983e && next.pc<0x49878) ||
+                (next.pc>=0x4ae4a && next.pc<0x4b50c))ok=animation_objects_n08_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

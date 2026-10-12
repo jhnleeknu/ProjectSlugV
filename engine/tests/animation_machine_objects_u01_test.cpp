@@ -363,8 +363,9 @@ void interior(){
  assert(even==525&&inside==420&&bundled==2);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
  // 5f1a0/5f1a4 replace 1ab02/c6a96 (now objects U05 block starts); 10fe0c replaces 482c0 (now an objects U17 block start).
+ // 10fe90 replaces 4b50a (now an objects N08 block interior).
  const std::uint32_t outside[]={0xb4db0,0xb4db2,0xb4dc0,0xb4e46,0xb4e58,0xb4d88,0xb4d92,0xb4d9c,0xb4dca,0xb4dee,0xb4e6c,0x10fe0c,0xdd574,
-  0x1aa7c,0x5f1a0,0x48294,0x482aa,0x4b50a,0xb4d7c,0xb4fd2,0xb503e,0xc6a8e,0x5f1a4,0xd6d20,0xd6d36,0xdd4ce};
+  0x1aa7c,0x5f1a0,0x48294,0x482aa,0x10fe90,0xb4d7c,0xb4fd2,0xb503e,0xc6a8e,0x5f1a4,0xd6d20,0xd6d36,0xdd4ce};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x1aa7f,0x48297,0x4b50d,0x4b6e3,0xb4d7f,0xb4dc3,0xb4df9,0xb4e5b,0xb4fd5,0xc6a91,0xd6d23,0xdd4d1,0xdd513};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
