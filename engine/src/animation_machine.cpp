@@ -840,6 +840,15 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x33c34:case 0x33c48:case 0x33c4e:case 0x33c54:case 0x33c5e:case 0x33c6c:case 0x33c72:case 0x34608:case 0x34610:case 0x34614:
     case 0x3462c:case 0x34634:case 0x34638:case 0x34642:case 0x34650:case 0x34658:case 0x346a2:case 0x346be:case 0x346c6:case 0x346cc:
     case 0x346fa:case 0x34714:case 0x34748:case 0x34874:case 0x3487a:case 0x3489a:case 0x3489c:
+    // Objects N31 (F4) blocks: JSR/JMP/BRA/RTS, LEA+JSR (38c14 38c36 38c48 38cce 38d18 3a3fc), MOVEA+JSR 38ca2, BSET+MOVEA+JSR
+    // 38cc0, BTST (Z only, +Bcc) 3a350 3a3cc, BTST+SNE+BEQ 3a406, BSET 3a43e / 3a456 and the 10 consumers 38c40 38cd8 38d22 (C
+    // returned by 1aa7e), 38c52 (4d2d4), 38c5e 3a384 (3a4a4), 38ce4 38d2e (3b334), 3a340 (49fc6), 3a43a (4d766). The code pointer
+    // 38d44 (TST.B Clear) / 38d50 (ORI Set) gives a known C to N23 4dbb2. The other blocks stay Unknown.
+    case 0x34750:case 0x38ba0:case 0x38bd2:case 0x38c14:case 0x38c1e:case 0x38c36:case 0x38c40:case 0x38c44:case 0x38c48:case 0x38c52:
+    case 0x38c5e:case 0x38c86:case 0x38c8a:case 0x38ca2:case 0x38cac:case 0x38cc0:case 0x38cce:case 0x38cd8:case 0x38cdc:case 0x38ce0:
+    case 0x38ce4:case 0x38d0a:case 0x38d18:case 0x38d22:case 0x38d26:case 0x38d2a:case 0x38d2e:case 0x38d54:case 0x3a2f4:case 0x3a334:
+    case 0x3a33a:case 0x3a340:case 0x3a344:case 0x3a34a:case 0x3a34c:case 0x3a350:case 0x3a380:case 0x3a384:case 0x3a3cc:case 0x3a3e8:
+    case 0x3a3fc:case 0x3a406:case 0x3a434:case 0x3a43a:case 0x3a43e:case 0x3a456:case 0x3a4a2:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1247,6 +1256,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x33f4c && next.pc<0x33f58) || (next.pc>=0x345c2 && next.pc<0x346c0) ||
                 (next.pc>=0x346c6 && next.pc<0x346fc) || (next.pc>=0x34714 && next.pc<0x34750) ||
                 (next.pc>=0x34874 && next.pc<0x348a2))ok=animation_objects_n30_block(c);
+            else if ((next.pc>=0x34750 && next.pc<0x34752) || (next.pc>=0x38ba0 && next.pc<0x38d56) ||
+                (next.pc>=0x3a2f4 && next.pc<0x3a4a4))ok=animation_objects_n31_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
