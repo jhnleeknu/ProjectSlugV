@@ -204,8 +204,10 @@ bool animation_interpreter_block(AnimationMachineContext& c) {
             !write_offset(c,0,6,2,r.d[0]))return false;
         r.carry=AnimationCarryClear;
         return am_return(c);
-    case 0x49fc6:
-        r.a[0]=r.a[6]+0x26U;if(!am_zero_bank(c) || !am_read(c,r.a[0],4,r.d[7]))return false;
+    // Second entry 49fca (A0 = the animation block given by the caller; no LEA 26(A6),A0).
+    case 0x49fc6:case 0x49fca:
+        if(r.pc==0x49fc6)r.a[0]=r.a[6]+0x26U;
+        if(!am_zero_bank(c) || !am_read(c,r.a[0],4,r.d[7]))return false;
         if(r.d[7]==0) {r.carry=AnimationCarrySet;return am_return(c);}
         r.a[1]=r.d[7];if(!write_offset(c,5,0x5742,1,0) || !read_offset(c,6,0x17,1,v))return false;
         if(v!=0 && v<128)if(!write_offset(c,6,0x17,1,v-1U))return false;

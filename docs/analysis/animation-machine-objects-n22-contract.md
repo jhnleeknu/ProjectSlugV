@@ -322,3 +322,5 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 - [F] base frame pass 차분(`verify_animation_machine_scheduler_f4.py` 사본, 출력 scratch `fp/`): 기준 `10b3c2d` 일치 pass 14,408·node 122,462, 불일치 0 → N22a 뒤 같음(불일치 0, seed별 분류 줄 동일).
 - [F] RNG 400 frame 차분(`verify_animation_machine_scheduler_rng_f4.py` 사본): 기준 complete 130·pass 52,000·node 389,711·불일치 0 → N22a 뒤 같음(complete 130, 미완 seed·분류·첫 미연결 callback 동일: 32 33 `dcf56`, 38 39 `7086a`(N23 `c3a7c`), 116 117 `38ba0`, 136~140 `deadbeef`, 141). **새 완주 seed 없음, 회귀 없음**(재범위 "새 seed - / -"와 같다).
 - [U] 남은 미확인: N22a 범위 PC는 400 frame 자연 frame pass에서 아직 실행되지 않는다(38 39는 N23 `c3a7c`, 116 117은 N31 `38ba0`에서 먼저 멈춤). N23(+`4da50`, 결정 5)과 interpreter `49fca`(결정 2) 뒤에 seed 38 39가 frame pass로 N22a를 지난다.
+
+- (메인) 결정 1 채택(N22a=objects-n22, N22b=objects-n22b 예정). 결정 2 채택: 인터프리터 `case 0x49fca`(원본 `49fca`부터 같은 본문, `LEA 26(A6),A0` 생략)를 메인이 추가했다. 결정 3 채택(3e1ba LONG 포인터 표는 live bus 읽기+live target jump). 결정 4 채택: `4da4a..4da74`는 N23으로 옮긴다.
