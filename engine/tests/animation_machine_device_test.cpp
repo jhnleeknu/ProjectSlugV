@@ -171,8 +171,45 @@ void live_bus_and_non_device() {
     result=0x12345678;assert(!ms5::am_read(f.c,0xd00046,2,result));
     assert(result==0x12345678&&f.c.external_reads==2);
 }
+ms5::AnimationMachineExternalRead ext(std::uint32_t address,std::uint8_t size,std::uint32_t value) {
+    ms5::AnimationMachineExternalRead r;r.address=address;r.size=size;r.value=value;return r;
+}
+// Declared external-read queue: WORD 3c0006 and BYTE 300000 / 340000 / 380000 consume the front entry only when address and size match.
+void external_read_queue() {
+    Fixture f;std::uint32_t result=0x55555555U;const char* const empty="animation machine external read queue empty";
+    const char* const mismatch="animation machine external read queue mismatch";
+    // Default: empty queue, every queue device read is the checked error and leaves the result and counters alone.
+    assert(f.device.reads.empty());
+    assert(!ms5::am_read(f.c,0x3c0006,2,result)&&f.error==empty&&result==0x55555555U&&f.c.external_reads==0);
+    assert(!ms5::am_read(f.c,0x300000,1,result)&&f.error==empty);assert(!ms5::am_read(f.c,0x340000,1,result)&&f.error==empty);
+    assert(!ms5::am_read(f.c,0x380000,1,result)&&f.error==empty);
+    // Other sizes at those addresses are not queue reads (the previous unsupported-device behaviour).
+    f.device.reads.push_back(ext(0x3c0006,2,0x1234));
+    assert(!ms5::am_read(f.c,0x3c0006,1,result)&&f.error!=empty&&f.error!=mismatch&&f.device.reads.size()==1);
+    assert(!ms5::am_read(f.c,0x300000,2,result)&&f.error!=empty&&f.error!=mismatch&&f.device.reads.size()==1&&f.c.external_reads==0);
+    // Mismatch: wrong address, wrong size in the entry, the entry stays at the front and nothing is counted.
+    assert(!ms5::am_read(f.c,0x300000,1,result)&&f.error==mismatch&&f.device.reads.size()==1&&f.c.external_reads==0&&result==0x55555555U);
+    f.device.reads.clear();f.device.reads.push_back(ext(0x3c0006,1,0x12));
+    assert(!ms5::am_read(f.c,0x3c0006,2,result)&&f.error==mismatch&&f.device.reads.size()==1);
+    f.device.reads.clear();
+    // Ordered consumption across all four devices; values are masked to the access size; the 24-bit address is used.
+    f.device.reads.push_back(ext(0x300000,1,0x1234));f.device.reads.push_back(ext(0x340000,1,0xa5));
+    f.device.reads.push_back(ext(0x380000,1,0xffffff7fU));f.device.reads.push_back(ext(0x3c0006,2,0xabcd1234U));
+    f.device.reads.push_back(ext(0x3c0006,2,0x8000));f.device.reads.push_back(ext(0x300000,1,0xff));
+    assert(ms5::am_read(f.c,0xab300000U,1,result)&&result==0x34&&f.c.external_reads==1&&f.device.reads.size()==5);
+    assert(!ms5::am_read(f.c,0x380000,1,result)&&f.error==mismatch&&f.device.reads.size()==5&&f.c.external_reads==1);
+    assert(ms5::am_read(f.c,0x340000,1,result)&&result==0xa5&&f.c.external_reads==2);
+    assert(ms5::am_read(f.c,0x380000,1,result)&&result==0x7f&&f.c.external_reads==3);
+    assert(ms5::am_read(f.c,0x3c0006,2,result)&&result==0x1234&&f.c.external_reads==4);
+    assert(ms5::am_read(f.c,0x3c0006,2,result)&&result==0x8000&&f.c.external_reads==5&&f.device.reads.size()==1);
+    assert(ms5::am_read(f.c,0x300000,1,result)&&result==0xff&&f.c.external_reads==6&&f.device.reads.empty());
+    assert(!ms5::am_read(f.c,0x300000,1,result)&&f.error==empty&&f.c.external_reads==6);
+    // The d00046 external status is unaffected by the queue and keeps its own count.
+    f.device.reads.push_back(ext(0x3c0006,2,7));
+    assert(ms5::am_read(f.c,0xd00046,1,result)&&result==0x7b&&f.c.external_reads==7&&f.device.reads.size()==1);
+}
 }
 int main() {
-    colors_exhaustive();color_lanes_and_triggers();bank_matrix_and_partial_order();live_bus_and_non_device();
+    colors_exhaustive();color_lanes_and_triggers();bank_matrix_and_partial_order();live_bus_and_non_device();external_read_queue();
     std::cout<<"animation_machine_device_test PASS (pinned model;65536pens)\n";
 }

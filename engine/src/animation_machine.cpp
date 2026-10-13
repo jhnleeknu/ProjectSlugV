@@ -9,9 +9,23 @@ std::uint32_t am_extend_word(std::uint32_t value) {
 }
 std::uint32_t am_index(std::uint32_t base,std::uint32_t word) {return base+am_extend_word(word);}
 bool am_error(AnimationMachineContext& c,const char* message) {c.error=message;return false;}
+namespace {
+// Declared external-read devices: WORD raster 3c0006 and BYTE inputs 300000 / 340000 / 380000 (24-bit address, exact size).
+bool external_queue_device(std::uint32_t address,unsigned int size) {
+    return (address==0x3c0006U && size==2) || ((address==0x300000U || address==0x340000U || address==0x380000U) && size==1);
+}
+}
 bool am_read(AnimationMachineContext& c,std::uint32_t address,unsigned int size,std::uint32_t& value) {
     if ((address&0xffffffU)==0xd00046U && size==1) {
         ++c.external_reads;value=c.external_status;return true;
+    }
+    if (external_queue_device(address&0xffffffU,size)) {
+        // The queue lives in the candidate device, so a failed run never commits the consumption.
+        if (c.device.reads.empty())return am_error(c,"animation machine external read queue empty");
+        const AnimationMachineExternalRead head=c.device.reads.front();
+        if (head.address!=(address&0xffffffU) || head.size!=size)return am_error(c,"animation machine external read queue mismatch");
+        value=size==1?(head.value&255U):(head.value&65535U);
+        c.device.reads.erase(c.device.reads.begin());++c.external_reads;return true;
     }
     c.bus.bank_base=c.device.bank_base;
     return read_program_bus(c.ram,c.windows,c.bus,address,size,value,c.error);
@@ -1306,7 +1320,7 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
         }
         if (!stopped)return am_error(c,"animation machine block budget exceeded");
         ram.swap(next_ram);state=next;
-        device.pvc.swap(next_device.pvc);device.bank_base=next_device.bank_base;
+        device.pvc.swap(next_device.pvc);device.bank_base=next_device.bank_base;device.reads.swap(next_device.reads);
         ports.swap(next_ports);external_reads=c.external_reads;status=result;error.clear();return true;
     } catch (const std::bad_alloc&) {error="cannot allocate animation machine transaction";return false;}
 }
