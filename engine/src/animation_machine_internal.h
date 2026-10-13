@@ -128,5 +128,6 @@ bool animation_objects_n31_block(AnimationMachineContext& c);
 bool animation_objects_n32_block(AnimationMachineContext& c);
 bool animation_frame_head_h1_block(AnimationMachineContext& c);
 bool animation_objects_n32b_block(AnimationMachineContext& c);
+bool animation_objects_n33_block(AnimationMachineContext& c);
 }
 #endif
