@@ -974,6 +974,9 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x13766:case 0x1376a:case 0x1376e:case 0x13772:case 0x13776:case 0x1377a:case 0x1377e:case 0x13782:case 0x13786:case 0x1378a:
     case 0x1378e:case 0x13792:case 0x13796:case 0x1379a:case 0x1379e:case 0x137a2:case 0x137a6:case 0x137aa:case 0x137ae:case 0x137b2:
     case 0x137b6:case 0x137ba:case 0x137be:case 0x137c2:
+    // Objects N35 (F4) blocks: JSR/JMP/RTS 4c728 4cf52 4cf5c 4cf62 ea680 ea68a and the 2 consumers 4cf58 (C returned by 288c), ea686
+    // (1abda). N35 has no known C producer; the other blocks stay Unknown.
+    case 0x4c728:case 0x4cf52:case 0x4cf58:case 0x4cf5c:case 0x4cf62:case 0xea680:case 0xea686:case 0xea68a:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1403,6 +1406,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x4c7a4 && next.pc<0x4c810))ok=animation_objects_n33_block(c);
             else if (next.pc>=0x4718 && next.pc<0x72f0)ok=animation_frame_head_h3_block(c);
             else if (next.pc>=0x11792 && next.pc<0x13b46)ok=animation_frame_head_h4_block(c);
+            else if ((next.pc>=0x4c6f0 && next.pc<0x4c72a) || (next.pc>=0x4cf52 && next.pc<0x4cf64) ||
+                (next.pc>=0x4d8d8 && next.pc<0x4d900) || (next.pc>=0xea680 && next.pc<0xea69c))ok=animation_objects_n35_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

@@ -5,19 +5,19 @@
 #include <cstring>
 #include <iostream>
 #include <string>
-// Objects F4 U08b (165 block starts, the second part of the U08 split, groups C4/C6: the slope WORD 461ec, the terrain step
-// 46372 and loop 4683c, the screen clamp 468e0, the move-lock bits 4bb22, the terrain condition reset 4bc44, the C4 updates
-// 4be34 / 4be82 and the shared tail 4bf0a / 4bf16) through run_animation_machine only. Inputs are declared fixtures: zero RAM
-// with LONG 10f000 = STOP (the return LONG at A7 = 10f000), node A6 = 10e000, A0 = 10e400, A1 = 10e600, A5 = 108000, PVC words
-// ff8 = 00a0 / ff9 = 1000 (bank 200000), the fixture's "address:bytes" items (applied in order), declared registers and the
-// incoming C. The program bus has two physical ROM resources with synthetic bytes: the 461ec slope table 461f2..46372 and the
-// 54a6 rectangle window 4bca0..4bce0. The FIXTURES/BLOCKS tables were produced from the original code bytes (Unicorn M68000 on
-// the canonical BE ROM with the same synthetic bytes overlaid, write-protected ROM, stack in work RAM, every data read checked to
-// stay in work RAM or the synthetic windows; scratch generator outside the repository): each success row records the native
-// stop state (16 registers and the FNV-1a digest of RAM, D0-D7/A0-A7, PC, bank and PVC words ff8/ff9; U08b writes no port).
-// Fixtures run through the U08a calls (447be with A0 = 0 or the 109156 map, 4483a, 1aa3a) and stop at a boundary callee
-// (44ade 4578a 45b12 4662e 469d8 492c8 4b8e8 4bce0, 47288 inside 447be), at the scene call 43e34 or at the final RTS. The C
-// expected after a success run is the incoming C when every executed U08b/U08a block is FLOW_ONLY (checked natively there) and
+// Objects F4 U08b (166 block starts, the second part of the U08 split, groups C4/C6: the slope WORD 461ec, the terrain step 46372
+// and loop 4683c, the screen clamp 468e0, the move-lock bits 4bb22, the terrain condition reset 4bc44 (second entry 4bc58, N33
+// 4bdfe), the C4 updates 4be34 / 4be82 and the shared tail 4bf0a / 4bf16) through run_animation_machine only. Inputs are declared
+// fixtures: zero RAM with LONG 10f000 = STOP (the return LONG at A7 = 10f000), node A6 = 10e000, A0 = 10e400, A1 = 10e600, A5 =
+// 108000, PVC words ff8 = 00a0 / ff9 = 1000 (bank 200000), the fixture's "address:bytes" items (applied in order), declared
+// registers and the incoming C. The program bus has two physical ROM resources with synthetic bytes: the 461ec slope table
+// 461f2..46372 and the 54a6 rectangle window 4bca0..4bce0. The FIXTURES/BLOCKS tables were produced from the original code bytes
+// (Unicorn M68000 on the canonical BE ROM with the same synthetic bytes overlaid, write-protected ROM, stack in work RAM, every
+// data read checked to stay in work RAM or the synthetic windows; scratch generator outside the repository): each success row
+// records the native stop state (16 registers and the FNV-1a digest of RAM, D0-D7/A0-A7, PC, bank and PVC words ff8/ff9; U08b
+// writes no port). Fixtures run through the U08a calls (447be with A0 = 0 or the 109156 map, 4483a, 1aa3a) and stop at a boundary
+// callee (44ade 4578a 45b12 4662e 469d8 492c8 4b8e8 4bce0, 47288 inside 447be), at the scene call 43e34 or at the final RTS. The
+// C expected after a success run is the incoming C when every executed U08b/U08a block is FLOW_ONLY (checked natively there) and
 // Unknown otherwise (U08b has no producer).
 namespace {
 typedef std::vector<std::uint8_t> Bytes;
@@ -226,6 +226,10 @@ const Fixture FIXTURES[]={
  {"4bc44-10",0x4bc44,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e015:10,10e061:20,10d49f:07,10d4a0:07",NULL,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f004},0,0x1ee4df6646ad6d68ULL},
  {"4bc44-08",0x4bc44,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e015:08,10e061:10,10d49f:07,10d4a0:07",NULL,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f004},0,0xd3c28bb33399798fULL},
  {"4bc44-18",0x4bc44,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e015:18,10e061:30,10d49f:07,10d4a0:07",NULL,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f004},0,0x7c922779db33c578ULL},
+ {"4bc58-0",0x4bc58,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e015:00,10e061:00,10d49f:07,10d4a0:07,10d4a2:5a,10d4a3:a5,10d49d:3c,10d49e:c3",NULL,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f004},0,0xd68ae077b6b8f35ULL},
+ {"4bc58-10",0x4bc58,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e015:10,10e061:20,10d49f:07,10d4a0:07,10d4a2:5a,10d4a3:a5,10d49d:3c,10d49e:c3",NULL,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f004},0,0x5a503c927d8b1cf5ULL},
+ {"4bc58-08",0x4bc58,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e015:08,10e061:10,10d49f:07,10d4a0:07,10d4a2:5a,10d4a3:a5,10d49d:3c,10d49e:c3",NULL,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f004},0,0x4a99fa1191bb834eULL},
+ {"4bc58-18",0x4bc58,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e015:18,10e061:30,10d49f:07,10d4a0:07,10d4a2:5a,10d4a3:a5,10d49d:3c,10d49e:c3",NULL,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f004},0,0x5cca2bfe673215a1ULL},
  {"4be34",0x4be34,0x469d8,0,{0x11110000,0x22220001,0xfffff000,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e02e:00100000,10e032:00200000,10e036:00030000,10e03a:00040000,10e03e:0010e400,10e015:18,10e061:30,10e06d:90,10e414:00000011,10e418:00000022,10e41c:00000033,10e420:00000044,10e614:00001000,10e618:00002000,10e61c:00003000,10e620:00004000,10d49d:77,10d43c:00c8",NULL,{0x100000,0x200000,0x30000,0x40000,0x55550004,0x66660005,0x77770006,0x88880090,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10effc},0,0x76628d9087ddd470ULL},
  {"4be82",0x4be82,0x4bce0,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e02e:00100000,10e032:00200000,10e036:00030000,10e03a:00040000,10e03e:0010e400,10e015:18,10e061:30,10e06d:90,10e414:00000011,10e418:00000022,10e41c:00000033,10e420:00000044,10e614:00001000,10e618:00002000,10e61c:00003000,10e620:00004000,10d49d:77,10d43c:00c8",NULL,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10effc},0,0xb0f457aaba728922ULL},
  {"4be86",0x4be86,0x4b8e8,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e02e:00100000,10e032:00200000,10e036:00030000,10e03a:00040000,10e03e:0010e400,10e015:18,10e061:30,10e06d:90,10e414:00000011,10e418:00000022,10e41c:00000033,10e420:00000044,10e614:00001000,10e618:00002000,10e61c:00003000,10e620:00004000,10d49d:77,10d43c:00c8",NULL,{0x100000,0x200000,0x30000,0x40000,0x55550004,0x66660005,0x77770006,0x88880008,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10effc},0,0x66991f90770fd006ULL},
@@ -406,7 +410,8 @@ const Block BLOCKS[]={
  {0x4bb44,0x4bb4a,0x393962ac817825bcULL,0x4bb4a,0x393962ac817825bcULL},
  {0x4bb4a,0x4bb4c,0xdbc4164281ea1ca7ULL,0x4bb4c,0xdbc4164281ea1ca7ULL},
  {0x4bb4c,0xe000e,0x2bf5420e71190eb5ULL,0xe000e,0x2bf5420e71190eb5ULL},
- {0x4bc44,0x4bc74,0x5325709f1dc49f40ULL,0x4bc74,0x5325709f1dc49f40ULL},
+ {0x4bc44,0x4bc58,0x7851c55469a810c4ULL,0x4bc58,0x7851c55469a810c4ULL},
+ {0x4bc58,0x4bc74,0x52a793a554a01c59ULL,0x4bc74,0x52a793a554a01c59ULL},
  {0x4bc74,0x4bc7a,0x38e284d1255dcb44ULL,0x4bc7a,0x38e284d1255dcb44ULL},
  {0x4bc7a,0x4bc84,0x48e98beb3cfcb029ULL,0x4bc84,0x48e98beb3cfcb029ULL},
  {0x4bc84,0x4bc8a,0xd26a65d9c0c8f75ULL,0x4bc8a,0xd26a65d9c0c8f75ULL},
@@ -535,6 +540,10 @@ void key_facts(){
  // 4bc44: 549c = 2 / 1 (bit 4 of 15(A6)) / 0 (bit 3); 54a4/54a5 = SNE of bits 5/4 of 61(A6).
  assert(at("4bc44-0",a5(0x549c),1)==2&&at("4bc44-10",a5(0x549c),1)==1&&at("4bc44-08",a5(0x549c),1)==0&&at("4bc44-18",a5(0x549c),1)==0);
  assert(at("4bc44-10",a5(0x54a4),1)==0xff&&at("4bc44-10",a5(0x54a5),1)==0&&at("4bc44-08",a5(0x54a5),1)==0xff&&at("4bc44-0",a5(0x54a2),1)==0xff);
+ // 4bc58 (second entry, N33 4bdfe BRA.W 4bc58): the same 549c / 54a4 / 54a5 results; 549f 54a0 54a2 54a3 keep their old BYTEs.
+ assert(at("4bc58-0",a5(0x549c),1)==2&&at("4bc58-10",a5(0x549c),1)==1&&at("4bc58-08",a5(0x549c),1)==0&&at("4bc58-18",a5(0x549c),1)==0);
+ assert(at("4bc58-10",a5(0x54a4),1)==0xff&&at("4bc58-08",a5(0x54a5),1)==0xff&&at("4bc58-0",a5(0x549d),1)==0&&at("4bc58-0",a5(0x549e),1)==0);
+ assert(at("4bc58-0",a5(0x549f),1)==7&&at("4bc58-0",a5(0x54a0),1)==7&&at("4bc58-0",a5(0x54a2),1)==0x5a&&at("4bc58-0",a5(0x54a3),1)==0xa5);
  // 4bb22: bit 4 clears a negative D2, bit 5 a positive D2; both bits are cleared in 6d(A6); bit 7 set skips everything (6d unchanged).
  assert(final_of("4bb22-4-neg").s.d[2]==0&&final_of("4bb22-4-pos").s.d[2]==5&&final_of("4bb22-5-pos").s.d[2]==0&&
   final_of("4bb22-5-neg").s.d[2]==0xfffffffbU&&at("4bb22-all-pos",NODE+0x6d,1)==0x0f&&at("4bb22-minus",NODE+0x6d,1)==0xb0);
@@ -545,7 +554,7 @@ void key_facts(){
 void generic(std::uint32_t pc,Bytes&ram,State&s,unsigned int carry){ram=base_ram(GENERIC_PUTS);s=state_of(GENERIC_REGS,pc,carry);}
 ms5::AnimationCarryState expected_carry(std::uint32_t pc,unsigned int carry){return is_flow(pc)?carry_of(carry):ms5::AnimationCarryUnknown;}
 void block_table(){
- assert(BLOCK_COUNT==165&&FLOW_COUNT==27);unsigned int flow=0;
+ assert(BLOCK_COUNT==166&&FLOW_COUNT==27);unsigned int flow=0;
  for(unsigned int i=0;i<BLOCK_COUNT;++i)if(is_flow(BLOCKS[i].pc))++flow;
  assert(flow==27);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)for(unsigned int c=0;c<3;++c){const Block&b=BLOCKS[i];
@@ -572,7 +581,7 @@ void interior(){
  for(unsigned int r=0;r<RANGE_COUNT;++r)for(std::uint32_t pc=RANGES[r][0];pc<RANGES[r][1];pc+=2){++even;
   if(is_start(pc))continue;Bytes ram;State s;generic(pc,ram,s,2);
   reject(ram,s,STOP,"unsupported animation objects u08b PC");++inside;}
- assert(even==754&&inside==589);
+ assert(even==754&&inside==588);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
  const std::uint32_t outside[]={0x10fe1c,0x10fe46,0x10fe04,0x10fe48,0x10fe4a, // 44ade is U20 now, 469d8 is U09 now, 492c8 is U12 now, 4662e is U15a now, 4578a is U15b now, 45b12 is U15c now
  0x10fe50,0x10fe52,0x10fe08,0x461f2,0x46370,0x10fe4c, // 4683a is inside the U15a range 4662e..4683c now, 461ea is inside U15c now, 4b8e8 4bce0 are N33 now
