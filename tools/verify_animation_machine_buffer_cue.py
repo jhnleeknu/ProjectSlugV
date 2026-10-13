@@ -68,6 +68,7 @@ SPRITE_CALLBACK = 'unsupported sprite callback target'
 VERIFIED_ARTIFACTS = set()
 RUN_DIR = None
 WORKERS = 8
+SUPERSEDED_OUTSIDE = {0x4b830: 'unsupported animation objects n03 PC'}
 DEBUG_ROWS = int(os.environ.get('BUFCUE_DEBUG_ROWS', '0'))     # development switch only: the reported run is always the full set
 
 
@@ -824,7 +825,13 @@ def negatives(exe, base, st, resources, entry_buffer, entry_cue, wrapper_fail, w
     for pc in (0xe8a0c, 0xe8a1c, 0xe8a46, 0xe8b5a, 0xe8b5c, 0x4abc0, 0x4abc2, 0x4b782, 0x4b82e, 0x4b830, 0x2984):
         if in_ranges(pc, U7_RANGES):
             continue
-        reject(exe, 'outside_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, out, resources)
+        # align2 run (HEAD dd61e61): 4b830 is now routed by F4 N03 ('unsupported animation objects n03 PC'); former expectation UNSUPPORTED_MACHINE.
+        reject(exe, 'outside_entry_%06x' % pc, base, {'pc': pc}, 0xff000, SUPERSEDED_OUTSIDE.get(pc, UNSUPPORTED_MACHINE), out, resources)
+        if pc in SUPERSEDED_OUTSIDE:
+            out[-1].update(former_expected_API_error=UNSUPPORTED_MACHINE, classification='superseded_by_F4_N03', API_only_control=True)
+    # Unrouted controls that no F4 unit can route: even work-RAM PCs.
+    for pc in (0x10fe00, 0x10fefe):
+        reject(exe, 'unrouted_ram_pc_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, out, resources)
     for pc in (0x4aa89, 0x4b785, 0xe8a49, 0x2987, 0x298f, 0xe8ad1):
         reject(exe, 'odd_pc_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNALIGNED_PC, out, resources)
     # unknown-carry consumer: 298e with C Unknown

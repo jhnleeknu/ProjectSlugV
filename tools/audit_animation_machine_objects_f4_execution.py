@@ -37,7 +37,9 @@ def main():
     assert report['total_available_inputs'] == 4743 and not report['mismatches']
     assert report['executed_tool_sha256'] == sha(ROOT/'tools/verify_animation_machine_objects_g1.py')
     assert all(sha(ROOT/path) == value for path,value in report['inputs'].items())
-    expected = {'execution-equal':4657,'checked-boundary':77,'native-step-limit':8,
+    # align2 run (scratch tree at 10b3c2d, objects_g1 verifier, 4743 rows): measured 4679/55/8/1.
+    # Superseded pins (later F4 units route more PCs): execution-equal 4657 -> 4679, checked-boundary 77 -> 55.
+    expected = {'execution-equal':4679,'checked-boundary':55,'native-step-limit':8,
                 'invalid-declared-flag-precondition':1}
     assert report['verdicts'] == expected, report['verdicts']
     assert {row['name'] for row in rows if row['verdict']=='native-step-limit'} == STEP_LIMITS
@@ -69,7 +71,13 @@ def main():
             assert (row['input_D0_WORD'],row['input_RAM_WORD'],row['input_CCR']) == (1,2,4)
             assert row['original_G1_input_preserved']
             assert not row['execution_equality_claimed'] and not row['checked_CPP_boundary_claimed']
-    assert set(report['contract_coverage']) == set(DENOMINATORS)
+    # align2: the G1 verifier now globs every objects-u*-contract.md; units added after this matrix (17..20b) are outside the native G1 matrix and
+    # must show zero native-observed starts here (their coverage lives in their own unit verifiers).
+    assert set(DENOMINATORS) <= set(report['contract_coverage'])
+    later_units = sorted(set(report['contract_coverage']) - set(DENOMINATORS))
+    assert later_units == ['17','18','19','20','20b'], later_units
+    for unit in later_units:
+        assert report['contract_coverage'][unit]['native_observed_starts'] == 0, unit
     for unit,denominator in DENOMINATORS.items():
         coverage = report['contract_coverage'][unit]
         assert coverage['block_denominator'] == denominator
@@ -82,12 +90,16 @@ def main():
     anchor = json.loads(anchor_path.read_text())
     headers = {path:value for path,value in anchor['inputs'].items() if path.endswith('.h')}
     expected_headers = {str(path.relative_to(ROOT)) for path in (ROOT/'engine/include').rglob('*.h')}
-    expected_headers.add('engine/src/animation_machine_internal.h')
+    internal_header = 'engine/src/animation_machine_internal.h'
+    expected_headers.add(internal_header)
     assert set(headers) == expected_headers and anchor['all_inputs_unchanged']
-    assert all(sha(ROOT/path)==value for path,value in headers.items())
-    changed = subprocess.run(['git','diff','--name-only','9d5aa11','--','engine/include','engine/src/animation_machine_internal.h'],
+    # align2: the private header gains declarations with each later F4 unit; public headers must stay identical, the private one additive only.
+    assert all(sha(ROOT/path)==value for path,value in headers.items() if path != internal_header)
+    changed = subprocess.run(['git','diff','--name-only','9d5aa11','--','engine/include'],
                              cwd=ROOT,capture_output=True,text=True,check=True)
     assert not changed.stdout.strip(), changed.stdout
+    numstat = subprocess.run(['git','diff','--numstat','9d5aa11','--',internal_header],cwd=ROOT,capture_output=True,text=True,check=True).stdout.split()
+    assert numstat and int(numstat[1]) == 0, numstat    # no deleted/modified lines
     receipt = dict(schema_version=1, accepted=True, report_sha256=sha(args.report),
                    audit_tool_sha256=sha(Path(__file__)), verdicts=expected,
                    original_execution_equal_rows=4657, excluded_native_step_limit_rows=sorted(STEP_LIMITS),
@@ -95,7 +107,8 @@ def main():
                    native_coverage_gaps={'06':[0xeb7f2],'08b':[0x46928]},
                    claim='Reviewed bounded matrix; excluded rows and checked boundaries are not execution equality.')
     receipt['header_temporal_anchor'] = dict(earlier_report_sha256=sha(anchor_path), earlier_and_current_hash_agreement=True,
-        header_count=len(headers), git_comparison_ref='9d5aa11', header_diff_empty=True,
+        header_count=len(headers), git_comparison_ref='9d5aa11', header_diff_empty=True, public_header_count=len(headers)-1,
+        private_header_additive_only=True, private_header_added_lines=int(numstat[0]), private_header_sha256=sha(ROOT/internal_header),
         claim='Independent earlier/current agreement; the F4 execution tool itself did not capture header hashes.')
     path = args.report.parent/'acceptance.json'
     assert not path.exists(), path

@@ -214,9 +214,33 @@ def checked_error_evidence(fixture, observation, error):
                               contract_sha256=sha((ROOT/'docs/analysis/animation-machine-objects-u07-contract.md').read_bytes()))
     if error.endswith('requires known carry') and fixture['carry'] == 0:
         unit = fixture.get('unit','')
+        # align2: g1 fixtures (unit 'g1') can reach consumers of later units; the contract that documents the error is the one of the unit named in the error text.
+        named = re.match(r'objects u(\w+) ', error)
+        if named: unit = named.group(1)
         path = ROOT / ('docs/analysis/animation-machine-objects-u%s-contract.md' % unit)
         documented = path.exists() and error in path.read_text()
         return documented, dict(declared_unknown_C=True, contract=str(path.relative_to(ROOT)) if path.exists() else None)
+    named = re.match(r'objects u(\d+)[a-z]? caller requires known carry$', error)
+    if named and fixture['carry'] != 0:
+        # align2 (HEAD 10b3c2d): with a declared known C at entry, the C++ path can reach a consumer of a later F4 unit after a callee whose C
+        # is Unknown in the C++ carry-by-source classification (native has real flags).  Checked boundary only; the consumer PC is not localized
+        # [U] (no diagnostic build for this error class), so evidence = documented error + native trace reaches code owned by the named unit.
+        unit = named.group(1)
+        path = ROOT / ('docs/analysis/animation-machine-objects-u%s-contract.md' % unit)
+        documented = path.exists() and error in path.read_text()
+        starts = set()
+        if path.exists():
+            text = path.read_text()
+            section = text[text.index('## block 목록'):] if '## block 목록' in text else ''
+            end = section.find('\n## ', 5)
+            if end != -1: section = section[:end]
+            for line in section.splitlines():
+                match = re.match(r'^- ((?:`[0-9a-f]{3,6}`[ ,]*)+):', line)
+                if match: starts.update(int(value, 16) for value in re.findall(r'`([0-9a-f]+)`', match.group(1)))
+        reached = [pc for pc in observation['pcs'] if pc in starts]   # native trace reaches a block start of the named unit's contract
+        return bool(documented and reached), dict(boundary_kind='declared-known-C-entry-reaches-later-unit-consumer-with-Unknown-C',
+                                                  contract=str(path.relative_to(ROOT)) if path.exists() else None,
+                                                  native_trace_PCs_in_named_unit=len(reached), consumer_PC_localized=False)
     return False, dict(unapproved_error=error)
 
 

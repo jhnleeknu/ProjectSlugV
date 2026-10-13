@@ -58,6 +58,9 @@ FRAME_RET = 0x2ac2
 END_STOP = 0x477ee
 FRAME_RTS = 0x480f0
 WAIT_PCS = (0xcda4, 0x3aea)
+# Neighbour probes superseded by later F4 units (label -> classification) and their observed new error.
+SUPERSEDED_NEIGHBOURS = {'unrouted_neighbour_01c5ea': 'superseded_by_F4_later_unit_routes_1c5ea'}
+SUPERSEDED_NEIGHBOUR_ERRORS = {'unrouted_neighbour_01c5ea': 'program bus write requires RAM mirror units'}  # align2 run: observed at HEAD a32885b
 F1B_RANGES = ((0x47da4, 0x47eac), (0x4b6e4, 0x4b6f4), (0x1c5b0, 0x1c5ea), (0x1bee4, 0x1bef8), (0xca48, 0xca50), (0x9056, 0x9060))
 CONSUMERS = (0x1c5bc, 0x1c5d8, 0x47e0a)
 CALLBACKS = (0x47de4, 0x47e22, 0x47e62, 0x47e70, 0x47e92)
@@ -860,6 +863,9 @@ def reject_one(args):
     row = dict(label=label, error=expected, all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False)
     if label == 'boundary_477ee_without_stop_from_47e9a':
         row.update(former_expected_API_error=UNSUPPORTED_MACHINE, classification='superseded_by_F4_U04', API_only_control=True)
+    if label in SUPERSEDED_NEIGHBOURS:
+        # Alignment (align2 run): this neighbour was an unrouted probe; a later F4 unit now routes it.
+        row.update(former_expected_API_error=UNSUPPORTED_MACHINE, classification=SUPERSEDED_NEIGHBOURS[label], API_only_control=True)
     return row
 
 
@@ -875,7 +881,11 @@ def negatives(ctx, base, st):
         jobs.append((ctx, 'interior_direct_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_AREA))
     # neighbours that are not routed to any executor (contract: other routines / data)
     for pc in (0x4b6f4, 0x1c5ea, 0x1bef8, 0xca50, END_STOP):
-        jobs.append((ctx, 'unrouted_neighbour_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE))
+        label = 'unrouted_neighbour_%06x' % pc
+        jobs.append((ctx, label, base, {'pc': pc}, 0xff000, SUPERSEDED_NEIGHBOUR_ERRORS.get(label, UNSUPPORTED_MACHINE)))
+    # Declared unrouted control that no F4 unit can route: even work-RAM PCs (code never executes in RAM).
+    for pc in (0x10fe00, 0x10fefe):
+        jobs.append((ctx, 'unrouted_ram_pc_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE))
     for low, high in F1B_RANGES:
         jobs.append((ctx, 'odd_pc_entry_%06x' % (low + 1), base, {'pc': low + 1}, 0xff000, UNALIGNED_PC))
         jobs.append((ctx, 'odd_pc_entry_%06x' % (high - 1), base, {'pc': high - 1}, 0xff000, UNALIGNED_PC))
