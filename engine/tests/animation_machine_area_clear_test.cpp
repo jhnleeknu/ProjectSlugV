@@ -799,8 +799,8 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation area clear PC");++inside;if(in_list(BUNDLED,7,pc))++bundled;}
  assert(even==188&&inside==149&&bundled==7);
  for(unsigned int i=0;i<7;++i)assert(!is_start(BUNDLED[i]));
- // 5f03e replaces 4b6e2 (now an objects U01 block start).
- const std::uint32_t outside[]={0x5f03e,0x1c5ae,0x1bef8,0xca46,0x9054};
+ // 10fe20 replaces 4b6e2 (now an objects U01 block start).
+ const std::uint32_t outside[]={0x10fe20,0x1c5ae,0x1bef8,0xca46,0x9054};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x47da5,0x4b6e5,0x1c5b1,0x1bee5,0xca49,0x9057};
