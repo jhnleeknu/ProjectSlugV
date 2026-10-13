@@ -492,7 +492,7 @@ void interior(){
  // starts (animation_machine_stage_event_ops_test) and the unrouted 10fe20..10fe2c, outside every unit contract, stand in for them.
  {Bytes ram;State s;generic(0x1a93c,ram,s,2);reject(ram,s,STOP,"unsupported animation stage event ops PC");}
  const std::uint32_t outside[]={0x10fe20,0x10fe22,0x10fe24,0xe914e,0x10fe26,0x10fe28,0xe98ee,0x48500,0x4855c,0x1a91a,0x1a952,0x10fe2a,0x10fe2c,
-  0x5f9f2,0x43e36}; // 43e04 is a cleanup block start since F4 U10
+  0x10fe40,0x43e36}; // 43e04 is a cleanup block start since F4 U10
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x1a911,0x48503,0xe9151,0xe9177,0xe97c9,0xe98eb,0x43e35};

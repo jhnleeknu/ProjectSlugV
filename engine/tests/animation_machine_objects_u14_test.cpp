@@ -481,15 +481,15 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u14 PC");++inside;}
  assert(even==495&&inside==417);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- // Rollback probes only in the unrouted 5f6xx..5ffxx range (no F4 unit PC; F4 unit test boundary convention).
- const std::uint32_t outside[]={0x5fc10,0x5fc20,0x5fc30};
+ // Rollback probes only in work RAM 10fe00..10fefe (code never executes in RAM; F4 unit test boundary convention).
+ const std::uint32_t outside[]={0x10fe40,0x10fe42,0x10fe44};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x16ef1,0x16f0d,0x49261,0x49273,0x4a497,0x4a4b3,0x50ccb,0x50cd1,0x50d2d,0x50dad,0x51483,0x51573,0x51635,
   0x5179f,0x51fcd,0x51ff3,0x51ffb,0x5205d,0x614d5,0x614d9,0x7086b,0x7087d};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
 // Boundaries: 51602 and 515fc (BSR.W helpers without an executor) and the U13 dispatcher 70932 (stop only; U13 routes it); the U12
-// callees 70418/490ba stop only. Rollback through an unrouted PC uses 5fc10 as the return LONG of runs that end in a U14 RTS. The
+// callees 70418/490ba stop only. Rollback through an unrouted PC uses 10fe40 as the return LONG of runs that end in a U14 RTS. The
 // installed callback 50dae outside U14 is only written (no fixture executes it).
 void boundaries(){
  const char* names[]={"50d96-9a","50da0-9a","70874","7086a","5153e"};
@@ -497,7 +497,7 @@ void boundaries(){
  for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(f.stop==want[i]&&final_of(names[i]).s.pc==want[i]);}
  const char* rts[]={"16ef0-5-3-5b","4926e","4a4a2","50d3c-2-0","50d50-1","51568","51766","51780-30-0-20","51fcc","52058-1","5204c-1234ffe8"};
  for(unsigned int i=0;i<sizeof(rts)/sizeof(rts[0]);++i){const Fixture&f=fixture_of(rts[i]);assert(f.stop==STOP);Bytes ram=base_ram(f.puts);
-  put(ram,SP,4,0x5fc10);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
+  put(ram,SP,4,0x10fe40);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
  assert(at("50d6a-1fc0-40",NODE,4)==0x50daeU&&final_of("50d6a-1fc0-40").s.pc==0x1701a);
 }
 }

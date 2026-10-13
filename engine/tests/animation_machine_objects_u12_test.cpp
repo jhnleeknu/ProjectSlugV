@@ -626,15 +626,15 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u12 PC");++inside;}
  assert(even==826&&inside==664);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- // Rollback probes only in the unrouted 5f6xx..5ffxx range (no F4 unit PC; F4 unit test boundary convention).
- const std::uint32_t outside[]={0x5f712,0x5f8a0,0x5fe40};
+ // Rollback probes only in work RAM 10fe00..10fefe (code never executes in RAM; F4 unit test boundary convention).
+ const std::uint32_t outside[]={0x10fe40,0x10fe42,0x10fe44};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(NO_ALT,outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x1abdb,0x1abf9,0x46d73,0x46eeb,0x49099,0x4910b,0x4911b,0x4913d,0x49141,0x49173,0x49177,0x491b5,0x492af,0x492cf,
   0x4c0ad,0x4c0e9,0x70055,0x7028d,0x70419,0x7054b};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(NO_ALT,odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
 // Boundary callees of other units (U11 45176 49370, 4bc04, 4c1de, 4c29a, 4c2cc, 6feb4, 70036, ea5f0) and the TRAP #15 sites
-// 4910c 4913e 49174: only the stop at that PC is asserted (later units route them). Rollback through an unrouted PC uses 5f712 as
+// 4910c 4913e 49174: only the stop at that PC is asserted (later units route them). Rollback through an unrouted PC uses 10fe40 as
 // the return LONG of runs that end in a U12 RTS. The 4 consumers reject an Unknown C (block table above, and below with the success
 // inputs).
 void boundaries(){
@@ -646,8 +646,8 @@ void boundaries(){
  const char* rts[]={"1abda-ne","1abda-eq","46eda-hit-c1","490b0-c1-ff","490be-word-easy","492c8-8000","70270-0","1abea-c2"};
  for(unsigned int i=0;i<sizeof(rts)/sizeof(rts[0]);++i){const Fixture&f=fixture_of(rts[i]);assert(f.stop==STOP);Bytes ram=base_ram(f.puts);
   State s=state_of(f.regs,f.entry,f.carry);const std::uint32_t at_sp=s.a[7];
-  // The RTS that ends the fixture pops the LONG STOP: replace it by 5f712 (490be also has the table LONG first).
-  if(get(ram,at_sp,4)==STOP)put(ram,at_sp,4,0x5f712);else{assert(get(ram,at_sp+4,4)==STOP);put(ram,at_sp+4,4,0x5f712);}
+  // The RTS that ends the fixture pops the LONG STOP: replace it by 10fe40 (490be also has the table LONG first).
+  if(get(ram,at_sp,4)==STOP)put(ram,at_sp,4,0x10fe40);else{assert(get(ram,at_sp+4,4)==STOP);put(ram,at_sp+4,4,0x10fe40);}
   reject(ram,s,STOP,"unsupported animation machine PC");}
  const char* consumers[]={"490a4-c1","490b0-c2-ff","4c0c6-c1","70502-c2"};
  for(unsigned int i=0;i<4;++i){const Fixture&f=fixture_of(consumers[i]);assert(f.entry==CONSUMERS[i]);Bytes ram=base_ram(f.puts);

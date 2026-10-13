@@ -1098,18 +1098,18 @@ void interior(){
  assert(even==452&&inside==308);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(BLOCKS[i].pc>=RANGE_LO&&BLOCKS[i].pc<RANGE_HI);
  // Rollback probes only in the unrouted 5f6xx..5ffxx range (F4 unit test boundary convention).
- const std::uint32_t outside[]={0x5ff48,0x5ff4c};
+ const std::uint32_t outside[]={0x10fe40,0x10fe42};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x4578b,0x45793,0x45799,0x4579d,0x4591b,0x4591d,0x45927,0x45ad5,0x45afd,0x45aff,0x45b07,0x45b11};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
-// Runs ending in a U15b RTS roll back when the return LONG is an unrouted PC (5ff50). Every table index with every incoming C reaches
+// Runs ending in a U15b RTS roll back when the return LONG is an unrouted PC (10fe44). Every table index with every incoming C reaches
 // its transcribed target in one call from 45792 (stop at the target) and from the entry itself.
 void boundaries(){
  const char* rts[]={"t00-0","t20-0","t24-1","t34-0","t3c-0","t40-0","t48-0","t58-0","t59-0","t5a-0","t5d-0","t00-z","45afe-gt","45afe-zero",
   "4591c","45930","45b10","4596a-tail","45ade-tail"};
  for(unsigned int i=0;i<sizeof(rts)/sizeof(rts[0]);++i){const Fixture&f=fixture_of(rts[i]);assert(f.stop==STOP);Bytes ram=base_ram(f.puts);
-  put(ram,SP,4,0x5ff50);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
+  put(ram,SP,4,0x10fe44);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
  for(unsigned int k=0;k<96;++k)for(unsigned int c=0;c<3;++c){Bytes ram;State s;generic(0x45792,ram,s,c);s.d[7]=0xabcd0000U|(4U*k);Out o;
   assert(run(ram,s,TARGETS[k],o)&&s.pc==TARGETS[k]&&s.carry==ms5::AnimationCarryUnknown&&s.d[7]==(0xabcd0000U|(4U*k))&&s.d[4]==0xffffffffU);
   Bytes ram2;State t;generic(TABLE+4U*k,ram2,t,c);Out o2;assert(run(ram2,t,TARGETS[k],o2)&&t.pc==TARGETS[k]&&t.carry==carry_of(c));}
