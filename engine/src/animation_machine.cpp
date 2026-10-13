@@ -788,6 +788,22 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x2ca72:case 0x2ca9a:case 0x2cb2a:case 0x306a8:case 0x30748:case 0x3075a:case 0x3075e:case 0x3076a:case 0x30774:case 0x30778:
     case 0x30784:case 0x30790:case 0x307bc:case 0x307d2:case 0x307d6:case 0x30ed2:case 0x30f84:case 0x30f8a:case 0x30fb8:case 0x30fbe:
     case 0x30fc2:case 0x30fda:case 0x31000:
+    // Objects N29 (F4) blocks: JSR/JMP/BRA/RTS, LEA/MOVEA+JSR (30ac0 30e70), BTST (Z only, +Bcc) blocks (30902 3090a 30914 30962
+    // 3096a 30974 30aa8 30ab2 30f2a), the 9 BRA.W slots of 30a76 and the 15 BCC/BCS/SCS consumers 306fc (C returned by 1aa7e), 3070a
+    // 309e4 (3165e = 49fc6), 30dc2 (3164a), 30dea 30e3e 31038 (288c), 30dfa 30e52 (ea680), 30ec0 (49fc6), 30efa (319f6), 3195c 3199a
+    // (28ae), 31a04 (4d418), 31676 (49c38; SCS then MOVE, so the block ends Unknown). ANDI.W #8 (31650) clears and ORI CCR (31658 31960
+    // 31a08) sets a known C. The other blocks stay Unknown.
+    case 0x306ec:case 0x306f0:case 0x306fc:case 0x30706:case 0x3070a:case 0x30714:case 0x308fe:case 0x30902:case 0x3090a:case 0x30914:
+    case 0x30926:case 0x3092a:case 0x3092e:case 0x30932:case 0x30936:case 0x3093a:case 0x3093e:case 0x3095e:case 0x30962:case 0x3096a:
+    case 0x30974:case 0x30986:case 0x3098a:case 0x309ac:case 0x309b0:case 0x309d0:case 0x309d4:case 0x309d8:case 0x309dc:case 0x309e0:
+    case 0x309e4:case 0x309ee:case 0x30a50:case 0x30a54:case 0x30a7a:case 0x30a7e:case 0x30a82:case 0x30a86:case 0x30a8a:case 0x30a8e:
+    case 0x30a92:case 0x30a96:case 0x30a9a:case 0x30aa8:case 0x30ab2:case 0x30abc:case 0x30ac0:case 0x30ad6:case 0x30b66:case 0x30dbe:
+    case 0x30dc2:case 0x30dc6:case 0x30de4:case 0x30dea:case 0x30dee:case 0x30df4:case 0x30dfa:case 0x30e12:case 0x30e38:case 0x30e3e:
+    case 0x30e4c:case 0x30e52:case 0x30e70:case 0x30e7c:case 0x30e82:case 0x30e88:case 0x30eae:case 0x30eb4:case 0x30eba:case 0x30ec0:
+    case 0x30eca:case 0x30ecc:case 0x30ed6:case 0x30ef6:case 0x30efa:case 0x30f2a:case 0x31002:case 0x31032:case 0x31038:case 0x3103c:
+    case 0x3104a:case 0x310ca:case 0x310d0:case 0x310d6:case 0x310d8:case 0x3164a:case 0x3165c:case 0x3165e:case 0x31664:case 0x3166a:
+    case 0x31676:case 0x31694:case 0x31696:case 0x316ac:case 0x3195c:case 0x3199a:case 0x319b4:case 0x31a04:case 0x31a10:case 0x31a22:
+    case 0x31a24:case 0x33116:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1180,6 +1196,11 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x2c7fe && next.pc<0x2c8f2) || (next.pc>=0x2ca68 && next.pc<0x2cb30) ||
                 (next.pc>=0x306a8 && next.pc<0x306b4) || (next.pc>=0x30718 && next.pc<0x307da) ||
                 (next.pc>=0x30ed2 && next.pc<0x30ed6) || (next.pc>=0x30f84 && next.pc<0x31002))ok=animation_objects_n28_block(c);
+            else if ((next.pc>=0x306b4 && next.pc<0x30718) || (next.pc>=0x308e2 && next.pc<0x30b6c) ||
+                (next.pc>=0x30dbe && next.pc<0x30ed2) || (next.pc>=0x30ed6 && next.pc<0x30f84) ||
+                (next.pc>=0x31002 && next.pc<0x310de) || (next.pc>=0x3164a && next.pc<0x3169c) ||
+                (next.pc>=0x316ac && next.pc<0x316c2) || (next.pc>=0x318d8 && next.pc<0x319b6) ||
+                (next.pc>=0x319f6 && next.pc<0x31a54) || (next.pc>=0x3310c && next.pc<0x3312c))ok=animation_objects_n29_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
