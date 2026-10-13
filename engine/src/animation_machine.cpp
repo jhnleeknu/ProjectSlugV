@@ -840,6 +840,14 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x33c34:case 0x33c48:case 0x33c4e:case 0x33c54:case 0x33c5e:case 0x33c6c:case 0x33c72:case 0x34608:case 0x34610:case 0x34614:
     case 0x3462c:case 0x34634:case 0x34638:case 0x34642:case 0x34650:case 0x34658:case 0x346a2:case 0x346be:case 0x346c6:case 0x346cc:
     case 0x346fa:case 0x34714:case 0x34748:case 0x34874:case 0x3487a:case 0x3489a:case 0x3489c:
+    // Objects N27 (F4) blocks: JSR-only blocks, ST(+JSR) 5ff8a 600f8, LEA(+BRA) blocks 5ff98 5ffa0, BRA / BSR blocks, RTS and the
+    // consumers 5ff7e (BCC.W after JSR 49fc6), 6019e 601c8 (BCC.W after JSR 28ae). 601b0 601da (ORI.B #1,CCR) set a known Set that no
+    // block consumes; every other block stays Unknown.
+    case 0x5fd44:case 0x5fd4a:case 0x5fdee:case 0x5fe40:case 0x5fe4e:case 0x5fe76:case 0x5feae:case 0x5feb2:case 0x5fedc:case 0x5ff06:
+    case 0x5ff2a:case 0x5ff4e:case 0x5ff6e:case 0x5ff72:case 0x5ff78:case 0x5ff7e:case 0x5ff8a:case 0x5ff8e:case 0x5ff98:case 0x5ffa0:
+    case 0x5ffd6:case 0x6001c:case 0x600dc:case 0x600f8:case 0x60126:case 0x6013c:case 0x60166:case 0x6019e:case 0x601b4:case 0x601c8:
+    case 0x601fa:case 0x60242:case 0x60294:case 0x602e6:case 0x60304:case 0x60308:case 0x6030e:case 0x60314:case 0x60332:case 0x603f8:
+    case 0x60406:case 0x60408:case 0x6040e:case 0x60414:case 0x60432:case 0x604ee:case 0x604fc:case 0x604fe:case 0x60504:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1247,6 +1255,9 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x33f4c && next.pc<0x33f58) || (next.pc>=0x345c2 && next.pc<0x346c0) ||
                 (next.pc>=0x346c6 && next.pc<0x346fc) || (next.pc>=0x34714 && next.pc<0x34750) ||
                 (next.pc>=0x34874 && next.pc<0x348a2))ok=animation_objects_n30_block(c);
+            else if ((next.pc>=0x5fd24 && next.pc<0x5ffd8) || (next.pc>=0x60008 && next.pc<0x60316) ||
+                (next.pc>=0x6031e && next.pc<0x60416) || (next.pc>=0x6041e && next.pc<0x60506) ||
+                (next.pc>=0xdcf56 && next.pc<0xdcf6a))ok=animation_objects_n27_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
