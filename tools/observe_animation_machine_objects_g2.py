@@ -54,7 +54,7 @@ from unicorn import UC_HOOK_CODE
 from address_map import pvc_bank_update
 
 ROOT=Path(__file__).resolve().parents[1]
-OUT=ROOT/'artifacts/animation_machine_objects_g2_native'
+OUT=Path('/Users/start/Workspce/ms5-scratch/g2obs/out/run')
 ROM_SHA=S.ROM_SHA
 CONTRACT_DIR=ROOT/'docs/analysis'
 SCHED_DIR=ROOT/'artifacts/animation_machine_scheduler_native'

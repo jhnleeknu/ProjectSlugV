@@ -61,6 +61,6 @@ G2 PC를 경계/미라우팅 탐침으로 쓰는 이전 시험 후보(grep): `en
 - 진단 복사본은 증거용이며 생산 결과가 오라클이다.
 
 ## 통합 기록(메인, 2026-10-13)
-- [F] 통합 시 검증기 기본 scratch 경로를 `build/objects_g2`로, native 관측기 기본 출력을 `artifacts/animation_machine_objects_g2_native`로 바꿨다(동작 변경 없음). 통합본 검증기 SHA256 `aaa8ad2a2a8e287928cbf9f873b940c32059c724b1f5ea4dfd2ef291fadbcdae`.
+- [F] 통합 시 검증기 기본 scratch 경로를 `build/objects_g2`로, native 관측기는 관측 산출물에 기록된 SHA(`50cd24d6…`)를 유지하려고 바이트 그대로 두었다(기본 출력이 scratch 경로이므로 재관측 시 `--out artifacts/animation_machine_objects_g2_native`를 지정한다). 통합본 검증기 SHA256 `aaa8ad2a2a8e287928cbf9f873b940c32059c724b1f5ea4dfd2ef291fadbcdae`.
 - [F] 위 결과는 `4f91481` 기준이다. native 관측 `run1`/`run2` `observation.json`은 바이트 단위로 같고, `run1`을 `artifacts/animation_machine_objects_g2_native`에, `run3` `verification.json`(SHA256 `f6773ae7…`)을 `artifacts/animation_machine_objects_g2_execution`에 복사했다.
 - [U] 이후 단위(N02~N32a, H1)가 합쳐진 HEAD에서의 재실행 결과는 별도로 기록한다.
