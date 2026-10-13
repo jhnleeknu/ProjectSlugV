@@ -118,5 +118,6 @@ bool animation_objects_n21_block(AnimationMachineContext& c);
 bool animation_objects_n22_block(AnimationMachineContext& c);
 bool animation_objects_n23_block(AnimationMachineContext& c);
 bool animation_objects_n28_block(AnimationMachineContext& c);
+bool animation_objects_n24_block(AnimationMachineContext& c);
 }
 #endif
