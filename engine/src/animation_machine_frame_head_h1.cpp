@@ -17,9 +17,14 @@ std::uint32_t fh1_ix(std::uint32_t base,std::uint32_t displacement,std::uint32_t
 void fh1_port(AnimationMachineContext& c,std::uint32_t address,unsigned int size,std::uint32_t value) {
     VideoPortWrite port;port.address=address;port.size=static_cast<std::uint8_t>(size);port.value=value;c.ports.push_back(port);
 }
-// MOVE.W 3c0006.l,D0 (raster, D3): the declared external-read queue is not representable through the current
-// public API (contract main decision 2), so the queue is always empty: checked error, state preserved.
-bool fh1_raster(AnimationMachineContext& c) {return am_error(c,"animation machine external read queue empty");}
+// MOVE.W 3c0006.l,D0 (raster, D3) from the declared external-read queue (empty queue: checked error "animation machine external read
+// queue empty", different front entry: "... queue mismatch"; consumption is committed with the run); LSR.W #7,D0; SUBI.W #$100,D0;
+// BCC.W no_borrow_pc (else the fall-through borrow_pc: MOVEQ #0,D0). A borrow means (raster >> 7) < $100.
+bool fh1_raster(AnimationMachineContext& c,std::uint32_t no_borrow_pc,std::uint32_t borrow_pc) {
+    AnimationMachineState& r=c.s;std::uint32_t value=0;if(!am_read(c,0x3c0006,2,value))return false;
+    am_word(r.d[0],value);am_word(r.d[0],fh1_w(r.d[0])>>7);const bool borrow=fh1_w(r.d[0])<0x100U;
+    am_word(r.d[0],r.d[0]-0x100U);r.pc=borrow?borrow_pc:no_borrow_pc;return true;
+}
 // BSET.B / BCLR.B #bit,address (read, then write).
 bool fh1_bit(AnimationMachineContext& c,std::uint32_t address,unsigned int bit,bool set) {
     std::uint32_t value=0;if(!am_read(c,address,1,value))return false;
@@ -60,8 +65,8 @@ void fh1_subx(AnimationMachineState& r,std::uint32_t& target) {
 // sprite flush 16bba with the 166bc radix sort and the D5 wait 16bd0, background snapshot 1ae56 / 1879c, vblank wait ef2 (D2),
 // BIOS mode / player mod b68, pause palette copies 8bc8 / 8be0, 3db2, frame parity 43dbc). Boundaries (never executed here):
 // 31d6 / 9136 (H2), 5728 (H3), the live writer table targets of 16c48 / 16cc8 (H8 / H4), TRAP #15 at fee (D8), the controller
-// callback LONG (1008e4) entered by the dispatcher (D1). The raster reads at ea4 / efc are the empty external-read queue error
-// (main decision 2). The aux callback path f3c / f44 / f4c / f52 is the D8 guard. No carry consumer, no known-carry producer.
+// callback LONG (1008e4) entered by the dispatcher (D1). The raster reads at ea4 / efc consume the declared external-read queue
+// (WORD 3c0006; empty queue: checked error). The aux callback path f3c / f44 / f4c / f52 is the D8 guard. No carry consumer, no known-carry producer.
 bool animation_frame_head_h1_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0;std::uint32_t other=0;
     switch(r.pc) {
@@ -98,7 +103,7 @@ bool animation_frame_head_h1_block(AnimationMachineContext& c) {
     case 0xe8c:return am_call(c,0x16bba,0xe92);
     case 0xe92:return am_call(c,0x1ae56,0xe98);
     case 0xe98:if(!fh1_bit(c,fh1_at(r.a[5],0x801b),7,false))return false;return am_call(c,0x5728,0xea4);
-    case 0xea4:if(!fh1_bit(c,fh1_at(r.a[5],0x801b),7,true))return false;return fh1_raster(c);
+    case 0xea4:if(!fh1_bit(c,fh1_at(r.a[5],0x801b),7,true))return false;return fh1_raster(c,0xebc,0xeba);
     case 0xeba:r.d[0]=0;r.pc=0xebc;return true;                                    // MOVEQ #0,D0.
     case 0xebc:
         // SUB.B -7fe8(A5),D0; MOVE.B D0,-7fe8(A5).
@@ -113,7 +118,7 @@ bool animation_frame_head_h1_block(AnimationMachineContext& c) {
         if(!am_read(c,fh1_at(r.a[5],0x8016),1,value) || !am_read(c,fh1_at(r.a[5],0x8017),1,other))return false;
         if(fh1_b(value)<fh1_b(other)) {c.waiting=true;return true;}
         am_byte(r.d[0],value);r.pc=0xefc;return true;
-    case 0xefc:return fh1_raster(c);
+    case 0xefc:return fh1_raster(c,0xf0e,0xf0c);
     case 0xf0c:r.d[0]=0;r.pc=0xf0e;return true;                                    // MOVEQ #0,D0.
     case 0xf0e:if(!am_write(c,fh1_at(r.a[5],0x8018),1,fh1_b(r.d[0])))return false;r.pc=0xf12;return true;
     case 0xf12:

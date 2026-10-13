@@ -14,6 +14,10 @@ import struct
 import pack_physical_program as physical
 
 ROOT = Path(__file__).resolve().parents[1]
+# F5 external-read queue: the only permitted public header change since 9d5aa11 (additive: AnimationMachineExternalRead and
+# AnimationMachineDevice::reads). Pinned hash; the diff versus 9d5aa11 must contain zero deleted lines.
+PUBLIC_HEADER = 'engine/include/ms5/animation_machine.h'
+PUBLIC_HEADER_SHA256 = '0e9ed25b4ae745d9fab7bd8c01795d00096a526404c222abf1bf59ed77b738e2'
 OBS_SHA = '413052978cbf85fa1eedbaaa0ca93bc20b9996c131bba032a6e8db22bc27d6d7'
 
 
@@ -85,12 +89,16 @@ def main():
     expected_headers = {str(path.relative_to(ROOT)) for path in (ROOT/'engine/include').rglob('*.h')}
     expected_headers.add(internal_header)
     assert set(headers) == expected_headers and anchor['all_inputs_unchanged']
-    # align2: the private header animation_machine_internal.h gained declarations with each later F4 unit; the public headers must stay identical
+    # align2: the private header animation_machine_internal.h gained declarations with each later F4 unit; the public headers must stay identical (except the pinned additive external-read queue change in animation_machine.h)
     # and the private header must have changed additively only (no deleted/modified lines versus the anchor ref).
-    assert all(sha(ROOT/path)==value for path,value in headers.items() if path != internal_header)
+    assert PUBLIC_HEADER in headers
+    assert all(sha(ROOT/path)==value for path,value in headers.items() if path not in (internal_header,PUBLIC_HEADER))
+    assert sha(ROOT/PUBLIC_HEADER)==PUBLIC_HEADER_SHA256 and headers[PUBLIC_HEADER]!=PUBLIC_HEADER_SHA256
     changed = subprocess.run(['git','diff','--name-only','9d5aa11','--','engine/include'],
                              cwd=ROOT,capture_output=True,text=True,check=True)
-    assert not changed.stdout.strip(), changed.stdout
+    assert changed.stdout.split()==[PUBLIC_HEADER], changed.stdout    # exactly the pinned additive change, no other public header
+    public_numstat = subprocess.run(['git','diff','--numstat','9d5aa11','--',PUBLIC_HEADER],cwd=ROOT,capture_output=True,text=True,check=True).stdout.split()
+    assert public_numstat and int(public_numstat[0]) > 0 and int(public_numstat[1]) == 0, public_numstat    # deletions == 0: additive only
     numstat = subprocess.run(['git','diff','--numstat','9d5aa11','--',internal_header],cwd=ROOT,capture_output=True,text=True,check=True).stdout.split()
     assert numstat and int(numstat[1]) == 0, numstat    # deletions == 0: additive only
     internal_added_lines = int(numstat[0])
@@ -101,7 +109,9 @@ def main():
                    variant_passes_equal=2400,variant_nodes_equal=19936,
                    limitation='Post-audit of immutable inputs; compiler header hashes were not captured by the execution tool.')
     receipt['header_temporal_anchor'] = dict(earlier_report_sha256=sha(anchor_path), earlier_and_current_hash_agreement=True,
-        header_count=len(headers), git_comparison_ref='9d5aa11', header_diff_empty=True, public_header_count=len(headers)-1,
+        header_count=len(headers), git_comparison_ref='9d5aa11', header_diff_empty=False, public_header_diff_files=[PUBLIC_HEADER], public_header_additive_only=True,
+        public_header_added_lines=int(public_numstat[0]), public_header_sha256=PUBLIC_HEADER_SHA256,
+        public_header_identical_count=len(headers)-2, public_header_count=len(headers)-1,
         private_header_additive_only=True, private_header_added_lines=internal_added_lines, private_header_sha256=sha(ROOT/internal_header),
         claim='Independent earlier/current agreement; the F4 execution tool itself did not capture header hashes.')
     path=args.report.parent/'acceptance.json'

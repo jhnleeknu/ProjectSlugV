@@ -13,9 +13,20 @@ struct AnimationMachineState {
         for (unsigned int i=0;i<8;++i) {d[i]=0;a[i]=0;}
     }
 };
+// One declared external device read: the 24-bit original address, the access size in BYTEs and the value the read returns.
+struct AnimationMachineExternalRead {
+    std::uint32_t address;
+    std::uint8_t size;
+    std::uint32_t value;
+};
 struct AnimationMachineDevice {
     std::vector<std::uint8_t> pvc;
     std::uint32_t bank_base;
+    // Declared external-read queue, consumed from the front. Only WORD 3c0006 (raster) and BYTE 300000 / 340000 / 380000 (inputs)
+    // reads consume it, and only when the front entry has the same address and size. An empty queue gives the checked error
+    // "animation machine external read queue empty", a different front entry "animation machine external read queue mismatch".
+    // Consumption (and the external_reads count) is committed only when the run succeeds; failure leaves the queue unchanged.
+    std::vector<AnimationMachineExternalRead> reads;
     AnimationMachineDevice() : pvc(8192,0), bank_base(0x200000) {}
 };
 enum AnimationMachineStatus { AnimationMachineReturned, AnimationMachineWaiting };
