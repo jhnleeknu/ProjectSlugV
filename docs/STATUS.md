@@ -2096,3 +2096,13 @@
 - 인터프리터 명령 callback 허용 목록을 없애고 live target routing으로 바꿨으며(원본 `JSR (A1)` 앞에 거르기 없음), `49f8c` 두 번째 진입점 `49f96`, cleanup `43e04`·`2a24` 진입을 더했다.
 - RNG 초기화 400 frame 원본 비교: 자연 seed 137개 중 130개가 원본과 같게 완주(불일치 0). 기본 120 frame 비교도 불일치 0. 남은 seed는 N22~N35 단위의 첫 미연결 callback에서 checked 오류로 멈춘다.
 - 미뤄 둔 것: N16b(107), N19b(31), U19b(86) 등 400 frame 안에서 실행되지 않는 설치 체인, 고아 설치 callback(31 대상), 1a3ac 경계. 묶음 G2(U17~N01) 원본 관측 완료, C++ 검증·이전 검증기 정렬은 진행 중. 자연 scheduler·IRQ/timing·F5(frame head·controller)·전체 Goal은 미완료이며 active다.
+
+## 2026-10-13 — F4 N22a~N32b 연결, F5 H1·native observer·external-read queue, G2 검증기, artifacts 삭제 사고
+
+- 이전 STATUS 항목(N21 묶음) 이후 `git log 10b3c2d..HEAD`(37개, HEAD `0c89a1f`) 기준 병합된 단위(계약 문서 `animation-machine-objects-n22..n32b-contract.md`의 구현 block 수): N22a 151, N23 198, N24 195, N25 168, N26 168, N27 162(재범위 155 + BSR 복귀점 등), N28 152, N29a 192, N30a 166, N31 96, N32a 203, N32b 125. 합계 1,976 block. N26 계약은 `5f4b0..5f760` 틈의 고아 사슬을 어느 단위도 소유하지 않는 것으로 기록했다. N26/N27 시험의 미연결 탐침은 work RAM PC(10fe00..10fefe)로 옮겼다.
+- RNG 400 frame 원본 비교: N27 병합(`38e4135`)으로 seed 32·33이 완주했다. 자연 seed 137개 중 134개 완주, 불일치 0, 나머지 3개는 미연결 PC checked 2개(seed 116·117)와 case 141(원본도 frame 0 `odd-pc`) 1개다. seed 116·117은 N31 이후 frame 0 `38ba0`의 `JSR 3b542`(N33 범위)에서 멈추며 N33 진행 중이다. 이번 정렬 재생성(scratch, `0c89a1f`)의 RNG f4 검증 결과는 완주 134, 첫 미연결 PC checked 2, native 끝 오류 6이고 passes 53600, nodes 403677이다(이전 pin 132/4, 52800/396091).
+- 미뤄 둔 b 단위: N16b, N19b, U19b, N22b, N29b, N30b (400 frame에서 실행되지 않는 설치 사슬). 고아 사슬: `5eed2..5efe6`, `5f504..5f760`(53 block), `60516..`, `3383c..33958`, `3a4a4..3a5d2`(소유 단위 없으면), `38d56..38dd4`. 소유와 정리 방식은 [U].
+- F5: frame head native observer(D1 프로토콜) 기록 완료. 자연 seed 137개 중 136개가 400 frame 완주(case 141은 frame 0 `odd-pc`), guard-release 5개는 frame 0 `fetch-unmapped`. H1(frame head 본문, vblank·sprite-flush wait)을 병합했다(`0e4a9be`). 선언된 external-read queue API(`AnimationMachineExternalRead`, `AnimationMachineDevice::reads`; raster·입력 읽기)를 병합하고 H1 raster block이 이를 읽는다(`f21ee9d`). 공개 헤더 변경은 이 추가분뿐이다.
+- G2 검증기(U17~U20b·N01 묶음 native 관측 + C++ 검증)를 병합했고 `a22c318`에서 통과한 기록이 있다(`c5181b6`, `748a747`). 이전 검증기와 F4 감사는 연속 단위에 맞춰 pin을 다시 맞췄다(`4e7d02c`). 이번에 RNG f4·objects G1 감사 입력 보고서를 scratch에 재생성해 pin을 다시 맞추는 작업이 이어졌고(보고서 경로·anchor를 옵션/환경으로 받음), 재생성 결과는 별도 검증 기록을 따른다.
+- 2026-10-13 사고: scratch 트리에서 `rm -f artifacts/*/verification.json`이 심볼릭 링크를 따라가 공유 checkout의 `verification.json` 약 300개를 삭제했다. 재생성은 다른 작업자가 진행 중이며 완료 전까지 해당 산출물에 의존하는 검증은 신뢰할 수 없다(완료 여부는 [U]).
+- 다음: 진행 중 N33(seed 116·117 `3b542`)·H3. N34, N35, H2, H4~H7, D1 C++ 구동기(자연 scheduler 대체가 아닌 선언된 frame 구동), 컨트롤러 결정 D9, 고아 사슬·b 단위 정리. 자연 scheduler·IRQ/timing·BIOS 실행은 주장하지 않으며 전체 Goal은 active다. 이 항목의 "N32b 진행 중" 여부는 git 기준으로 병합 완료(`0fb604a`)다.

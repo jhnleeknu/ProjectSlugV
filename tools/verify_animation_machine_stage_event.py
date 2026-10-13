@@ -42,7 +42,7 @@ from disassemble_program import load_verified_program, disassemble_range
 
 ROOT = Path(__file__).resolve().parents[1]
 MAIN_ROOT = '/Users/start/Workspce/metalslug'
-OUT = ROOT / 'artifacts/animation_machine_stage_event_execution'
+OUT = Path(os.environ['OUTDIR']) if os.environ.get('OUTDIR') else ROOT / 'artifacts/animation_machine_stage_event_execution'   # OUTDIR: scratch output override (final component must keep this name)
 NATIVE_DIR = ROOT / 'artifacts/animation_machine_stage_event_native'
 SEED_DIR = ROOT / 'artifacts/animation_machine_scheduler_native'
 NATIVE_SHA = '44836842e9b132ac4909e693845f85def6d3204787c764eca33bf17e1d100ae0'
@@ -52,7 +52,7 @@ SEED_OBS_SHA = 'c330e597f9585c2595006239be49ab0bcb029f4b5fed5c70ebf872fe91a2b4ff
 SEED_FILE_SHA = '86af9f05a3f127aabd96c7755f091e4a450bb8d5d70978ddb0a503f1b7fcff0f'
 CONTRACT = ROOT / 'docs/analysis/animation-machine-stage-event-f3-contract.md'
 CONTRACT_SHA = 'bba912176899ab0c21a0b9d54800c5f987f8fdcad9c592b714b8a713d5376c95'
-CPP_PINS = {'engine/src/animation_machine_stage_event.cpp': 'e074f25f82b8e1bd7d84068bfe773db6b9f435cb35d22e95a59e24ead6952d9c', 'engine/src/animation_machine_cleanup.cpp': 'b6aed30bbea37f5ab02f85ffc8e62ecd6c68e5f6f34cdc0a2b6e9487716aaf5c', 'engine/src/animation_machine.cpp': '2f16bea5ed3b4c88b96bd90c009e232f3f16b50f5c9154c4e9cd445cf870d6d8', 'engine/src/animation_machine_internal.h': '8eaffdfdef6538cac945bd577ad8218e170be4e9b9f878082c22025af2b1dffb'}  # align2: pins refreshed to the 3535981 snapshot (shared engine files change with every F4 unit merge); previous: animation_machine.cpp a0f77362514f, animation_machine_internal.h b38204d4ba30
+CPP_PINS = {'engine/src/animation_machine_stage_event.cpp': 'e074f25f82b8e1bd7d84068bfe773db6b9f435cb35d22e95a59e24ead6952d9c', 'engine/src/animation_machine_cleanup.cpp': 'b6aed30bbea37f5ab02f85ffc8e62ecd6c68e5f6f34cdc0a2b6e9487716aaf5c', 'engine/src/animation_machine.cpp': 'e4481dcc335327a5973907cf5e54170541038542cfa10bab42368cc70f18b5e1', 'engine/src/animation_machine_internal.h': 'b6bb4cf1ca5e5f87ac9be2e38cb25887b07f484a9d2f0baaf9839810e61ed9de'}  # 0c89a1f refresh (previous: animation_machine.cpp 2f16bea5ed3b, animation_machine_internal.h 8eaffdfdef65; at 3535981 -> 0c89a1f: animation_machine.cpp 2f16bea5ed3b -> e4481dcc3353, internal.h 8eaffdfdef65 -> b6bb4cf1ca5e; intermediate b70a71a values 0bcab8076a5b / 497e53d57df4); align2: pins refreshed to the 3535981 snapshot (shared engine files change with every F4 unit merge); previous: animation_machine.cpp a0f77362514f, animation_machine_internal.h b38204d4ba30
 ROM_SHA = '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f'
 MARKER = cc.MARKER
 sha = cc.sha

@@ -6,6 +6,7 @@ It checks the frozen full verifier output against the reviewed input/boundary ma
 import argparse
 import hashlib
 import json
+import os
 import gzip
 import observe_animation_machine_objects_g1 as native
 from pathlib import Path
@@ -33,7 +34,10 @@ def sha(path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('report', type=Path, nargs='?', default=ROOT/'artifacts/animation_machine_objects_integration_execution/execution.json')
+    # The report path may also come from the environment (OBJECTS_F4_REPORT) so the audit can run against a scratch regeneration.
+    parser.add_argument('report', type=Path, nargs='?', default=Path(os.environ.get('OBJECTS_F4_REPORT') or ROOT/'artifacts/animation_machine_objects_integration_execution/execution.json'))
+    # Sanitizer anchor report (earlier header hashes); MS5_HEADER_ANCHOR overrides the default build/ location (e.g. a scratch tree).
+    parser.add_argument('--anchor', type=Path, default=Path(os.environ.get('MS5_HEADER_ANCHOR') or ROOT/'build/sanitize-u15review/verification.json'))
     args = parser.parse_args()
     report = json.loads(args.report.read_text())
     rows = report['results']
@@ -90,7 +94,7 @@ def main():
         assert coverage['missing_native_starts'] == missing, (unit,coverage)
         assert coverage['native_observed_starts'] == denominator-len(missing)
     assert all(0x500000 not in pcs for pcs in report['instruction_PC_coverage'].values())
-    anchor_path = ROOT/'build/sanitize-u15review/verification.json'
+    anchor_path = args.anchor
     anchor = json.loads(anchor_path.read_text())
     headers = {path:value for path,value in anchor['inputs'].items() if path.endswith('.h')}
     expected_headers = {str(path.relative_to(ROOT)) for path in (ROOT/'engine/include').rglob('*.h')}

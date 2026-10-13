@@ -8,6 +8,7 @@ import argparse
 import collections
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import struct
@@ -27,7 +28,10 @@ def sha(path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('report',type=Path,nargs='?',default=ROOT/'artifacts/animation_machine_scheduler_rng_f4_execution/verification.json')
+    # The report path may also come from the environment (RNG_F4_REPORT) so the audit can run against a scratch regeneration.
+    parser.add_argument('report',type=Path,nargs='?',default=Path(os.environ.get('RNG_F4_REPORT') or ROOT/'artifacts/animation_machine_scheduler_rng_f4_execution/verification.json'))
+    # Sanitizer anchor report (earlier header hashes); MS5_HEADER_ANCHOR overrides the default build/ location (e.g. a scratch tree).
+    parser.add_argument('--anchor',type=Path,default=Path(os.environ.get('MS5_HEADER_ANCHOR') or ROOT/'build/sanitize-u15review/verification.json'))
     args = parser.parse_args()
     report = json.loads(args.report.read_text())
     native = ROOT/'artifacts/animation_machine_scheduler_rng_native'
@@ -58,16 +62,18 @@ def main():
     rows,variants = report['seeds'],report['variants_answer00']['seeds']
     assert {row['case'] for row in rows} == {item['case'] for item in obs['seeds']} and len(rows)==142
     assert {row['case'] for row in variants} == {item['case'] for item in obs['variants_answer00']} and len(variants)==6
+    # b70a71a run (scratch OUTDIR, verifier rc=0): measured 134 complete / 2 unrouted / 5 / 1; passes_equal 53600, nodes_equal 403677
+    # (previous pins: 132/4/5/1 and 52800/396091 at 3535981).
     # align2 run (scratch tree at snapshot 3535981, verifier rc=0, OUTDIR scratch): measured current classes 132/4/5/1
     # (snapshot 10b3c2d measured 130/6/5/1; original pins 61/75/5/1).  Pins move with every F4 unit merge that routes more PCs.
-    normal = {'complete':132,'checked-current-first-unrouted-PC':4,
+    normal = {'complete':134,'checked-current-first-unrouted-PC':2,
               'cpp-error-at-native-end:animation fade card odd JSR target':5,
               'cpp-error-at-native-end:unaligned animation machine PC':1}
     # '-replayed' = stop frame without a frame-1 dump: replayed from the seed start / latest earlier dump with every pass digest equal (same rule, explicit class)
     fold = lambda name: 'checked-current-first-unrouted-PC' if name.startswith('checked-current-first-unrouted-PC') else name
     assert dict(collections.Counter(fold(row['classification']) for row in rows))==normal
     assert dict(collections.Counter(fold(row['classification']) for row in variants))=={'complete':6}  # superseded: complete 2 -> 6, unrouted 4 -> 0 (align2 run)
-    assert (report['totals']['passes_equal'],report['totals']['nodes_equal']) == (52800,396091)  # align2 run @3535981; superseded (52000,389711 @10b3c2d; 24646,169037 original)
+    assert (report['totals']['passes_equal'],report['totals']['nodes_equal']) == (53600,403677)  # b70a71a run; superseded (52800,396091 @3535981; 52000,389711 @10b3c2d; 24646,169037 original)
     assert (report['variants_answer00']['totals']['passes_equal'],report['variants_answer00']['totals']['nodes_equal']) == (2400,19936)  # align2 run; superseded (844,6116)
     for row in rows+variants:
         assert not row['mismatches'] and row['chain_unequal']==0
@@ -82,7 +88,7 @@ def main():
             assert evidence['callback'] == row['cpp_stop']['node_cb']
             assert evidence['frame'] == row['cpp_stop']['frame'] == row['pass_equal']
             assert evidence['replayed_equal_passes'] == (evidence['frame']-evidence['first_replayed_frame'] if evidence['replay_from'].startswith('pass-end-dump') or evidence['replay_from']=='seed-start' else 0)
-    anchor_path = ROOT/'build/sanitize-u15review/verification.json'
+    anchor_path = args.anchor
     anchor = json.loads(anchor_path.read_text())
     internal_header = 'engine/src/animation_machine_internal.h'
     headers = {path:value for path,value in anchor['inputs'].items() if path.endswith('.h')}
@@ -105,7 +111,7 @@ def main():
     receipt = dict(schema_version=1,accepted=True,report_sha256=sha(args.report),
                    audit_tool_sha256=sha(Path(__file__)),pinned_seed_file_sha256=pinned_files,
                    physical_resource_sha256=resource_hashes,normal_classification=normal,
-                   current_missing_boundary_count=4,normal_passes_equal=52800,normal_nodes_equal=396091,
+                   current_missing_boundary_count=2,normal_passes_equal=53600,normal_nodes_equal=403677,
                    variant_passes_equal=2400,variant_nodes_equal=19936,
                    limitation='Post-audit of immutable inputs; compiler header hashes were not captured by the execution tool.')
     receipt['header_temporal_anchor'] = dict(earlier_report_sha256=sha(anchor_path), earlier_and_current_hash_agreement=True,
