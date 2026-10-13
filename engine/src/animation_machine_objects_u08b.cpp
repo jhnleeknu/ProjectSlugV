@@ -103,12 +103,12 @@ void ou8b_flag(AnimationMachineState& r,unsigned int bit,std::uint32_t mask,bool
     am_byte(target,target|(r.d[5]&255U));
 }
 }
-// Objects F4 U08b (165 block starts, the second part of the U08 split, groups C4/C6): the slope WORD 461ec (PC-relative data read
+// Objects F4 U08b (166 block starts, the second part of the U08 split, groups C4/C6): the slope WORD 461ec (PC-relative data read
 // 461f2+D7.W through the bus), the terrain step 46372 and loop 4683c, the screen clamp 468e0, the move-lock bits 4bb22, the terrain
-// condition reset 4bc44, and the C4 object updates 4be34 / 4be82 with the shared tail 4bf0a / 4bf16. SUBX (46398 / 464ac) takes X
-// from the ADDI.L inside the same block. 4beec recomputes the Z of the 4be9a ADD.B D7,D7 from D7.B (its only predecessor is the
-// 4be9c BCC). U08b has no carry consumer across blocks and no known-carry producer. The callees 44ade 4578a 45b12 4662e 469d8
-// 492c8 4b8e8 4bce0 have no executor.
+// condition reset 4bc44 (second entry 4bc58 from N33 4bdfe), and the C4 object updates 4be34 / 4be82 with the shared tail
+// 4bf0a / 4bf16. SUBX (46398 / 464ac) takes X from the ADDI.L inside the same block. 4beec recomputes the Z of the 4be9a
+// ADD.B D7,D7 from D7.B (its only predecessor is the 4be9c BCC). U08b has no carry consumer across blocks and no known-carry
+// producer. The callees 44ade 4578a 45b12 4662e 469d8 492c8 4b8e8 4bce0 have no executor.
 bool animation_objects_u08b_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0,other=0;
     switch(r.pc) {
@@ -247,12 +247,16 @@ bool animation_objects_u08b_block(AnimationMachineContext& c) {
     case 0x4bb4a:r.d[2]=0;r.pc=0x4bb4c;return true;                          // MOVEQ #0,D2.
     case 0x4bb4c:if(!ou8b_put(c,r.a[6],0x6d,1,r.d[7]&255U))return false;return am_return(c); // MOVE.B D7,6d(A6); RTS.
 
-    // ---- 4bc44: CLR.B 549f(A5); CLR.B 54a0(A5); MOVE.B #ff,54a2(A5); MOVE.B #ff,54a3(A5); MOVE.B #0,549d(A5);
-    // MOVE.B #0,549e(A5); MOVE.B #2,549c(A5); BTST #4,15(A6); BEQ 4bc7a.
+    // ---- 4bc44: CLR.B 549f(A5); CLR.B 54a0(A5); MOVE.B #ff,54a2(A5); MOVE.B #ff,54a3(A5) (falls into 4bc58).
     case 0x4bc44:
         if(!ou8b_put(c,r.a[5],0x549f,1,0) || !ou8b_put(c,r.a[5],0x54a0,1,0) || !ou8b_put(c,r.a[5],0x54a2,1,0xff) ||
-            !ou8b_put(c,r.a[5],0x54a3,1,0xff) || !ou8b_put(c,r.a[5],0x549d,1,0) || !ou8b_put(c,r.a[5],0x549e,1,0) ||
-            !ou8b_put(c,r.a[5],0x549c,1,2) || !ou8b_get(c,r.a[6],0x15,1,value))return false;
+            !ou8b_put(c,r.a[5],0x54a3,1,0xff))return false;
+        r.pc=0x4bc58;return true;
+    // Second entry 4bc58 (N33 4bdfe BRA.W 4bc58): MOVE.B #0,549d(A5); MOVE.B #0,549e(A5); MOVE.B #2,549c(A5); BTST #4,15(A6);
+    // BEQ 4bc7a.
+    case 0x4bc58:
+        if(!ou8b_put(c,r.a[5],0x549d,1,0) || !ou8b_put(c,r.a[5],0x549e,1,0) || !ou8b_put(c,r.a[5],0x549c,1,2) ||
+            !ou8b_get(c,r.a[6],0x15,1,value))return false;
         r.pc=(value&0x10U)?0x4bc74:0x4bc7a;return true;
     case 0x4bc74:if(!ou8b_put(c,r.a[5],0x549c,1,1))return false;r.pc=0x4bc7a;return true; // MOVE.B #1,549c(A5).
     case 0x4bc7a:if(!ou8b_get(c,r.a[6],0x15,1,value))return false;r.pc=(value&0x08U)?0x4bc84:0x4bc8a;return true; // BTST #3,15(A6); BEQ.

@@ -116,8 +116,9 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 - `4bb3c`: `BCLR #5,D7; BEQ 4bb4c` / `4bb44`: `TST.L D2; BMI 4bb4c` / `4bb4a`: `MOVEQ #0,D2`
 - `4bb4c`: `MOVE.B D7,6d(A6); RTS`
 
-**지형 조건 초기화 `4bc44` 5**
-- `4bc44`: `CLR.B 549f(A5); CLR.B 54a0(A5); MOVE.B #ff,54a2(A5); MOVE.B #ff,54a3(A5); MOVE.B #0,549d(A5); MOVE.B #0,549e(A5); MOVE.B #2,549c(A5); BTST #4,15(A6); BEQ 4bc7a`
+**지형 조건 초기화 `4bc44` 6**(F4 N35에서 두 번째 진입 `4bc58`로 나눔)
+- `4bc44`: `CLR.B 549f(A5); CLR.B 54a0(A5); MOVE.B #ff,54a2(A5); MOVE.B #ff,54a3(A5)` (→`4bc58`)
+- `4bc58`: `MOVE.B #0,549d(A5); MOVE.B #0,549e(A5); MOVE.B #2,549c(A5); BTST #4,15(A6); BEQ 4bc7a`
 - `4bc74`: `MOVE.B #1,549c(A5)` / `4bc7a`: `BTST #3,15(A6); BEQ 4bc8a` / `4bc84`: `MOVE.B #0,549c(A5)`
 - `4bc8a`: `BTST #5,61(A6); SNE 54a4(A5); BTST #4,61(A6); SNE 54a5(A5); RTS`
 
@@ -137,11 +138,11 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 - `4bf80`: `BTST #7,15(A6); BNE 4bf98` / `4bf8a`: `JSR 1aa3a.L` / `4bf90`: `ANDI.W #c8,D0; BEQ 4bf9e` / `4bf98`: `JSR 492c8.L`(경계)
 - `4bf9e`: `MOVEM.L (A7)+,D4/D6-D7; RTS`
 
-(block 수: 1+79+24+21+9+5+26 = 165.)
+(block 수: 1+79+24+21+9+6+26 = 166.)
 
 ## 구현 범위와 규약
 
-- routing 7 범위(위 표). 짝수 PC 754개 중 block 시작 165, 내부 589. 내부 PC 직접 진입은 `unsupported animation objects u08b PC`다. 경계 callee 8개와 범위 이웃은 routing 밖이므로 `unsupported animation machine PC`(stop이면 직전 상태로 멈춤, 아니면 rollback)다. 홀수 PC는 `unaligned animation machine PC`다.
+- routing 7 범위(위 표). 짝수 PC 754개 중 block 시작 166, 내부 588. 내부 PC 직접 진입은 `unsupported animation objects u08b PC`다. 경계 callee 8개와 범위 이웃은 routing 밖이므로 `unsupported animation machine PC`(stop이면 직전 상태로 멈춤, 아니면 rollback)다. 홀수 PC는 `unaligned animation machine PC`다.
 - 조건 판정은 원본 flag 그대로 계산한다(크기별 명시, 미정의 동작 없음). `ADD`의 V=((¬(s⊕d))∧(d⊕r))의 최상위 bit, `SUB`/`CMP`의 V=((s⊕d)∧(d⊕r))의 최상위 bit(r=d−s), `SUBQ.W #8`·`CMPI.W`의 C=(d <u s), `ADD.B D7,D7`의 C=bit 7. `BLE`=Z∨(N≠V), `BGE`=(N=V). `NEG.L`·`ASR.L #1`은 32bit 2의 보수·산술 이동이다. `BTST #n,Dn`·`BCLR #n,Dn`은 bit n(mod 32), 메모리 `BTST #n,d16(A6)`은 BYTE bit n(mod 8)이다.
 - `SUBX.L D4,D4`(block `46398`/`464ac`): X=(`ADDI.L #80000000,D6`의 carry)=원래 D6 bit31. D4=0−0−X. 이후 명령이 X를 다시 정하지만 block 밖에서 쓰이지 않는다.
 - **carry.** [F] U08b 함수 9개의 ROM 정적 호출(BSR/JSR/BRA) 뒤 흐름을 C 보존 명령(`BTST`/`BCLR`/`BRA`/`LEA`/`MOVEM`/Z·N·V Bcc)을 따라 최대 12명령 검사했다(`461ec` 2, `46372` 1, `4683c` 1, `468e0` 1, `4bb22` 3, `4bc44` 14, `4be34` 260, `4be82` 32, `4bf16` 1곳). C 소비 명령(`BCC`/`BCS`/`BHI`/`BLS`/`Scc`/`ADDX`/`SUBX`/`ROXL`/`ROXR`)에 먼저 닿는 곳은 없다(유일한 CCR 명령 `7918c ORI.B #1,CCR`은 C를 새로 정한다). 호출자 `RTS`로 이어지는 곳의 바깥 소비는 그 호출자 단위가 정한다(관례대로 Unknown). 경계 callee 뒤 첫 명령(`46388 SUBI` `463b8 BSR` `463bc MOVEQ` `4649c SUBI` `464ce MOVE` `4688e MOVE` `4be86 MOVE` `4be9a ADD` `4bea6 MOVE` `4bf10 MOVEM`→`4bf16 MOVE` `4bf9e MOVEM`→`RTS`)도 C를 소비하지 않는다. 따라서 known 생산 block을 두지 않는다.
@@ -161,6 +162,11 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 - 단위 test(`run_animation_machine`만): 165 시작 모두 도달, 시작마다 3 carry로 한 block 후계와 carry 분류(FLOW_ONLY 보존, 그 밖 Unknown), zero-step, 내부 589 PC 정확한 오류, 홀수 PC, 경계·이웃 오류. 자연에 없는 길은 원본 코드로 만든 typed fixture(Unicorn, 필요한 ROM 자료는 합성 바이트 overlay)로 비교한다. SUBX의 X 양쪽, `BVC`·`BLE`·`BGE` 경계값, `4beec` Z 양쪽, `461ec` 홀수 index 오류를 포함한다.
 - 실제 ROM 차분: `461ec`(96 index와 `160`), `46372`(D2·D6·D7·`54b4`·`54ae`·`54a4/5` 조합, `447be`/`4483a`까지 실제 ROM으로), `468e0`(실제 ROM 사각형 `4bca0..4bce0`과 RAM 사각형), `4683c`(D2=D3=0 경로와 `4662e` 경계까지), `4bb22`, `4bc44`, `4be34`·`4bf16`(경계 `469d8`·`492c8`까지)을 실제 program ROM resource로 C++와 Unicorn에서 같은 결과로 실행한다.
 - 차분(F2 프레임 패스, 142 seed): `b4ba243` 기준(일치 pass 9,776, 일치 node 73,326/73,328, 불일치 seed 2(58·59, 기존 U06 PVC 경로), 자연 완주 58) 회귀 0이고, 첫 미연결 callback 분포 변화를 보고한다.
+
+## 두 번째 진입 `4bc58`(F4 N35에서 추가)
+
+- [F] N33 `4bdfe MOVEM.L (A7)+,D0-D7; BRA.W 4bc58`(ROM 참조 `4be02` 하나)이 block `4bc44`의 다섯 번째 명령으로 들어간다(N33 계약 결정 5). `4bc44`를 앞 4 명령(후속 `4bc58`)과 `4bc58`(뒤 3 명령 + `BTST`/`BEQ`)로 나눴다. 실행 의미·쓰기 순서는 같고 둘 다 Unknown(MOVE)이며 FLOW 27은 그대로다. block 165 → 166, 내부 589 → 588.
+- [F] 단위 test: BLOCKS `4bc44` 행(후속 `4bc58`)과 새 `4bc58` 행, fixture `4bc58-0` `-10` `-08` `-18`(`549f` `54a0` `54a2` `54a3`은 그대로 남음)을 Unicorn으로 만들었다. 같은 scratch 생성기(`ms5-scratch/n35/u08b/gen_u08b.py`)가 기존 BLOCKS 165행과 성공 fixture 231개를 먼저 바이트 단위로 재현했다.
 
 ## 미확인·범위 밖
 
