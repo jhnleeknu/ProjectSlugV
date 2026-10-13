@@ -2088,3 +2088,11 @@
 - 사용자 지시("계속 진행해")로 Codex 통합 인수(`9682aed`, U01~U16·F2/F3·회귀 35/35) 위에서 F4 객체 callback 단위를 U17부터 이어 간다. 기존 전체 Goal과 완료 기준은 그대로이며 작업 브랜치는 `codex/f4-continue`다.
 - 메인 Claude Opus 5.5가 범위·결정·리뷰·통합을 맡고, 단위마다 Claude Opus 5.5/high 작업자가 계약과 C++ core를 별도 worktree에서 작성한다(U17, U18 동시 진행). 검증 기준은 단위 시험·실제 ROM 차분·기본 frame-pass 비교·RNG 400 frame 비교이며, 묶음 단위로 독립 원본 관측과 C++ 검증을 덧붙인다.
 - 시험의 "실행부 없음" rollback 탐침은 이후 단위(U36/U37)와 겹치는 5f6xx~5ffxx 대신 work RAM PC(10fe00..10fefe)를 쓴다. 기존 5fxxx 탐침은 U36/U37 전에 옮긴다.
+
+## 2026-10-13 — F4 U17~U20b·N01~N21 연결 (재산정 1차 묶음 완료)
+
+- 메인 Claude Opus 5.5, 단위마다 Claude Opus 5.5/high 작업자가 계약·C++ core·단위 시험·실제 ROM 차분·frame-pass/RNG 400 차분을 별도 worktree에서 수행하고 메인이 리뷰·결정·병합했다. Codex Astra/Sol 미사용.
+- 범위 재산정(`animation-machine-object-callbacks-f4-rescope.md`)에 따라 U17, U18, U19, U20a, U20b, N01~N21(N16a, N19 일부)을 연결했다. 단위마다 정적 디코드 block 시작, 범위 안 설치 callback 포함, 미참조 코드 미연결, 앞 block이 여럿인 flag 분기는 각 앞 block에 묶음, known C는 실제 소비 분기로 확인하는 규칙을 지켰다.
+- 인터프리터 명령 callback 허용 목록을 없애고 live target routing으로 바꿨으며(원본 `JSR (A1)` 앞에 거르기 없음), `49f8c` 두 번째 진입점 `49f96`, cleanup `43e04`·`2a24` 진입을 더했다.
+- RNG 초기화 400 frame 원본 비교: 자연 seed 137개 중 130개가 원본과 같게 완주(불일치 0). 기본 120 frame 비교도 불일치 0. 남은 seed는 N22~N35 단위의 첫 미연결 callback에서 checked 오류로 멈춘다.
+- 미뤄 둔 것: N16b(107), N19b(31), U19b(86) 등 400 frame 안에서 실행되지 않는 설치 체인, 고아 설치 callback(31 대상), 1a3ac 경계. 묶음 G2(U17~N01) 원본 관측 완료, C++ 검증·이전 검증기 정렬은 진행 중. 자연 scheduler·IRQ/timing·F5(frame head·controller)·전체 Goal은 미완료이며 active다.
