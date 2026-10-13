@@ -700,11 +700,12 @@ void caf0_tail(){
  Bytes r=zero_ram();putf(r,0x544e,1,0xff);State u=state(0x1afda);Out q;assert(run(r,u,0xcaf0,q)&&quiet(q)&&u.a[7]==SP&&getf(r,0x544e,1)==0&&(u.d[6]&255U)==0xff&&u.d[7]==0);
 }
 // Path opcode index policy (19e86 JMP 19e8a+D7.W): non-slot even PCs inside U4 are rejected, odd PCs fail
-// alignment, PCs outside every executor are unsupported; failures after earlier writes roll back.
+// alignment, PCs outside every executor are unsupported; failures after earlier writes roll back. The opcode 7ffc (target 21e86)
+// replaces 1000, whose target 1ae8a is now an F5 frame head H1 interior PC.
 void path_policy(){
  struct Op {std::uint32_t op;const char*message;};
  const Op ops[]={{0x2,"unsupported animation scene update PC"},{0x1e,"unsupported animation scene update PC"},{0x22,"unsupported animation scene update PC"},
-  {0x7fff,"unaligned animation machine PC"},{0x1001,"unaligned animation machine PC"},{0x1000,"unsupported animation machine PC"},{0x7ffe,"unsupported animation machine PC"}};
+  {0x7fff,"unaligned animation machine PC"},{0x1001,"unaligned animation machine PC"},{0x7ffc,"unsupported animation machine PC"},{0x7ffe,"unsupported animation machine PC"}};
  for(unsigned int i=0;i<sizeof(ops)/sizeof(ops[0]);++i){Bytes ram=zero_ram();put(ram,P0,4,STR);put(ram,STR,2,0x00);put(ram,STR+6,2,ops[i].op);
   reject(ram,state(0x19e64),STOP,ops[i].message);}
  // From the frame entry: the opcode 0002 of node 0 fails after the node/camera writes.

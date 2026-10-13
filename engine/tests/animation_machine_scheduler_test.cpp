@@ -363,14 +363,15 @@ void interior(){
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
 // Host checks of the frame pass: a frame head callback other than e4a / e74 is rejected before any run (nothing changes), and
-// a stop that is not that callback runs the pass past the frame head (the frame head e4a has no executor).
+// a stop that is not that callback runs the pass past the frame head (the head LONG is the work RAM PC 10fe40, which has no executor;
+// it replaces e4a, an F5 frame head H1 block start).
 void host(){
  const std::uint32_t bad[]={0x270e,0x2ac2,0xc52a,0,0xe4b};
  for(unsigned int i=0;i<sizeof(bad)/sizeof(bad[0]);++i){Bytes ram=frame_base(4);put(ram,HEAD,4,bad[i]);const std::uint32_t regs[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0x108000,CONTROLLER,SPD};
   State s=state_of(regs,0x2ac2,0);const Bytes before=ram;const State old=s;const unsigned int c0=calls;Out o;
   assert(!frame_pass(ram,s,o)&&o.error==HEAD_REJECT&&ram==before&&same(s,old)&&calls==c0);}
- {Bytes ram=frame_base(4);const std::uint32_t regs[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0x108000,CONTROLLER,SPD};State s=state_of(regs,0x2ac2,0);
-  reject(ram,s,0xe74,"unsupported animation machine PC");}
+ {Bytes ram=frame_base(4);put(ram,HEAD,4,0x10fe40);const std::uint32_t regs[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0x108000,CONTROLLER,SPD};
+  State s=state_of(regs,0x2ac2,0);reject(ram,s,0xe74,"unsupported animation machine PC");}
 }
 }
 int main(){
