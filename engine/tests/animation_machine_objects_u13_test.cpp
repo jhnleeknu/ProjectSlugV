@@ -478,22 +478,22 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u13 PC");++inside;}
  assert(even==345&&inside==269);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- // Rollback probes only in the unrouted 5f6xx..5ffxx range (no F4 unit PC; F4 unit test boundary convention).
- const std::uint32_t outside[]={0x5fc10,0x5fc20,0x5fc30};
+ // Rollback probes only in work RAM 10fe00..10fefe (code never executes in RAM; F4 unit test boundary convention).
+ const std::uint32_t outside[]={0x10fe40,0x10fe42,0x10fe44};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x7090b,0x7091d,0x70933,0x70a6b,0xb80c5,0xb812b,0xb8133,0xb81bd,0xb83e7,0xb83ff,0xea5f1,0xea5ff,0xea60d,
   0xea625,0xf1a4f,0xf1a79};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
 // U12 boundary callees (70418, 4c0ac, 490ba, 1abda): only the stop at that PC is asserted (U12 routes them). Rollback through an
-// unrouted PC uses 5fc10 as the return LONG of runs that end in a U13 RTS. The 4 consumers reject an Unknown C.
+// unrouted PC uses 10fe40 as the return LONG of runs that end in a U13 RTS. The 4 consumers reject an Unknown C.
 void boundaries(){
  const char* names[]={"7090a","b8132","b8110","ea5f0"};
  const std::uint32_t want[]={0x70418,0x4c0ac,0x490ba,0x1abda};
  for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(f.stop==want[i]&&final_of(names[i]).s.pc==want[i]);}
  const char* rts[]={"70914-e-5a-3","70914-0-a5-0","7093e","b811c","b80d8","ea624","ea61e","f1a5a-1","ea5f6-c1","b80ce-c1"};
  for(unsigned int i=0;i<sizeof(rts)/sizeof(rts[0]);++i){const Fixture&f=fixture_of(rts[i]);assert(f.stop==STOP);Bytes ram=base_ram(f.puts);
-  put(ram,SP,4,0x5fc10);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
+  put(ram,SP,4,0x10fe40);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
  const char* consumers[]={"b80ce-c1","b819c-c2-7f","b83f2-c1","ea5f6-c2"};
  for(unsigned int i=0;i<4;++i){const Fixture&f=fixture_of(consumers[i]);assert(f.entry==CONSUMERS[i]);Bytes ram=base_ram(f.puts);
   State s=state_of(f.regs,f.entry,0);reject(ram,s,f.stop,"objects u13 caller requires known carry");}

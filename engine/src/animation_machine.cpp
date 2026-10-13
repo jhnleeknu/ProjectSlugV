@@ -818,6 +818,14 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x5ec9c:case 0x5eca0:case 0x5eca6:case 0x5ecf4:case 0x5ecfa:case 0x5ed00:case 0x5ed94:case 0x5edca:case 0x5edce:case 0x5edfa:
     case 0x5ee16:case 0x5ee1c:case 0x5eeaa:case 0x5f006:case 0x5f00c:case 0x5f074:case 0x5f0e8:case 0x5f15a:case 0x5f174:case 0x5f182:
     case 0x5f184:case 0x5f18a:case 0x5f190:case 0x5f1c2:case 0x5f1dc:case 0x5f1fe:case 0x5f218:case 0x5f238:
+    // Objects N26 (F4) blocks: JSR-only blocks, MOVEA+JSR 5fa02, LEA(+BRA) blocks 5f308 5f310 5f46c 5f474 5fcc4 5fccc, BRA blocks, RTS
+    // and the consumers 5f394 5f876 5fcb4 (BCC.W after JSR 49fc6), 5f3c4 5f3ea 5f414 5f43a (BCC.W after JSR 28ae). 5f3d6 5f3fc 5f426
+    // 5f44c (ORI.B #1,CCR) set a known Set that no block consumes; every other block stays Unknown.
+    case 0x5f26a:case 0x5f270:case 0x5f308:case 0x5f310:case 0x5f32e:case 0x5f336:case 0x5f354:case 0x5f386:case 0x5f388:case 0x5f38e:
+    case 0x5f394:case 0x5f3c4:case 0x5f3ea:case 0x5f400:case 0x5f414:case 0x5f43a:case 0x5f45c:case 0x5f46c:case 0x5f474:case 0x5f4ae:
+    case 0x5f774:case 0x5f77a:case 0x5f860:case 0x5f86e:case 0x5f870:case 0x5f876:case 0x5f9a4:case 0x5f9f8:case 0x5fa02:case 0x5fa66:
+    case 0x5fab4:case 0x5fb02:case 0x5fb04:case 0x5fb2e:case 0x5fb34:case 0x5fbd8:case 0x5fc48:case 0x5fc62:case 0x5fc70:case 0x5fc8c:
+    case 0x5fc8e:case 0x5fc9c:case 0x5fca6:case 0x5fca8:case 0x5fcae:case 0x5fcb4:case 0x5fcc4:case 0x5fccc:case 0x5fd02:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1218,6 +1226,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x319f6 && next.pc<0x31a54) || (next.pc>=0x3310c && next.pc<0x3312c))ok=animation_objects_n29_block(c);
             else if ((next.pc>=0x5e8b0 && next.pc<0x5ea38) || (next.pc>=0x5eac2 && next.pc<0x5eeac) ||
                 (next.pc>=0x5efe6 && next.pc<0x5f23a))ok=animation_objects_n25_block(c);
+            else if ((next.pc>=0x5f24a && next.pc<0x5f4b0) || (next.pc>=0x5f760 && next.pc<0x5fb06) ||
+                (next.pc>=0x5fb0e && next.pc<0x5fd04))ok=animation_objects_n26_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

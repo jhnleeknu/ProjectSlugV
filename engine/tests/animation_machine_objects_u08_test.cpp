@@ -627,7 +627,7 @@ void zero_step(){
 }
 // Every other even PC of the 5 routed ranges (the BRA.W displacement WORDs included) is rejected by the U08a executor; the
 // range neighbours and the RAM probes 10fe1c/10fe1e by the routing (47288 is an objects U11 block start since the U11 merge and
-// the unrouted 5f802 stands in for it; the next table function 44ade is objects U20 now); odd PCs first.
+// the unrouted 10fe40 stands in for it; the next table function 44ade is objects U20 now); odd PCs first.
 void interior(){
  unsigned int even=0,inside=0;
  for(unsigned int r=0;r<RANGE_COUNT;++r)for(std::uint32_t pc=RANGES[r][0];pc<RANGES[r][1];pc+=2){++even;
@@ -635,7 +635,7 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u08 PC");++inside;}
  assert(even==472&&inside==291);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- const std::uint32_t outside[]={0x5f802,0x10fe1c,0x10fe1e,0x18be6,0x1aa38,0x1aa40,0x447bc,0x10fe14,0x5fa10,0x3c83e}; // 47288 is U11, 492c8 is U12, 4929e is U17 now
+ const std::uint32_t outside[]={0x10fe40,0x10fe1c,0x10fe1e,0x18be6,0x1aa38,0x1aa40,0x447bc,0x10fe14,0x10fe42,0x3c83e}; // 47288 is U11, 492c8 is U12, 4929e is U17 now
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x18be9,0x18c05,0x1aa3b,0x43eb9,0x43ef9,0x447bf,0x4483b,0x4483f,0x449bf,0x44add,0x49275,0x4929d};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
