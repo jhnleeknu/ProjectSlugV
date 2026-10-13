@@ -132,8 +132,8 @@ void errors(){
  put(ram,0x104ca0,2,1);put(ram,0x104c9c,4,0x103001);s=state(0x28ae);s.d[0]=0;reject(ram,s,STOP,"even WORD/LONG");
  const std::uint32_t bundled[]={0x4806e,0x48094,0x480b0,0xc38a,0x28ba,0x28c2,0x28d6,0x48050,0x48064,0xc366,0x28c8,0x2902};
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){s=state(bundled[i]);reject(ram,s,STOP,"unsupported animation fade card PC");}
- // 4abc0 follows the U7 4aa88 range (no executor); 5f038/5f03a replace 2aac/2ab2 (now the F2 scheduler executor).
- const std::uint32_t outside[]={0x4abc0,0x5f038,0x5f03a,0x2a04,0x2a08,BIOS};
+ // 4abc0 follows the U7 4aa88 range (no executor); 10fe20/10fe22 replace 2aac/2ab2 (now the F2 scheduler executor).
+ const std::uint32_t outside[]={0x4abc0,0x10fe20,0x10fe22,0x2a04,0x2a08,BIOS};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){s=state(outside[i]);reject(ram,s,STOP,"unsupported animation machine PC");}
 }
 }

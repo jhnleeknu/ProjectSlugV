@@ -489,9 +489,9 @@ void interior(){
  for(unsigned int i=0;i<BUNDLED_COUNT;++i)assert(!is_start(BUNDLED[i])&&in_ranges(BUNDLED[i]));
  for(unsigned int i=0;i<5;++i){Bytes ram;State s;generic(Z_F3B[i],ram,s,2);reject(ram,s,STOP,"unsupported animation stage event ops PC");}
  // 1a93c (the 1a92c RTS) is an F3b interior PC; the former neighbours e94fe e9350 e9362 e9774 e97c6 e9428 e939a are F3b block
- // starts (animation_machine_stage_event_ops_test) and the unrouted 5f028..5f034, outside every unit contract, stand in for them.
+ // starts (animation_machine_stage_event_ops_test) and the unrouted 10fe20..10fe2c, outside every unit contract, stand in for them.
  {Bytes ram;State s;generic(0x1a93c,ram,s,2);reject(ram,s,STOP,"unsupported animation stage event ops PC");}
- const std::uint32_t outside[]={0x5f028,0x5f02a,0x5f02c,0xe914e,0x5f02e,0x5f030,0xe98ee,0x48500,0x4855c,0x1a91a,0x1a952,0x5f032,0x5f034,
+ const std::uint32_t outside[]={0x10fe20,0x10fe22,0x10fe24,0xe914e,0x10fe26,0x10fe28,0xe98ee,0x48500,0x4855c,0x1a91a,0x1a952,0x10fe2a,0x10fe2c,
   0x5f9f2,0x43e36}; // 43e04 is a cleanup block start since F4 U10
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   reject(ram,s,STOP,"unsupported animation machine PC");}

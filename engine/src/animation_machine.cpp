@@ -794,6 +794,14 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x5e3ce:case 0x5e414:case 0x5e524:case 0x5e574:case 0x5e57e:case 0x5e5bc:case 0x5e5ec:case 0x5e62a:case 0x5e65a:case 0x5e68e:
     case 0x5e6de:case 0x5e728:case 0x5e7aa:case 0x5e7d8:case 0x5e7dc:case 0x5e7ea:case 0x5e7f0:case 0x5e7f6:case 0x5e7fe:case 0x5e846:
     case 0x5e878:case 0x5e8a0:case 0x5e8a4:
+    // Objects N25 (F4) blocks: JSR-only blocks, ST.B+JSR 5e9ec, ST.B 5edca, BRA blocks, RTS (5e8be 5e8c6 5e9d4 5ebde 5eeaa 5f182 5f238)
+    // and the consumers 5ec9c (BCS.W after JSR 49370), 5ee1c 5f190 (BCC.W after JSR 49fc6). N25 has no known C producer; every other
+    // block stays Unknown.
+    case 0x5e8b0:case 0x5e8be:case 0x5e8c0:case 0x5e8c6:case 0x5e8dc:case 0x5e95c:case 0x5e97a:case 0x5e97e:case 0x5e9d4:case 0x5e9ec:
+    case 0x5ea2e:case 0x5ea34:case 0x5eae2:case 0x5eae8:case 0x5ebc8:case 0x5ebd0:case 0x5ebde:case 0x5ec1e:case 0x5ec88:case 0x5ec96:
+    case 0x5ec9c:case 0x5eca0:case 0x5eca6:case 0x5ecf4:case 0x5ecfa:case 0x5ed00:case 0x5ed94:case 0x5edca:case 0x5edce:case 0x5edfa:
+    case 0x5ee16:case 0x5ee1c:case 0x5eeaa:case 0x5f006:case 0x5f00c:case 0x5f074:case 0x5f0e8:case 0x5f15a:case 0x5f174:case 0x5f182:
+    case 0x5f184:case 0x5f18a:case 0x5f190:case 0x5f1c2:case 0x5f1dc:case 0x5f1fe:case 0x5f218:case 0x5f238:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1187,6 +1195,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x306a8 && next.pc<0x306b4) || (next.pc>=0x30718 && next.pc<0x307da) ||
                 (next.pc>=0x30ed2 && next.pc<0x30ed6) || (next.pc>=0x30f84 && next.pc<0x31002))ok=animation_objects_n28_block(c);
             else if (next.pc>=0x5deec && next.pc<0x5e8a6)ok=animation_objects_n24_block(c);
+            else if ((next.pc>=0x5e8b0 && next.pc<0x5ea38) || (next.pc>=0x5eac2 && next.pc<0x5eeac) ||
+                (next.pc>=0x5efe6 && next.pc<0x5f23a))ok=animation_objects_n25_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

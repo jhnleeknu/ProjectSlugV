@@ -190,8 +190,8 @@ void errors(){
   0x38d0,0x38d2,0x38d4,0x38d6,0x38da,0x38e6,0x38ec,0x38f6,0xc2ae,0xc2b0,0xc2b2,0xc2b6,0xc2b8};
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){s=state(bundled[i]);reject(menu_ram(),s,STOP,"unsupported animation card menu PC",&p);}
  // Boundaries without an executor and neighbours outside the routed ranges.
- // 5f080 replaces e84d6 (now the objects U03 glyph writer).
- const std::uint32_t outside[]={TRAP_F,0x9ee6,TRAP_N,TRAP_L,0xc00468,0xa09e,0xa1e2,0xa29a,0x5f080,0x386c,0x3900,0xc2a6,0xc2fa};
+ // 10fe20 replaces e84d6 (now the objects U03 glyph writer).
+ const std::uint32_t outside[]={TRAP_F,0x9ee6,TRAP_N,TRAP_L,0xc00468,0xa09e,0xa1e2,0xa29a,0x10fe20,0x386c,0x3900,0xc2a6,0xc2fa};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){s=state(outside[i]);reject(menu_ram(),s,STOP,"unsupported animation machine PC",&p);}
  s=state(0xa0a1);reject(menu_ram(),s,STOP,"unaligned animation machine PC",&p);
 }
