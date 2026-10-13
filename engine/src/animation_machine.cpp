@@ -895,6 +895,18 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xfae:case 0xfb4:case 0xfd6:case 0x1000:case 0x3dc0:case 0x8bc8:case 0x8bde:case 0x8c14:case 0x903a:case 0x9054:
     case 0x955c:case 0x166c8:case 0x16bb8:case 0x16bc8:case 0x16c18:case 0x16c2c:case 0x16c4c:case 0x16c98:case 0x16cae:case 0x16ccc:
     case 0x187d6:case 0x1ae78:case 0x1ae84:case 0x1ae90:
+    // Objects N32b (F4) blocks: JSR-only blocks, MOVEA/LEA(+JSR) blocks, BTST (Z only, +Bcc) blocks, BRA blocks (the 18 BRA.W table
+    // slots of 39e7a / 39f4e among them) and the 8 consumers 39c58 39d78 (BCC.W after JSR 3b334), 39c90 39d9e (BCC.W after JSR 28ae),
+    // 39e40 39f7c (BCC.W after JSR 1ab02) and 39c30 39d50 (MOVEM.L (A7)+,D0; BCS.W after JSR 3a4da). 39c9e / 39dac (ORI.B #1,CCR) set C
+    // in the executor; every other block stays Unknown.
+    case 0x39b72:case 0x39b7c:case 0x39b80:case 0x39b8a:case 0x39bb2:case 0x39bbc:case 0x39bc8:case 0x39bd0:case 0x39bd8:case 0x39be2:
+    case 0x39bea:case 0x39bf4:case 0x39c14:case 0x39c30:case 0x39c38:case 0x39c40:case 0x39c48:case 0x39c50:case 0x39c54:case 0x39c58:
+    case 0x39c6a:case 0x39c90:case 0x39ca2:case 0x39cb0:case 0x39cda:case 0x39ce4:case 0x39ce8:case 0x39cf0:case 0x39cf8:case 0x39d02:
+    case 0x39d0a:case 0x39d14:case 0x39d34:case 0x39d50:case 0x39d58:case 0x39d60:case 0x39d68:case 0x39d70:case 0x39d74:case 0x39d78:
+    case 0x39d9e:case 0x39db0:case 0x39dc6:case 0x39dd0:case 0x39e36:case 0x39e40:case 0x39e5c:case 0x39e60:case 0x39e7a:case 0x39e7e:
+    case 0x39e82:case 0x39e86:case 0x39e8a:case 0x39e8e:case 0x39e92:case 0x39e96:case 0x39e9a:case 0x39e9e:case 0x39eae:case 0x39ec4:
+    case 0x39ece:case 0x39ef4:case 0x39f1c:case 0x39f20:case 0x39f2a:case 0x39f34:case 0x39f4e:case 0x39f52:case 0x39f56:case 0x39f5a:
+    case 0x39f5e:case 0x39f62:case 0x39f66:case 0x39f6a:case 0x39f6e:case 0x39f72:case 0x39f7c:case 0x39f8a:case 0x39f94:case 0x39f98:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1314,6 +1326,7 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x8bc8 && next.pc<0x8c16) || (next.pc>=0x903a && next.pc<0x9056) || (next.pc>=0x9546 && next.pc<0x955e) ||
                 (next.pc>=0x166bc && next.pc<0x16cfa) || (next.pc>=0x1879c && next.pc<0x187d8) || (next.pc>=0x1ae56 && next.pc<0x1aeb4) ||
                 (next.pc>=0x43dbc && next.pc<0x43dcc))ok=animation_frame_head_h1_block(c);
+            else if ((next.pc>=0x39b72 && next.pc<0x39ca6) || (next.pc>=0x39cb0 && next.pc<0x39f9c))ok=animation_objects_n32b_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
