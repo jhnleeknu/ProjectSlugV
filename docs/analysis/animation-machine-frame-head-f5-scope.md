@@ -381,3 +381,13 @@ Claude Opus 5.5 / high 읽기 전용 분석 작업자가 작성했다. 기준:
 3. `e40`(aux 설정)·`107df6`(menu callback)의 실제 사용 여부(BIOS·디버그 경유 가능성).
 4. Duff 진입 D7.B 범위가 모든 8곳에서 `ANDI #1f`/`ADD.B`로 제한되는지. 첫 routine 형태로 추론했고 각 routine의 정확한 선행 경로는 단위 계약에서 확인한다.
 5. controller 자식 7개와 게임 mode 상태(`c79a` 이후)의 매 frame 의미.
+
+## 관측 결과에 따른 정정
+
+native 관측(`tools/observe_animation_machine_frame_head.py`, 결과 문서 `docs/analysis/animation-machine-frame-head-observation.md`, 관측 SHA256 `4fe4f796879af90df1c1fd4c753485a9bf0a04d2667b14b8c00dbab23879b16b`)에서 이 문서의 탐침 수치와 달랐던 점이다. 결정 D1~D10은 바꾸지 않는다. 수치는 첫 두 run(`observation.json` SHA256 `dbb631a8008a6da7ea6055dc9db7ea12aaeda01d557f471f1f0e8dc41ff915a0`)에서 읽었다.
+
+1. **`16bd0` sprite flush 대기는 seed 0·1·2·135에 한정되지 않는다.** [F] 자연 seed 100개에서 발생했고 합계 8,100회다(36 seed는 0회). 대표값은 seed당 85회(61개 seed)이고 81회 25개 seed, 나머지는 80/84/70/61/50/39회 등이다. 2.3절의 "seed 0·1·2·135, 85회"는 실험 C의 full dump 표본 7개에서만 본 값이다. 해제 선언(D5)은 그대로이고 적용 범위만 넓다.
+2. **자연 실행 leader 563 대 577.** [F] 탐침(2절)의 563은 자연 pass-end 상태 5,017개에서 head를 실행해 센 값이다(실행된 leader 수, 탐침 방식). 관측 도구의 577은 136개 완주 seed의 H 54,264개에서 H segment가 실행한 translation block 바이트 범위 안에 든 leader를 센 값이다(block hook). 세는 방식(명령 단위 대 TB 범위)과 입력 상태 집합이 달라 14개 차이가 난다. [U] 14개의 개별 원인은 비교하지 않았다. 이후 커버리지 기준은 577(자연) + 4(변종) + 1,666(fixture)이며 미커버는 47개(Duff 7 포함)다.
+3. **H당 port·RAM 변경 최댓값.** [F] 탐침은 상태당 RAM 쓰기 1,000~4,209바이트, port 14~6,372건이었다(표본 pass-end 상태). 관측은 seed별 한 H의 최댓값으로 port 14~2,644건, RAM 변경 바이트(pre/post 차이) 516~2,348이다. 지표가 다르다(쓰기 바이트 대 변경 바이트). port 상한도 관측 쪽이 낮다. 탐침은 분포가 넓은 5,017개 pass-end 상태를, 관측은 실제 400 frame 연쇄의 H 54,264개를 보았다. [U] 탐침의 6,372건을 낳은 상태는 관측 연쇄에서 나타나지 않았다.
+4. **입력 recorder `349c..3520`은 도달 불가.** [F] `3360`/`3364`는 `349c` recorder 호출 경로(`3360`: `BSR.W` -> `349c`)이며, 그 앞 `3358`의 `TST.W ($0180).W` 뒤 `BEQ.W`(`335c`)가 WORD `0180`=0일 때 `3368`로 건너뛴다. 원본 ROM(`extracted/program/maincpu.decrypted.be.bin`, SHA256 `29112a94…c886c860f`, 읽기 전용)에서 file offset `0x180`..`0x181` = `00 00`이다(fixed 영역이므로 CPU 주소 `000180`과 file offset이 같다). 따라서 이 ROM에서는 recorder가 실행되지 않으며 미커버로 남은 leader(`3360`, `3364`, `349c`..`3522` 등)는 정적 도달 불가 후보다.
+5. **IRQ 신호 필드 `100016`/`100017`는 vblank 변종으로 확인.** [F] `BYTE 100017`을 1·2로 선언한 변종(`vblank1`/`vblank2`/`combo`)에서 `ef2`가 매 frame 대기하고 `100016 := 100017`으로 해제되어 400 frame을 완주했다(seed 0에서 `ef2` 도달 798, 해제 399). `108016`/`108017` 표기는 오기라는 앞의 정정을 확인한다. 자연 seed는 `100017`=0이므로 vblank 대기는 변종·fixture에서만 나온다. 자연 IRQ는 주장하지 않는다.
