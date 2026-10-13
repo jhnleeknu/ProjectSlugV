@@ -8,7 +8,7 @@
 - RTS 앞 known C는 실제 ROM 소비자를 복귀 주소로 둔 native 분기로만 확인한다(Unicorn SR 불가).
 - `animation_machine_interpreter.cpp`와 다른 단위 실행부는 고치지 않는다(N28에는 기존 실행부의 두 번째 진입이 필요 없다). DIV 0 제수는 단위 checked 오류(N28에는 DIV가 없다).
 - 계산 점프 표는 정적으로 묶고 전부 전사한다(N28에는 PC 상대 BRA.W 점프 표가 없다). LONG 포인터 표 + `JMP (An)`은 live bus 읽기 + live target(N28에는 레지스터 간접 제어 이동이 없다).
-- ~220 block을 넘으면 나눈다(N28은 151 block이라 나누지 않는다).
+- ~220 block을 넘으면 나눈다(N28은 152 block이라 나누지 않는다).
 - N24(`5deec..5e8c8`)가 동시에 진행된다. N28 routing 범위는 N24와 겹치지 않는다.
 
 - 결정 3(관례): block 시작은 정적 디코드(진입, 분기 대상, 조건분기 fall-through, JSR/BSR 복귀점, 범위 안 `MOVE.L #imm,(A6)` 설치, 범위 밖에서 참조하는 범위 안 진입, LEA로 넘기는 code pointer)로 정한다. Unicorn TB 분할은 시작이 아니다.
@@ -19,7 +19,7 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 
 ## 요약
 
-- [F] **N28 = 151 block**(12 routing 범위, 코드 1,746바이트, 짝수 PC 873, 내부 722). 진입 10개(`2b8a0` `2b8a6` `2b96c` `2b99c` `306a8` `30718` `3075a` `2b692` `2c7fe` `2ca68`)에서 분기·fall-through·범위 안 설치를 끝까지 따라간 정적 closure다. 재범위 150은 400 frame 안에 실행되는 함수 본문 span(동적 TB 소유 포함)이고, 차이는 결정 1이다.
+- [F] **N28 = 152 block**(12 routing 범위, 코드 1,746바이트, 짝수 PC 873, 내부 721; 두 번째 진입 `30fa0` 반영, 결정 9). 진입 10개(`2b8a0` `2b8a6` `2b96c` `2b99c` `306a8` `30718` `3075a` `2b692` `2c7fe` `2ca68`)에서 분기·fall-through·범위 안 설치를 끝까지 따라간 정적 closure다. 재범위 150은 400 frame 안에 실행되는 함수 본문 span(동적 TB 소유 포함)이고, 차이는 결정 1이다.
 - [F] 진입:
   - stage event callback(고정 ROM LONG 표 `e8cc0..e8cdc`의 `e8cc4` = `2b8a6`, `e8ccc` = `2b8a0`, `e8cd4` = `306a8`). `2b8a0`은 `BSET.B #0,15(A6)` 뒤 `2b8a6`으로 fall-through한다. 같은 표의 `2b7be` `2b7b8`(형제 callback, 함수 `2b6e6`)과 `3310c`(N29) `304ea` `3fefc`는 범위 밖이다.
   - 범위 안 설치: `2b96c`(`2b8f4`; 범위 밖 `2c638`도 설치), `2b99c`(`2b996`, fall-through), `2c838`(`2c832`, fall-through), `2ca68`(`2c8c0`; 범위 밖 `2c68a` 설치·`2ca60 BRA`), `30718`(`306ac`; 범위 밖 `304f6` `30710` `30efe`), `3075a`(`30754`, fall-through).
@@ -29,7 +29,7 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 - [F] **경계(실행부 없음, 현재 routing 밖) callee 15개**: `2b63e`(`2ba18` `2c89a BSR`; C 반환), `2c71a`(`2c8a8 BSR`), `3165e`(`30774`), `316b2`(`3075a`), `318b8`(`30fd6`), `318d8`(`306a8`), `319f6`(`3078c`; C 반환), `4c37c`(`2b8d6`), `4c3a2`(`2c79a`), `4c3de`(`2c76e`), `4d4b4`(`2c894` `2ca8a`), `4db18`(`2c826`), `4ff96`(`2ca94`), `8d34`(`2c860`), `d3d7c`(`2ca9a` `2cab6` `2cad2` `2caee`). `unsupported animation machine PC`(stop이면 그 PC에서 멈춤, 아니면 rollback)다.
 - [F] **다른 실행부로 가는 callee**: `28ae` `2a00`(fade_card), `2986`(buffer_cue), `3af8`(sound), `8ebe`(U02), `1aa7e` `48296` `4b54e`(U01), `496c2`(U11), `49be0`(U06), `4c0ac`(U12), `49c66`(input), `49f8c` `49fc6`(interpreter; `2b52c JMP 49fc6`), `49214`(N05), `4ae4a`(N08), `4d81c`(stage_area), `4d2d4` `4d508` `4d766` `4da4a` `4da50`(N23; `2b68c JMP 4da50`). 레지스터 간접 제어 이동은 없다.
 - [F] **범위 밖 설치·자식 값(실행 PC가 아님)**: 설치 `2ba50`(`2ba3e`), `307da`(`307ae`), `31002`(`3076e`), `30b6c`(`30f96`, N29 범위); `28ae` 자식 `41fe6`(`2b81e` `2b860`, N22); `2986` 자식 `2cb30`(`2caf4`); 자료 포인터 `2b3d0`(LONG `9e`), `2c7a6`(LONG `98`).
-- [F] **carry**(아래 "carry" 절): 소비 block 10개(모두 FLOW), known 생산 3개(`ORI` Set 2, `ANDI` Clear 1), FLOW_ONLY 53개(소비 10 포함), Unknown 95개. 53 + 3 + 95 = 151.
+- [F] **carry**(아래 "carry" 절): 소비 block 10개(모두 FLOW), known 생산 3개(`ORI` Set 2, `ANDI` Clear 1), FLOW_ONLY 53개(소비 10 포함), Unknown 96개. 53 + 3 + 96 = 152(`30f9c`와 `30fa0` 모두 Unknown).
 - [F] N/Z 재계산·X·DIVx/MULx·PC 상대 점프 표·레지스터 간접 제어 이동·TRAP·I/O port 쓰기·bank 변경이 없다.
 - [F] 스택: JSR/BSR 복귀 LONG, `2b9fa MOVE.W 42(A6),-(A7); MOVE.W 46(A6),-(A7)` / `2ba44 MOVE.W (A7)+,46(A6); MOVE.W (A7)+,42(A6)`(WORD, ±2).
 - [F] 자연 도달(재범위 scratch 재생 `rescope/dyn_rng`·`dyn_base`, TB 시작 기준; scratch `seen28.py`): RNG·base 두 기록 모두 seed 116 117만 N28 범위 PC 77개를 실행한다. callback 실행 수(seed 116 기준, 117 같음): `2b8a6` 1, `2b96c` 1, `2b99c` 80, `306a8` 1, `30718` 1, `3075a` 80, 그리고 N23 `4db8e`의 `JSR (A1)` = `2b692` 80. `2b8a0` `2c7fe..2c8c6` `2ca68..2cb2a` `2b85c..2b874` `2b9d0` `2ba14..2ba3e` `2c77a` `3076e` `30788..307d2` `30f96` `30fae` `30fc2` `30fd0` `30fda` `30ff6`은 자연 400 frame에서 실행되지 않는다.
@@ -53,10 +53,11 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 6. **`2986` caller-X 제한 유지.** [F] `2caf4`가 `JSR 2986`(buffer_cue, A0 = `2cb30`, `D0.W` = `1e`, A1 = `100bf4`)을 부른다. 실패 경로는 buffer_cue 결정 1 선택 A대로 `cue wrapper failure requires known caller X` checked 오류다. N28은 고치지 않는다(자연 400 frame에서 실행되지 않음).
 7. **실행부 파일·오류 문자열.** `engine/src/animation_machine_objects_n28.cpp`의 `animation_objects_n28_block`. 오류는 `unsupported animation objects n28 PC`(내부 PC), `objects n28 caller requires known carry`(소비 10 block). 메인 지시와 같다.
 8. **무효화 탐침 없음.** [F] `engine/tests`·`engine/src`·`tools/*.py`의 16진 토큰 중 N28 routing 범위 짝수 PC와 같은 것은 자료 추출 도구의 ROM 주소(`tools/pack_palettes.py` `2b7e4` `2b7f2` `2b800`, `tools/analyze_branch_object_setup.py` `2b7ce` `2b80e`, `tools/pack_animation_branch.py` `2b7ce`, `tools/observe_animation_machine_scene_core.py`의 검색 끝 `31000`)와 N04 test의 레지스터 값 `2ca78`뿐이다. routing 탐침이나 rollback 기대로 쓰는 곳은 없다.
+9. **두 번째 진입 `30fa0`(N29 요청 수용).** [F] 범위 밖 N29 `30abc BRA.W 30fa0`(`30a9e` 판정 끝)과 N29b `30cb4 BRA.W 30fa0`이 N28 원래 block `30f9c`(`AND.B D0,5e(A6); BCLR.B #6,61(A6); TST.W 88(A6); BEQ.W 30fb8`)의 두 번째 명령으로 들어간다. 결정 3의 관례(범위 밖에서 참조하는 범위 안 진입은 block 시작)에 따라 `30f9c`를 `30f9c`(`AND.B D0,5e(A6)`, 후속 `30fa0`)와 `30fa0`(`BCLR.B #6,61(A6); TST.W 88(A6); BEQ.W 30fb8`, 후속 `30fb8` / `30fae`)로 나눈다. 실행 의미는 바뀌지 않는다(`30f9c` 뒤 곧바로 `30fa0`으로 이어짐; 오류 시 rollback이므로 읽기·쓰기 순서도 같다). 나눈 뒤 block 152, 내부 PC 721이다. [F] carry: `30f9c`의 `AND.B`도 `30fa0`의 `TST.W`도 C를 0으로 만든다. 둘 다 FLOW_ONLY가 아니고 carry 보존 목록(`carry_preserving_pc`)에 넣지 않는다(Unknown 유지, 목록은 53 PC 그대로). routing: `30fa0`은 `30f84..31002` 범위 안이라 N28 실행부로 간다(`animation_machine.cpp` 변경 없음). [U] `30fa0`을 부르는 N29 쪽 test는 `30fa0`을 stop으로만 쓴다(F4 경계 관례).
 
 ## 원본 바이트 근거
 
-[F] N28 코드 12 범위 합계 1,746바이트(짝수 PC 873개, 시작 151, 내부 722). 범위 순서로 이어 붙인 SHA256 `1fd3bf81cfaf5ea49dad71e579a727634a67e1e70fc898c36b6d3c5a7c29a03e`.
+[F] N28 코드 12 범위 합계 1,746바이트(짝수 PC 873개, 시작 152, 내부 721). 범위 순서로 이어 붙인 SHA256 `1fd3bf81cfaf5ea49dad71e579a727634a67e1e70fc898c36b6d3c5a7c29a03e`.
 
 | CPU 범위 | 바이트 | SHA256 | 시작 |
 | --- | --- | --- | --- |
@@ -71,7 +72,7 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 | `306a8..306b4` | 12 | `592bebd1cbe9bb62ec4741e069a1d1664bd4678de3d0bf8c486e6018404b89e4` | 2 |
 | `30718..307da` | 194 | `e54f18ce6f96a17f3300f152d6c933b8dd3b18b6bbf7f5016ae65d7a9e50a630` | 20 |
 | `30ed2..30ed6` | 4 | `13304458ad071da9bd4afcd66531086a23f12ac8a93cca585681f5d231206bb7` | 1 |
-| `30f84..31002` | 126 | `58acb273032ef791d52331b0dbe9fa775f6d7646027e0b706011eaa4383bd8e8` | 14 |
+| `30f84..31002` | 126 | `58acb273032ef791d52331b0dbe9fa775f6d7646027e0b706011eaa4383bd8e8` | 15 |
 
 - [F] 범위 이웃: `2b418` 앞 `..2b418`(LONG 표 `2b2ec` `2b330` `2b374`, 자료 `2b3d0`), `2b532..2b668`(함수 `2b532` `2b608`, 경계 `2b63e`), `2b6c4..2b6e6`(자료 `2b6c4`, 사각형 `2b6ce` `2b6d6`), `2b6e6..2b7ce`(형제 설정 함수 `2b6e6`, 형제 callback `2b7b8`/`2b7be`/`2b7c6`), `2b8ae..2b8b6`(미참조), `2b8fc..2b96c`(범위 밖에서만), `2ba50..2c71a`(설치 `2ba50`, 다른 함수 `2ba86..`), `2c71a..2c760`(경계 `2c71a`), `2c7a6..2c7fe`(자료), `2c8f2..2ca68`(자료 `2c8f2..2c94c`, 함수 `2c94c..`), `2cb30..`(`2986` 자식 값), `306a8` 앞 `..306a8`(다른 함수), `306b4..30718`(N29 `306b4`), `307da..30ed2`(N29 범위의 설치 `307da`·`308e2..`), `30ed6..30f84`(결정 1), `31002..`(설치 `31002`, N29 `30dbe..310de`).
 - [F] 우연 일치(실행 진입 아님): 고정 ROM에 `0002b800`(`2475c` 등 12곳), `0002c800`(`2474c` 등 12곳), `00031000`(`244aa` 등 12곳)인 LONG과 명령 바이트 안의 `0002b42c`(`1ca5e` `1ce1c`), `00030744`(`f35aa`)가 있다. `2b800` `2c800` `31000` `2b42c` `30744`는 명령 중간이거나 수치 상수다([I]).
@@ -239,11 +240,12 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 **`30ed2`(`307d6 BRA`·범위 밖 `30614` `30646` `30714 BRA`) 1**
 - `30ed2`: `BRA.W 30f84` — FLOW
 
-**`30f84`(`30ed2 BRA`; 범위 밖 `30f04 BRA`(`30ed6` 꼬리)) 14**
+**`30f84`(`30ed2 BRA`; 범위 밖 `30f04 BRA`(`30ed6` 꼬리); 두 번째 진입 `30fa0` ← 범위 밖 N29 `30abc BRA.W`·N29b `30cb4 BRA.W`) 15**
 - `30f84`: `JSR 4b54e.l` — FLOW
 - `30f8a`: `BTST.B #7, 61(a6); SNE.B d0; BEQ.W 30f9c` (→`30f96`) — FLOW
 - `30f96`: `MOVE.L #30b6c, (a6)` (→`30f9c`)
-- `30f9c`: `AND.B d0, 5e(a6); BCLR.B #6, 61(a6); TST.W 88(a6); BEQ.W 30fb8` (→`30fae`)
+- `30f9c`: `AND.B d0, 5e(a6)` (→`30fa0`)
+- `30fa0`: `BCLR.B #6, 61(a6); TST.W 88(a6); BEQ.W 30fb8` (→`30fae`) — 두 번째 진입(결정 9)
 - `30fae`: `SUBQ.W #1, 88(a6); BSET.B #6, 61(a6)` (→`30fb8`)
 - `30fb8`: `JSR 4d766.l` — FLOW
 - `30fbe`: `BCC.W 30fc8` (→`30fc2`) — C 소비, FLOW
@@ -268,7 +270,7 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
   - `2ca68`: `3af8`(`D0.W` = `18de`). `2ca72`: A0 = `2c94c`, `JSR 4ae4a`(N08). `2ca7c`: `D1.B` = 0, `D0.W` = `88.W`, BYTE `5e` = 7, `JSR 4d4b4`(경계). `2ca90`: `D0` = 1, `D1` = 0, `JSR 4ff96`(경계). `2ca9a`: `JSR d3d7c`(경계). `2caa0` `2cabc` `2cad8` `2caf4`: 반환 A0 노드에 LONG `36` / LONG `3a` / `54.W` = (`fff20000`, `280000`, `a`) / (`a0000`, `250000`, 7) / (`fff70000`, `10000`, 7) / (`70000`, `fffc0000`, 5); 앞 셋은 다시 `JSR d3d7c`, `2caf4`는 `2986`(A0 = `2cb30`, `D0.W` = `1e`, A1 = `100bf4`; 결정 6). `2cb20`: `D0` = 0, `D1` = `10`, `JSR 49214`(N05). `2cb2a`: `JMP 2a00`.
   - `306a8`: `JSR 318d8`(경계). `306ac`: `(A6)` = `30718`, RTS.
   - `30718`(설치): `49f8c`(A1 = `31d6e`, `D0.W` = `100`). `30728`: BYTE `14` = BYTE `1b`, LONG `76` = 0, LONG `56` = 0, `D0` = 8, `D1` = `28`, `JSR 4da4a`(N23: `28ae` 자식 `4db42`, LONG `7a` = 0). `30748`: `JSR 496c2`(U11). `3074e`: BYTE `94` = `ff`, `(A6)` = `3075a`, fall-through. `3075a`(설치): `JSR 316b2`(경계). `3075e`: A0 = `31ad4`, `JSR 1aa7e`(U01); Set이면 `(A6)` = `31002`(`3076e`). `30774`: `JSR 3165e`(경계). `30778`: A0 = `31ae4`, `JSR 4d2d4`(N23); Clear면 `307d6`. `30788`: `84.W` = `D0.W`, `JSR 319f6`(경계); Clear면 `307d6`(`30790`). `30794`: `D0.W` = `84.W`, `D1.B` = 9, `D2.B` = BYTE `99`, `D3.B` = BYTE `9a`, `D4.W` = `54.W`, `JSR 4d508`(N23). `307ae`: `(A6)` = `307da`; `92.W` < 0이면 `307d6`. `307bc`: `JSR 48296`(U01). `307c2`/`307ca`: `JSR 49c66`(input; `D0` = 0 / 1). `307d2`: BYTE `5c8d(A5)` = `ff`. `307d6`: `BRA 30ed2`; `30ed2`: `BRA 30f84`.
-  - `30f84`: `JSR 4b54e`(U01; C는 소비되지 않음). `30f8a`: `D0.B` = (BYTE `61` bit 7 = 1) ? `ff` : 0; bit 7 = 1이면 `(A6)` = `30b6c`(`30f96`). `30f9c`: BYTE `5e` &= `D0.B`, BYTE `61` bit 6 = 0; `88.W` ≠ 0이면 `88.W` −= 1, BYTE `61` bit 6 = 1(`30fae`). `30fb8`: `JSR 4d766`(N23); Set이면 BYTE `61` bit 6 = 1(`30fc2`). `30fc8`: LONG `76` ≠ 0이면 BYTE `14` = BYTE `1a`, `JSR 318b8`(경계, `30fd0`), BYTE `61` bit 6 = 1, `BRA 31000`(`30fda`). `30fe4`: BYTE `14` = BYTE `1b`, `D0.W` = `88.W` & 1; ≠ 0이면 BYTE `14` = BYTE `19`, BYTE `8c` = `ff`(`30ff6`). RTS(`31000`).
+  - `30f84`: `JSR 4b54e`(U01; C는 소비되지 않음). `30f8a`: `D0.B` = (BYTE `61` bit 7 = 1) ? `ff` : 0; bit 7 = 1이면 `(A6)` = `30b6c`(`30f96`). `30f9c`: BYTE `5e` &= `D0.B`(`30fa0`로 이어짐). `30fa0`: BYTE `61` bit 6 = 0; `88.W` ≠ 0이면 `88.W` −= 1, BYTE `61` bit 6 = 1(`30fae`). `30fb8`: `JSR 4d766`(N23); Set이면 BYTE `61` bit 6 = 1(`30fc2`). `30fc8`: LONG `76` ≠ 0이면 BYTE `14` = BYTE `1a`, `JSR 318b8`(경계, `30fd0`), BYTE `61` bit 6 = 1, `BRA 31000`(`30fda`). `30fe4`: BYTE `14` = BYTE `1b`, `D0.W` = `88.W` & 1; ≠ 0이면 BYTE `14` = BYTE `19`, BYTE `8c` = `ff`(`30ff6`). RTS(`31000`).
 
 ## carry
 
@@ -287,7 +289,7 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 
 ## 구현 범위와 규약
 
-- routing 12 범위(위 표). 짝수 PC 873개 중 block 시작 151, 내부 722. 내부 PC 직접 진입은 `unsupported animation objects n28 PC`다. 범위 이웃(미참조 코드·범위 밖에서만 들어오는 경로·자료·다른 단위 범위)은 routing 밖 PC(`unsupported animation machine PC`; stop이면 직전 상태로 멈춤, 아니면 rollback)다.
+- routing 12 범위(위 표). 짝수 PC 873개 중 block 시작 152, 내부 721. 내부 PC 직접 진입은 `unsupported animation objects n28 PC`다. 범위 이웃(미참조 코드·범위 밖에서만 들어오는 경로·자료·다른 단위 범위)은 routing 밖 PC(`unsupported animation machine PC`; stop이면 직전 상태로 멈춤, 아니면 rollback)다.
 - 레지스터 의미: `.W`/`.B` 연산은 하위 WORD/BYTE만 바꾼다. 산술·shift는 원래 폭의 2의 보수·부호 채움으로 명시 계산하고 C++ 부호 있는 overflow나 부호 있는 shift에 기대지 않는다(`ASR.W #5` `ASR.W #1` `ASR.L Dn`은 부호 bit 채움을 직접 계산, `ASR.L`의 레지스터 shift 수는 `D1` & 63). 부호 있는 비교(`BGE`/`BGT`)는 WORD를 부호 있는 값으로 명시 변환해 비교한다. 결과 flag는 같은 block 안의 Bcc/`Scc`만 쓴다. 명령 순서대로 읽기·쓰기를 한다(홀수 주소 등 checked 오류의 순서가 원본과 같다).
 - carry: 위 "carry" 절. carry 보존 목록(`animation_machine.cpp` `carry_preserving_pc`, 주석이 붙은 case group 하나)에 53 PC를 넣는다.
 - 제어 이동은 모두 정적이다. `2b52c JMP 49fc6`·`2b68c JMP 4da50`·`2b9d0` `2cb2a JMP 2a00`은 복귀 LONG을 push하지 않는다. 설치 값은 노드 LONG에 쓰는 자료이고 실행 PC가 아니다. 범위 안 설치 대상이 fall-through로 이어지면 같은 실행으로 계속한다(`2b996`→`2b99c`, `2c82c`→`2c838`, `3074e`→`3075a`). `2b8a0`은 `2b8a6`으로, `2ba3e`는 `2ba44`로, `2b832`는 `2b85c`로 이어진다.
@@ -323,4 +325,14 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 - [F] 실제 ROM 차분(scratch `realrom/real28.py`, Unicorn vs C++ `run_animation_machine` + 8 `program_rom_*.ms5d`, bank `200000`/`300000`, 무작위 work RAM, 실제 ROM 표 `2b2ec` `2b330` `2b374` `2d8b8`·기록 `2b3d0`·목록 `2c7a6`·bank LONG `20009c`, native는 STOP·`2a00`·`2a24`·C++ routing 밖 첫 PC·interpreter `49f8c`/`49f96`(선언 stop)에서 멈춤): 3 seed × 1,500 case 불일치 0/0/0, 시작 150/151/150(합집합 151). 실제 생산자 뒤 소비자 native 분기 비교(seed 1): `2b82e` 40 `2b870` 54 `2b9cc` 69 `2ba10` 119 `3076a` 42 `30784` 62 `30fbe` 159. interpreter 따라가기(`FOLLOW_ANIM`) 2 × 1,000 case 불일치 0. 의도한 차이: `2986` 실패 경로 caller-X 제한(`cue wrapper failure requires known caller X`, 결정 6) 0/1/2/3/0건(모두 `2caf4`). native 홀수 주소·Unknown C 진입 소비 거부 0. clean stop이 없는 native case는 건너뜀(seed별 136/117/122; 주로 `4b54e`·interpreter 경로).
 - [F] base frame pass 차분(`verify_animation_machine_scheduler_f4.py` 사본, 출력 scratch `fp/`): 기준 `0da8cec` 일치 pass 14,408·node 122,462, 불일치 0 → N28 뒤 같음(`diff_results.json` SHA256 `a6c41695…` 기준과 동일).
 - [F] RNG 400 frame 차분(`verify_animation_machine_scheduler_rng_f4.py` 사본): 기준 complete 132·pass 52,800·node 396,091·불일치 0(`verification.json` SHA256 `5656685f…`) → N28 뒤 같은 수치·불일치 0(`cdffa22c…`; 차이는 기록된 `animation_machine.cpp` 원본 SHA와 새 원본 목록뿐). **새 완주 seed 없음**(재범위 예상과 같음), 잃은 seed 0. seed 116 117은 그대로 frame 0 `38ba0`(N31)에서 멈춘다.
+- [F] **두 번째 진입 `30fa0` 추가 검증(결정 9; 기준 `4497217`, 작업 트리 `metalslug-n28b`, scratch `ms5-scratch/n28b/`, Claude Sonnet 5.5 / high, 커밋하지 않음).** 산출(SHA256 앞 16자리): `engine/src/animation_machine_objects_n28.cpp` `84a45c21a734cfd1`, `engine/tests/animation_machine_objects_n28_test.cpp` `51eda27ea8ccc130`. `animation_machine.cpp`(routing·carry 목록)·Makefile·tools는 바꾸지 않았다. ROM SHA256 `29112a94…860f`·mtime `1791291625`·크기 8,388,608 불변.
+  - 실행부: `case 0x30f9c`는 `AND.B`만 하고 `PC = 30fa0`, `case 0x30fa0`은 `BCLR.B #6,61(A6)` → `TST.W 88(A6)` → `30fb8`(= 0) / `30fae`. carry 보존 목록에 두 PC는 없다(`AND.B`·`TST.W`가 C를 바꿈; 목록 53 PC 그대로). routing은 기존 `30f84..31002` 범위에서 `30fa0`을 N28 실행부로 보낸다.
+  - test 재생성(scratch `gen/gen28.py` Unicorn 생성, `gen/assemble28.py` 조립; 먼저 기존 151 시작 입력으로 생성기를 돌려 기존 test와 바이트 동일함을 확인): 시작 152(`starts.txt`에 `30fa0`), fixture 423 → 434(성공 404, checked 오류 30, kept C 48 그대로), 시작 152 모두 Unicorn fixture로 덮음, block 표 `30f9c` 후속 `30fa0` digest 변경 + `30fa0` 행(후속 `30fae`) 추가, zero-step 152 × 3, 내부 PC 721 전수가 정확한 문자열 `unsupported animation objects n28 PC`. 새 fixture 11개: `30fa0`(전체 사슬 → `4d766`), `30f9c-to-30fa0`(stop `30fa0`, `AND.B`만 실행됨), `30fa0-w0-c{0,1,2}`(stop `30fb8`)·`30fa0-w3-c{0,1,2}`(stop `30fae`)(incoming C 3종 × 두 후속), `30fa0-0-1` `30fa0-40-8000` `30fa0-bf-ffff`(`88.W` 1 / `8000` / `ffff`와 BYTE `61` 다양 → `30fae` → `30fb8` → `4d766`). key fact: `30fa0`은 BYTE `5e`를 건드리지 않고(`AND.B` 건너뜀) BYTE `61` bit 6을 지운다. C는 Unicorn SR로 단정하지 않았다(Unknown = 계약 분류, 모든 `30fa0` fixture C = Unknown).
+  - `make -j4 all test`: exit 0, 경고 0, `Assert` 줄 0(scratch `make_all.log`). 출력: `animation machine objects n28: 434 fixtures (30 checked errors, 48 kept C), 152 blocks, 2108 calls`, `objects n29: 420 fixtures … 192 blocks` 그대로 통과(N29 test는 `30fa0`을 stop으로만 씀).
+  - UBSan(`-fsanitize=undefined -fno-sanitize-recover`, `build_ubsan.sh`): N28 test 통과(`ubsan.log`).
+  - 돌연변이(scratch `mut/run_mut.py`, 새·나뉜 block에 9개: `30f9c` AND→OR, `30f9c` 후속, `AND.B` 생략, `30fa0` BCLR→BSET, BEQ 뒤바꿈, 잘못된 bit(5), `88` BYTE 읽기, 잘못된 `8a`, `30fae` 후속 → `30fb8`): 9/9 test가 잡았다(`mut/results.txt`).
+  - 실제 ROM 차분(`realrom/real28.py` 사본, 같은 8 `program_rom_*.ms5d`, cb 목록에 `30fa0` 추가): 3 seed × 1,500 case 불일치 0/0/0, 시작 152/152(seed마다 전부). 실제 생산자 뒤 소비자 native 분기 비교는 이전과 같은 규모(seed 1: `2b82e` 50 `2b870` 55 `2b9cc` 63 `2ba10` 136 `3076a` 32 `30784` 60 `30fbe` 216). 의도한 차이: `2986` 실패 경로 caller-X 제한 4/3/1건(모두 `2caf4`). 하네스 보정: 나중 단위(N29)가 routing하게 된 옛 N28 경계 PC `3165e` `316b2` `318d8` `319f6` `30ed6` `306b4`는 선언 stop으로 유지(이전과 같은 정지 지점).
+  - base frame pass 차분(`verify_animation_machine_scheduler_f4.py` 사본, 출력 scratch `fp/out/`): 일치 pass 14,408·node 122,462, 불일치 0, `diff_results.json` SHA256 `a6c41695e17a74bd…`(기준 기록과 바이트 동일).
+  - RNG 400 frame 차분(`verify_animation_machine_scheduler_rng_f4.py`, `OUTDIR=ms5-scratch/n28b/rng`): complete 132·pass 52,800·node 396,091·불일치 0, 변형 6/6 complete, 분류 `checked-current-first-unrouted-PC` 4·native 끝 오류 6. 기준(`ms5-scratch/n26/fp/base_rng`)과 `engine_source_sha256`·실행 도구 SHA 항목을 뺀 JSON이 완전히 같고, 소스 SHA 차이는 `animation_machine_objects_n28.cpp` 하나다. 새 완주 seed 0, 잃은 seed 0.
+  - [U] N29a `30abc`·N29b `30cb4`가 N28 `30fa0`을 거치는 연결 실행(두 단위를 함께 따라가는 차분)은 이 작업에서 하지 않았다. N29 실제 ROM 차분은 `30fa0`을 stop으로 둔 상태였고, 이제 N28 실행부가 그 뒤를 받는다. N29 단위의 해당 경로 재검증은 N29 쪽 몫이다.
 - [U] 남은 미확인: N28 범위의 자연 frame pass 비교는 116 117이 `38ba0`에서 먼저 멈춰 아직 없다(실제 ROM 차분·fixture로만 덮음). 경계 `2b63e`·`319f6`의 C 생산(소비 `2ba1c` `2c89e` `30790`)은 그 단위가 정한다. 결정 1의 `2b8fc..2b96c`·`30ed6..30f84`와 결정 2의 `4db18`은 routing하지 않았다.

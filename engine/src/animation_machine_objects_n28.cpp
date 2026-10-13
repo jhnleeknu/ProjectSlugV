@@ -331,10 +331,12 @@ bool animation_objects_n28_block(AnimationMachineContext& c) {
     // BTST.B #7,61(A6); SNE.B D0; BEQ.W 30f9c.
     case 0x30f8a:if(!on28_bit(c,r.a[6],0x61,7,bit))return false;am_byte(r.d[0],bit?0xffU:0U);r.pc=bit?0x30f96:0x30f9c;return true;
     case 0x30f96:if(!on28_install(c,0x30b6c))return false;r.pc=0x30f9c;return true; // MOVE.L #30b6c,(A6).
-    // AND.B D0,5e(A6); BCLR.B #6,61(A6); TST.W 88(A6); BEQ.W 30fb8.
+    // AND.B D0,5e(A6) (then the second entry 30fa0).
     case 0x30f9c:
-        if(!on28_get(c,r.a[6],0x5e,1,value) || !on28_put(c,r.a[6],0x5e,1,(value&r.d[0])&255U) || !on28_bset(c,0x61,6,false) ||
-           !on28_get(c,r.a[6],0x88,2,value))return false;
+        if(!on28_get(c,r.a[6],0x5e,1,value) || !on28_put(c,r.a[6],0x5e,1,(value&r.d[0])&255U))return false;r.pc=0x30fa0;return true;
+    // Second entry 30fa0 (N29 30abc / N29b 30cb4 BRA.W 30fa0): BCLR.B #6,61(A6); TST.W 88(A6); BEQ.W 30fb8.
+    case 0x30fa0:
+        if(!on28_bset(c,0x61,6,false) || !on28_get(c,r.a[6],0x88,2,value))return false;
         r.pc=on28_w(value)==0U?0x30fb8:0x30fae;return true;
     // SUBQ.W #1,88(A6); BSET.B #6,61(A6).
     case 0x30fae:
