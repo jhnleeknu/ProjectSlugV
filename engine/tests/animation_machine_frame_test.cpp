@@ -96,12 +96,13 @@ ms5::AnimationFrameResult sentinel_result(){
  ms5::VideoPortWrite p;p.address=0xdeadbeef;p.size=1;p.value=0x87;r.head_ports.push_back(p);r.node_ports.push_back(p);
  ms5::AnimationFrameWait w;w.segment=ms5::AnimationFrameNodes;w.pc=9;w.address=8;w.size=1;w.before=7;w.released=6;r.waits.push_back(w);return r;}
 typedef bool (*FrameFunction)(std::vector<std::uint8_t>&,const std::vector<ms5::FixedDataResource>&,const ms5::ProgramBusState&,
- State&,Device&,std::uint8_t,ms5::AnimationFrameResult&,std::string&);
+ State&,Device&,std::uint8_t,const ms5::AnimationFrameOptions&,ms5::AnimationFrameResult&,std::string&);
 // Failure: the checked error, and ram / state / device (pvc, bank, reads) / result exactly unchanged.
-void reject(FrameFunction f,const Bytes& ram_in,const State& s_in,const Device& d_in,const char* message){
+void reject(FrameFunction f,const Bytes& ram_in,const State& s_in,const Device& d_in,const char* message,bool card_resume=false){
  Bytes ram(ram_in);State s(s_in);Device d(d_in);ms5::AnimationFrameResult r=sentinel_result();const ms5::AnimationFrameResult r0=sentinel_result();
  std::vector<ms5::FixedDataResource> w;const ms5::ProgramBusState bus=bus_of();std::string error;
- const bool ok=f(ram,w,bus,s,d,0,r,error);
+ ms5::AnimationFrameOptions options;options.card_resume=card_resume;
+ const bool ok=f(ram,w,bus,s,d,0,options,r,error);
  if(ok||error!=message)std::cerr<<"expected error '"<<message<<"' got ok="<<ok<<" '"<<error<<"'\n";
  assert(!ok&&error==message&&ram==ram_in&&same_state(s,s_in)&&same_device(d,d_in)&&same_result(r,r0));++checks;}
 // Harness-style manual segment: run_animation_machine to the stop PC with the declared releases (independent of the driver).
@@ -148,10 +149,11 @@ void bc_frame(Bytes& r){bc_frame_base(r);put(r,0x10f001,1,0x80);bc_slot(r,0,true
 
 // Driver call on copies of the inputs, the same input through the harness chain, and the full comparison.
 struct Run {Bytes ram;State s;Device d;ms5::AnimationFrameResult r;std::string error;bool ok;};
-Run drive(bool frame,const Bytes& ram,const State& s,const Device& d){
+Run drive(bool frame,const Bytes& ram,const State& s,const Device& d,bool card_resume=false,std::uint8_t answer=0x80){
  Run x;x.ram=ram;x.s=s;x.d=d;x.ok=false;const ms5::ProgramBusState bus=bus_of();std::vector<ms5::FixedDataResource> w;
- if(frame)x.ok=ms5::step_animation_machine_frame(x.ram,w,bus,x.s,x.d,0,x.r,x.error);
- else x.ok=ms5::run_animation_machine_pass(x.ram,w,bus,x.s,x.d,0,x.r,x.error);
+ ms5::AnimationFrameOptions options;options.card_resume=card_resume;options.card_answer=answer;
+ if(frame)x.ok=ms5::step_animation_machine_frame(x.ram,w,bus,x.s,x.d,0,options,x.r,x.error);
+ else x.ok=ms5::run_animation_machine_pass(x.ram,w,bus,x.s,x.d,0,options,x.r,x.error);
  if(!x.ok)std::cerr<<"driver error: "<<x.error<<"\n";
  assert(x.ok);return x;}
 // The driver equals manual chaining of run_animation_machine calls (stop PCs LONG (1008e4) and LONG (100820)).
@@ -221,6 +223,30 @@ void pass_and_frames(){
   same_as_manual(false,x,ram,s,d);assert(x.r.waits.size()==1);check_wait(x.r.waits[0],ms5::AnimationFrameNodes,0xcda4,0x108d34,2,2,4);
   assert(get(x.ram,0x108d34,2)==4);}
 }
+// Declared BIOS card request: node 3 runs the fade card block c364 (pushes A6, JSR c00468 at c376).
+void card(){
+ const Bytes ram=frame_ram(0xe74,"100a6c:0000c364");const State pass=pass_state();const Device d=device_with(frame_reads());
+ // Without card_resume the BIOS PC is the original checked error, with full preservation.
+ reject(ms5::run_animation_machine_pass,ram,pass,d,"unsupported animation machine PC");
+ reject(ms5::step_animation_machine_frame,ram,head_state(ram),d,"unsupported animation machine PC");
+ // With card_resume the request is answered: BYTE 10fdc6 := answer, resume at c37c, the pass goes on to the head.
+ const std::uint8_t answers[]={0x80,0x01};
+ for(unsigned int i=0;i<2;++i){
+  const Run x=drive(false,ram,pass,d,true,answers[i]);
+  assert(x.r.waits.size()==1&&x.s.pc==0xe74&&get(x.ram,0x10fdc6,1)==answers[i]);
+  check_wait(x.r.waits[0],ms5::AnimationFrameNodes,0xc00468,0x10fdc6,1,0,answers[i]);
+  assert(get(x.ram,0x10fdc4,1)==1&&get(x.ram,0x10fdce,2)==0x268);}
+ {const Run x=drive(true,ram,head_state(ram),d,true,0x80);assert(x.r.waits.size()==1&&x.r.waits[0].segment==ms5::AnimationFrameNodes&&x.r.waits[0].pc==0xc00468);}
+ // card_resume with a failure that is not a card request keeps the original error and preserves everything.
+ {Bytes r=frame_ram(0xe74,"100a6c:0010fe40");
+  reject(ms5::run_animation_machine_pass,r,pass,d,"unsupported animation machine PC",true);
+  reject(ms5::step_animation_machine_frame,r,head_state(r),d,"unsupported animation machine PC",true);}
+ {Device e=device_with(std::vector<ms5::AnimationMachineExternalRead>());
+  reject(ms5::step_animation_machine_frame,ram,head_state(ram),e,"animation machine external read queue empty",true);}
+ // Without a failure card_resume changes nothing.
+ {const Bytes plain=frame_ram(0xe74,"");const State h=head_state(plain);const Run a=drive(true,plain,h,d,false);const Run b=drive(true,plain,h,d,true);
+  assert(a.ram==b.ram&&same_state(a.s,b.s)&&same_device(a.d,b.d)&&same_result(a.r,b.r));}
+}
 // Failure rows: the checked error with ram, state, device (queue) and result untouched.
 void errors(){
  const Bytes ram=frame_ram(0xe74,"");const State head=head_state(ram);const Device d=device_with(frame_reads());
@@ -262,7 +288,7 @@ void errors(){
 }
 }
 int main(){
- pass_and_frames();errors();
+ pass_and_frames();card();errors();
  std::cout<<"animation machine frame: "<<checks<<" checks\n";
  return 0;
 }

@@ -30,11 +30,13 @@ class FrameDriverHelperTests(unittest.TestCase):
     def test_request_layout(self):
         regs = {k: i for i, k in enumerate(v.KEYS)}
         req = v.encode_request(1, bytes(65536), regs, 0xe74, 0x200000, bytes(8192), [(0x3c0006, 2, 0)], 0)
-        self.assertEqual(len(req), 4 * 22 + 65536 + 8192 + 12)
-        words = struct.unpack_from('>22I', req)
+        self.assertEqual(len(req), 4 * 23 + 65536 + 8192 + 12)
+        words = struct.unpack_from('>23I', req)
         self.assertEqual(words[0], 1)
         self.assertEqual(words[1:17], tuple(range(16)))
-        self.assertEqual(words[17:22], (0xe74, 0, 0x200000, 0, 1))
+        self.assertEqual(words[17:23], (0xe74, 0, 0x200000, 0, 0x180, 1))
+        off = v.encode_request(0, bytes(65536), regs, 0x2ac2, 0x200000, bytes(8192), [], 0, card_resume=False, card_answer=0)
+        self.assertEqual(struct.unpack_from('>23I', off)[21], 0)
 
     def test_parse_roundtrip_and_errors(self):
         payload = response((0xe74, 0, 0x200000, 0xe74, 0xc52a, 0xe74, 7, 0, list(range(16))), head=[(0x300001, 1, 0)],
@@ -63,8 +65,9 @@ class FrameDriverHelperTests(unittest.TestCase):
 
     def test_native_waits(self):
         waits = [dict(pc=0x16bd0, kind='sprite-flush', live=4, compared=8, released=[[0x108d34, 2, 8]]),
-                 dict(pc=0xc00468, kind='bios-card', live=0xc37c, compared=0x80, released=[['pc', 0xc37c]], a7_at_stop=0x1fefe0, saved_a6=0x100b30)]
-        self.assertEqual(v.native_wait_tuples(waits, 1), [(1, 0x16bd0, 0x108d34, 2, 4, 8), ('card', 0xc00468, 0x1fefe0, 0x100b30)])
+                 dict(pc=0xc00468, kind='bios-card', live=0xc37c, compared=0x80, released=[['pc', 0xc37c], ['a7', 4], ['ram', 0x10fdc6, 1, 0x80]],
+                      a7_at_stop=0x1fefe0, saved_a6=0x100b30, card_before=0)]
+        self.assertEqual(v.native_wait_tuples(waits, 1), [(1, 0x16bd0, 0x108d34, 2, 4, 8), (1, 0xc00468, 0x10fdc6, 1, 0, 0x80)])
 
     def test_compare_detects(self):
         exp = expectation(head_ports=[(2, 0x300001, 1, 0)], waits=[(0, 0x16bd0, 0x108d34, 2, 4, 8)])

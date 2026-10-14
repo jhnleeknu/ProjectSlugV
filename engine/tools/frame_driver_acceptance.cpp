@@ -2,7 +2,7 @@
 // Length-prefixed BE packets on stdin/stdout; no files written by this process.
 // Request (BE u32 unless noted):
 //   mode (0 = run_animation_machine_pass, 1 = step_animation_machine_frame, 2 = H segment only, see head_only), d0..d7, a0..a7, pc, carry, bank_base,
-//   external_status, queue count NQ, then RAM 65536 bytes, PVC 8192 bytes, NQ x (address, size, value).
+//   external_status, options (bit 8 = card_resume, bits 0..7 = card_answer; modes 0/1 only), queue count NQ, then RAM 65536 bytes, PVC 8192 bytes, NQ x (address, size, value).
 // Success response: 1, pc, carry, bank_base, head_pc, controller_pc, pass_stop_pc, head_external_reads,
 //   node_external_reads, NH (head ports), NN (node ports), NW (waits), NR (queue entries left), d0..d7, a0..a7,
 //   RAM 65536, PVC 8192, NH x (address, size, value), NN x (address, size, value),
@@ -16,7 +16,7 @@
 #include <vector>
 
 typedef std::vector<std::uint8_t> Bytes;
-static const std::uint32_t REQUEST_WORDS=22;
+static const std::uint32_t REQUEST_WORDS=23;
 static void add(Bytes& b,std::uint32_t v) {
     for(unsigned int i=0;i<4;++i)b.push_back(static_cast<std::uint8_t>(v>>(24-8*i)));
 }
@@ -116,8 +116,8 @@ static bool run(const Bytes& input,const ms5::ProgramBusState& bus,Bytes& output
     std::size_t at=0;
     std::uint32_t v[REQUEST_WORDS];
     for(unsigned int i=0;i<REQUEST_WORDS;++i)if(!take(input,at,v[i])) {error="short request";return false;}
-    const std::uint32_t mode=v[0],nq=v[21];
-    if(mode>2U||v[18]>2U||v[20]>255U||nq>65536U||input.size()!=4U*REQUEST_WORDS+65536U+8192U+12U*nq) {error="invalid request";return false;}
+    const std::uint32_t mode=v[0],nq=v[22];
+    if(mode>2U||v[18]>2U||v[20]>255U||v[21]>0x1ffU||nq>65536U||input.size()!=4U*REQUEST_WORDS+65536U+8192U+12U*nq) {error="invalid request";return false;}
     ms5::AnimationMachineState s;
     for(unsigned int i=0;i<8;++i) {s.d[i]=v[1+i];s.a[i]=v[9+i];}
     s.pc=v[17];
@@ -139,11 +139,14 @@ static bool run(const Bytes& input,const ms5::ProgramBusState& bus,Bytes& output
     const ms5::AnimationMachineState s0(s);
     const ms5::AnimationMachineDevice dev0(dev);
     std::vector<ms5::FixedDataResource> windows;
+    ms5::AnimationFrameOptions options;
+    options.card_resume=(v[21]&0x100U)!=0;
+    options.card_answer=static_cast<std::uint8_t>(v[21]&0xffU);
     ms5::AnimationFrameResult result;
     std::string failure;
     bool ok=false;
-    if(mode==0U)ok=ms5::run_animation_machine_pass(ram,windows,bus,s,dev,static_cast<std::uint8_t>(v[20]),result,failure);
-    else if(mode==1U)ok=ms5::step_animation_machine_frame(ram,windows,bus,s,dev,static_cast<std::uint8_t>(v[20]),result,failure);
+    if(mode==0U)ok=ms5::run_animation_machine_pass(ram,windows,bus,s,dev,static_cast<std::uint8_t>(v[20]),options,result,failure);
+    else if(mode==1U)ok=ms5::step_animation_machine_frame(ram,windows,bus,s,dev,static_cast<std::uint8_t>(v[20]),options,result,failure);
     else ok=head_only(ram,bus,s,dev,static_cast<std::uint8_t>(v[20]),result,failure);
     if(!ok) {
         const bool preserved=ram==ram0&&same_state(s,s0)&&dev.bank_base==dev0.bank_base&&dev.pvc==dev0.pvc&&same_reads(dev.reads,dev0.reads)&&

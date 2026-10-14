@@ -14,8 +14,11 @@ The C++ external-read queue is exactly what native consumed in that frame (H: FH
 consumed.  Compared: RAM 64 KiB, D0-D7/A0-A7, PC, bank base, PVC page (native mapped page with ff8/ff9 normalised as in verify_animation_machine_frame_head.py), ordered
 ports per segment (PVC kind 1 raw WORD; C++ MOVE.L 3c0000 events are split into two WORDs only inside native 4fcce/4fcda node port ranges, as the F4 verifier does), ordered
 declared waits (segment, pc, address, size, before, released), external reads per segment, stop PCs, carry tag.
-Native frames that are not plain D1 completions (a guard / unrouted stop, or a declared bios-card resume, which the D1 driver does not declare) must make the C++ fail with a
-checked error and preserved state; they are classified, never counted as matches.
+All C++ calls of modes 0/1 pass AnimationFrameOptions card_resume = true, card_answer = R.DEFAULT_ANSWER (80), the native declared bios-card resume; the native card record
+(FH/R 'bios-card' wait, BYTE 10fdc6 before value captured in VerifyRun.card_wait) is compared as the wait (segment, c00468, 10fdc6, 1, before, answer) in order.
+Native frames that are not D1 completions (a guard / unrouted stop) must make the C++ fail with a checked error and preserved state; they are classified, never counted as matches.
+Full pure-C++ chain (every seed): frame 0 pass from the prepared seed state, then step from the previous C++ output with the native-consumed queue of that frame; every frame
+is compared in full with the native frame; the chain ends at the first divergence or at the native stop (which must be a checked, preserving C++ failure).
 """
 import argparse
 import collections
@@ -46,6 +49,7 @@ STATUS_ADDR = 0xd00046
 SPLIT_CALLBACKS = (0x4fcce, 0x4fcda)
 PVC_LO, PVC_HI = 0x2fe000, 0x300000
 MODE_PASS, MODE_STEP, MODE_HEAD = 0, 1, 2
+CARD_BIOS, CARD_RET, CARD_BYTE = 0xc00468, 0xc37c, 0x10fdc6
 CHAIN_SEEDS = 4
 # Historic aggregates, docs/analysis/animation-machine-frame-head-observation.md (natural seeds, base configuration).
 HISTORIC = dict(natural_seeds=137, natural_complete_400=136, guard_release_seeds=5, stop_categories={'frame-limit': 136, 'fetch-unmapped': 5, 'odd-pc': 1},
@@ -76,10 +80,12 @@ def normalise_page(page, ff8, ff9):
     return bytes(p)
 
 
-def encode_request(mode, ram, regs, pc, bank_base, pvc, queue, external_status=0, carry=0):
+def encode_request(mode, ram, regs, pc, bank_base, pvc, queue, external_status=0, carry=0, card_resume=True, card_answer=0x80):
+    """options word: bit 8 = AnimationFrameOptions.card_resume, bits 0..7 = card_answer."""
     assert len(ram) == 65536 and len(pvc) == 8192
-    values = [mode] + [regs[k] & 0xffffffff for k in KEYS] + [pc, carry, bank_base, external_status, len(queue)]
-    return struct.pack('>22I', *values) + bytes(ram) + bytes(pvc) + b''.join(struct.pack('>III', *e) for e in queue)
+    options = (0x100 if card_resume else 0) | (card_answer & 0xff)
+    values = [mode] + [regs[k] & 0xffffffff for k in KEYS] + [pc, carry, bank_base, external_status, options, len(queue)]
+    return struct.pack('>23I', *values) + bytes(ram) + bytes(pvc) + b''.join(struct.pack('>III', *e) for e in queue)
 
 
 def parse_response(payload):
@@ -137,11 +143,13 @@ def cpp_ports_native_form(cpp_ports, native_ports, split_ranges=()):
 
 
 def native_wait_tuples(waits, segment):
-    """FH / S wait records -> (segment, pc, address, size, before, released); a bios-card record (no D1 equivalent) -> ('card', ...)."""
+    """FH / S wait records -> (segment, pc, address, size, before, released); a bios-card record -> the AnimationFrameOptions card_resume wait (segment, c00468, 10fdc6, 1, before, answer)."""
     out = []
     for w in waits:
         if w['kind'] == 'bios-card':
-            out.append(('card', w['pc'], w.get('a7_at_stop'), w.get('saved_a6')))
+            # FH/R record: pc c00468, live c37c, released [['pc', c37c], ['a7', 4], ['ram', 10fdc6, 1, answer]]; 'card_before' is captured by VerifyRun.card_wait
+            assert w['pc'] == CARD_BIOS and w['live'] == CARD_RET and w['released'][:2] == [['pc', CARD_RET], ['a7', 4]] and w['released'][2][:3] == ['ram', CARD_BYTE, 1]
+            out.append((segment, CARD_BIOS, CARD_BYTE, 1, w.get('card_before'), w['released'][2][3]))
             continue
         if not w['released']:
             out.append(('unreleased', w['pc']))
@@ -290,6 +298,19 @@ def make_verify_class():
             val = int.from_bytes(bytes(uc.mem_read(address, size)), 'big')
             self.devlog.append((self.phase, address, size, val))
 
+        def card_wait(self):
+            a7 = FH.HeadRun.card_wait(self)
+            if a7 is not None:
+                self.card_before.append(self.m.byte(CARD_BYTE))      # BYTE 10fdc6 before the declared resume writes the answer
+            return a7
+
+        def attach_cards(self, waits):
+            cards = [w for w in waits if w['kind'] == 'bios-card']
+            assert len(cards) == len(self.card_before), (len(cards), len(self.card_before))
+            for w, b in zip(cards, self.card_before):
+                w['card_before'] = b
+            self.card_before = []
+
         def capture(self):
             m = self.m
             st = m.state()
@@ -300,9 +321,11 @@ def make_verify_class():
 
         def run_head(self, frame):
             self.devlog = []
+            self.card_before = []
             start = self.capture()
             out = FH.HeadRun.run_head(self, frame)
             reason, rec, hend, hports, hext, hpre = out
+            self.attach_cards(rec['waits'])
             end = self.capture()
             self.fr = dict(frame=frame, start=start, h=dict(reason=reason, rec=rec, end=end, ports=list(hports), ext=[tuple(e) for e in hext],
                                                            status_reads=[d for d in self.devlog if d[0] == 'H']))
@@ -316,8 +339,10 @@ def make_verify_class():
                 self.fr = dict(frame=0, start=self.capture(), h=None)
             nstart = self.capture()
             self.devlog = []
+            self.card_before = []
             out = FH.HeadRun.run_pass(self)
             reason, walk, start_digest, waits, ports0 = out
+            self.attach_cards(waits)
             ports = list(self.m.ports[ports0:])
             split = [(n['ports0'] - ports0, n['ports0'] - ports0 + n['rec']['ports']) for n in self.pass_nodes if 'rec' in n and n['cb'] in SPLIT_CALLBACKS]
             if self.cur is not None and self.cur['cb'] in SPLIT_CALLBACKS:
@@ -362,14 +387,11 @@ def frame_expectation(fr):
                  head_ports=[], node_ports=[tuple(p) for p in n['ports']], node_ports_split=n['split'], waits=nwaits)
     status_values = set(d[3] for d in n['dev'] if d[1] == STATUS_ADDR) | set(d[3] for d in (h['status_reads'] if h else []))
     info = dict(n_queue=nq, h_queue=hq, n_other_reads=n_other, status_values=sorted(status_values))
-    cards = [w for w in hwaits + nwaits if w[0] == 'card']
     unreleased = [w for w in hwaits + nwaits if w[0] == 'unreleased']
     if nreason != 'frame-head':
         cat = 'native-N-stop:' + nreason
     elif unreleased:
         cat = 'native-wait-not-released'
-    elif cards:
-        cat = 'native-bios-card'
     elif n_other:
         cat = 'native-undeclared-N-device-read'
     else:
@@ -380,7 +402,7 @@ def frame_expectation(fr):
         out['exp_h'] = dict(ram=hend['ram'], regs=hend['regs'], pc=hend['pc'], bank_base=hend['bank'][0], pvc=hend['pvc'], head_pc=fr['start']['pc'],
                             controller_pc=hend['pc'], pass_stop_pc=0, head_reads=len(hq) + h_status, node_reads=0, head_ports=[tuple(p) for p in h['ports']],
                             node_ports=[], waits=hwaits)
-        out['h_has_card'] = any(w[0] == 'card' for w in hwaits)
+        out['h_has_card'] = any(w[1] == CARD_BIOS for w in hwaits)     # mode 2 (harness H only) has no card resume
         out['exp_step'] = dict(exp_n, head_pc=fr['start']['pc'], controller_pc=hend['pc'], head_reads=len(hq) + h_status, head_ports=[tuple(p) for p in h['ports']],
                                waits=hwaits + nwaits)
     return cat, out
@@ -400,11 +422,13 @@ def frame_counts(got, ec):
         c['moveL_split'] = cpp_ports_native_form(got['node_ports'], e['node_ports'], e.get('node_ports_split', ()))[1]
     for w in e['waits']:
         c['wait_%s_%x' % ('H' if w[0] == 0 else 'N', w[1])] += 1
+    c['card_frames'] = int(any(w[1] == CARD_BIOS for w in e['waits']))
     return dict(c)
 
 
-def request_for(mode, st, queue):
-    return encode_request(mode, st['ram'], st['regs'], st['pc'], st['bank'][0], st['pvc'], queue, st['status'])
+def request_for(mode, st, queue, card_resume=True, card_answer=None):
+    return encode_request(mode, st['ram'], st['regs'], st['pc'], st['bank'][0], st['pvc'], queue, st['status'], card_resume=card_resume,
+                          card_answer=CTX.get('answer', 0x80) if card_answer is None else card_answer)
 
 
 def check_expected_failure(got, label):
@@ -423,7 +447,7 @@ def compare_frame(harness, fr):
         row['checks']['step'] = check_expected_failure(got, 'step')
         row['native_stop'] = fr['h']['reason']
         row['match'] = False
-        return row, None
+        return row, dict(fail=True, queue=list(fr['h']['ext']))
     info = ex['info']
     if info['status_values'] and any(v != fr['start']['status'] for v in info['status_values']):
         row['status_varies'] = info['status_values']
@@ -434,12 +458,12 @@ def compare_frame(harness, fr):
             row['checks']['pass'] = dict(ok=not bad, mismatch=bad[:4])
             row['match'] = not bad
             row['counts'] = frame_counts(got, e_counts(ex))
-            chain = dict(queue=info['n_queue'], digest=state_digest(ex['exp_n']['ram'], ex['exp_n']['regs'], ex['exp_n']['pc'], ex['exp_n']['bank_base'], ex['exp_n']['pvc']))
+            chain = dict(queue=info['n_queue'], exp=ex['exp_n'], digest=state_digest(ex['exp_n']['ram'], ex['exp_n']['regs'], ex['exp_n']['pc'], ex['exp_n']['bank_base'], ex['exp_n']['pvc']))
         else:
             row['checks']['pass'] = check_expected_failure(got, 'pass')
             row['native_stop'] = fr['n']['reason']
             row['match'] = False
-            chain = None
+            chain = dict(fail=True, queue=info['n_queue'])
         return row, chain
     queue = info['h_queue'] + info['n_queue']
     got = harness.call(request_for(MODE_STEP, fr['start'], queue))
@@ -459,15 +483,13 @@ def compare_frame(harness, fr):
         row['match'] = not bad and not nbad and row['checks']['head']['ok']
         row['counts'] = frame_counts(got, e_counts(ex))
         e = ex['exp_step']
-        chain = dict(queue=queue, digest=state_digest(e['ram'], e['regs'], e['pc'], e['bank_base'], e['pvc']))
+        chain = dict(queue=queue, exp=e, digest=state_digest(e['ram'], e['regs'], e['pc'], e['bank_base'], e['pvc']))
     else:
         row['checks']['step'] = check_expected_failure(got, 'step')
         row['checks']['pass'] = check_expected_failure(ngot, 'pass')
         row['native_stop'] = fr['n']['reason'] if cat.startswith('native-N-stop') else None
-        if cat == 'native-bios-card':
-            row['cards'] = [dict(kind=w['kind'], node=w.get('node'), node_a6=w.get('node_a6'), a7=w.get('a7_at_stop')) for w in fr['n']['waits'] if w['kind'] == 'bios-card']
         row['match'] = False
-        chain = None
+        chain = dict(fail=True, queue=queue)
     return row, chain
 
 
@@ -482,12 +504,40 @@ def harness_for_worker():
     return h
 
 
+def full_chain_step(harness, fr, c, fc):
+    """Pure C++ chain over all frames: only C++ outputs are chained (frame 0 from the prepared seed state); each frame's result is compared in full with the native
+    frame (state, ports, waits, reads).  A native non-completion frame must be a checked, preserving C++ failure.  The chain stops at the first divergence."""
+    if not fc['alive']:
+        return
+    st = fr['start'] if fr['frame'] == 0 else fc['state']
+    if st is None:
+        fc['alive'] = False
+        return
+    fc['frames'] += 1
+    got = harness.call(request_for(MODE_PASS if fr['frame'] == 0 else MODE_STEP, st, c['queue']))
+    if c.get('fail'):
+        r = check_expected_failure(got, 'chain')
+        if r['ok']:
+            fc['expected_failures'] += 1
+        else:
+            fc['first_divergence'] = dict(frame=fr['frame'], detail=r)
+        fc['alive'] = False
+        return
+    bad = compare(got, c['exp'])
+    if bad:
+        fc['first_divergence'] = dict(frame=fr['frame'], mismatch=bad[:4])
+        fc['alive'] = False
+        return
+    fc['matched'] += 1
+    fc['state'] = dict(ram=got['ram'], regs=got['regs'], pc=got['pc'], bank=(got['bank_base'],), pvc=got['pvc'], status=st['status'])
+
+
 def run_chain(harness, seed_start, chain_rows):
     """C++-only chain: frame 0 pass from the seed start, then step from the C++ output with the native per-frame queue.  -> list of digests (stops at the first failure)."""
     st = dict(seed_start)
     digests = []
     for i, c in enumerate(chain_rows):
-        if c is None:
+        if c is None or c.get('fail'):
             break
         got = harness.call(request_for(MODE_PASS if i == 0 else MODE_STEP, st, c['queue']))
         if not got['ok'] or got['remaining']:
@@ -510,6 +560,7 @@ def work(arg):
     chain_rows = []
     state0 = {}
     tbset = set()
+    fchain = dict(state=None, alive=True, matched=0, expected_failures=0, first_divergence=None, frames=0)
 
     def on_frame(fr):
         if fr['frame'] == 0:
@@ -519,6 +570,9 @@ def work(arg):
         except Exception as e:                                  # a verifier failure is recorded, never a match
             row, c = dict(frame=fr['frame'], category='verifier-error', error=repr(e), match=False, checks={}), None
         rows.append(row)
+        if c is not None:
+            full_chain_step(harness, fr, c, fchain)
+            c.pop('exp', None)                                  # keep only queue + digest for the determinism rerun
         chain_rows.append(c)
     snapc = {k: v for k, v in carried.items() if k != 'prep_entry_state'}
     run = Verify(R.G['program'], R.G['fixed'], R.G['levels'], snapc, 'continuous', frames, heavy=False, plan=None, sink=None, extend=False,
@@ -533,14 +587,16 @@ def work(arg):
     if chain:
         d1 = run_chain(harness, state0, chain_rows)
         d2 = run_chain(harness, state0, chain_rows)
-        native = [c['digest'] for c in chain_rows if c is not None]
+        native = [c['digest'] for c in chain_rows if c is not None and not c.get('fail')]
         k = 0
-        for x, y in zip(d1, [c['digest'] if c else None for c in chain_rows]):
+        for x, y in zip(d1, [c.get('digest') if c else None for c in chain_rows]):
             if x != y:
                 break
             k += 1
         out['chain'] = dict(frames=len(d1), deterministic=d1 == d2, digest=sha(json.dumps(d1).encode()), equal_native_prefix=k, native_complete_frames=len(native),
                             last=d1[-1] if d1 else None)
+    fchain.pop('state', None)
+    out['full_chain'] = fchain
     out['harness_calls'] = harness.calls - calls0
     out['seconds'] = time.time() - t0
     return out
@@ -558,11 +614,16 @@ def negatives(case):
     Verify = CTX['cls']
     sd, snap, meta, rec, carried = FH.prepared(case)
     frs = []
-    run = Verify(R.G['program'], R.G['fixed'], R.G['levels'], {k: v for k, v in carried.items() if k != 'prep_entry_state'}, 'continuous', 3, heavy=False, plan=None,
+
+    def keep(f):                                              # frame 2 and the first frame with a native card resume
+        if f['frame'] == 2 or (f.get('n') and any(w['kind'] == 'bios-card' for w in f['n']['waits']) and not any(x['frame'] != 2 for x in frs)):
+            frs.append(f)
+    run = Verify(R.G['program'], R.G['fixed'], R.G['levels'], {k: v for k, v in carried.items() if k != 'prep_entry_state'}, 'continuous', 400, heavy=False, plan=None,
                  sink=None, extend=False, answer=R.DEFAULT_ANSWER, full_dump=False, prep_dump=None, cfg=dict(FH.BASE_CFG), case=case, tbset=None, keep_all=False, do_model=False)
-    run.on_frame = frs.append
+    run.on_frame = keep
     run.run()
     fr = [f for f in frs if f['frame'] == 2][0]
+    card_fr = [f for f in frs if f['frame'] != 2][0]
     cat, ex = frame_expectation(fr)
     assert cat == 'complete', cat
     queue = ex['info']['h_queue'] + ex['info']['n_queue']
@@ -585,6 +646,19 @@ def negatives(case):
     # Value changes (the first raster read alone does not influence the state natively either; both raster reads are changed)
     detected(fr['start'], [(a, n, 0x9234) if a == 0x3c0006 else (a, n, v) for a, n, v in queue], 'queue-raster-values-changed')
     detected(fr['start'], [(a, n, 0x00) if a == 0x300000 else (a, n, v) for a, n, v in queue], 'queue-input-values-changed')
+    # card frame: baseline equal with card_resume / native answer; a wrong answer is detected; card_resume=false is a checked preserving error
+    ccat, cex = frame_expectation(card_fr)
+    assert ccat == 'complete', ccat
+    cq = cex['info']['h_queue'] + cex['info']['n_queue']
+    cexp = cex['exp_step']
+    cbase = harness.call(request_for(MODE_STEP, card_fr['start'], cq))
+    tests['card-frame-baseline-equal'] = dict(detected=not compare(cbase, cexp), frame=card_fr['frame'],
+                                              card_waits=[list(w) for w in cbase['waits'] if w[1] == CARD_BIOS] if cbase['ok'] else None)
+    wrong = (CTX.get('answer', 0x80) ^ 0x80) & 0xff
+    bad = compare(harness.call(request_for(MODE_STEP, card_fr['start'], cq, card_answer=wrong)), cexp)
+    tests['card-wrong-answer'] = dict(detected=bool(bad), answer=wrong, first=bad[0] if bad else None)
+    off = harness.call(request_for(MODE_STEP, card_fr['start'], cq, card_resume=False))
+    tests['card-resume-off'] = dict(detected=(not off['ok']) and bool(off['preserved']), error=off.get('error'), preserved=off.get('preserved'))
     q3 = list(queue)
     q3[0], q3[2] = q3[2], q3[0]
     detected(fr['start'], q3, 'queue-order-swapped')
@@ -670,7 +744,7 @@ def aggregate(results, historic):
         comp = [x for x in rows if x['category'] == 'complete']
         seed = dict(case=r['case'], kind=r['kind'], native_stop=r['stop'], frames=len(rows), complete_frames=len(comp), matches=sum(1 for x in comp if x['match']),
                     mismatches=sum(1 for x in comp if not x['match']), non_completions=[dict(frame=x['frame'], category=x['category'], checks=x['checks']) for x in nonc][:5],
-                    expected_failure_bad=len(bad_fail), first_mismatch=first, seconds=round(r['seconds'], 1), chain=r.get('chain'))
+                    expected_failure_bad=len(bad_fail), first_mismatch=first, seconds=round(r['seconds'], 1), chain=r.get('chain'), full_chain=r.get('full_chain'))
         per_seed.append(seed)
         if r['kind'] == 'natural':
             tot['natural_frames'] += len(rows)
@@ -684,6 +758,12 @@ def aggregate(results, historic):
         tot['mismatches'] += seed['mismatches']
         tot['non_completions'] += len(nonc)
         tot['status_varies'] += sum(1 for x in rows if 'status_varies' in x)
+        fc = r.get('full_chain') or {}
+        if r['kind'] == 'natural':
+            tot['natural_chain_frames_matched'] += fc.get('matched', 0)
+            tot['natural_chain_expected_failures'] += fc.get('expected_failures', 0)
+            tot['natural_chain_divergent_seeds'] += int(fc.get('first_divergence') is not None)
+            tot['natural_chain_seeds_full'] += int(fc.get('first_divergence') is None and fc.get('matched', 0) + fc.get('expected_failures', 0) == len(rows))
         for x in rows:
             if x.get('match') and r['kind'] == 'natural':
                 for k, v in x.get('counts', {}).items():
@@ -751,7 +831,7 @@ def main(argv=None):
         build_cmd = 'reused existing build (--no-build)'
     else:
         exe, compiler, srcs, build_cmd = build(args.workers)
-    CTX.update(exe=exe, resources=resources, cls=make_verify_class())
+    CTX.update(exe=exe, resources=resources, cls=make_verify_class(), answer=R.DEFAULT_ANSWER)
     import unicorn
     libs = sorted(set(Path(unicorn.__file__).parent.rglob('libunicorn*.so*')) | set(Path(unicorn.__file__).parent.rglob('libunicorn*.dylib')))
     headers = sorted(set((ROOT / 'engine/include').rglob('*.h')) | set((ROOT / 'engine/src').rglob('*.h')))

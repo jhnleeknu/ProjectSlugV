@@ -21,6 +21,15 @@ struct AnimationFrameWait {
     std::uint8_t size;      // BYTEs
     std::uint32_t before, released;
 };
+// card_resume: the declared BIOS card request (N reaches c376 JSR c00468; BIOS is not executed). When a run fails, it is re-run
+// from the same pre-call state with stop PC c00468. If that returns at c00468 with LONG (A7) = c37c, the request is declared
+// answered: BYTE 10fdc6 := card_answer, PC := c37c, A7 += 4, C Unknown, recorded as an AnimationFrameWait (pc c00468, address
+// 10fdc6, size 1) and counted in the 64-wait limit. Any other outcome returns the original error. false: no card handling.
+struct AnimationFrameOptions {
+    bool card_resume;
+    std::uint8_t card_answer;
+    AnimationFrameOptions() : card_resume(false), card_answer(0x80) {}
+};
 struct AnimationFrameResult {
     std::uint32_t head_pc;        // LONG (100820) at the H start; 0 for run_animation_machine_pass
     std::uint32_t controller_pc;  // LONG (1008e4) at the H start (= H stop PC); 0 for run_animation_machine_pass
@@ -35,10 +44,10 @@ struct AnimationFrameResult {
 // Both functions work on copies: any failure returns false with ram, state, device and result unchanged and error set.
 bool run_animation_machine_pass(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
     const ProgramBusState& resources, AnimationMachineState& state, AnimationMachineDevice& device,
-    std::uint8_t external_status, AnimationFrameResult& result, std::string& error);
+    std::uint8_t external_status, const AnimationFrameOptions& options, AnimationFrameResult& result, std::string& error);
 // H + skip + N from a valid H start (PC = LONG (100820), A6 100820, A7 1feffc, LONG (1feffc) = 2ac2).
 bool step_animation_machine_frame(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows,
     const ProgramBusState& resources, AnimationMachineState& state, AnimationMachineDevice& device,
-    std::uint8_t external_status, AnimationFrameResult& result, std::string& error);
+    std::uint8_t external_status, const AnimationFrameOptions& options, AnimationFrameResult& result, std::string& error);
 }
 #endif
