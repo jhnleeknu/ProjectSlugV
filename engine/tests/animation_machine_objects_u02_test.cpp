@@ -420,8 +420,8 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u02 PC");++inside;if(in_list(BUNDLED,1,pc))++bundled;}
  assert(even==792&&inside==659&&bundled==1);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- // 10fe10 replaces 443ea (now an objects U17 block start).
- const std::uint32_t outside[]={0x39c6,0x3a0c,0x8ec8,0x8eca,0x8f6c,0x8f70,0x8f82,0x36ba,0x37e2,0x383e,0x3902,0x48256,0xe6496,0xe5324,
+ // 10fe10 replaces 443ea (now an objects U17 block start); 10fe12 replaces 3902 (now an F5 frame head H2 block start).
+ const std::uint32_t outside[]={0x39c6,0x3a0c,0x8ec8,0x8eca,0x8f6c,0x8f70,0x8f82,0x36ba,0x37e2,0x383e,0x10fe12,0x48256,0xe6496,0xe5324,
   0x394e,0x3a82,0x8ff6,0x443d0,0x10fe10,0xe5084,0xe5292,0xe5612,0xe56c0,0xe5722,0xe583c,0xe5844};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x3951,0x39c7,0x3a81,0x8ebf,0x8f85,0x8ff3,0x443d3,0xe5087,0xe5291,0xe5615,0xe56bf,0xe5725,0xe583b};
@@ -431,10 +431,14 @@ void interior(){
 // the computed JSR (A1) is dispatched by the routing (odd target: unaligned PC, unrouted target: unsupported PC); the consumers
 // reject an Unknown C (error rows of the fixture table, and below with the success inputs).
 void boundaries(){
- const char* names[]={"39be-trap","39fc-trap","8ebe-trap","8ebe-trap-ff","39a4-zero","39c8-next-x","3a52","8ebe-over-debug","8f4e","8f5a",
+ const char* names[]={"39be-trap","39fc-trap","8ebe-trap","8ebe-trap-ff","39a4-zero","39c8-next-x","3a52","8f4e","8f5a",
   "e5286","e5086-p1","e5086-p2"};
  for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);
   reject(ram,s,STOP,"unsupported animation machine PC");}
+ // 8ebe-over-debug: 3902 is now an F5 frame head H2 block start; past it the card menu text step 386e reads the string 8f6c, which
+ // this test's synthetic physical ROM does not cover, so the whole run still rolls back (same meaning, different checked error).
+ {const Fixture&f=fixture_of("8ebe-over-debug");Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);
+  reject(ram,s,STOP,"missing or ambiguous physical program bus ROM byte");}
  assert(final_of("39be-trap").s.pc==0x39c6&&final_of("39fc-trap").s.pc==0x3a0c&&final_of("8ebe-trap").s.pc==0x8ec8&&final_of("8ebe-trap-ff").s.pc==0x8ec8);
  {const Fixture&f=fixture_of("3a0e");Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);s.a[1]=0x3651;
   reject(ram,s,STOP,"unaligned animation machine PC");s.a[1]=0x10e900;reject(ram,s,STOP,"unsupported animation machine PC");
