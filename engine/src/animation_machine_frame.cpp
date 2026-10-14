@@ -1,7 +1,7 @@
 #include "ms5/animation_machine_frame.h"
 namespace ms5 {
 namespace {
-const std::uint32_t HEAD_LONG=0x100820, CONTROLLER_LONG=0x1008e4, SPD=0x1ff000, DISPATCH_PC=0x2ac2, MAX_WAITS=64,
+const std::uint32_t HEAD_LONG=0x100820, CONTROLLER_LONG=0x1008e4, SPD=0x1ff000, DISPATCH_PC=0x2ac2, MAX_WAITS=16,
     CARD_BIOS=0xc00468, CARD_RETURN=0xc37c, CARD_ANSWER=0x10fdc6;
 std::uint32_t ram_get(const std::vector<std::uint8_t>& ram, std::uint32_t address, unsigned int size) {
     std::uint32_t v=0;
@@ -93,7 +93,8 @@ bool run_nodes(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResour
     if (!head_callback(stop)) { error="animation frame head callback unsupported"; return false; }
     if (!run_segment(ram,windows,resources,state,device,external_status,options,stop,AnimationFrameNodes,r.node_ports,r.waits,
         r.node_external_reads,error)) return false;
-    if (state.pc!=stop||state.a[6]!=HEAD_LONG||state.a[7]!=SPD-4||ram_get(ram,SPD-4,4)!=DISPATCH_PC) {
+    if (state.pc!=stop||state.a[6]!=HEAD_LONG||state.a[7]!=SPD-4||ram_get(ram,SPD-4,4)!=DISPATCH_PC||
+        state.a[5]!=0x108000||state.a[0]!=stop||ram_get(ram,HEAD_LONG,4)!=stop) {
         error="animation frame pass boundary mismatch"; return false;
     }
     r.pass_stop_pc=stop;
@@ -129,7 +130,7 @@ bool step_animation_machine_frame(std::vector<std::uint8_t>& ram, const std::vec
     if (!run_segment(wram,windows,resources,wstate,wdevice,external_status,options,controller,AnimationFrameHead,wresult.head_ports,
         wresult.waits,wresult.head_external_reads,werror)) { error=werror; return false; }
     if (wstate.pc!=controller||wstate.a[6]!=CONTROLLER_LONG||wstate.a[7]!=SPD-4||ram_get(wram,SPD-4,4)!=DISPATCH_PC||
-        ram_get(wram,CONTROLLER_LONG,4)!=controller) { error="animation frame head boundary mismatch"; return false; }
+        ram_get(wram,CONTROLLER_LONG,4)!=controller||wstate.a[5]!=0x108000||wstate.a[0]!=controller) { error="animation frame head boundary mismatch"; return false; }
     wstate.pc=DISPATCH_PC; wstate.a[7]=SPD; wstate.carry=AnimationCarryUnknown;
     if (!run_nodes(wram,windows,resources,wstate,wdevice,external_status,options,wresult,werror)) { error=werror; return false; }
     wresult.head_pc=head; wresult.controller_pc=controller;

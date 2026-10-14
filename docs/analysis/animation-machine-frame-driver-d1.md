@@ -8,13 +8,13 @@
 - `run_animation_machine_pass`: seed에서 시작하는 frame 0용 N pass다.
   - 시작 조건: PC `2ac2`, A6 `1008e4`, A7 `1ff000`.
   - stop: 시작 시의 LONG `(100820)`. `e4a` 또는 `e74`만 허용한다.
-  - 종료 조건: PC=stop, A6 `100820`, A7 `1feffc`, LONG `(1feffc)`=`2ac2`.
+  - 종료 조건: PC=stop, LONG `(100820)`=stop, A6 `100820`, A5 `108000`, A0=stop, A7 `1feffc`, LONG `(1feffc)`=`2ac2`.
 - `step_animation_machine_frame`: 한 frame을 세 구간으로 실행한다.
-  1. H: frame head를 PC=LONG `(100820)`부터 controller 진입 PC=LONG `(1008e4)`까지 실행한다. 종료 시 A6 `1008e4`, A7 `1feffc`, 복귀 LONG `2ac2`를 확인하고, controller LONG이 바뀌지 않았는지도 확인한다.
+  1. H: frame head를 PC=LONG `(100820)`부터 controller 진입 PC=LONG `(1008e4)`까지 실행한다. 종료 시 A6 `1008e4`, A5 `108000`, A0=controller, A7 `1feffc`, 복귀 LONG `2ac2`를 확인하고, controller LONG이 바뀌지 않았는지도 확인한다.
   2. 선언 controller 생략: PC:=`2ac2`, A7+=4, C Unknown.
   3. N: `run_animation_machine_pass`와 같은 pass를 실행한다.
 - 모든 구간은 C Unknown으로 시작한다. 실패하면 RAM·상태·device(PVC, bank, 외부 읽기 queue)·result를 전혀 바꾸지 않는다.
-- 선언 해제(`AnimationFrameWait`로 순서대로 기록하고, 구간마다 최대 64회):
+- 선언 해제(`AnimationFrameWait`로 순서대로 기록하고, 구간마다 최대 16회, 원본 `S.WAIT_LIMIT`와 같음):
 
   | PC | 해제 동작 | 의미 |
   | --- | --- | --- |
@@ -40,8 +40,8 @@
   - 대상: 142 seed × 최대 400 frame = 54,406 frame. 정상 D1 frame 54,400개가 모두 일치했고 불일치는 0이다.
   - 비교 항목: RAM 64KiB, 레지스터 16개·PC, PVC bank·page, 구간별 순서 있는 ports, 대기 해제 기록, 외부 읽기 수, head/controller/stop PC.
   - card frame 130개도 일치한다.
-  - 원본에서 frame이 완료되지 않는 6개(guard-release seed 5개의 frame 0 `fetch-unmapped`, case 141 frame 0 `odd-pc` `47c05`)는 C++가 상태를 보존하는 checked error로 끝났다.
-- **[F] C++ 단독 연쇄:** C++ 출력만 다음 frame으로 넘겨, 자연 seed 137개 모두 마지막 frame까지 원본과 일치했다. 54,400 frame이고 어긋난 frame은 없다. 같은 연쇄를 두 번 실행해도 결과가 같았다.
+  - 원본에서 frame이 완료되지 않는 6개(guard-release seed 5개의 frame 0 `fetch-unmapped`, case 141 frame 0 `odd-pc` `47c05`)는 C++가 상태를 보존하는 checked error로 끝났고, 오류 문구가 원본 stop 종류와 짝을 이룬다(`fetch-unmapped` ↔ `animation fade card odd JSR target`, `odd-pc` ↔ `unaligned animation machine PC`).
+- **[F] C++ 단독 연쇄:** C++ 출력만 다음 frame으로 넘겨, 자연 seed 136개가 400 frame을 완주하며 원본과 일치했고, case 141은 원본과 같은 frame 0 정지에서 checked error로 끝났다. 일치한 frame은 54,400개이고 어긋난 frame은 없다. 같은 연쇄를 두 번 실행해도 결과가 같았다.
 - **[F] 역사 기록 대조:** 관측 문서의 역사 집계 22개가 모두 같다.
   - 자연 137 seed 중 136개가 400 frame을 완주했다.
   - H 54,264개가 모두 `c52a`에서 멈췄다.
@@ -58,7 +58,7 @@
   - 결과 위조(RAM·레지스터·port·대기·읽기 수·carry)
 - **비교 어댑터:** C++ `MOVE.L` `3c0000` 1건을 원본의 WORD 2건으로 나누는 변환을 썼다. 원본 node `4fcce`/`4fcda`의 port 구간 안에서만 적용한다(F4 검증기와 같은 규약).
 - **외부 읽기 queue:** 원본 H가 실제 소비한 값과 순서를 그대로 C++에 공급했고, C++가 queue를 남김없이 소비했는지 확인했다.
-- 재현 명령: `.venv/bin/python tools/verify_animation_machine_frame_driver.py --workers 4`. 4코어에서 약 4분 24초 걸렸고, 보고서는 `artifacts/animation_machine_frame_driver/verification.json`(로컬, SHA256 `f96ce9b2…`)이다.
+- 재현 명령: `.venv/bin/python tools/verify_animation_machine_frame_driver.py --workers 4`. 4코어에서 약 4분 16초 걸렸고, 보고서는 `artifacts/animation_machine_frame_driver/verification.json`(로컬, SHA256 `76873c60…`, 최종 코드 기준)이다.
 
 ## 남은 것
 - controller D9/C1~C3를 실행해 선언 생략을 없애야 한다.

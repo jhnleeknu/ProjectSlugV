@@ -8,7 +8,7 @@ namespace ms5 {
 //   skip: the declared controller skip (PC := 2ac2, A7 += 4 = the RTS the controller would run, C Unknown). The controller is not run.
 //   N: the existing F2 node pass from 2ac2 until the dispatcher enters LONG (100820).
 // BIOS, IRQ and the controller are not executed. Each segment starts with C Unknown. Only the head callbacks e4a / e74 are supported.
-// Declared wait releases (one per Waiting block, recorded in AnimationFrameWait; at most 64 waits per segment):
+// Declared wait releases (one per Waiting block, recorded in AnimationFrameWait; at most 16 waits per segment):
 //   ef2   BYTE (A5-7fea) := BYTE (A5-7fe9)   (vblank)          16bd0  WORD (A5+d34) := D0.W   (sprite flush)
 //   3aea  WORD 104d74 := ffff                (sound ring)      cda4   WORD 108d34 := D4.W     (sprite queue)
 //   47af0 / 478de  BYTE 107ded &= 7f only if WORD 107dea == 0, else a checked error (gate).
@@ -24,7 +24,7 @@ struct AnimationFrameWait {
 // card_resume: the declared BIOS card request (N reaches c376 JSR c00468; BIOS is not executed). When a run fails, it is re-run
 // from the same pre-call state with stop PC c00468. If that returns at c00468 with LONG (A7) = c37c, the request is declared
 // answered: BYTE 10fdc6 := card_answer, PC := c37c, A7 += 4, C Unknown, recorded as an AnimationFrameWait (pc c00468, address
-// 10fdc6, size 1) and counted in the 64-wait limit. Any other outcome returns the original error. false: no card handling.
+// 10fdc6, size 1) and counted in the 16-wait limit. Any other outcome returns the original error. false: no card handling.
 struct AnimationFrameOptions {
     bool card_resume;
     std::uint8_t card_answer;
