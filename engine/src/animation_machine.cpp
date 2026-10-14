@@ -977,6 +977,12 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // Objects N35 (F4) blocks: JSR/JMP/RTS 4c728 4cf52 4cf5c 4cf62 ea680 ea68a and the 2 consumers 4cf58 (C returned by 288c), ea686
     // (1abda). N35 has no known C producer; the other blocks stay Unknown.
     case 0x4c728:case 0x4cf52:case 0x4cf58:case 0x4cf5c:case 0x4cf62:case 0xea680:case 0xea686:case 0xea68a:
+    // F5 frame head H2: 46 FLOW_ONLY blocks (only LEA / JSR / BSR / BRA / JMP / RTS / Bcc / DBRA and the Z-only BTST / BSET / BCLR).
+    case 0x334c:case 0x3360:case 0x3364:case 0x3368:case 0x3404:case 0x349a:case 0x350e:case 0x3904:case 0x3910:case 0x3912:
+    case 0x3916:case 0x90b6:case 0x90ba:case 0x90c4:case 0x90dc:case 0x90ea:case 0x90f8:case 0x9106:case 0x910a:case 0x9122:
+    case 0x9126:case 0x9130:case 0x9134:case 0x9154:case 0x9168:case 0x9172:case 0x9184:case 0x91cc:case 0x91d0:case 0x91da:
+    case 0x91ea:case 0x91f4:case 0x91fe:case 0x9208:case 0x9218:case 0x9222:case 0x922c:case 0x924c:case 0x9250:case 0x928a:
+    case 0x928e:case 0x92ce:case 0x92ec:case 0x92fc:case 0x9326:case 0x933e:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1408,6 +1414,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
             else if (next.pc>=0x11792 && next.pc<0x13b46)ok=animation_frame_head_h4_block(c);
             else if ((next.pc>=0x4c6f0 && next.pc<0x4c72a) || (next.pc>=0x4cf52 && next.pc<0x4cf64) ||
                 (next.pc>=0x4d8d8 && next.pc<0x4d900) || (next.pc>=0xea680 && next.pc<0xea69c))ok=animation_objects_n35_block(c);
+            else if ((next.pc>=0x313c && next.pc<0x3144) || (next.pc>=0x31d6 && next.pc<0x35a2) ||
+                (next.pc>=0x3902 && next.pc<0x3918) || (next.pc>=0x9086 && next.pc<0x9344))ok=animation_frame_head_h2_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
