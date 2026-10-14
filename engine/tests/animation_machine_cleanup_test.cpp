@@ -97,7 +97,7 @@ void errors(){Bytes ram(65536,0);put(ram,SP,4,STOP);ms5::AnimationMachineState s
  s=state(0x2a28);s.a[0]=0x102000;put(ram,0x102010,2,1);reject(ram,s,STOP,"TRAP15");s=state(0x46ef4);put(ram,0x10206c,1,8);reject(ram,s,STOP,"TRAP15");
  s=state(0x271c);s.a[0]=0x1fffb0;reject(ram,s,STOP,"write device");s=state(0x43e38);s.a[0]=0x1ffff0;reject(ram,s,STOP,"ROM");
  s=state(0x8ff4);put(ram,0x10201d,1,1);put(ram,0x102019,1,1);s.a[5]=0;reject(ram,s,STOP,"unsupported");
- s=state(0x8eb6);put(ram,SP,4,0xdeac);s.a[0]=0x102000;reject(ram,s,STOP,"unsupported animation machine PC");
+ s=state(0x8eb6);put(ram,SP,4,0x10fe44);s.a[0]=0x102000;reject(ram,s,STOP,"unsupported animation machine PC");
  s=state(0x2a34);s.a[7]=0x100008;reject(ram,s,STOP,"RAM");
  // PlainMOVE.Lpush clearsC; arbitraryentry cannot retain callerknownC.
  ram.assign(65536,0);s=state(0x2a34);s.a[0]=0x102000;Out o;assert(run(ram,s,0x2a3c,o)&&s.carry==ms5::AnimationCarryUnknown&&s.a[7]==SP-12&&get(ram,SP-12,4)==0x102000);
