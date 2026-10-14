@@ -9,3 +9,10 @@ artifacts/
 *.zip
 *.7z
 *.rom
+
+# Local data/venv may be symlinks rather than directories.
+/.venv
+/extracted
+/roms
+/artifacts
+/build

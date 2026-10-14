@@ -2145,3 +2145,12 @@
 - 사용자 지시를 기록했다. 작업 완료 후 오래된 `artifacts` 검증·임시 산출물부터 정리하고, 최종 결과와 실제 검증 근거를 보존한다. 다음으로 완료된 `claude-integration` 복사본의 미반영 코드와 필요한 결과가 본 작업 폴더에 반영·보존됐는지 확인한 뒤 정리한다. 그 후 `https://github.com/jhnleeknu/ProjectSlugV.git`에 중간 결과를 올려 여러 컴퓨터에서 이어 작업할 예정이다.
 - 이번 변경은 계획·운영 규칙 기록만이다. 삭제·원격 설정·GitHub push는 아직 실행하지 않았다. 이전할 기준 브랜치 및 원격 기존 이력은 이전 실행 시 확인한다. 현재 인수 완료 결과는 `codex/f4-f5-acceptance`의 `3d7d11a`이며 다른 로컬 checkout에 자동 반영됐다고 가정하지 않는다.
 - 루트 README는 빈 상태로 유지하고 절차는 `docs/WORKFLOW.md`에 둔다. Codex·Claude 모두 서브에이전트 사용을 필수로 하며 심화 추론과 확정 사양의 분산 코딩·검증을 분리한다. 기존 모델/effort·작업자 상한과 전체 Goal 범위·완료 기준은 유지한다.
+
+
+## 2026-10-14 — artifacts·완료 복사본 정리 및 GitHub 게시 준비
+
+- 사용자 승인 순서대로 과거 claude-integration의 artifacts/build를 먼저 정리했다. regular 1,011,493개 / 25,416,756,662바이트를 고유 객체 30,730개로 보존했으며 압축 데이터+경로·metadata manifest는 합계 666,183,355바이트다. 모든 원본 SHA, 전후 census, 실제 압축 객체 SHA/크기·누락/추가·gzip CRC를 검증했다. 원래 내용과 mtime/mode/링크를 복원하는 도구와 테스트 9개, 독립 검토·재검증 기록을 추가했다.
+- 과거 0256 근거 40개를 실제 바이트로 보존했다. 현재 0258 인수 산출물·최초 실패 자료는 유지하며 report/receipt/log 105개 hash를 정리 후 재확인했다. 역사적 pin을 수정하지 않았고, 이번 파일 검사를 전체 게임 재검증이라고 부르지 않는다.
+- 그 후 Codex 관리 도구로 claude-integration worktree를 archive했다. 미반영 코드가 없음을 확인했고 `codex/claude-integration`의 `9682aed` 브랜치도 유지했다. 공유 primary/ROM/extracted/venv 및 다른 작업 복사본은 유지했다. 실제 보존 위치·SHA·복원 방법은 `docs/reviews/0260-cleanup-github-migration.md`, 상세 수치는 `0260-cleanup-manifest.json`에 있다. GitHub에는 이 대용량 로컬 보존본이 포함되지 않는다.
+- origin을 `https://github.com/jhnleeknu/ProjectSlugV.git`으로 연결했다. 기존 ref가 없는 저장소의 기본 브랜치 main을 확인하고 인증·dry-run을 통과했다. 이 항목은 게시 직전 준비 기록이며 실제 게시 SHA는 후속 기록으로 남긴다. 루트 README는 0바이트, engine/README.md는 유지했다. 여러 컴퓨터의 작업 절차는 `docs/WORKFLOW.md`, Claude 시작 안내는 `CLAUDE.md`다. 서브에이전트 필수·모델/effort·역할 분담 규칙은 유지한다.
+- 엔진 구현·기존 전체 Goal 범위와 일시중지 상태는 변경하지 않았다. 후속 게임 작업은 기존 D1/D9/C1–C3/deferred 단위 목록을 따른다.

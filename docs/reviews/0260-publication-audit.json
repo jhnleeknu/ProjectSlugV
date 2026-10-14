@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "scope": "All Git objects reachable from audited HEAD; other refs and unreachable objects are not included in a normal branch push. Working tree inspection is tracked HEAD plus status. Remote existence, permissions, branch state and credentials are delegated to main.",
+  "head": "20ea8a8e6b75993fdf6be8f488044e44376b4fc1",
+  "method": [
+    "git rev-list --objects HEAD",
+    "git cat-file --batch-check and --batch: every reachable blob scanned for binary content, size, suspect paths and high-confidence secret patterns",
+    "git ls-tree -r -z HEAD",
+    "git status --short; local Git config remote names only; rg portability paths",
+    "git ls-tree -r -z for all 449 reachable commits: all historical paths/modes, including renamed blobs"
+  ],
+  "counts": {
+    "commit": 449,
+    "tree": 3542,
+    "blob": 3982
+  },
+  "reachable_blob_bytes": 155528352,
+  "tracked_file_count": 1964,
+  "binary_blob_findings": [],
+  "suspect_payload_path_findings": [],
+  "secret_pattern_findings": [],
+  "large_blobs_ge_50MiB": [],
+  "largest_blobs": [
+    {
+      "oid": "386596153f75bce947d8413277fafb6afaf32afb",
+      "size": 792661,
+      "path": "engine/tests/animation_machine_objects_n23_test.cpp"
+    },
+    {
+      "oid": "0101c8379afeb72e27739745ecb1358d296cabf5",
+      "size": 768090,
+      "path": "engine/tests/animation_machine_objects_n25_test.cpp"
+    },
+    {
+      "oid": "3f4479617cd51b06e4a534ede43fb4335e32bb25",
+      "size": 767699,
+      "path": "engine/tests/animation_machine_objects_n24_test.cpp"
+    },
+    {
+      "oid": "c6f0dbec8fd5a556712c41f799056e5717b66456",
+      "size": 642662,
+      "path": "engine/tests/animation_machine_objects_n18_test.cpp"
+    },
+    {
+      "oid": "74a7f7f26b3752eb81b6bd7fe53c9e4696766b7d",
+      "size": 618846,
+      "path": "engine/tests/animation_machine_objects_n20_test.cpp"
+    },
+    {
+      "oid": "8918eb3b63950d08f6ff2b024895f16ca36f369f",
+      "size": 550983,
+      "path": "engine/tests/animation_machine_frame_head_h2_test.cpp"
+    },
+    {
+      "oid": "40146d19d62cebef072b2293ab69bb7c154bb2ce",
+      "size": 526223,
+      "path": "engine/tests/animation_machine_objects_n32_test.cpp"
+    },
+    {
+      "oid": "82d3ba12df56fc4959d6ed450f3be296688d3010",
+      "size": 512864,
+      "path": "engine/tests/animation_machine_frame_head_h8_test.cpp"
+    },
+    {
+      "oid": "927601bfd80f3e6c6d14f5a2513ff0c0c3594e07",
+      "size": 497745,
+      "path": "engine/tests/animation_machine_frame_head_h4_test.cpp"
+    },
+    {
+      "oid": "a36aa8a0a2fc3478e65263116e929c260ea4192c",
+      "size": 488083,
+      "path": "engine/tests/animation_machine_objects_n34_test.cpp"
+    }
+  ],
+  "tracked_symlinks": [],
+  "current_status": [
+    "?? .venv",
+    "?? extracted"
+  ],
+  "local_remote_names": [],
+  "root_README_at_audit": {
+    "tracked": false,
+    "exists": false,
+    "size": null
+  },
+  "absolute_path_files": {
+    "Makefile": [],
+    "config": [],
+    "tools": [
+      "tools/verify_animation_machine_input.py",
+      "tools/verify_animation_machine_stage_catalog.py",
+      "tools/observe_animation_machine_scheduler_rng.py",
+      "tools/verify_animation_machine_area_clear.py",
+      "tools/verify_animation_machine_stage_entry.py",
+      "tools/verify_animation_machine_motion_walk.py",
+      "tools/verify_animation_machine_card_menu_nested.py",
+      "tools/verify_animation_machine_script_placement.py",
+      "tools/verify_animation_machine_stage_event_ops.py",
+      "tools/observe_animation_machine_objects_g3.py",
+      "tools/verify_animation_machine_scheduler.py",
+      "tools/verify_animation_machine_stage_event.py",
+      "tools/verify_animation_machine_scheduler_rng_f4.py",
+      "tools/verify_animation_machine_stage_area.py",
+      "tools/observe_animation_machine_objects_g2.py",
+      "tools/verify_animation_machine_scene_core.py",
+      "tools/observe_animation_machine_pvc_banks.py",
+      "tools/verify_animation_machine_scene_update.py",
+      "tools/verify_animation_machine_buffer_cue.py"
+    ],
+    "engine": [],
+    "docs/WORKFLOW.md": []
+  },
+  "limits": [
+    "Pattern scanning does not prove the absence of every possible secret or ROM-derived text. No secret values are recorded. Binary/path findings require explicit review.",
+    "GitHub remote checks were not performed; no push or remote mutation occurred.",
+    "Absolute paths in historical evidence are provenance, not necessarily executable dependencies."
+  ],
+  "portability_recommendation": "Preserve historical machine-specific evidence paths. Add a short new-computer note listing fresh Python environment, required compiler/build tools, independently supplied hash-verified ROM/media/runtime data, ignored acceptance evidence custody, and explicit per-machine path overrides. No engine restructuring is needed for publication.",
+  "all_history_path_count": 1964,
+  "historical_symlinks": [],
+  "historical_gitlinks": [],
+  "all_history_suspect_paths": [],
+  "portability_details": [
+    {
+      "type": "portable_build",
+      "evidence": "Makefile: CXX=clang++, -std=c++11; setup-tools creates .venv and installs requirements-analysis.txt; no absolute engine paths found."
+    },
+    {
+      "type": "historical_provenance_mapping",
+      "evidence": "Most MAIN_ROOT constants remap recorded observation paths into current ROOT; preserve historical pins."
+    },
+    {
+      "type": "machine_specific_observer_default",
+      "evidence": "observe_animation_machine_scheduler_rng.py and observe_animation_machine_pvc_banks.py default INPUT_TREE to /Users/start/Workspce/metalslug-input; --routing-file supplies explicit source without that worktree."
+    },
+    {
+      "type": "machine_specific_output_default",
+      "evidence": "observe_animation_machine_objects_g2.py and g3.py default OUT to /Users/start/Workspce/ms5-scratch/...; --out overrides this."
+    },
+    {
+      "type": "historical_receipt_pin",
+      "evidence": "verify_animation_machine_scheduler_rng_f4.py compares ROM mtime_ns with native observation; a newly copied ROM may retain hash/size but fail historical mtime pin. Retain original evidence and document this limitation; do not relax pins or claim fresh acceptance."
+    }
+  ],
+  "publication_verdict": "No detected prohibited binary payloads, suspect historical data paths, pattern-matched secrets, tracked symlinks, or large blobs in HEAD history. Publication content audit passes subject to main checking final staged changes and remote state; root README absent at audit and must become 0 bytes as authorized.",
+  "review_correction": "Independent follow-up found that only scheduler_rng supports --routing-file; PVC observer has fixed INPUT_TREE/INPUT_ROUTING/INPUT_BUS/U06 paths and requires separate portability work. Earlier combined RNG/PVC recommendation is superseded by this correction."
+}
