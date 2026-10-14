@@ -14,9 +14,9 @@ Reviewer: gpt-6.1-sol / medium. Read-only review of publication changes against 
 - Recheck: WORKFLOW now correctly separates RNG `--routing-file` from PVC fixed path limitations; `0260-publication-audit.json` records `review_correction` superseding earlier recommendation. No pinned observer source changed.
 - Publication remote facts (empty refs/default main/authorization) are supplied by main and not independently network-verified by this reviewer.
 
-## Pending
+## Final staged review
 
-Review final documentation state and staged payload after preservation/cleanup execution.
+Independent reviewer rechecked 11 staged text files after actual cleanup; staged diff SHA256 `e45fdb627a6d968f589c3668efd6f7459672a5f5ad8ca83d0a73355e5f97dd93` was stable. README was 0 bytes; no data-root files, symlinks or secret-pattern findings. Actual archive and companion bytes/SHA matched the receipts; tool SHA matched the staged code; source initial/final/pre-delete census matched. Removed source directory was absent and its HEAD was an ancestor. No unresolved finding. Main separately verified remote publication and fresh clone in `0260-publication-receipt.json`.
 
 ## Evidence store code review (resolved)
 

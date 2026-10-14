@@ -1,0 +1,14 @@
+{
+  "repository": "https://github.com/jhnleeknu/ProjectSlugV.git",
+  "source_checkpoint": "7dd25108e6f8d4569521118de11e413b6b27434c",
+  "verified_remote_refs": {
+    "refs/heads/codex/f4-f5-acceptance": "7dd25108e6f8d4569521118de11e413b6b27434c",
+    "refs/heads/main": "7dd25108e6f8d4569521118de11e413b6b27434c"
+  },
+  "fresh_clone_head": "7dd25108e6f8d4569521118de11e413b6b27434c",
+  "fresh_clone_tree": "d7d3cb5f24a56de6238e5813bb43756096f0190f",
+  "fresh_clone_reachable_commits": 450,
+  "fresh_clone_root_readme_bytes": 0,
+  "fresh_clone_fsck": "passed",
+  "scope": "Source/history publication verified; no ROM/resources/local evidence transferred; no game execution on fresh clone"
+}

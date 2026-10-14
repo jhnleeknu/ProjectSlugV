@@ -46,3 +46,7 @@
 ## 새 컴퓨터에서 이어가기
 
 `docs/WORKFLOW.md`의 clone → fetch → 기준 커밋 확인 → pull --ff-only → 독립 작업 브랜치 → 검증·상태 기록 → push 절차를 따른다. GitHub에는 소스와 도구·문서가 전달된다. ROM·런타임 리소스·과거 로컬 검증 근거는 별도 전달 또는 기록된 절차로 재생성해야 한다. 역사 근거를 재생성 결과로 조용히 교체하지 않는다. 기계별 관측기 경로 옵션과 ROM mtime pin 제약도 WORKFLOW에 기록했다.
+
+## GitHub 게시 확인
+
+정리 소스 체크포인트 `7dd25108e6f8d4569521118de11e413b6b27434c`를 origin의 `main`과 `codex/f4-f5-acceptance`에 atomic push했다. 두 원격 ref가 로컬 SHA와 같음을 확인했다. 별도 임시 폴더에서 GitHub main을 새로 clone하여 HEAD·tree 동일, 도달 가능한 450개 commit, root README 0바이트와 `git fsck --full` 성공을 확인한 뒤 임시 clone을 제거했다. 검증 receipt는 `0260-publication-receipt.json`이다. 이 확인 기록 자체는 체크포인트 다음 커밋으로 게시한다. 개발 브랜치 upstream은 `origin/codex/f4-f5-acceptance`다. 빈 저장소의 최초 게시이므로 PR이나 원격 병합을 수행하지 않았다.

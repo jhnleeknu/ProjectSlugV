@@ -2154,3 +2154,9 @@
 - 그 후 Codex 관리 도구로 claude-integration worktree를 archive했다. 미반영 코드가 없음을 확인했고 `codex/claude-integration`의 `9682aed` 브랜치도 유지했다. 공유 primary/ROM/extracted/venv 및 다른 작업 복사본은 유지했다. 실제 보존 위치·SHA·복원 방법은 `docs/reviews/0260-cleanup-github-migration.md`, 상세 수치는 `0260-cleanup-manifest.json`에 있다. GitHub에는 이 대용량 로컬 보존본이 포함되지 않는다.
 - origin을 `https://github.com/jhnleeknu/ProjectSlugV.git`으로 연결했다. 기존 ref가 없는 저장소의 기본 브랜치 main을 확인하고 인증·dry-run을 통과했다. 이 항목은 게시 직전 준비 기록이며 실제 게시 SHA는 후속 기록으로 남긴다. 루트 README는 0바이트, engine/README.md는 유지했다. 여러 컴퓨터의 작업 절차는 `docs/WORKFLOW.md`, Claude 시작 안내는 `CLAUDE.md`다. 서브에이전트 필수·모델/effort·역할 분담 규칙은 유지한다.
 - 엔진 구현·기존 전체 Goal 범위와 일시중지 상태는 변경하지 않았다. 후속 게임 작업은 기존 D1/D9/C1–C3/deferred 단위 목록을 따른다.
+
+## 2026-10-14 — GitHub 최초 게시·새 clone 검증 완료
+
+- 정리·소스 체크포인트 `7dd25108e6f8d4569521118de11e413b6b27434c`를 `origin/main`과 `origin/codex/f4-f5-acceptance`에 게시하고 두 ref의 일치를 확인했다. 새 임시 clone에서도 HEAD·tree·450개 기존 이력·root README 0바이트를 확인했고 `git fsck --full`이 통과했다. 이 게시 확인 기록은 체크포인트 다음 커밋으로 추가한다.
+- 다음 컴퓨터는 `https://github.com/jhnleeknu/ProjectSlugV.git`을 clone하고 최신 main에서 작업 브랜치를 만들면 된다. 기존 컴퓨터는 `docs/WORKFLOW.md`대로 fetch·상태 확인·pull --ff-only를 따른다. 로컬 ROM·런타임 리소스·과거 근거 보존본은 별도이며 GitHub에 전송하지 않았다.
+- 게시 receipt: `docs/reviews/0260-publication-receipt.json`. 게임 구현 범위·기존 미완료 목록·전체 Goal 일시중지는 유지한다.
