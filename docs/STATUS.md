@@ -2160,3 +2160,14 @@
 - 정리·소스 체크포인트 `7dd25108e6f8d4569521118de11e413b6b27434c`를 `origin/main`과 `origin/codex/f4-f5-acceptance`에 게시하고 두 ref의 일치를 확인했다. 새 임시 clone에서도 HEAD·tree·450개 기존 이력·root README 0바이트를 확인했고 `git fsck --full`이 통과했다. 이 게시 확인 기록은 체크포인트 다음 커밋으로 추가한다.
 - 다음 컴퓨터는 `https://github.com/jhnleeknu/ProjectSlugV.git`을 clone하고 최신 main에서 작업 브랜치를 만들면 된다. 기존 컴퓨터는 `docs/WORKFLOW.md`대로 fetch·상태 확인·pull --ff-only를 따른다. 로컬 ROM·런타임 리소스·과거 근거 보존본은 별도이며 GitHub에 전송하지 않았다.
 - 게시 receipt: `docs/reviews/0260-publication-receipt.json`. 게임 구현 범위·기존 미완료 목록·전체 Goal 일시중지는 유지한다.
+
+## 2026-10-14 — Claude 클라우드 세션: PVC 관측기 입력 경로 이식
+
+- 새 clone(`0caa22c`)에서 시작해 `claude/projectslugv-work-cycle-yout6u` 브랜치에서 작업했다. 이 환경에는 ROM·추출 데이터·과거 artifacts가 없다. 그래서 `docs/WORKFLOW.md`가 남은 과제로 적은 PVC 관측기 경로 이식을 ROM 없이 끝낼 수 있는 단위로 골랐다.
+- 관측기 본체는 세 도구(`frame_head`, `objects_g2`, `stage_area`)가 SHA `86ebf962…`로 pin한다. 그래서 본체는 수정하지 않고 wrapper `tools/run_animation_machine_pvc_banks.py`를 추가했다.
+  - `--input-tree`·`--reference-dir`로 입력 위치를 지정하고, 누락 파일은 출력 전에 모두 표시한다.
+  - pin 키 이름과 순서는 과거와 같고, 실제 입력 위치는 `input_locations.json`에 기록한다.
+  - 독립 리뷰가 1차 설계(본체 직접 수정, `93261ed`)의 SHA pin 파손을 찾아 재설계했다.
+- 검증: 고정 MAME 참고 소스를 받은 뒤 Python 테스트가 기준 266개에서 변경 후 273개로 모두 통과했다. ROM이 없어 관측 전체 실행은 하지 않았다(미확인). 상세: `docs/reviews/0261-pvc-observer-input-paths.md`.
+- 도구 판단: REA(`morluto/rea`, Hopper/Ghidra/IDA를 MCP로 연결하는 범용 역공학 도구)를 검토했다. 68000·Neo Geo·PVC bank 전용 지원이 없고, 이 저장소의 원본 비교 기반(Unicorn 실행 비교·고정 capstone·주소 resolver·pin 체계)을 대체하지 못해 이번 단위에는 채택하지 않았다. Ghidra 68000 디컴파일을 고아 사슬·`4d418` 같은 미해석 코드 탐색의 보조로 쓸 수는 있다. 그 출력은 자동 역어셈블과 같이 분석 완료 근거로 취급하지 않는다.
+- 다음: ROM이 있는 컴퓨터에서 wrapper로 PVC 관측 재실행 확인, 기존 목록(G3 C++ 검증, D1 frame 구동기, D9/C1–C3, b-unit·고아 사슬)을 이어서 진행한다. 전체 Goal 범위·완료 기준은 바꾸지 않았다.

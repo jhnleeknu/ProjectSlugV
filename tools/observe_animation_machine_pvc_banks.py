@@ -39,25 +39,12 @@ from address_map import pvc_bank_update
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts/animation_machine_pvc_banks_native'
-DEFAULT_INPUT_TREE=Path('/Users/start/Workspce/metalslug-input')
-DEFAULT_REFERENCE_DIR=ROOT/'artifacts/reference'
-INPUT_TREE=DEFAULT_INPUT_TREE
+INPUT_TREE=Path('/Users/start/Workspce/metalslug-input')
 INPUT_ROUTING=INPUT_TREE/'engine/src/animation_machine.cpp'
 INPUT_BUS=INPUT_TREE/'engine/src/program_bus.cpp'
-INPUT_U06_CPP=INPUT_TREE/'engine/src/animation_machine_objects_u06.cpp'
 U06_CONTRACT=ROOT/'docs/analysis/animation-machine-objects-u06-contract.md'
-REF_PVC=DEFAULT_REFERENCE_DIR/'prot_pvc.cpp'
-REF_NEOGEO=DEFAULT_REFERENCE_DIR/'neogeo.cpp'
-
-
-def configure_inputs(input_tree,reference_dir):
-    global INPUT_TREE,INPUT_ROUTING,INPUT_BUS,INPUT_U06_CPP,REF_PVC,REF_NEOGEO
-    tree=Path(input_tree).expanduser();ref=Path(reference_dir).expanduser()
-    routing=tree/'engine/src/animation_machine.cpp';bus=tree/'engine/src/program_bus.cpp';u06=tree/'engine/src/animation_machine_objects_u06.cpp'
-    pvc=ref/'prot_pvc.cpp';neogeo=ref/'neogeo.cpp'
-    missing=[str(p) for p in (routing,bus,u06,pvc,neogeo) if not p.is_file()]
-    if missing:raise SystemExit('missing required input files (--input-tree / --reference-dir):\n  '+'\n  '.join(missing))
-    INPUT_TREE,INPUT_ROUTING,INPUT_BUS,INPUT_U06_CPP,REF_PVC,REF_NEOGEO=tree,routing,bus,u06,pvc,neogeo
+REF_PVC=ROOT/'artifacts/reference/prot_pvc.cpp'
+REF_NEOGEO=ROOT/'artifacts/reference/neogeo.cpp'
 KEYS=S.KEYS
 M32=S.M32
 SPD=S.SPD
@@ -659,26 +646,14 @@ def natural_init_replay(case,ent,program,fixed,entries,blob):
 def tool_pins():
     pins={}
     for name in ('observe_animation_machine_scheduler.py',)+S.IMPORTED_TOOLS:pins['tools/'+name]=sha((ROOT/'tools'/name).read_bytes())
-    for path in (S.F2_CONTRACT,S.F3_CONTRACT,U06_CONTRACT,S.SEED_OBS):pins[str(path.relative_to(ROOT))]=sha(path.read_bytes())
-    pins.update(input_pins())
+    for path in (S.F2_CONTRACT,S.F3_CONTRACT,U06_CONTRACT,S.SEED_OBS,REF_PVC,REF_NEOGEO):pins[str(path.relative_to(ROOT))]=sha(path.read_bytes())
+    for path in (INPUT_ROUTING,INPUT_BUS,INPUT_TREE/'engine/src/animation_machine_objects_u06.cpp'):pins['metalslug-input/'+str(path.relative_to(INPUT_TREE))]=sha(path.read_bytes())
     return pins
-
-
-def input_pins():
-    pins={}
-    for path in (REF_PVC,REF_NEOGEO):pins['artifacts/reference/'+path.name]=sha(path.read_bytes())
-    for path in (INPUT_ROUTING,INPUT_BUS,INPUT_U06_CPP):pins['metalslug-input/'+str(path.relative_to(INPUT_TREE))]=sha(path.read_bytes())
-    return pins
-
-
-def build_parser():
-    ap=argparse.ArgumentParser();ap.add_argument('--out',default=str(OUT));ap.add_argument('--workers',type=int,default=3)
-    ap.add_argument('--input-tree',default=str(DEFAULT_INPUT_TREE));ap.add_argument('--reference-dir',default=str(DEFAULT_REFERENCE_DIR))
-    return ap
 
 
 def main(argv=None):
-    args=build_parser().parse_args(argv);configure_inputs(args.input_tree,args.reference_dir);out_dir=Path(args.out).resolve();t0=time.time()
+    ap=argparse.ArgumentParser();ap.add_argument('--out',default=str(OUT));ap.add_argument('--workers',type=int,default=3)
+    args=ap.parse_args(argv);out_dir=Path(args.out).resolve();t0=time.time()
     rom_start=S.rom_stat();assert rom_start['sha256']==S.ROM_SHA
     assert sha(S.F2_CONTRACT.read_bytes())==S.F2_SHA and sha(S.F3_CONTRACT.read_bytes())==S.F3_SHA
     if out_dir.exists() and any(out_dir.iterdir()):raise SystemExit('output directory is not empty: %s'%out_dir)
@@ -746,7 +721,7 @@ def main(argv=None):
     chk('P-5','natural eb7b6 replay (fresh CPU) equals the seed node record (exit SHA, ports SHA) and the independent model',[True,True],[r['ok'] for r in natural])
     chk('P-6','no executed TB start of the two natural nodes is outside the merged-tree routing or off the U06 contract block starts',0,sum(len(d['unrouted'])+len(d['u06_not_start']) for r in seed_rows for d in r['tb_class'].values()))
     rom_end=S.rom_stat();assert rom_end==rom_start,(rom_start,rom_end)
-    report=dict(schema_version=1,tool='tools/observe_animation_machine_pvc_banks.py',tool_sha256=sha(Path(__file__).read_bytes()),scope=SCOPE_TEXT,inputs=pins,input_locations=dict(input_tree=str(INPUT_TREE),reference_dir=str(REF_PVC.parent)),rom_stat_start=rom_start,rom_stat_end=rom_end,
+    report=dict(schema_version=1,tool='tools/observe_animation_machine_pvc_banks.py',tool_sha256=sha(Path(__file__).read_bytes()),scope=SCOPE_TEXT,inputs=pins,rom_stat_start=rom_start,rom_stat_end=rom_end,
         oracle=dict(engine='Unicorn',version=unicorn.__version__,model='UC_CPU_M68K_M68000'),formula_evidence=evidence,
         memory_map=dict(identical_to='tools/observe_animation_machine_scheduler.py Machine except the banked window',banked_window='program[bank_base : bank_base + fe000] for any bank_base >= 100000 (rebuilt on every 2ffff0 / 2ffff2 WORD write); bytes past 800000 are not exposed, a read of them is the guard bank-read-outside-rom',
             routing_source=pins['metalslug-input/engine/src/animation_machine.cpp'],routing_rules=nrules,routable_pcs=sum(bitmap)),
@@ -768,7 +743,7 @@ LIMITATIONS=[
     'The PVC page memory keeps the raw written WORD (the PVC register side effects ff8 = (ff8 & fe00) | a0 and ff9 &= 7fff are tracked in the machine fields and the state SHA, not written back into the page): a CPU read of 2ffff0 / 2ffff2 after a write would not return MAME values.  No node executed here reads them.',
     'Odd bank bases (BYTE offsets that are not even) are modeled by the same slice but never produced by eba3e; the physical odd-address CPU behavior is not claimed.',
     'The bank list pointers are read as LONG CPU addresses and walked only inside the covered spaces (fixed ROM, work RAM mirror, banked window); the semantics of the entries (animation scripts / sprite lists) is not analysed here.',
-    'Entry routability is by callback PC against the merged tree metalslug-input (HEAD a4e9253, U01..U06 routed, U07 not present); internal blocks of an executor are the executor\'s. The tree location is the --input-tree option (recorded in input_locations).',
+    'Entry routability is by callback PC against the merged tree metalslug-input (HEAD a4e9253, U01..U06 routed, U07 not present); internal blocks of an executor are the executor\'s.',
 ]
 
 
