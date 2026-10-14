@@ -247,14 +247,15 @@ def negatives(exe, records, resources, program):
         assert result['external_reads'] == 0x12345678 and result['status'] == 1
         rows.append(dict(label=label, error=error, all_API_outputs_preserved=True,
                          native_exception_rollback_equivalence_claimed=False))
+    # F5 queues nonphysical read addresses; this synthetic gate read has no queued value.
     reject('HUD_gate_device', {'pc': 0x4e286, 'a5': 0x2fa2e1},
-           'unsupported program bus device address')
+           'animation machine external read queue empty')
     reject('HUD_counter_write_before_odd_saved_WORD_push',
            {'pc': 0x4e286, 'a5': 0x108000, 'a7': 0x1feffd, 'd0': 1},
            'even WORD/LONG', memory=((0x10dd1f, 1, 1), (0x10dd20, 1, 0)))
     reject('palette_writes_before_bad_live_RTS',
            {'pc': 0x8cda, 'd0': 12, 'd1': 0x12340a0d, 'd2': 4},
-           'unsupported animation machine PC',
+           'unsupported animation frame head h8 PC',
            memory=((0x104e5a, 2, 1), (0x104e5e, 2, 0x2222),
                    (base['initial_a7'], 4, 0xdeac)))
     reject('rectangle_TRAP_after_first_video_port',
@@ -265,12 +266,12 @@ def negatives(exe, records, resources, program):
            'unsupported original rectangle TRAP15')
     reject('rectangle_ports_before_bad_live_RTS',
            {'pc': 0x35f0, 'd0': 0x7243, 'd1': 0xc904, 'd2': 2, 'd3': 2},
-           'unsupported animation machine PC', memory=((base['initial_a7'], 4, 0xdeac),))
+           'unsupported animation frame head h8 PC', memory=((base['initial_a7'], 4, 0xdeac),))
     reject('rectangle_unsupported_live_A4',
            {'pc': 0x35fe, 'a4': 0x3c0002, 'd7': 0x7243c904, 'd6': 1, 'd2': 1},
            'unsupported animation machine write device')
     reject('BCD_two_BYTE_writes_before_bad_live_RTS',
-           {'pc': 0x4843c, 'a5': 0x108000}, 'unsupported animation machine PC',
+           {'pc': 0x4843c, 'a5': 0x108000}, 'unsupported animation frame head h8 PC',
            memory=((0x10d683, 1, 0x10), (0x10fdb6, 1, 1), (0x10fdb7, 1, 0),
                    (0x10d67e, 2, 0x0100), (base['initial_a7'], 4, 0xdeac)))
     reject('HUD_second_saved_WORD_odd_pop', {'pc': 0x4e312, 'a7': 0x1feffd}, 'even WORD/LONG')

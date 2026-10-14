@@ -299,9 +299,9 @@ def negatives(exe, records, resources, program):
            'unsupported animation machine write device')
     reject('column_record_BYTE_write_before_live_node_BYTE_failure', {'pc': 0x16f76,
            'a3': 0x102000, 'a0': 0x2fffcb, 'a2': 0x103000},
-           'unsupported program bus device address')
+           'animation machine external read queue empty')
     reject('flag_write_before_bad_live_RTS', {'pc': 0x17012, 'a0': 0x102000},
-           'unsupported animation machine PC', memory=((base['initial_a7'], 4, 0xdeac),))
+           'unsupported animation frame head h8 PC', memory=((base['initial_a7'], 4, 0xdeac),))
     reject('finite_budget_after_repeated_secondary_clear_writes', {'pc': 0x185a6,
            'a0': 0x106000, 'd2': 0, 'd3': 0, 'd4': 0, 'd5': 0},
            'animation machine block budget exceeded')

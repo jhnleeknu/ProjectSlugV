@@ -242,8 +242,8 @@ def negatives(exe,folder,fx,resources):
         assert r['status']==1 and r['external_reads']==0x12345678
         assert out==incoming and device==dev and ports==struct.pack('>BII',1,0xdeadbeef,0x87)
         rows.append(dict(label=label,error=error,all_outputs_preserved=True))
-    reject('unsupported-PC',s=dict(state,pc=0xdeac),expected_error='unsupported animation machine PC')
-    ram=bytearray(fx['ram']);native.put(ram,native.S,4,0xdeac);reject('unsupported-live-return',ram=ram,expected_error='unsupported animation machine PC')
+    reject('unsupported-PC',s=dict(state,pc=0xdeac),expected_error='unsupported animation frame head h8 PC')
+    ram=bytearray(fx['ram']);native.put(ram,native.S,4,0xdeac);reject('unsupported-live-return',ram=ram,expected_error='unsupported animation frame head h8 PC')
     reject('missing-physical',paths=[])
     reject('odd-stack',s=dict(state,a7=native.S-1))
     reject('odd-stop',stop=native.RETURN+1)

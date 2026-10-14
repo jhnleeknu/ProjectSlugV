@@ -289,7 +289,7 @@ def negatives(exe, records, resources, program):
     reject('two_stack_LONG_pushes_before_fixed_bank_push', {'pc': 0x2a34, 'a7': 0x100008},
            'program bus write requires RAM mirror units')
     reject('coordinate_LONG_clears_before_bad_live_RTS', {'pc': 0x43dda, 'a0': 0x102000},
-           'unsupported animation machine PC', memory=((base['initial_a7'], 4, 0xdeac),))
+           'unsupported animation frame head h8 PC', memory=((base['initial_a7'], 4, 0xdeac),))
     reject('sound_callback_publication_overwrites_live_return', {'pc': 0x3dce, 'a5': 0x108000, 'a7': 0x100006},
            'unsupported animation machine PC')
     reject('post_map_sequence_unsupported', {'pc': 0xc00468}, 'unsupported animation machine PC')

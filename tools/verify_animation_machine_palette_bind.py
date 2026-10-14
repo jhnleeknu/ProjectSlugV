@@ -310,7 +310,7 @@ def negatives(exe, records, resources, program):
     reject('watchdog_before_odd_binding_WORD', {'pc': 0x8da2, 'a0': 0x104001},
            'program bus requires even WORD/LONG address')
     reject('binding_terminal_before_bad_live_RTS', {'pc': 0x8da2, 'a0': 0x104000},
-           'unsupported animation machine PC', memory=((0x104000, 2, 0xffff),
+           'unsupported animation frame head h8 PC', memory=((0x104000, 2, 0xffff),
            (base['initial_a7'], 4, 0xdeac)))
     whole = next(fx for _, fx, _ in records if fx['entry_pc'] == 0x47ff2)
     # Whole run now proceeds past 4804e (fade_card core); the legacy fixture's next

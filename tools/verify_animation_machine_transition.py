@@ -287,7 +287,7 @@ def negatives(exe, records, resources, program):
            {'pc': 0x35e0, 'a4': 0x3c0002}, 'unsupported animation machine write device')
     reject('fill_ports_before_bad_live_RTS',
            {'pc': 0x35a2, 'd0': 0x7162, 'd1': 0xff, 'd2': 2, 'd3': 2},
-           'unsupported animation machine PC', memory=((base['initial_a7'], 4, 0xdeac),))
+           'unsupported animation frame head h8 PC', memory=((base['initial_a7'], 4, 0xdeac),))
     reject('fill_ports_before_odd_live_RTS_LONG',
            {'pc': 0x35a2, 'd0': 0x7162, 'd1': 0xff, 'd2': 2, 'd3': 2,
             'a7': 0x1feffd}, 'even WORD/LONG')
@@ -297,7 +297,7 @@ def negatives(exe, records, resources, program):
            {'pc': 0x4e216, 'a5': 0x3075bb}, 'unsupported program bus device address',
            fx=dict(base, pvc=bytes(helper_pvc)))
     reject('live_helper_RTS_after_status_clear',
-           {'pc': 0xbee}, 'unsupported animation machine PC',
+           {'pc': 0xbee}, 'unsupported animation frame head h8 PC',
            memory=((0x10f004, 1, 0x55), (0x10fdb6, 1, 0), (0x10fdb7, 1, 0),
                    (base['initial_a7'], 4, 0xdeac)))
     reject('odd_WORD_after_flag_read',

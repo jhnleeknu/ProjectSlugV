@@ -254,7 +254,7 @@ def negatives(exe, records, resources, program):
     reject('all_screen_ports_before_invalid_final_BYTE_clear',
            {'pc': 0xcaf0, 'a5': 0x7699}, 'unsupported animation machine write device')
     reject('screen_ports_before_bad_live_RTS', {'pc': 0xca9e},
-           'unsupported animation machine PC', memory=((base['initial_a7'], 4, 0xdeac),))
+           'unsupported animation frame head h8 PC', memory=((base['initial_a7'], 4, 0xdeac),))
     reject('screen_ports_before_odd_live_RTS', {'pc': 0xca9e},
            'unaligned animation machine PC', memory=((base['initial_a7'], 4, 0xdeaf),))
     reject('screen_ports_before_odd_A7_pop', {'pc': 0xca9e, 'a7': 0x1feffd},

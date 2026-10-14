@@ -120,7 +120,7 @@ def negatives(exe, folder, records, resources):
     reject('second_mask_BYTE_device_after_first_PVC_read', base,
            {'pc': 0x4e166, 'a5': 0x3075bb}, 'unsupported program bus device address')
     reject('late_live_RTS_after_marker_read', base,
-           {'pc': 0x289e, 'a0': 0x104900}, 'unsupported animation machine PC',
+           {'pc': 0x289e, 'a0': 0x104900}, 'unsupported animation frame head h8 PC',
            memory=((0x104900, 4, 0x270e), (base['initial_a7'], 4, 0xdeac)))
     # Real kind3 resources remain unmodified. Removing physical bank2 leaves
     # the first player marker in mirrored RAM, then rejects the reached second

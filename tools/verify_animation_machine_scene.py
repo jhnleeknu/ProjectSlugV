@@ -288,13 +288,13 @@ def negatives(exe, records, resources, program):
                'unsupported animation scene PC')
     reject('three_live_WORD_clears_before_bank_write', {'pc': 0x182d0, 'a0': 0x1fffc0},
            'unsupported animation machine write device')
-    reject('live_A0_pop_before_bad_RTS', {'pc': 0x43ff8}, 'unsupported animation machine PC',
+    reject('live_A0_pop_before_bad_RTS', {'pc': 0x43ff8}, 'unsupported animation frame head h8 PC',
            memory=((base['initial_a7'], 4, 0x104000), (base['initial_a7'] + 4, 4, 0xdeac)))
     reject('live_D7_WORD_pop_and_pool_writes_before_bad_RTS', {'pc': 0x44082},
-           'unsupported animation machine PC',
+           'unsupported animation frame head h8 PC',
            memory=((base['initial_a7'], 2, 0), (base['initial_a7'] + 2, 4, 0xdeac)))
     reject('flag_BYTE_clear_before_bad_RTS', {'pc': 0x1701a, 'a0': 0x1fff84},
-           'unsupported animation machine PC', memory=((0x1ffffe, 1, 255),
+           'unsupported animation frame head h8 PC', memory=((0x1ffffe, 1, 255),
            (0x1fffaa, 2, 0xffff), (base['initial_a7'], 4, 0xdeac)))
     reject('one_pool_LONG_before_second_bank_write', {'pc': 0xcd1c, 'a5': 0x1ff2be,
            'd0': 0, 'd1': 1, 'd2': 2}, 'unsupported animation machine write device')

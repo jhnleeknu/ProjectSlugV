@@ -9,6 +9,7 @@ a370 (opening frame), 9b58 and c2c0 are executed by the card menu open core and 
 verify_animation_machine_card_menu_open.py; here they are normal stops. a63c (TRAP #f), e84d6 and the BIOS call c00468 are the still unexecuted
 boundaries used for the unsupported-PC negatives.
 """
+import ctypes
 import json
 from pathlib import Path
 import shutil
@@ -16,6 +17,7 @@ import sys
 import verify_animation_machine as common
 import verify_animation_machine_callers as helpers
 import verify_animation_machine_card_child as cc
+import observe_animation_machine_pvc_banks as native_banks
 from disassemble_program import load_verified_program
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -370,6 +372,74 @@ def menu_interior_pcs(instructions):
 
 
 U03_PREFIX_RECORDS = []
+H2_PREFIX_RECORDS = []
+
+
+def string_entry_prefix(exe, folder, base, resources):
+    """Execute the former unsupported entry's first original instruction on a fresh CPU."""
+    import unicorn
+    from unicorn import m68k_const
+    program, source = load_verified_program(ROOT)
+    assert program[0x3902:0x3904].hex() == '3600'  # MOVE.W D0,D3.
+    ram, state, pvc, bank = base
+    incoming = dict(state, pc=0x3902, carry=2)
+    cpu = unicorn.Uc(unicorn.UC_ARCH_M68K, unicorn.UC_MODE_BIG_ENDIAN)
+    cpu.ctl_set_cpu_model(m68k_const.UC_CPU_M68K_M68000)
+    cpu.mem_map(0, 0x100000, unicorn.UC_PROT_READ | unicorn.UC_PROT_EXEC)
+    cpu.mem_write(0, program[:0x100000])
+    cpu.reg_write(m68k_const.UC_M68K_REG_SR, 0x2000)  # declared input; no native SR read
+    registers = {key: getattr(m68k_const, 'UC_M68K_REG_' + key.upper())
+                 for key in common.REGS + ('pc',)}
+    for key, register in registers.items():
+        cpu.reg_write(register, incoming[key])
+    pcs = []
+    cpu.hook_add(unicorn.UC_HOOK_CODE, lambda c, pc, size, user: pcs.append(pc))
+    cpu.emu_start(0x3902, 0x3904, count=1)
+    outgoing = {key: cpu.reg_read(register) for key, register in registers.items()}
+    expected = dict(incoming, d3=(incoming['d3'] & 0xffff0000) | (incoming['d0'] & 0xffff), pc=0x3904, carry=0)
+    assert pcs == [0x3902] and outgoing == {key: expected[key] for key in registers}
+    assert bytes(cpu.mem_read(0, 0x100000)) == program[:0x100000]
+    result, out_ram, out_pvc, ports, error = common.invoke(
+        exe, folder, 'superseded_h2_3902_prefix', ram, incoming, pvc, bank, resources, stop=0x3904)
+    assert result['ok'] and not error and result['status'] == 0
+    assert {key: result[key] for key in common.STATE_KEYS} == expected
+    assert out_ram == ram and out_pvc == pvc and not ports
+    assert result['bank_base'] == bank and result['external_reads'] == 0
+    # Replay this same declared legacy input through the original string/glyph/menu path,
+    # stopping before the dispatcher JSR (A0) which rejects its odd target in C++.
+    fixed = (ctypes.c_ubyte * 0x100000).from_buffer_copy(program[:0x100000])
+    bank_state = (bank, int.from_bytes(pvc[0x1ff0:0x1ff2], 'big'),
+                  int.from_bytes(pvc[0x1ff2:0x1ff4], 'big'))
+    machine = native_banks.PvcMachine(program, fixed, dict(
+        ram=ram, regs={key: incoming[key] for key in common.REGS}, pc=0x3902, bank=bank_state))
+    machine.cpu.mem_write(native_banks.PVC, pvc)
+    machine.install_basic_hooks()
+    late_pcs = []
+    def stop_before_dispatch(cpu, pc, size, user):
+        late_pcs.append(pc)
+        if pc == 0x2ac0:
+            cpu.emu_stop()
+    machine.cpu.hook_add(unicorn.UC_HOOK_CODE, stop_before_dispatch)
+    machine.cpu.emu_start(0x3902, 0xffffff, count=200000)
+    assert machine.pc() == 0x2ac0 and program[0x2ac0:0x2ac2].hex() == '4e90'
+    assert not (machine.odd or machine.invalid or machine.intr or machine.fetch_unmapped)
+    assert machine.regs()['a0'] == 0x92bdcb15  # odd live target from this frozen legacy fixture
+    late, late_ram, late_pvc, late_ports, late_error = common.invoke(
+        exe, folder, 'superseded_h2_3902_before_odd_dispatch', ram, incoming, pvc, bank, resources, stop=0x2ac0)
+    assert late['ok'] and not late_error and late['status'] == 0
+    assert {key: late[key] for key in common.REGS} == machine.regs() and late['pc'] == machine.pc()
+    assert late_ram == machine.ram() and late_pvc == bytes(machine.cpu.mem_read(native_banks.PVC, 8192))
+    assert late['bank_base'] == machine.bank and late['external_reads'] == len(machine.dev_reads) == 0
+    assert late_ports == b''.join(cc.struct.pack('>BII', e[2], e[1], e[3]) for e in machine.ports)
+    return dict(label='outside_range_entry_003902_prefix', source=source,
+                former_expected_API_error=UNSUPPORTED_MACHINE, original_cpu_pc='0x3902',
+                original_file_offset='0x3902', original_block_raw='3600', executed_prefix_stop='0x3904',
+                native_executed_pcs=pcs, native_outgoing=outgoing, full_prefix_state_checked=True,
+                continued_native_executed_pcs=late_pcs, continued_prefix_full_state_checked=True,
+                later_error_cpu_pc='0x2ac0', later_error_file_offset='0x2ac0',
+                later_error_opcode='4e90', later_live_JSR_target='0x92bdcb15',
+                carry_check='Unknown source classification; native SR not read',
+                native_exception_rollback_equivalence_claimed=False)
 
 
 def glyph_entry_prefix(exe, folder, base, resources):
@@ -404,6 +474,7 @@ def negatives(exe, starts, instructions, resources, neg_errors):
     out = []
     base = starts[('connected-a29c-to-a370', 0)]
     U03_PREFIX_RECORDS.append(glyph_entry_prefix(exe, OUT, base, resources))
+    H2_PREFIX_RECORDS.append(string_entry_prefix(exe, OUT, base, resources))
 
     def reject(label, start, changes=None, stop=0xff000, external=0):
         r, s, p, b = start
@@ -498,6 +569,8 @@ SUPERSEDED_GUARDS = {
 class Errors(dict):
     """Exact pinned error strings; unknown labels fall back to the class expected for the label prefix."""
     def __missing__(self, label):
+        if label == 'outside_range_entry_003902':
+            return ODD_JSR  # H2 string loop executes; this fixture later reaches the odd dispatcher callback.
         if label == 'boundary_direct_entry_0e84d6':
             return ODD_JSR  # U03 executes the glyph entry; this fixture then reaches an odd dispatcher callback.
 
@@ -571,7 +644,7 @@ def main():
                   actual_CPP=dict(totals, matches=matches),
                   original_program_read_audit=program_reads,
                   native_guards_checked_API=guarded, native_guards_superseded_by_card_menu_open_core=superseded,
-                  negatives_superseded_by_later_card_menu_cores=dict(u03_entry_prefix=U03_PREFIX_RECORDS, interior_direct_entry_a100='block of the card menu core (BSR 9e1a) now', outside_range_entry_a2be='executed by the close core', boundary_direct_entry_e84d6='executed by U03; this fixture later reaches an odd dispatcher callback (exact error and full rollback checked)', boundary_direct_entry_a662_9e94_c2c8_a406='executed by the input/close cores'),
+                  negatives_superseded_by_later_card_menu_cores=dict(u03_entry_prefix=U03_PREFIX_RECORDS, h2_string_entry_prefix=H2_PREFIX_RECORDS, interior_direct_entry_a100='block of the card menu core (BSR 9e1a) now', outside_range_entry_a2be='executed by the close core', boundary_direct_entry_e84d6='executed by U03; this fixture later reaches an odd dispatcher callback (exact error and full rollback checked)', boundary_direct_entry_a662_9e94_c2c8_a406='executed by the input/close cores'),
                   native_continuous_control_phases_replayed=control_count,
                   negatives=negative, negative_count=len(negative) + len(guarded),
                   interior_PCs_rejected=interior_count, zero_step=zero, boundary_zero_step=boundary_zero,

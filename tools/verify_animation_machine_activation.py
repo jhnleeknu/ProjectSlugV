@@ -136,7 +136,7 @@ def checked_failures(exe, records, resources, program):
     for entry in (0x16ea4, 0x16ed2):
         fx = fixture(entry, lambda fx, phases: entry != 0x16ea4 or 0xcde4 in phases[0]['pcs'])
         reject('late_live_RTS_unsupported_%06x' % entry, fx,
-               'unsupported animation machine PC', memory=[(fx['initial_a7'], 4, 0xdeac)])
+               'unsupported animation frame head h8 PC', memory=[(fx['initial_a7'], 4, 0xdeac)])
     # superseded expectation (was 'unsupported animation machine PC'): past the supported caller the 480bc frame helpers are executable now (U1..U7),
     # so the run ends in a state-dependent bus error; the label is kept and the former error is noted here.
     reject('whole_activation_past_supported_caller_boundary', chain,

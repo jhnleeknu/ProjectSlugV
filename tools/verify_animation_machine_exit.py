@@ -282,16 +282,16 @@ def negatives(exe, records, resources, program):
            {'pc': 0x47f82, 'a7': 0x1feffd}, 'even WORD/LONG')
     reject('palette_leaf_writes_before_bad_live_RTS',
            {'pc': 0x8c16, 'd0': 0, 'd1': 0xffffffe1, 'd2': 0xffffffe1, 'd3': 32},
-           'unsupported animation machine PC', memory=((base['initial_a7'], 4, 0xdeac),))
+           'unsupported animation frame head h8 PC', memory=((base['initial_a7'], 4, 0xdeac),))
     reject('lookup_publication_before_bad_live_RTS',
-           {'pc': 0x48398, 'a5': 0x108000}, 'unsupported animation machine PC',
+           {'pc': 0x48398, 'a5': 0x108000}, 'unsupported animation frame head h8 PC',
            memory=((0x10fd8c, 1, 0), (base['initial_a7'], 4, 0xdeac)))
     for pc, label in ((0x3c84, 'sound_flag'), (0x4e24e, 'HUD_flag'), (0xca7e, 'stage_flag')):
         reject(label + '_BYTE_clear_before_bad_live_RTS',
-               {'pc': pc, 'a5': 0x108000}, 'unsupported animation machine PC',
+               {'pc': pc, 'a5': 0x108000}, 'unsupported animation frame head h8 PC',
                memory=((base['initial_a7'], 4, 0xdeac),))
     reject('two_sound_BYTE_queue_writes_before_bad_live_RTS',
-           {'pc': 0x3d44, 'a5': 0x108000}, 'unsupported animation machine PC',
+           {'pc': 0x3d44, 'a5': 0x108000}, 'unsupported animation frame head h8 PC',
            memory=((0x104d74, 2, 0xffff), (0x104d76, 2, 0),
                    (base['initial_a7'], 4, 0xdeac)))
     # Remove only the selected original lookup BYTE while retaining the rest
