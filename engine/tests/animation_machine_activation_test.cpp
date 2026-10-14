@@ -114,7 +114,7 @@ void waits_and_failures() {
     s=initial(0x16ed2);s.a[5]=0x1ff2ba;reject(ram,s,"program bus ROM"); // FirstWORD RAM, secondWORD bank.
     s=initial(0x16ed2);s.a[6]=0x1ffff0;Outputs late_write;
     physical(late_write,0x34567d,Bytes(1,0x89));reject(ram,s,"unsupported animation machine write device",late_write);
-    s=initial(0x16ed2);put(ram,SP,4,0xdeac);reject(ram,s,"unsupported animation machine PC");
+    s=initial(0x16ed2);put(ram,SP,4,0x10fe44);reject(ram,s,"unsupported animation machine PC");
     ram.assign(65536,0);draw_seed(ram);put(ram,0x109152,4,0xdeac);s=initial(0x16ea4);reject(ram,s,"unsupported sprite callback target");
     s=initial(0x47cca);reject(ram,s,"program bus ROM"); // Earlier objectBYTE mutation rolls back.
     s=initial(0x47cae);reject(ram,s,"program bus ROM"); // Earlier coordinate writes and sound stack roll back.

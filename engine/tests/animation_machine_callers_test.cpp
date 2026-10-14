@@ -99,7 +99,7 @@ void failures() {
     s.a[6]=0x1fffd4;rejected(ram,s,"write device");s=initial(0x49f8c);
     s.a[6]=0x102001;rejected(ram,s,"alignment");s=initial(0x49f8c);
     s.a[7]=SP-1;rejected(ram,s,"even WORD/LONG");s=initial(0x49f8c);
-    put(ram,SP,4,0xdeac);rejected(ram,s,"unsupported animation machine PC");
+    put(ram,SP,4,0x10fe44);rejected(ram,s,"unsupported animation machine PC");
     // Both callerJSRs and initializer effects precede a genuine missing-script read.
     s=initial(0x47d0a);rejected(ram,s,"missing or ambiguous physical program bus ROM byte");
 }

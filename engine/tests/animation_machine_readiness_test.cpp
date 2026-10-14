@@ -147,7 +147,7 @@ void failures() {
     s=initial(0x4847c);s.a[5]=0x207346;reject(ram,s,"program bus ROM"); // Earlier nested JSRs already wrote RAM.
     s=initial(0x4dee2);s.a[5]=0x108001;reject(ram,s,"even WORD/LONG");
     s=initial(0x4e166);s.a[5]=0x2075bb;put(ram,0x1fffff,1,2);reject(ram,s,"program bus ROM");
-    s=initial(0x289e);s.a[0]=0x104000;put(ram,SP,4,0xdeac);reject(ram,s,"unsupported animation machine PC");
+    s=initial(0x289e);s.a[0]=0x104000;put(ram,SP,4,0x10fe44);reject(ram,s,"unsupported animation machine PC");
     s=initial(0x1bdf8);s.a[0]=0x1fffff;reject(ram,s,"program bus ROM");
 }
 }

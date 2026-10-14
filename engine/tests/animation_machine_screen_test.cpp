@@ -62,7 +62,7 @@ void upper(){Bytes ram(65536,0);ms5::AnimationMachineState s=state(0x47fca);Out 
 void errors(){Bytes ram(65536,0);put(ram,SP,4,STOP);ms5::AnimationMachineState s=state(0xcaf0);s.a[5]=0x7699;reject(ram,s,STOP,"unsupported animation machine write device");
  s=state(0xcab0);s.a[4]=0x1ffffe;s.d[7]=0;reject(ram,s,STOP,"unsupported animation machine write device");s.a[4]=0x104001;reject(ram,s,STOP,"alignment");
  s=state(0xcaf0);s.a[7]=0x100002;reject(ram,s,STOP,"RAM");
- s=state(0xcaf0);put(ram,SP,4,0xdeac);reject(ram,s,STOP,"unsupported animation machine PC");
+ s=state(0xcaf0);put(ram,SP,4,0x10fe44);reject(ram,s,STOP,"unsupported animation machine PC");
  s=state(0x47fd0);s.a[6]=0xffffe;reject(ram,s,STOP,"unsupported animation machine write device");
  s=state(0x47fdc);s.a[6]=0x102001;reject(ram,s,STOP,"even WORD/LONG");
  s=state(0x47fe0);reject(ram,s,STOP,"unsupported animation machine PC"); // BNE needs unrepresented incoming Z.
