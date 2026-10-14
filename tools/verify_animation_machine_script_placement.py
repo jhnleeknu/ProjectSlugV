@@ -803,6 +803,89 @@ def full_frames(exe, resources, scene_in, report, chains, chain_rows):
 SUPERSEDED_NEGATIVES = []      # negatives whose PC is executed by a later unit in the final state (recorded, not silently deleted)
 
 
+def h1_outside_prefix(exe, base, resources, actual):
+    """Fresh original 3db2 execution through the declared legacy return chain to ff000."""
+    import ast
+    import ctypes
+    import unicorn
+    from unicorn.unicorn_py3.unicorn import uclib
+    # Freeze every local import dependency before the first native_banks import.
+    todo = [ROOT / 'tools/observe_animation_machine_pvc_banks.py']
+    local_sources = set()
+    while todo:
+        path = todo.pop()
+        if path in local_sources or not path.is_file():
+            continue
+        local_sources.add(path)
+        for node in ast.walk(ast.parse(path.read_text())):
+            names = [entry.name for entry in node.names] if isinstance(node, ast.Import) else (
+                [node.module] if isinstance(node, ast.ImportFrom) and node.module else [])
+            for name in names:
+                dependency = ROOT / 'tools' / (name.split('.')[0] + '.py')
+                if dependency.is_file():
+                    todo.append(dependency)
+    helper_paths = sorted(local_sources | set(Path(unicorn.__file__).parent.rglob('*.py')))
+    helper_before = {str(path): cc.digest(path) for path in helper_paths}
+    library = Path(uclib._name).resolve()
+    library_before = cc.digest(library)
+    import observe_animation_machine_pvc_banks as native_banks
+    program, source = load_verified_program(ROOT)
+    raw = '70000839000300104d91670000044e75103900104d9052404e75'
+    assert program[0x3db2:0x3dcc].hex() == raw
+    ram, state, pvc, bank = base
+    incoming = dict(state, carry=2, pc=0x3db2)
+    fixed = (ctypes.c_ubyte * 0x100000).from_buffer_copy(program[:0x100000])
+    bank_state = (bank, int.from_bytes(pvc[0x1ff0:0x1ff2], 'big'),
+                  int.from_bytes(pvc[0x1ff2:0x1ff4], 'big'))
+    machine = native_banks.PvcMachine(program, fixed, dict(
+        ram=ram, regs={key: incoming[key] for key in common.REGS}, pc=0x3db2, bank=bank_state))
+    machine.cpu.mem_write(native_banks.PVC, pvc)
+    assert bytes(machine.cpu.mem_read(native_banks.PVC, 8192)) == pvc
+    machine.install_basic_hooks()
+    pcs, write_pcs = [], []
+    last_pc = [None]
+    def stop_at_return(cpu, pc, size, user):
+        last_pc[0] = pc
+        pcs.append(pc)
+        if pc == FF000:
+            cpu.emu_stop()
+    def record_pvc_write(cpu, access, address, size, value, user):
+        if 0x2fe000 <= address < 0x300000:
+            write_pcs.append(dict(cpu_pc=hex(last_pc[0]), file_offset=hex(last_pc[0]),
+                                  address=hex(address), size=size, value=hex(value),
+                                  original_instruction_raw=program[last_pc[0]:last_pc[0] + 8].hex()))
+    machine.cpu.hook_add(unicorn.UC_HOOK_CODE, stop_at_return)
+    machine.cpu.hook_add(unicorn.UC_HOOK_MEM_WRITE, record_pvc_write)
+    machine.cpu.emu_start(0x3db2, 0xffffff, count=200000)
+    assert machine.pc() == FF000 and not (machine.odd or machine.invalid or machine.intr or machine.fetch_unmapped)
+    assert bytes(machine.cpu.mem_read(0, 0x100000)) == program[:0x100000]
+    result, out_ram, out_pvc, ports, error = actual
+    assert result['ok'] and not error and result['status'] == 0 and result['pc'] == machine.pc()
+    assert {key: result[key] for key in common.REGS} == machine.regs() and out_ram == machine.ram()
+    events = [dict(access='write', address=e[1], size=e[2], bytes=e[3].to_bytes(e[2], 'big').hex())
+              for e in machine.ports if e[0] == 1]
+    expected_pvc, expected_bank, _pvc_ports = common.fold_device(pvc, bank, events)
+    assert out_pvc == expected_pvc and result['bank_base'] == machine.bank == expected_bank
+    native_pvc = bytes(machine.cpu.mem_read(native_banks.PVC, 8192))
+    assert cc.masked_pvc(native_pvc) == cc.masked_pvc(expected_pvc)
+    assert ports == b''.join(struct.pack('>BII', e[2], e[1], e[3]) for e in machine.ports)
+    assert result['external_reads'] == len(machine.dev_reads) == 0
+    helper_after = {str(path): cc.digest(path) for path in helper_paths}
+    library_after = cc.digest(library)
+    assert helper_before == helper_after and library_before == library_after
+    return dict(source=source, helper_provenance=dict(before_first_native_banks_import=helper_before,
+                after_native_execution=helper_after, all_inputs_unchanged=True,
+                native_library_path=str(library), native_library_before=library_before,
+                native_library_after=library_after),
+                fresh_original_prefix_exception_to_immutable_artifact_audit=True, entry_cpu_pc='0x3db2', entry_file_offset='0x3db2', original_H1_raw=raw,
+                native_executed_pcs=pcs, final_stop_cpu_pc='0xff000', native_SR_read=False,
+                full16R_PC_RAM_ordered_ports_equal=True, initial_PVC_exact_input_equal=True,
+                full8192_PVC_independent_fold_and_bank_equal=True, native_PVC_outside_ff8_ff9_equal=True,
+                native_PVC_ff8_ff9_are_raw_storage=True, ordered_PVC_writes=write_pcs,
+                PVC_fold_spec='common.fold_device with address_map.pvc_bank_update; raw ff8/ff9 differ from masked device registers',
+                native_exception_rollback_equivalence_claimed=False)
+
+
 def negatives(exe, base, st, resources, cpp_text, instructions):
     out = []
     r0, s0, p0, b0 = base
@@ -841,9 +924,9 @@ def negatives(exe, base, st, resources, cpp_text, instructions):
         cleanup_interior.append((pc, error.strip()))
     # neighbours just outside every routed range (own executors or none) and the unrouted gaps
     outside = (0x3db2, 0x3db4, 0x16ff0, 0x19768, 0x1976a, 0x1a07a, 0x1a414, 0x1a416, 0xe89f8, 0xe8a0c, 0xe8a0e, 0x1a5a4)
-    # API-only controls for these frozen inputs; no native execution equality claim.
-    successful_outside = (0x1a07a, 0x1a414)
-    outside_errors = {0x1976a: 'unsupported animation stage entry PC', 0x1a416: 'unsupported animation stage entry PC', 0x19768: 'program bus requires even WORD/LONG address', 0x1a5a4: 'unaligned animation machine PC'}
+    # Except the 3db2 fresh original comparison below, these are API-only controls for frozen inputs.
+    successful_outside = (0x3db2, 0x1a07a, 0x1a414)
+    outside_errors = {0x3db4: 'unsupported animation frame head h1 PC', 0x1976a: 'unsupported animation stage entry PC', 0x1a416: 'unsupported animation stage entry PC', 0x19768: 'program bus requires even WORD/LONG address', 0x1a5a4: 'unaligned animation machine PC'}
     for pc in outside:
         if pc not in successful_outside and pc not in outside_errors:
             reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
@@ -861,6 +944,10 @@ def negatives(exe, base, st, resources, cpp_text, instructions):
         else:
             assert result['ok'] and not error.strip() and result['pc'] == 0xff000 and result['status'] == 0, (hex(pc), error.strip(), result)
             row.update(observed_final_state=dict(ok=True, pc=hex(result['pc'])))
+            if pc == 0x3db2:
+                row.update(API_only_control=False, native_execution_equivalence_claimed=True,
+                           original_H1_prefix=h1_outside_prefix(exe, base, resources,
+                                                              (result, outgoing, out_pvc, ports, error)))
         SUPERSEDED_NEGATIVES.append(row)
     # odd PCs (alignment is checked before routing)
     for pc in (0x1a0b7, 0x1a471, 0x3d7f, 0x16fef, 0x19773, 0xe89fb, 0x43e09, 0x1a0bd):

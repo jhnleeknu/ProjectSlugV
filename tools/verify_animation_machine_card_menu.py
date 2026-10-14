@@ -336,6 +336,55 @@ def compare(exe, rows, resources, instructions, connected_start, bios_start):
     return out_rows, totals, ends, starts, guards
 
 
+def overflow_guard_prefix(exe, row, ram, state, pvc, bank, resources, actual):
+    """Original whole declared guard and its saved guard-phase prefix, through the newly supported H1 RTS."""
+    import unicorn
+    program, source = load_verified_program(ROOT)
+    assert program[0x1000:0x1002].hex() == '4e75'
+    phase = row['phases'][0]
+    starts = [('whole_declared_guard_a0a0', phase['_data']['ram_before.bin'],
+               dict(phase['incoming'], carry=2), phase['_data']['pvc_before.bin'], phase['bank_before']),
+              ('actual_previous_CPP_guard_a0c2', ram, dict(state, carry=2), pvc, bank)]
+    evidence = []
+    for label, start_ram, start_state, start_pvc, start_bank in starts:
+        fixed = (ctypes.c_ubyte * 0x100000).from_buffer_copy(program[:0x100000])
+        banks = (start_bank, int.from_bytes(start_pvc[0x1ff0:0x1ff2], 'big'),
+                 int.from_bytes(start_pvc[0x1ff2:0x1ff4], 'big'))
+        machine = native_banks.PvcMachine(program, fixed, dict(
+            ram=start_ram, regs={key: start_state[key] for key in common.REGS},
+            pc=start_state['pc'], bank=banks))
+        machine.cpu.mem_write(native_banks.PVC, start_pvc)
+        machine.install_basic_hooks()
+        pcs = []
+        def stop_at_menu(cpu, pc, size, user):
+            pcs.append(pc)
+            if pc == A370:
+                cpu.emu_stop()
+        machine.cpu.hook_add(unicorn.UC_HOOK_CODE, stop_at_menu)
+        machine.cpu.emu_start(start_state['pc'], 0xffffff, count=200000)
+        assert machine.pc() == A370 and 0x1000 in pcs
+        assert not (machine.odd or machine.invalid or machine.intr or machine.fetch_unmapped)
+        assert bytes(machine.cpu.mem_read(0, 0x100000)) == program[:0x100000]
+        checked = common.invoke(exe, OUT, 'overflow_prefix_' + label, start_ram,
+                                start_state, start_pvc, start_bank, resources, stop=A370,
+                                external=row['fixture']['external'])
+        result, out_ram, out_pvc, ports, error = checked
+        assert result['ok'] and not error and result['status'] == 0 and result['pc'] == A370
+        assert {key: result[key] for key in common.REGS} == machine.regs()
+        assert out_ram == machine.ram() and out_pvc == bytes(machine.cpu.mem_read(native_banks.PVC, 8192))
+        assert result['bank_base'] == machine.bank and result['external_reads'] == len(machine.dev_reads) == 0
+        assert ports == b''.join(cc.struct.pack('>BII', e[2], e[1], e[3]) for e in machine.ports)
+        if label == 'actual_previous_CPP_guard_a0c2':
+            assert checked == actual
+        evidence.append(dict(label=label, source=source, entry_cpu_pc=hex(start_state['pc']),
+                             entry_file_offset=hex(start_state['pc']), native_executed_pcs=pcs,
+                             H1_RTS_cpu_pc='0x1000', H1_RTS_file_offset='0x1000', H1_RTS_raw='4e75',
+                             final_stop_cpu_pc='0xa370', full16R_PC_RAM_PVC_bank_ports_equal=True,
+                             native_SR_read=False, public_carry=result['carry'],
+                             native_fault_rollback_equivalence_claimed=False))
+    return evidence
+
+
 def compare_guards(exe, guards, resources, guard_errors):
     rows, superseded = [], []
     for row, phase, ram, state, pvc, bank, step in guards:
@@ -343,6 +392,13 @@ def compare_guards(exe, guards, resources, guard_errors):
         result, outgoing, out_pvc, ports, error = common.invoke(
             exe, OUT, 'guard_%s' % row['label'], ram, dict(state, carry=2), pvc, bank, resources,
             stop=stop, external=row['fixture']['external'])
+        if row['label'] == 'guard-overflow-rts-unsupported-target':
+            proof = overflow_guard_prefix(exe, row, ram, state, pvc, bank, resources,
+                                          (result, outgoing, out_pvc, ports, error))
+            superseded.append(dict(label=row['label'], native_guard=phase['guard'],
+                                   CPP_now_ok_at_stop=hex(A370), original_prefix=proof,
+                                   reason='H1 RTS 1000 is executable; the original stack returns through c2a8/a2b8/c2ba to a370'))
+            continue
         if row['label'] in SUPERSEDED_GUARDS:
             # The frozen native guard stopped where the menu push had no executor; the card menu open core now
             # runs 9b58 / a370 / c2c0, so the same input is a checked positive stop (not counted as a negative).

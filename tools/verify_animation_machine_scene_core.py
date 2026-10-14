@@ -67,7 +67,7 @@ GUARD_ERRORS = {
     'guard-odd-A0-placement-pointer': EVEN, 'guard-odd-A5-first-write': EVEN_WRITE, 'guard-odd-A7-bsr-push': EVEN,
     'guard-odd-A7-rts': EVEN, 'guard-rom-write-A5': WRITE_DEVICE, 'guard-rom-write-A7-push': RAM_MIRROR,
     'guard-cond-index-2000': UNSUPPORTED_MACHINE, 'guard-cond-index-odd-0001': UNALIGNED_PC,
-    'guard-cond-index-negative-8000': UNSUPPORTED_MACHINE,
+    'guard-cond-index-negative-8000': 'unsupported animation frame head h4 PC',
     'guard-bad-stop-19844-on-full-path-seed': UNSUPPORTED_MACHINE, 'guard-bad-stop-1a0b6-on-full-path-seed': UNSUPPORTED_MACHINE,
     'guard-bad-stop-1a470-on-full-path-seed': UNSUPPORTED_MACHINE}
 # Superseded by later units (final state): the 19844 seed now runs on through the later cores and reaches these stops without error (observed: ok, pc == stop).

@@ -979,14 +979,109 @@ def replay_all(ctx, report, results):
 
 
 # ----------------------------------------------------------------------------------------------------------------- API-only checks
+def superseded_stage_area_neighbour_prefix(ctx, label, ram, state, pvc, bank):
+    """Original prefix to H1 raster block; empty queue remains a checked boundary."""
+    import ctypes
+    import unicorn
+    # The shared native classes are imported only for these four controls. Bind
+    # their exact immutable sources before import and again after execution.
+    oracle_sources = {
+        'observe_animation_machine_scheduler.py': '62bb23ff6d2f61a5e47af71b8e1308d50c99b85d95f3278b8d825b7ee327c01c',
+        'observe_animation_machine_pvc_banks.py': '86ebf962e3b83eef6882c1f96845c117edfa735c3137960b1cbda6623768d3a0'}
+    for name, expected in oracle_sources.items():
+        assert cc.digest(ROOT / 'tools' / name) == expected
+    import observe_animation_machine_scheduler as scheduler
+    import observe_animation_machine_pvc_banks as pvc_native
+    library = Path(scheduler.uclib._name).resolve()
+    library_before = cc.digest(library)
+    manifest = ROOT / 'extracted/program/manifest.json'
+    manifest_before = cc.digest(manifest)
+    wrapper_files = sorted(Path(unicorn.__file__).resolve().parent.rglob('*.py'))
+    oracle_wrappers = {str(path): cc.digest(path) for path in wrapper_files}
+    program, source = load_verified_program(ROOT)
+    assert sha(program) == ROM_SHA
+    # Native BSET #7,d16(A5); MOVE.W 3c0006.l,D0 inside public block ea4.
+    assert program[0xea4:0xeb0].hex() == '08ed0007801b3039003c0006'
+    fixed = (ctypes.c_ubyte * 0x100000).from_buffer_copy(program[:0x100000])
+    snap = dict(ram=ram, regs={key: state[key] for key in REG16}, pc=state['pc'],
+                bank=(bank, int.from_bytes(pvc[0x1ff0:0x1ff2], 'big'),
+                      int.from_bytes(pvc[0x1ff2:0x1ff4], 'big')))
+    machine = pvc_native.PvcMachine(program, fixed, snap)
+    machine.install_basic_hooks()
+    machine.cpu.mem_write(0x2fe000, pvc)
+    machine.cpu.reg_write(scheduler.UC_REG['sr'], 0x2001)
+    trace, reached = [], []
+    def code(cpu, pc, size, unused):
+        trace.append(pc)
+        if pc == 0xea4:
+            reached.append(pc)
+            cpu.emu_stop()
+    hook = machine.cpu.hook_add(unicorn.UC_HOOK_CODE, code)
+    machine.cpu.emu_start(state['pc'], 0xffffff, count=1000000)
+    assert reached and not machine.odd and not machine.invalid and not machine.intr
+    assert not machine.dev_reads
+    expected_regs = machine.regs()
+    expected_ram = machine.ram()
+    expected_pvc = bytearray(machine.cpu.mem_read(0x2fe000, 8192))
+    expected_pvc[0x1ff0:0x1ff4] = struct.pack('>HH', machine.ff8, machine.ff9)
+    expected_ports = b''.join(struct.pack('>BII', size, address, value)
+                              for kind, address, size, value in machine.ports)
+    expected_bank = machine.bank
+    actual = inv(ctx, 'superseded_prefix_' + label, ram, state, pvc, bank, 0xea4, 0)
+    result, out_ram, out_pvc, ports, error = actual
+    assert result['ok'] and not error and result['pc'] == 0xea4 and result['status'] == 0
+    assert {key: result[key] for key in REG16} == expected_regs
+    assert out_ram == expected_ram and out_pvc == bytes(expected_pvc)
+    assert ports == expected_ports and result['bank_base'] == expected_bank and result['external_reads'] == 0
+    # Reached instruction eaa is the first external read. Do not provide input
+    # or claim its state equals a completed instruction with an empty queue.
+    machine.cpu.hook_del(hook)
+    external = []
+    def read(cpu, access, address, size, value, unused):
+        external.append((address, size, cpu.reg_read(scheduler.UC_REG['pc'])))
+        cpu.emu_stop()
+    machine.cpu.hook_add(unicorn.UC_HOOK_MEM_READ, read, begin=0x300000, end=0x3fffff)
+    machine.cpu.emu_start(0xea4, 0xffffff, count=20)
+    assert external == [(0x3c0006, 2, 0xeaa)]
+    assert not machine.odd and not machine.invalid and not machine.intr
+    for name, expected in oracle_sources.items():
+        assert cc.digest(ROOT / 'tools' / name) == expected
+    assert cc.digest(library) == library_before
+    assert cc.digest(manifest) == manifest_before
+    assert oracle_wrappers == {str(path): cc.digest(path) for path in wrapper_files}
+    return dict(stop_pc='0xea4', first_external_address='0x3c0006', first_external_size=2,
+                first_external_CPU_pc='0xeaa', source_ROM_sha256=ROM_SHA,
+                original_file_offset='0xeaa', fixed_ROM_bank=None,
+                original_block_bytes=program[0xea4:0xeb0].hex(), incoming_RAM_sha256=sha(ram),
+                prefix_RAM_sha256=sha(out_ram), prefix_PVC_sha256=sha(out_pvc),
+                ordered_ports=len(ports) // 9, trace_PC_sha256=sha(struct.pack('>%dI' % len(trace), *trace)),
+                native_PC_hook_count=len(trace), stopped_PC_included=True, full_prefix_state_ports_reads_equal=True,
+                native_SR_read=False, oracle_sources=oracle_sources,
+                program_manifest_sha256=manifest_before, oracle_wrapper_sha256=oracle_wrappers,
+                oracle_library=dict(path=str(library), sha256=library_before, version=unicorn.__version__),
+                limitation='Declared direct entry; later empty external queue is API checked boundary, not native CPU fault rollback.')
+
+
 def reject_one(args):
     ctx, label, base, changes, stop, expected = args
     ram, state, pvc, bank = base
     s = dict(state, carry=2)
     s.update(changes)
+    proof = None
+    former = expected
+    if label in ('unrouted_neighbour_0b481e', 'unrouted_neighbour_0b4a2a',
+                 'unrouted_neighbour_046f52', 'unrouted_neighbour_01bdde'):
+        assert expected == UNSUPPORTED_MACHINE
+        assert int(label.removeprefix('unrouted_neighbour_'), 16) == s['pc']
+        proof = superseded_stage_area_neighbour_prefix(ctx, label, ram, s, pvc, bank)
+        expected = 'animation machine external read queue empty'
     actual = inv(ctx, 'neg_' + label, ram, s, pvc, bank, stop, 0)
     check_preserved(actual, ram, s, pvc, bank, expected)
-    return dict(label=label, error=expected, all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False)
+    row = dict(label=label, error=expected, all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False)
+    if proof is not None:
+        row.update(former_expected_error=former, superseded_by='F5 H1 continuation into the declared empty raster-read queue',
+                   original_prefix=proof, API_only=False, boundary_rollback_API_only=True)
+    return row
 
 
 def run_parallel(function, items):
