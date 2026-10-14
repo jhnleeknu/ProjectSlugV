@@ -1,0 +1,923 @@
+{
+  "schema_version": 1,
+  "scope": "Existing F4/F5 unit acceptance only; no D1/controller/deferred unit implementation",
+  "source_commit": "668e142feb8ce79f820b22fb7700704865bf0724",
+  "source_ROM_sha256": "29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f",
+  "frozen_source_commit": "23779e0",
+  "frozen_sources": 517,
+  "source_freeze_sha256": "87d755242e5e38b94d6746bdb07a8184e3d0d99693942ad6b595c5066e802677",
+  "original_run_passed": 31,
+  "original_run_failed": 4,
+  "replacement_full_runs_passed": 4,
+  "standard_reports_accepted": 35,
+  "standard_reports": [
+    {
+      "tool": "verify_animation_machine.py",
+      "report": "artifacts/animation_machine_execution/verification.json",
+      "sha256": "56f0a878ada8ed06d47281536ef30584a38b9d325c6ffc8d68ca6d61c1fd1081",
+      "receipt": "build/legacy_acceptance/verify_animation_machine.py.result.json",
+      "receipt_sha256": "8641617160e8df06ca2a2853b2b80ce7a20a71b368851760800ab7f9f053ee34",
+      "log": "build/legacy_acceptance/verify_animation_machine.py.log",
+      "log_sha256": "27bc89f8a799f674d3833a2062a59d79f236ebf2aaf733c556e39c20d731e4ec",
+      "returncode": 0,
+      "duration_seconds": 47.519,
+      "input_pin_count": 122,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_activation.py",
+      "report": "artifacts/animation_machine_activation_execution/verification.json",
+      "sha256": "fdc9d2845e72bd7e5800b971a9fb8faaaa530f4fb12fcb49bc50a3dfec8f5d60",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_activation.py.result.json",
+      "receipt_sha256": "83bffb7341218a49def80c5aec46f37df015fc4aef68c4360b24080b828f0875",
+      "log": "build/legacy_acceptance/verify_animation_machine_activation.py.log",
+      "log_sha256": "cb032a65aaefdf3e69618b069ebca9ace49e3ed10e431ac68c8d5024783883a7",
+      "returncode": 0,
+      "duration_seconds": 37.264,
+      "input_pin_count": 154,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_area_clear.py",
+      "report": "artifacts/animation_machine_area_clear_execution/verification.json",
+      "sha256": "88c95ae23c2d7d6732440840f379d50ce08edffdf94f2c8c63131977a052f21d",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_area_clear.py.result.json",
+      "receipt_sha256": "d5cf283444f2056e6914c34b857256dfa64e9351b9a12eadbb6539398f990f78",
+      "log": "build/legacy_acceptance/verify_animation_machine_area_clear.py.log",
+      "log_sha256": "4c87db8bffb54c7a95096a909f21db872dd54770de721d8c0f4b5426252531da",
+      "returncode": 0,
+      "duration_seconds": 217.673,
+      "input_pin_count": 147,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_buffer_cue.py",
+      "report": "artifacts/animation_machine_buffer_cue_verify/verification.json",
+      "sha256": "f1751cb059d651aa6b9eb6f68e266410588ef2bf5aa8bc32f2e57aa321dc984b",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_buffer_cue.py.result.json",
+      "receipt_sha256": "06a88aaa1c570e528e3b9941a87108975be7d256d4bf3409c7d20a037d9ed8a5",
+      "log": "build/legacy_acceptance/verify_animation_machine_buffer_cue.py.log",
+      "log_sha256": "14b9e4afe57661ebf613efc79f6bc19ce05971ee8a3a53048c3b6e104bb7af80",
+      "returncode": 0,
+      "duration_seconds": 772.773,
+      "input_pin_count": 147,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_callers.py",
+      "report": "artifacts/animation_machine_callers_execution/verification.json",
+      "sha256": "dd603c7e9904d8190915ab6fe7f6e4fef36403ab1110414f30d327c69060d43e",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_callers.py.result.json",
+      "receipt_sha256": "67395c21ff747dec6e21b6396b675b21329e4aecc39d7e1cede86ad67e74d9e2",
+      "log": "build/legacy_acceptance/verify_animation_machine_callers.py.log",
+      "log_sha256": "2e6ac609ac0599df3b2d4c90602df40e71bb8e5c0f4a55745465c3781893f0b3",
+      "returncode": 0,
+      "duration_seconds": 54.241,
+      "input_pin_count": 143,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_card_child.py",
+      "report": "artifacts/animation_machine_card_child_execution/verification.json",
+      "sha256": "653e200be96db9728cf4822937baff15b6f53850a81d763592be8ac63df8e522",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_card_child.py.result.json",
+      "receipt_sha256": "2af2e41ff1c1071e547ddeb47ce53ac0f8482d1126def5654eea6afffe0b902b",
+      "log": "build/legacy_acceptance/verify_animation_machine_card_child.py.log",
+      "log_sha256": "ee49c2704ba26ef9aa542bbbc15dd29672878654a9bee0e966c31b9802bab39b",
+      "returncode": 0,
+      "duration_seconds": 128.864,
+      "input_pin_count": 147,
+      "acceptance": "frozen_pass_with_reviewed_source_delta",
+      "source_deltas": [
+        {
+          "path": "tools/verify_animation_machine_card_menu.py",
+          "recorded_sha256": "dc7b50331100f24d786d0ae6ac6f7483bcc5d0e4b51b1f880817e4dfab622f4c",
+          "current_sha256": "1dd4552147c45a34154bc6f48b2053d5a216f3bc065b6ad276ece0b51aa6dd37"
+        }
+      ]
+    },
+    {
+      "tool": "verify_animation_machine_card_menu.py",
+      "report": "artifacts/animation_machine_card_menu_execution/verification.json",
+      "sha256": "94d0c7ed6bc0f1806f97fd53089b5ffc7d1d734235e0580098329acd08968f68",
+      "receipt": "build/legacy_acceptance/reruns/verify_animation_machine_card_menu.py.result.json",
+      "receipt_sha256": "6c5f1f20b1e0322e3a24c3fbb9e8023ccefae3306fc1b4a335a4dedf5a09ed8f",
+      "log": "build/legacy_acceptance/reruns/verify_animation_machine_card_menu.py.log",
+      "log_sha256": "e4ec865f41c8a9d04c2e41acce3ed7a07ccffbab2e70c3b9a95cbea711920684",
+      "returncode": 0,
+      "duration_seconds": 878.992,
+      "input_pin_count": 150,
+      "acceptance": "full_rerun_after_repair",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_card_menu_close.py",
+      "report": "artifacts/animation_machine_card_menu_close_execution/verification.json",
+      "sha256": "4f1aee6e1bd5a914f8253418d7feceba27d396c0184495fcfb12a749cf3a64ff",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_card_menu_close.py.result.json",
+      "receipt_sha256": "d16e18717aeae0068e41525d92ba5e552eb9107a25e18ee59c21fce66749b307",
+      "log": "build/legacy_acceptance/verify_animation_machine_card_menu_close.py.log",
+      "log_sha256": "5873c3a72699bda7bb4ee916906d65bffc1d7d7216662b772f9d7aa9ea3c492e",
+      "returncode": 0,
+      "duration_seconds": 3065.827,
+      "input_pin_count": 151,
+      "acceptance": "frozen_pass_with_reviewed_source_delta",
+      "source_deltas": [
+        {
+          "path": "tools/verify_animation_machine_card_menu.py",
+          "recorded_sha256": "dc7b50331100f24d786d0ae6ac6f7483bcc5d0e4b51b1f880817e4dfab622f4c",
+          "current_sha256": "1dd4552147c45a34154bc6f48b2053d5a216f3bc065b6ad276ece0b51aa6dd37"
+        }
+      ]
+    },
+    {
+      "tool": "verify_animation_machine_card_menu_input.py",
+      "report": "artifacts/animation_machine_card_menu_input_execution/verification.json",
+      "sha256": "f49daa1963d6d3b4c3248993f047f231a6d246be1555bdd4f94993611bcc5bfa",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_card_menu_input.py.result.json",
+      "receipt_sha256": "e58d60afbbbf398ed6df901a02aafe3597ac75992248373c115305cdff55c81a",
+      "log": "build/legacy_acceptance/verify_animation_machine_card_menu_input.py.log",
+      "log_sha256": "8f5035cb794b640e7a58e0a9aa4a7a36209a35612306d05528bedf1b8facdc61",
+      "returncode": 0,
+      "duration_seconds": 1330.3,
+      "input_pin_count": 151,
+      "acceptance": "frozen_pass_with_reviewed_source_delta",
+      "source_deltas": [
+        {
+          "path": "tools/verify_animation_machine_card_menu.py",
+          "recorded_sha256": "dc7b50331100f24d786d0ae6ac6f7483bcc5d0e4b51b1f880817e4dfab622f4c",
+          "current_sha256": "1dd4552147c45a34154bc6f48b2053d5a216f3bc065b6ad276ece0b51aa6dd37"
+        }
+      ]
+    },
+    {
+      "tool": "verify_animation_machine_card_menu_nested.py",
+      "report": "artifacts/animation_machine_card_menu_nested_execution/verification.json",
+      "sha256": "19d5ed9c7da609f67cd23bccb82e8475fe46d3763677ce43796a8b26f717cd4e",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_card_menu_nested.py.result.json",
+      "receipt_sha256": "1c6a6654f966bf81181851f0bda1ad6c34b97d1e03dab37d1b5f6116219d312e",
+      "log": "build/legacy_acceptance/verify_animation_machine_card_menu_nested.py.log",
+      "log_sha256": "3e0026d2e0e1b4185ad666b2272865e8a2b86b5c433234c03554feae931dc6d5",
+      "returncode": 0,
+      "duration_seconds": 559.765,
+      "input_pin_count": 147,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_card_menu_open.py",
+      "report": "artifacts/animation_machine_card_menu_open_execution/verification.json",
+      "sha256": "eeaac380588bdbc94653f54a742c5da9f3d8e3c0d9ba67272e3621a2d2aa7600",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_card_menu_open.py.result.json",
+      "receipt_sha256": "32ea57b598fa9719d6852532ccbb1bee89e7a5dc2b0793db3ea2caa0f4d7ab33",
+      "log": "build/legacy_acceptance/verify_animation_machine_card_menu_open.py.log",
+      "log_sha256": "b8e04aa4cdd853799ec28cec263f723f8b28c815f7a41a380da7f5ac6bc5ff22",
+      "returncode": 0,
+      "duration_seconds": 10298.291,
+      "input_pin_count": 153,
+      "acceptance": "frozen_pass_with_reviewed_source_delta",
+      "source_deltas": [
+        {
+          "path": "tools/verify_animation_machine_card_menu.py",
+          "recorded_sha256": "dc7b50331100f24d786d0ae6ac6f7483bcc5d0e4b51b1f880817e4dfab622f4c",
+          "current_sha256": "1dd4552147c45a34154bc6f48b2053d5a216f3bc065b6ad276ece0b51aa6dd37"
+        }
+      ]
+    },
+    {
+      "tool": "verify_animation_machine_card_menu_save.py",
+      "report": "artifacts/animation_machine_card_menu_save_execution/verification.json",
+      "sha256": "67fa97dbfe5accbc44519d8c9c19f01f2244574592aefe94e309d003cbb28f20",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_card_menu_save.py.result.json",
+      "receipt_sha256": "705c62b5cfa98d478d88ee646dc7c744f87e715cef51d2dada00fbe1b2f9fa7f",
+      "log": "build/legacy_acceptance/verify_animation_machine_card_menu_save.py.log",
+      "log_sha256": "d82f46de79ed5d7886260cc95d03eac35212390d381b456ecb410df54cca5ab3",
+      "returncode": 0,
+      "duration_seconds": 416.683,
+      "input_pin_count": 151,
+      "acceptance": "frozen_pass_with_reviewed_source_delta",
+      "source_deltas": [
+        {
+          "path": "tools/verify_animation_machine_card_menu.py",
+          "recorded_sha256": "dc7b50331100f24d786d0ae6ac6f7483bcc5d0e4b51b1f880817e4dfab622f4c",
+          "current_sha256": "1dd4552147c45a34154bc6f48b2053d5a216f3bc065b6ad276ece0b51aa6dd37"
+        }
+      ]
+    },
+    {
+      "tool": "verify_animation_machine_carry.py",
+      "report": "artifacts/animation_machine_carry_execution/verification.json",
+      "sha256": "3c8594e877762b6123ebdf6ecc8b94b31ebd98808fd442bf1b135797f919daba",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_carry.py.result.json",
+      "receipt_sha256": "0e1488d9af0c2206083c59ad962bb3e63857ee16c74d930d43b146983289872c",
+      "log": "build/legacy_acceptance/verify_animation_machine_carry.py.log",
+      "log_sha256": "0e498b34b4793873bba32d2de71fc9d04cb4c49630b9acf3e6ed3b263e6d11b7",
+      "returncode": 0,
+      "duration_seconds": 64.524,
+      "input_pin_count": 146,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_cleanup.py",
+      "report": "artifacts/animation_machine_cleanup_execution/verification.json",
+      "sha256": "83e89cfac8298122f9f4240d090f5750cb0c3c141486444e7676f7572f50a5c3",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_cleanup.py.result.json",
+      "receipt_sha256": "74622df5bc306e1ec6460120a250ba019bc3c0fba3e246d152cb3e02723e6fab",
+      "log": "build/legacy_acceptance/verify_animation_machine_cleanup.py.log",
+      "log_sha256": "87105f69e7025ee63326c5c43f242add87fbc9c6c29f8e3104d592af4690089a",
+      "returncode": 0,
+      "duration_seconds": 83.12,
+      "input_pin_count": 163,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_exit.py",
+      "report": "artifacts/animation_machine_exit_execution/verification.json",
+      "sha256": "71607dbeea5ca67959a5f05c7ad9f291678d32e6dd8cec1efec5f881b60f6021",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_exit.py.result.json",
+      "receipt_sha256": "7cdbc13307bc05ff2315e53a1907bd36312eed7c6fe359fbfd0eefd38925dae4",
+      "log": "build/legacy_acceptance/verify_animation_machine_exit.py.log",
+      "log_sha256": "22aa3cd7d55cbf02137b7cfb88f54f5ade6b7d629257df07892d1f7f0d5b23bd",
+      "returncode": 0,
+      "duration_seconds": 71.563,
+      "input_pin_count": 161,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_fade_card.py",
+      "report": "artifacts/animation_machine_fade_card_execution/verification.json",
+      "sha256": "e8792d3ac6111cff9f56ba63e5f2853d26cd046b0f581a5475c38c434d599935",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_fade_card.py.result.json",
+      "receipt_sha256": "c9af9c1c14703c53f3d4d5bf49e405ee87f51c8c53d87f310605a471b0ee946a",
+      "log": "build/legacy_acceptance/verify_animation_machine_fade_card.py.log",
+      "log_sha256": "9e34e4b00ef5af3916b7a9261f3ac249ba47f2ce6c7777bcf2f824bd4757cff7",
+      "returncode": 0,
+      "duration_seconds": 69.85,
+      "input_pin_count": 145,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_frame_helpers.py",
+      "report": "artifacts/animation_machine_frame_helpers_execution/verification.json",
+      "sha256": "72e30464d1a657d9022d2db68f8aadc64562a208c5d1feddf6e93771e566199c",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_frame_helpers.py.result.json",
+      "receipt_sha256": "8f858c466179b7fe42ea242ffb3527e8ccc87cd05f56323d8e0443d8e624cda2",
+      "log": "build/legacy_acceptance/verify_animation_machine_frame_helpers.py.log",
+      "log_sha256": "78683291423980165ef1eb132cd75439196a1a19af797b6ecce9bb75769f3509",
+      "returncode": 0,
+      "duration_seconds": 1143.003,
+      "input_pin_count": 157,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_hud.py",
+      "report": "artifacts/animation_machine_hud_execution/verification.json",
+      "sha256": "2f40547af044726456fdb9d79f8cfe1c234327951b3a0f008fed00b0447e22db",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_hud.py.result.json",
+      "receipt_sha256": "c287a97d5fe4c0c3c16255638e07dee10b588b6eda832791d032f04afef9ea77",
+      "log": "build/legacy_acceptance/verify_animation_machine_hud.py.log",
+      "log_sha256": "8c767c4f2e628eef97c79c5c76887472b4523d7f4d2d10d24c790525bdef9bcc",
+      "returncode": 0,
+      "duration_seconds": 137.07,
+      "input_pin_count": 158,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_input.py",
+      "report": "artifacts/animation_machine_input_execution/verification.json",
+      "sha256": "97ad6df0187d6d0853679e6c593fc7daeba13ccccefa647ae00118b966402fca",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_input.py.result.json",
+      "receipt_sha256": "850b231be3e016a3fb875134b3d9c7d24b911ae7da87b68006cbfcd2c6300170",
+      "log": "build/legacy_acceptance/verify_animation_machine_input.py.log",
+      "log_sha256": "4c7c6c096e14f065e4ff518e3d6d0e832c1ee901bc93d20dd488ed4e4a2a84a9",
+      "returncode": 0,
+      "duration_seconds": 531.609,
+      "input_pin_count": 159,
+      "acceptance": "frozen_pass_with_reviewed_source_delta",
+      "source_deltas": [
+        {
+          "path": "tools/verify_animation_machine_scene_core.py",
+          "recorded_sha256": "040a0512d8ce3b094ba461e6219ece8a2cbf7e165bf18523d7856b8d9f5c8c5a",
+          "current_sha256": "f5c18f3518d0deae8c41fedff5c783b3ff5ffa20c860476e91c348511d9f7cd1"
+        }
+      ]
+    },
+    {
+      "tool": "verify_animation_machine_map_transfer.py",
+      "report": "artifacts/animation_machine_map_transfer_execution/verification.json",
+      "sha256": "6acf65c11996f31a9296fb800291fdd51be1ddf77f21944fef37c98a7b6263d4",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_map_transfer.py.result.json",
+      "receipt_sha256": "638280a8be743c77c1e838e7da832147fd9bb2aa768e4d905f1d4c86f6c74d46",
+      "log": "build/legacy_acceptance/verify_animation_machine_map_transfer.py.log",
+      "log_sha256": "d3ad52d71ff21d7eeefaad95263528305c6960dd4b279f3abc0b7520c8523d57",
+      "returncode": 0,
+      "duration_seconds": 165.025,
+      "input_pin_count": 167,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_motion_walk.py",
+      "report": "artifacts/animation_machine_motion_walk_execution/verification.json",
+      "sha256": "f571917a248287044be4cff4ad05c2606bdce15f00d972030d40f26a2a95d0fa",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_motion_walk.py.result.json",
+      "receipt_sha256": "3d72a8628216a0c65b6862f3e03855a1e29994f49404a8496d7d8d12ec627525",
+      "log": "build/legacy_acceptance/verify_animation_machine_motion_walk.py.log",
+      "log_sha256": "3bc58265ddc62ca8b4a1fc23c031151cdb1f2c26baa789ac6d0d9c59190ac1fa",
+      "returncode": 0,
+      "duration_seconds": 2388.258,
+      "input_pin_count": 157,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_palette_bind.py",
+      "report": "artifacts/animation_machine_palette_bind_execution/verification.json",
+      "sha256": "5328feb298457cc4d168694a4ce65a2b3ac6a51b8ad5a5e3bf46f578779069cf",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_palette_bind.py.result.json",
+      "receipt_sha256": "64dc3282d39652b04fce22fe711ef4eca8d7b0f4d9c1fc07862c68dfadf8aa83",
+      "log": "build/legacy_acceptance/verify_animation_machine_palette_bind.py.log",
+      "log_sha256": "2dd055e243b4c7ce28454f33d6ec1c2a65f41254c70efb46f5de2d2b1e6e0757",
+      "returncode": 0,
+      "duration_seconds": 81.26,
+      "input_pin_count": 166,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_readiness.py",
+      "report": "artifacts/animation_machine_readiness_execution/verification.json",
+      "sha256": "cd898ea729c15f7c4d2deb603ea66989389f61edd52b6d62f67e4faaf4ce26dc",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_readiness.py.result.json",
+      "receipt_sha256": "d2cef221994d05f60fa69ea33f28f11f2ab3c9b306c2285d664afe436b587d23",
+      "log": "build/legacy_acceptance/verify_animation_machine_readiness.py.log",
+      "log_sha256": "9b107805ba8272ed1e9ec86995bc423f6ecf07b47340d45edc1508ea5b842ae5",
+      "returncode": 0,
+      "duration_seconds": 46.365,
+      "input_pin_count": 157,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_scene.py",
+      "report": "artifacts/animation_machine_scene_execution/verification.json",
+      "sha256": "8bab194fe740563ae6c019fac8c46eb9ee0db795e004429fa2998e01755ee096",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_scene.py.result.json",
+      "receipt_sha256": "979f7525da06decc6ca486a27f0d5cf2ae72484d9f08b2284b0b3f0dea858136",
+      "log": "build/legacy_acceptance/verify_animation_machine_scene.py.log",
+      "log_sha256": "313ea84fd6623f1b9896dd3334bb54de45d105f31eec82d4d507e322bb8a8b5c",
+      "returncode": 0,
+      "duration_seconds": 188.873,
+      "input_pin_count": 165,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_scene_core.py",
+      "report": "artifacts/animation_machine_scene_core_execution/verification.json",
+      "sha256": "143691f1bfec4f15db1375c7f7db997f599e156e5c968ec4e37d311aac795d49",
+      "receipt": "build/legacy_acceptance/reruns/verify_animation_machine_scene_core.py.result.json",
+      "receipt_sha256": "13736357ca81b456725b2a87f8c2be1d18a9d41ba7ebea447769e2a61e6669ea",
+      "log": "build/legacy_acceptance/reruns/verify_animation_machine_scene_core.py.log",
+      "log_sha256": "f6dc5de8aca5a2022c441709492e5942e95684fb1189a54391295b3cfbfdc3e1",
+      "returncode": 0,
+      "duration_seconds": 765.857,
+      "input_pin_count": 157,
+      "acceptance": "full_rerun_after_repair",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_scene_update.py",
+      "report": "artifacts/animation_machine_scene_update_execution/verification.json",
+      "sha256": "e2598bc6283adb85d7ad0ca7471dcdc028146b4934015d1279cbdf389cb961ce",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_scene_update.py.result.json",
+      "receipt_sha256": "bfb2bdb0125e4ba1be80fe6ca2f59936722328fe092a7e61765df1321fbabfc6",
+      "log": "build/legacy_acceptance/verify_animation_machine_scene_update.py.log",
+      "log_sha256": "06d84f9bb0dabd0f738d1405474218e14c88a311f4985062cc9f94ff84bb4782",
+      "returncode": 0,
+      "duration_seconds": 508.609,
+      "input_pin_count": 158,
+      "acceptance": "frozen_pass_with_reviewed_source_delta",
+      "source_deltas": [
+        {
+          "path": "tools/verify_animation_machine_scene_core.py",
+          "recorded_sha256": "040a0512d8ce3b094ba461e6219ece8a2cbf7e165bf18523d7856b8d9f5c8c5a",
+          "current_sha256": "f5c18f3518d0deae8c41fedff5c783b3ff5ffa20c860476e91c348511d9f7cd1"
+        }
+      ]
+    },
+    {
+      "tool": "verify_animation_machine_scheduler.py",
+      "report": "artifacts/animation_machine_scheduler_execution/verification.json",
+      "sha256": "5b43ecf80149f5a786a6c627335b44b106adb4855200f0de092c4fb56d7a0e7c",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_scheduler.py.result.json",
+      "receipt_sha256": "b9db2bd799c0fb4200901aadb14a6b79606df0b69466ab1ddd7d8c10f1cf9a75",
+      "log": "build/legacy_acceptance/verify_animation_machine_scheduler.py.log",
+      "log_sha256": "7a0d12cf01fecd56f19a0be0f399cc57996e06395d923fa6bb275bffaa682ff7",
+      "returncode": 0,
+      "duration_seconds": 292.023,
+      "input_pin_count": 149,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_screen.py",
+      "report": "artifacts/animation_machine_screen_execution/verification.json",
+      "sha256": "4a7a03a5cc1bef0b78e9484dccc46cf9589577f05aa93446a55bc55eacb366c3",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_screen.py.result.json",
+      "receipt_sha256": "8f0ffb3719dfa41b3039fd65df4c923b34a04cba91777051ef651484baea59a2",
+      "log": "build/legacy_acceptance/verify_animation_machine_screen.py.log",
+      "log_sha256": "e48800e01510022a94e7c12d225a250705331a1899a23bb9a2986eb48b9e399e",
+      "returncode": 0,
+      "duration_seconds": 101.486,
+      "input_pin_count": 163,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_script_placement.py",
+      "report": "artifacts/animation_machine_script_placement_execution/verification.json",
+      "sha256": "32c0e17f86e9d9417b87f80cfd36da203532b654c8d65a765c7c66ac4e96f1e3",
+      "receipt": "build/legacy_acceptance/reruns/verify_animation_machine_script_placement.py.result.json",
+      "receipt_sha256": "c7d0e94fb44a293a764a3c31995e77ae81198cf4f78ae4bfffa7f7c6a46c9460",
+      "log": "build/legacy_acceptance/reruns/verify_animation_machine_script_placement.py.log",
+      "log_sha256": "08ec3c53a706cff9b3eb6468ac977890fe035d7813d17c38ccab9a7ce6a591ba",
+      "returncode": 0,
+      "duration_seconds": 287.419,
+      "input_pin_count": 159,
+      "acceptance": "full_rerun_after_repair",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_stage_area.py",
+      "report": "artifacts/animation_machine_stage_area_execution/verification.json",
+      "sha256": "cce2ed244270f8ea0b054f698252fea4d17f131a5e8472fe5b5f86a1d1aa03b4",
+      "receipt": "build/legacy_acceptance/reruns/verify_animation_machine_stage_area.py.result.json",
+      "receipt_sha256": "299f524fac6761235bf37e440db952fa152e812c938a5c98d05a0cd6e0b6a780",
+      "log": "build/legacy_acceptance/reruns/verify_animation_machine_stage_area.py.log",
+      "log_sha256": "b7ee15d984b35e204551607cf038a4db1795130143a5861d0ba10bb4c7d6f59e",
+      "returncode": 0,
+      "duration_seconds": 183.292,
+      "input_pin_count": 147,
+      "acceptance": "full_rerun_after_repair",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_stage_catalog.py",
+      "report": "artifacts/animation_machine_stage_catalog_execution/verification.json",
+      "sha256": "99ddebcf6f3f96085a374a173aae406d37b4b42f218330bcfc1f87cd45ad1019",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_stage_catalog.py.result.json",
+      "receipt_sha256": "c731b811bcf465df690087e7a0a7397c5cbfca762ccfce34151475ab0d47147e",
+      "log": "build/legacy_acceptance/verify_animation_machine_stage_catalog.py.log",
+      "log_sha256": "086409d7f027aaccf1e4fc2f1e285f6cb5a9885432f16f1dd3c9732c81b347a8",
+      "returncode": 0,
+      "duration_seconds": 2072.961,
+      "input_pin_count": 148,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_stage_entry.py",
+      "report": "artifacts/animation_machine_stage_entry_execution/verification.json",
+      "sha256": "2762a4f0712be08f6ceb4bd83d6babb39a44297a44bc03a587e387996b90942d",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_stage_entry.py.result.json",
+      "receipt_sha256": "4a32d2fee97d405199604e76f4d5dfdf3a6b7197b1314e6d3cd1ade6052560a4",
+      "log": "build/legacy_acceptance/verify_animation_machine_stage_entry.py.log",
+      "log_sha256": "988df7730b15d3540443e8bf57406fbbbf79bcad8322bef41db7ffa594ddbf3e",
+      "returncode": 0,
+      "duration_seconds": 1650.239,
+      "input_pin_count": 147,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_stage_event.py",
+      "report": "artifacts/animation_machine_stage_event_execution/verification.json",
+      "sha256": "422a021472b2eb686e6d134bc1de409d09f51f07ed7247a22e8b0bb333280cfc",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_stage_event.py.result.json",
+      "receipt_sha256": "8768995f409c4297a6fb4976ae59b4c890398fadd3c5ca801cd4c99ef51cc707",
+      "log": "build/legacy_acceptance/verify_animation_machine_stage_event.py.log",
+      "log_sha256": "abf5d264a77d2b8b3eed5cfdb210befde11762ec58f2bd1a7cb0f47d9bcc0175",
+      "returncode": 0,
+      "duration_seconds": 146.914,
+      "input_pin_count": 148,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_stage_event_ops.py",
+      "report": "artifacts/animation_machine_stage_event_ops_execution/verification.json",
+      "sha256": "0961ce296f8548087d68a7acc27acc58d4e9fa55f68d15faca46c133a7e72c51",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_stage_event_ops.py.result.json",
+      "receipt_sha256": "aa68f9560a9966a8ad8a0336b7d6f5fa3b4da091ff26f32e0cb0025dc131a13e",
+      "log": "build/legacy_acceptance/verify_animation_machine_stage_event_ops.py.log",
+      "log_sha256": "89bba147117c3ff1710ee53d0406603ccc79b3894c08175bfcc6ef68ff410152",
+      "returncode": 0,
+      "duration_seconds": 73.991,
+      "input_pin_count": 149,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    },
+    {
+      "tool": "verify_animation_machine_transition.py",
+      "report": "artifacts/animation_machine_transition_execution/verification.json",
+      "sha256": "c21905d03b9ef6f4e0dc5e4f37bd59a1332fdb6a2b6c101a39a1c9fd0ff462af",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_transition.py.result.json",
+      "receipt_sha256": "3728b940ca47cb93778c6cd8f6e58a2f6f08c66b80c34398bb21c88cb7015980",
+      "log": "build/legacy_acceptance/verify_animation_machine_transition.py.log",
+      "log_sha256": "18d9cb3bf7e2f4687a58e37f588fd9f7697c4ef6b7b8d69af56d22c86f10d49d",
+      "returncode": 0,
+      "duration_seconds": 83.616,
+      "input_pin_count": 160,
+      "acceptance": "frozen_pass_current_pins",
+      "source_deltas": []
+    }
+  ],
+  "preserved_initial_failures": [
+    {
+      "tool": "verify_animation_machine_card_menu.py",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_card_menu.py.result.json",
+      "receipt_sha256": "d40bd8649ee7da8f81ea355b59ce98a8fa322637e56c23cfe33bc909f69a8e65",
+      "log": "build/legacy_acceptance/verify_animation_machine_card_menu.py.log",
+      "log_sha256": "05da01b6cb9348970b4d88e3c96f9f57d96975a4012e76fabac09986ec4f64a5",
+      "returncode": 1
+    },
+    {
+      "tool": "verify_animation_machine_scene_core.py",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_scene_core.py.result.json",
+      "receipt_sha256": "1fd0e2bdcf306f37fe36831ed131f2ea7ee516095eb843c05c7573c766d62fe4",
+      "log": "build/legacy_acceptance/verify_animation_machine_scene_core.py.log",
+      "log_sha256": "89aad3d684070354aacee147918c6a552e6a58dead310a3a50b19f85ed07c486",
+      "returncode": 1
+    },
+    {
+      "tool": "verify_animation_machine_script_placement.py",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_script_placement.py.result.json",
+      "receipt_sha256": "4fd64106f716e742ce1491310ea8cfa6a9637abece94c7df5ee33f3bdfdc867e",
+      "log": "build/legacy_acceptance/verify_animation_machine_script_placement.py.log",
+      "log_sha256": "e58945e9db2b0c7daf64ebd55c34be9867563fc5f6e7e38ce2c34d5edfeb39f5",
+      "returncode": 1
+    },
+    {
+      "tool": "verify_animation_machine_stage_area.py",
+      "receipt": "build/legacy_acceptance/verify_animation_machine_stage_area.py.result.json",
+      "receipt_sha256": "b0a3abc1979621e0cfed087dc2c9aa76652ac771a2b8fd2e1940454f69a871c4",
+      "log": "build/legacy_acceptance/verify_animation_machine_stage_area.py.log",
+      "log_sha256": "0c6daf58469fa4ae57784774d75512356d188eaf3292474f6300d628fac633da",
+      "returncode": 1
+    }
+  ],
+  "source_delta_review": "docs/reviews/0258-card-menu-delta-review.md",
+  "limits": [
+    "Old report source pins remain unchanged; reviewed function-local deltas are explicitly recorded.",
+    "Full game, D1 whole frame, controllers, deferred b-units, native exception rollback and audiovisual equivalence are not claimed."
+  ],
+  "primary_acceptance": {
+    "hash_method": "streaming SHA256, one hash per unique file",
+    "limits": [
+      "G2/G1/RNG generated source recipes are compared where original metadata has no source hash; this does not invent compiler-time source hashes."
+    ],
+    "ok": true,
+    "receipt_tool_sha256": "c70c1701a99a48a7adedfb14a1fe17fc6c16b7a20ea2113790719b2289602555",
+    "reports": [
+      {
+        "acceptance_receipt_sha256": "1581049d93f8c3af8e7564939afb1106b53fe2c44324498f28cf934cb82f4250",
+        "bad": [],
+        "checked_hashes": 4916,
+        "legacy_four_dependencies": [],
+        "name": "G1",
+        "ok": true,
+        "reconstructed_generated_sources": 1,
+        "report": "artifacts/animation_machine_objects_integration_execution/execution.json",
+        "report_sha256": "981950aa963530279c9b00cb69139369ed141fbbd6baec2d6d41b565c0633849",
+        "unique_paths": 2659
+      },
+      {
+        "bad": [],
+        "checked_hashes": 4434,
+        "legacy_four_dependencies": [],
+        "name": "G2",
+        "ok": true,
+        "reconstructed_generated_sources": 3,
+        "report": "artifacts/animation_machine_objects_g2_execution/verification.json",
+        "report_sha256": "5f0cb5b065197e969f9ad7b42c3da97f81876714231029af2f3f58270481c938",
+        "resolved_scratch": "build/g2_dependencies_final",
+        "unique_paths": 4436
+      },
+      {
+        "bad": [],
+        "checked_hashes": 11148,
+        "legacy_four_dependencies": [],
+        "name": "G3",
+        "ok": true,
+        "reconstructed_generated_sources": 0,
+        "report": "artifacts/animation_machine_objects_g3_execution/verification.json",
+        "report_sha256": "2c2ac4ae6438eb86dc5286a351fea146832e73a4f1cfe4ffedc2b997a3c42419",
+        "unique_paths": 11146
+      },
+      {
+        "acceptance_receipt_sha256": "6fe617c0b65dc5ec06240b10723242f5bed8fe39fd501053c4faf18a67b8f4f2",
+        "bad": [],
+        "checked_hashes": 3647,
+        "legacy_four_dependencies": [],
+        "name": "RNG",
+        "ok": true,
+        "reconstructed_generated_sources": 2,
+        "report": "artifacts/animation_machine_scheduler_rng_f4_execution/verification.json",
+        "report_sha256": "b596175b1ac32264d70ce8a600143521c54ba2f9aaceb0fa3535cdbb27132a26",
+        "unique_paths": 3396
+      },
+      {
+        "bad": [],
+        "checked_hashes": 8735,
+        "legacy_four_dependencies": [],
+        "name": "F5",
+        "ok": true,
+        "reconstructed_generated_sources": 0,
+        "report": "artifacts/animation_machine_frame_head_execution/verification.json",
+        "report_sha256": "1a5423a79d1205354b9ffb3e3252a9b1a7d7e9061fc9b7343cad26e28866b1d0",
+        "unique_paths": 8735
+      }
+    ],
+    "scope": "Read-only final primary metadata pins; no acceptance execution or artifact writes.",
+    "seconds": 6.413924932479858,
+    "total_unique_files_hashed": 28318
+  },
+  "primary_pin_receipt_sha256": "440b75014580cc064dde103974ff09e39db859f05058e1cee0ab6f4e1b112155",
+  "build": {
+    "source_engine_commit": "b8502bfaa8c6bebd6f02d79a9be46b16543cc289",
+    "previous_evidence": {
+      "target_commit": "b8502bfaa8c6bebd6f02d79a9be46b16543cc289",
+      "cpp_executables_built_and_passed": 249,
+      "cpp_before_fixture_error": 209,
+      "cpp_resumed_separately": 40,
+      "python_tests_passed": 257,
+      "compiler_warnings": 0,
+      "tracked_source_copy_drift": [],
+      "initial_make_exit_code": 2,
+      "initial_make_failure": "isolated copy omitted artifacts/reference/prot_cmc.cpp; copied identical reference and reran Python plus remaining C++ tests",
+      "reference_sha256": "f6b618e70a1e6dcdcbbed1ee9c3fbc352dd195a895baf2fbb2e22ee413e3bf84",
+      "logs": {
+        "build-test.log": "7f9277d0a4d5b2c93ad3743ec84a51e7cde9e7fde8f64fd9e57f6acd79b2be39",
+        "python-tests-final.log": "28945b78d1bde1af5a26f8feba3d2bd19628152cfaeead11533d5a65d78d2cca",
+        "remaining-cpp-tests.log": "b416fb8465b37a37d4e3de06f92561140c3432cf5659711510f9a20df84a8075"
+      },
+      "legacy_probe": {
+        "state": {
+          "d0": 2309737967,
+          "d1": 2326647027,
+          "d2": 2343556087,
+          "d3": 2360465147,
+          "d4": 2377374207,
+          "d5": 2394283267,
+          "d6": 2411192327,
+          "d7": 2428101387,
+          "a0": 2445010447,
+          "a1": 2461919507,
+          "a2": 2478828567,
+          "a3": 2495737627,
+          "a4": 2512646687,
+          "a5": 1081344,
+          "a6": 1056768,
+          "a7": 2093052,
+          "pc": 57004,
+          "carry": 2,
+          "bank_base": 2097152,
+          "external_reads": 305419896,
+          "status": 1,
+          "ok": false
+        },
+        "error": "unsupported animation frame head h8 PC",
+        "old_expected_error": "unsupported animation machine PC",
+        "old_expectation_holds": false,
+        "official_negatives_assertion": "('unsupported-PC', 'unsupported animation frame head h8 PC')"
+      }
+    },
+    "compared_files": 818,
+    "different": [],
+    "new_harness": "engine/tools/frame_head_acceptance.cpp compiled separately by F5 verifier"
+  },
+  "current_Python_tests": {
+    "passed": 257,
+    "log": "build/python-unit-tests.log",
+    "sha256": "f32460db3db022ba67f44f327569350dc64539c16d038606328c7394c3b5c6b2"
+  },
+  "audit_negative_tests": [
+    {
+      "tool": "audit_animation_machine_objects_f4_execution.py",
+      "tool_sha256": "f0807bd9183ef4c310dc709501c4ff33b86d22481a5a949a5d132bc87222f5f7",
+      "mutation": "old-count",
+      "returncode": 1,
+      "no_acceptance": true
+    },
+    {
+      "tool": "audit_animation_machine_objects_f4_execution.py",
+      "tool_sha256": "f0807bd9183ef4c310dc709501c4ff33b86d22481a5a949a5d132bc87222f5f7",
+      "mutation": "stale-header",
+      "returncode": 1,
+      "no_acceptance": true
+    },
+    {
+      "tool": "audit_animation_machine_scheduler_rng_f4_execution.py",
+      "tool_sha256": "b46a319e43df76198b44ff321a43a6677e960cd9986fda49070331fa371c311f",
+      "mutation": "old-count",
+      "returncode": 1,
+      "no_acceptance": true
+    },
+    {
+      "tool": "audit_animation_machine_scheduler_rng_f4_execution.py",
+      "tool_sha256": "b46a319e43df76198b44ff321a43a6677e960cd9986fda49070331fa371c311f",
+      "mutation": "stale-header",
+      "returncode": 1,
+      "no_acceptance": true
+    }
+  ],
+  "failure_artifact_preservation": {
+    "manifest": "build/legacy_acceptance/original-failures/manifest.json",
+    "sha256": "3f3d83c84e741ab4c6ef35cb6a88742755743c10c1ad678082568446df648900"
+  },
+  "applied_delta": {
+    "applied_utc": "2026-10-14T12:03:40Z",
+    "original35_manifest_sha256": "267b6c50b2a43c48687382d107a2a4a7151925347065df8972ff84c32deabf47",
+    "source_freeze_sha256": "87d755242e5e38b94d6746bdb07a8184e3d0d99693942ad6b595c5066e802677",
+    "only_changed_sources": [
+      "tools/verify_animation_machine_card_menu.py",
+      "tools/verify_animation_machine_scene_core.py",
+      "tools/verify_animation_machine_script_placement.py",
+      "tools/verify_animation_machine_stage_area.py"
+    ],
+    "sources": [
+      {
+        "tool": "verify_animation_machine_card_menu.py",
+        "source": "tools/verify_animation_machine_card_menu.py",
+        "frozen_sha256": "dc7b50331100f24d786d0ae6ac6f7483bcc5d0e4b51b1f880817e4dfab622f4c",
+        "applied_sha256": "1dd4552147c45a34154bc6f48b2053d5a216f3bc065b6ad276ece0b51aa6dd37",
+        "patch": "/Users/start/.codex/worktrees/f4-f5-acceptance/metalslug/build/legacy_acceptance/card_menu_guard_repair.patch",
+        "patch_sha256": "8f40fa7096d94e62f196e4a6ed848657314f17d9064cbde4c92bc9960e7e2a8c"
+      },
+      {
+        "tool": "verify_animation_machine_scene_core.py",
+        "source": "tools/verify_animation_machine_scene_core.py",
+        "frozen_sha256": "040a0512d8ce3b094ba461e6219ece8a2cbf7e165bf18523d7856b8d9f5c8c5a",
+        "applied_sha256": "f5c18f3518d0deae8c41fedff5c783b3ff5ffa20c860476e91c348511d9f7cd1",
+        "patch": "/Users/start/.codex/worktrees/f4-f5-acceptance/metalslug/build/f5_acceptance/negative-audit/scene_core_h4_guard_repair.patch",
+        "patch_sha256": "8515bc9dd54bd5ddb5071c9873e4464c825a5dd372968755742c2cb61a5f43bc"
+      },
+      {
+        "tool": "verify_animation_machine_script_placement.py",
+        "source": "tools/verify_animation_machine_script_placement.py",
+        "frozen_sha256": "f14b21291e6ec52f91148b571bf4a631fc6db7d544b00c5b9197b5cb3c92e233",
+        "applied_sha256": "d77b432ace5e053b75c982f2b25e72bc3571cadce89f99ead949abd8ae0eddd5",
+        "patch": "/Users/start/.codex/worktrees/f4-f5-acceptance/metalslug/build/legacy_acceptance/script_placement_guard_repair.patch",
+        "patch_sha256": "b4ce7ad114cee933ba54a676453f90fb034478882103f3fa60eba202a7160e3a"
+      },
+      {
+        "tool": "verify_animation_machine_stage_area.py",
+        "source": "tools/verify_animation_machine_stage_area.py",
+        "frozen_sha256": "3841f635e1d8fb869a76db2df54f59aeda062ccdeeee9d4b5ad646a5cba2aea3",
+        "applied_sha256": "29df79b716136fa3453304d88529c939aaa11de2ea471945997aaa647f255fa9",
+        "patch": "/Users/start/.codex/worktrees/f4-f5-acceptance/metalslug/build/f5_acceptance/stage-area-negative-audit/stage_area_queue_repair.patch",
+        "patch_sha256": "ddebab9a7910b8568b06e8b867a4dea0b2ad8e3c812da2eec2329c97c5b37614"
+      }
+    ]
+  },
+  "original_manifest_sha256": "267b6c50b2a43c48687382d107a2a4a7151925347065df8972ff84c32deabf47",
+  "rerun_manifest_sha256": "9ef308a544ca9c78b6f727eda0413f86fd7ef2736c19c743441cfd71cf7461ab",
+  "acceptance_groups": {
+    "current_pin_original_reports": 24,
+    "reviewed_delta_original_reports": 7,
+    "repaired_full_reruns": 4
+  },
+  "independent_final_review": {
+    "schema_version": 1,
+    "completed_official_replacements": 4,
+    "pending": [],
+    "all_four_pass": true,
+    "all_old31_report_hashes_preserved": true,
+    "current_pin_historical_reports": 24,
+    "reviewed_delta_historical_reports": 7,
+    "rows": [
+      {
+        "tool": "verify_animation_machine_card_menu.py",
+        "returncode": 0,
+        "report": "/Users/start/.codex/worktrees/f4-f5-acceptance/metalslug/artifacts/animation_machine_card_menu_execution/verification.json",
+        "report_sha256": "94d0c7ed6bc0f1806f97fd53089b5ffc7d1d734235e0580098329acd08968f68",
+        "receipt_sha256": "6c5f1f20b1e0322e3a24c3fbb9e8023ccefae3306fc1b4a335a4dedf5a09ed8f",
+        "source_sha256": "1dd4552147c45a34154bc6f48b2053d5a216f3bc065b6ad276ece0b51aa6dd37",
+        "all_report_inputs_current": true,
+        "checked_input_count": 150,
+        "receipt_before_after_equal": true,
+        "default_report_copy_equal": true,
+        "proof": {
+          "proof_rows": 2,
+          "exact_original_H1_RTS": true,
+          "original_guard_checked_count": 7,
+          "superseded_count": 3
+        },
+        "duration_seconds": 878.992
+      },
+      {
+        "tool": "verify_animation_machine_scene_core.py",
+        "returncode": 0,
+        "report": "/Users/start/.codex/worktrees/f4-f5-acceptance/metalslug/artifacts/animation_machine_scene_core_execution/verification.json",
+        "report_sha256": "143691f1bfec4f15db1375c7f7db997f599e156e5c968ec4e37d311aac795d49",
+        "receipt_sha256": "13736357ca81b456725b2a87f8c2be1d18a9d41ba7ebea447769e2a61e6669ea",
+        "source_sha256": "f5c18f3518d0deae8c41fedff5c783b3ff5ffa20c860476e91c348511d9f7cd1",
+        "all_report_inputs_current": true,
+        "checked_input_count": 157,
+        "receipt_before_after_equal": true,
+        "default_report_copy_equal": true,
+        "proof": {
+          "exact_error": {
+            "phase": "unsupported animation frame head h4 PC",
+            "whole_step": "unsupported animation frame head h4 PC"
+          },
+          "rollback": true
+        },
+        "duration_seconds": 765.857
+      },
+      {
+        "tool": "verify_animation_machine_script_placement.py",
+        "returncode": 0,
+        "report": "/Users/start/.codex/worktrees/f4-f5-acceptance/metalslug/artifacts/animation_machine_script_placement_execution/verification.json",
+        "report_sha256": "32c0e17f86e9d9417b87f80cfd36da203532b654c8d65a765c7c66ac4e96f1e3",
+        "receipt_sha256": "c7d0e94fb44a293a764a3c31995e77ae81198cf4f78ae4bfffa7f7c6a46c9460",
+        "source_sha256": "d77b432ace5e053b75c982f2b25e72bc3571cadce89f99ead949abd8ae0eddd5",
+        "all_report_inputs_current": true,
+        "checked_input_count": 159,
+        "receipt_before_after_equal": true,
+        "default_report_copy_equal": true,
+        "proof": {
+          "full3db2_original_prefix": true,
+          "pvc_writes": 14,
+          "helper_source_and_wrapper_pins": 25,
+          "exact3db4_error": true
+        },
+        "duration_seconds": 287.419
+      },
+      {
+        "tool": "verify_animation_machine_stage_area.py",
+        "returncode": 0,
+        "report": "/Users/start/.codex/worktrees/f4-f5-acceptance/metalslug/artifacts/animation_machine_stage_area_execution/verification.json",
+        "report_sha256": "cce2ed244270f8ea0b054f698252fea4d17f131a5e8472fe5b5f86a1d1aa03b4",
+        "receipt_sha256": "299f524fac6761235bf37e440db952fa152e812c938a5c98d05a0cd6e0b6a780",
+        "source_sha256": "29df79b716136fa3453304d88529c939aaa11de2ea471945997aaa647f255fa9",
+        "all_report_inputs_current": true,
+        "checked_input_count": 147,
+        "receipt_before_after_equal": true,
+        "default_report_copy_equal": true,
+        "proof": {
+          "exact_labels": 4,
+          "full_prefix_to_EA4": true,
+          "first_read_EAA_3c0006_word": true,
+          "ordered_ports_per_prefix": 404,
+          "API_only_failure_rollback": true
+        },
+        "duration_seconds": 183.292
+      }
+    ]
+  },
+  "supplemental_evidence": [
+    {
+      "path": "build/g3_acceptance/official-four-independent-review.json",
+      "sha256": "0d31bf9b96e4c677675100e9f169f75a1f64e234b697b0a3486b2bcf9981f962"
+    },
+    {
+      "path": "build/g3_acceptance/four-applied-delta-review.json",
+      "sha256": "4074412349943363f12f2d0e931161223b24df8d91b2088372fa9bf84a20a98c"
+    },
+    {
+      "path": "build/g3_acceptance/old31-report-pin-impact.json",
+      "sha256": "556302befb254cd5e4d67f761e4fdaad7aad43a2bc3e697357c95baa14e6965a"
+    },
+    {
+      "path": "build/legacy_acceptance/post-rerun-validation.json",
+      "sha256": "2834805ca3c6ce315f1f5fbdb215499e378905eb5fe5ef95ba781084c27e021c"
+    },
+    {
+      "path": "build/legacy_acceptance/reruns/card_menu-preexisting-output-comparison.json",
+      "sha256": "433ad0b65bb54397ae8b19255484699a4a3ead8625c87b8447b9d7f2b4850f80"
+    }
+  ],
+  "review_documents": [
+    {
+      "path": "docs/reviews/0258-card-menu-delta-review.md",
+      "sha256": "499cb515be4bdd031cfd612603984ba298500e636337a89f525f9a93d6e14d8a"
+    },
+    {
+      "path": "docs/reviews/0258-legacy-standard35.md",
+      "sha256": "4a77ca013152785581cbb4792017fa1c6a94b70af9dd8cedb9a8618ca8dc8cdd"
+    }
+  ]
+}

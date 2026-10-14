@@ -38,14 +38,26 @@ F5는 자연 4,975 + 변형 976 + 선언 파생 4,977 = 10,928개가 일치했�
 
 G3 최종 전체 실행도 종료 0, `accepted=true`, 39개 checks 전부 참이다. 자연 30,632 node 중 실행 일치 30,630과 정확한 RNG guard 2개를 구분한다. 유닛 piece 133,378개, Known carry 112,306개에 불일치가 없다. Typed 2,459건은 실행 일치 1,572, 부분 일치 3, 명시적 caller-N 모순 제외 2 및 검증된 오류·경계로 분류한다. 2,203 block probe, 56,108 API 부정 호출, 비교기 오류 주입 9개와 출력 경로 부정 검사 4개도 통과했다. 보고서 SHA256 `2c2ac4ae6438eb86dc5286a351fea146832e73a4f1cfe4ffedc2b997a3c42419`의 입력·native·생성 소스·바이너리 SHA를 메인이 현재 파일과 다시 대조했다. N19 외부 carry 소비자에서의 선언 재진입과 native 주소 마스크 경계는 전체 실행 동등성으로 세지 않는다. 자세한 근거는 `0258-g3-independent.md`와 G3 실행 문서에 있다.
 
-코드·도구 통합 커밋은 F5 `39c1fad`, 전체 provenance/G1/G2/RNG `c7f801d`, G3 `8352514`, 기존 검증기 기대값·원본 prefix 보완 `23779e0`다. 기존 35개 회귀 전체 실행 및 최종 manifest는 작업 중이며 아직 완료로 인수하지 않았다.
+코드·도구 통합 커밋은 F5 `39c1fad`, 전체 provenance/G1/G2/RNG `c7f801d`, G3 `8352514`, 기존 검증기 기대값·원본 prefix 보완 `23779e0`다. 네 추가 guard 보완은 `668e142`에 저장했다. 기존 35개 회귀의 최종 인수 결과는 아래와 같다.
 
 
 ## 35개 회귀 중 발견한 추가 기대값 변경
 
-기존 카드 메뉴 전체 실행은 `guard-overflow-rts-unsupported-target`에서 종료 1이었다. 원본 CPU/파일 오프셋 `1000`의 `4e75 RTS`는 H1에서 지원되므로 기존 unsupported 기대가 오래된 것이다. frozen guard의 전체 시작 `a0a0`와 실제 직전 C++ 출력 `a0c2`에서 각각 원본을 다시 실행하면 `1000 → c2a8 → a2b8 → c2ba → a370`으로 진행한다. 두 시작 모두 full RAM/PVC/16R/PC/bank/ordered ports가 C++와 같고 외부 read는 0이다. 원본 SR이나 예외 rollback 동등성을 주장하지 않는다.
+전체 회귀에서 네 도구가 확장된 F5 실행 범위 이전의 기대값으로 실패했다. 원래 실패 실행의 receipt와 로그를 보존한다. 수정은 아래 해당 검사 함수와 그 검사에서만 부르는 보조 함수, scene-core의 기대값 한 개로 제한한다. 제품 엔진은 변경하지 않는다.
 
-수정안은 `compare_guards` 함수와 여기에서만 호출하는 순수 보조 함수 하나다. 독립 AST/호출 검토에서 나머지 모든 함수·상수·모듈 실행문은 동일하고 다른 34개 검증기는 이 함수를 호출하거나 alias하지 않는다. frozen 35개 실행을 먼저 보존한 뒤 수정된 카드 메뉴의 전체 main을 새로 실행한다. 과거 보고서의 전체 파일 pin을 새 값으로 바꾸지 않으며, 다른 34개 결과에 대해서는 동일 바이트 주장 대신 이 제한된 변경의 실행 경로 불변 검토를 별도로 기록한다. 아직 수정 후 전체 실행 전이므로 최종 수용은 보류한다.
+- 카드 메뉴 `guard-overflow-rts-unsupported-target`: CPU/파일 오프셋 `1000`의 `4e75 RTS`가 H1에서 지원된다. frozen guard의 전체 시작 `a0a0`와 실제 직전 C++ 출력 `a0c2`에서 원본을 다시 실행하면 `1000 → c2a8 → a2b8 → c2ba → a370`으로 진행한다. 두 시작 모두 RAM/PVC/16R/PC/bank/ordered ports가 C++와 같고 외부 read는 0이다. 기존 unsupported 기대를 이 원본 비교로 대체한다.
+- Scene-core `guard-cond-index-negative-8000`: native target `122d4`는 H4 routine 2 cell 시작 `120c0`에서 +532 바이트(18바이트 cell 내부 offset 10)다. 정확한 오류는 `unsupported animation frame head h4 PC`이며 fresh archived phase와 전체 public rollback을 검사한다.
+- Script-placement의 `3db2`는 H1에서 지원한다. 원본의 MOVEQ/BTST와 원래 스택 복귀 경로를 `ff000`까지 실행하여 16R/PC/RAM/ordered ports를 비교한다. 복귀 이후 PVC 쓰기 14회를 독립 장치 규칙으로 계산한 전체 8192바이트 PVC와 bank도 C++와 일치한다. native raw ff8/ff9 저장값과 장치의 masked 값은 다르므로 raw PVC 전체 일치로 주장하지 않는다. `3db4`는 H1 block 내부의 native 명령 주소로 정확한 H1 interior 오류를 기대한다.
+- Stage-area의 `b481e`, `b4a2a`, `46f52`, `1bdde`는 기존 지원 경로에서 H1까지 이어진다. 원본과 C++를 `ea4`까지 비교하면 전체 상태와 순서 있는 port 쓰기 404개가 일치한다. 이후 원본의 첫 외부 읽기는 `eaa`에서 `3c0006` WORD다. 빈 queue에서 C++가 내는 정확한 오류와 전체 API rollback을 검사한다. 빈 queue를 원본 CPU 예외로 해석하지 않는다.
 
+위 주소는 고정 ROM CPU 주소이며 파일 오프셋과 같다. 원본 SR 또는 실패 후 native 예외 상태 rollback 동등성은 주장하지 않는다.
 
-추가 readonly guard 점검에서 scene-core `guard-cond-index-negative-8000`의 native target `122d4`도 H4 내부 주소로 확인했다. H4 routine 2 cell 시작 `120c0`에서 +532 바이트(18바이트 cell의 내부 offset 10)이므로 정확한 오류는 `unsupported animation frame head h4 PC`다. fresh archived phase의 전체 public rollback을 확인했고, 기대 dictionary의 이 값 한 개만 수정한다. 이 상수와 card-menu의 위 변경 모두 해당 도구 자신의 guard 검사에서만 사용된다. 따라서 최종 재검증 계획은 두 공식 main 전체 재실행과 나머지 33개 결과의 제한된 source-delta 영향 검토다. 앞 문단의 34개 계획은 이 추가 발견 전 계획이며 최종 대상은 33개다. 517개 frozen source는 커밋 `23779e0`의 파일과 모두 동일함을 메인이 Git object와 직접 대조했다.
+517개 frozen source는 커밋 `23779e0`의 파일과 모두 동일함을 메인이 Git object와 직접 대조했다. 이 소스를 고정한 전체 실행은 31개 통과와 위 네 기대값 실패였고, 네 수정 도구의 공식 main 전체 재실행은 모두 종료 0이다. 최초 실패의 receipt·로그와 산출물 복사본(파일별 SHA/크기 inventory)을 보존했다. 카드 메뉴의 기존 산출물 48,903개도 재실행 뒤 같은 바이트로 유지됐다.
+
+## 최종 인수
+
+35개 표준 회귀를 인수한다. 실제 분류는 **24개 현재 input pin 일치 + 7개 제한된 변경 영향 검토 + 4개 수정 후 공식 전체 재실행**이다. 7개 과거 report의 whole-file pin은 수정하지 않았다. 독립 AST·호출·소스 내용 참조 검토에서 수정된 함수/값이 그 실행에 사용되지 않음을 확인했다. 이를 새 소스로 35개를 전부 재실행한 결과로 표현하지 않는다.
+
+네 재실행은 card-menu 878.992초, scene-core 765.857초, script-placement 287.419초, stage-area 183.292초다. 모두 입력 해시가 전후 동일하고 기본 경로의 report와 보존 복사본 SHA도 같았다. 메인이 35개 보고서·로그·현재 입력을 다시 대조했으며 위 7개 검토 대상 외 pin 차이는 없었다. G1/G2/G3/RNG/F5의 출처 최종 확인도 28,318개 unique 파일의 해시·바이너리·생성 소스 검사를 통과했다. 생성 시점 source hash 필드가 없는 일부 하네스는 고정된 생성 규칙과 현재 파일을 비교했으며, 존재하지 않는 과거 compiler-time hash를 만들어 주장하지 않는다.
+
+최종 목록과 SHA는 `0258-regression-manifest.json`, 독립 검토는 `0258-card-menu-delta-review.md`, 전체 실행 세부는 `0258-legacy-standard35.md`에 있다. 이번 작업은 기존 F4/F5 주 단위의 검증·인수 보완 완료다. D1 전체 프레임 연결, D9/C1–C3 controller, deferred b-unit·고아 사슬, 전체 화면·사운드 동등성 및 게임 전체 재구성은 여전히 남아 있다.

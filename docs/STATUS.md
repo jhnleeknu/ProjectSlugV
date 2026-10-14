@@ -2127,7 +2127,7 @@
 - 남은 것: 기존 회귀 기대값·stage-event source pin·RNG 감사의 134/2 결과 수 및 기본 산출물 경로 정리, 현재 HEAD 원본 비교 인수, G3 C++ 검증, D1 frame driver, D9/C1~C3, b-unit/고아 사슬·4d418 C 해석. 네 역사 보고서 복구 hash는 일치하지만 “약45개 차이”의 개별 manifest는 확인되지 않았다.
 - 이번 요청은 검사만 수행했으며 기존 일시중지 상태와 전체 Goal 범위·완료 기준을 유지한다.
 
-## 2026-10-14 — 기존 F4/F5 주 단위 인수 보완 진행
+## 2026-10-14 — 기존 F4/F5 주 단위 인수 보완 완료
 
 작업은 `/Users/start/.codex/worktrees/f4-f5-acceptance/metalslug`, `codex/f4-f5-acceptance`에서 이어간다. 엔진 기준은 `b8502bf`이며 새 controller/b-unit/D1 구현은 범위 밖이다. 앞 감사 기록은 `409abfd`, F5 영속 비교기·하네스·문서는 `39c1fad`에 저장했다. ROM과 공유 native 산출물은 읽기 전용으로 재사용하고 실행 산출물만 새 worktree에 둔다.
 
@@ -2136,6 +2136,6 @@
 - G2는 14,320 자연 node 모두 실제 출력 사슬 일치, RNG400은 자연 136 완주/54,400 pass/412,067 node 일치다. seed141은 원본에서도 홀수 PC로 끝나는 한계로 유지한다.
 - 독립 리뷰에서 간접 입력 pin 누락을 찾아 공통 출처 snapshot 도구를 추가했다. G1/G2/RNG는 이 보완을 포함한 전체 재실행과 현재 입력 감사까지 통과했다(`c7f801d`). 이전 통과 결과와 최종 보완 버전의 인수를 구분한다.
 - G3 최초 비교에서 발견한 차이는 계약상 묶인 `71c86..71c98`의 비교 경계, C 반전 소비자, 대상=다음 명령인 분기, 외부 callee의 정확한 경계, 두 잘못된 caller-N 선언을 구분해 처리했다. 원본 기록을 수정하거나 전제 위반을 정상 실행으로 세지 않는다. 최종 전체 실행 39개 checks 전부 통과했고 현재 입력·바이너리 해시를 메인이 재확인했다(`8352514`).
-- 기존 검증기 35개는 `build/legacy_acceptance/standard35.log`에 전체 재실행 중이다. 두 실행 작업에서 무거운 card close/open을 직렬화한다. 반복 subprocess 비용 때문에 수 시간이 소요될 수 있으며 사례 수를 줄이지 않았다. 517개 frozen 소스는 `23779e0`과 전부 동일하다. 카드 메뉴의 `1000 RTS` 새 성공 경로와 scene-core `122d4` H4 내부 오류의 오래된 기대값을 추가 확인했다. frozen 전체 실행 후 해당 두 도구를 수정·전체 재실행하고 나머지 33개 보고서는 변경 영향 독립 검토로 연결한다. 과거 보고서 pin은 수정하지 않는다. 최종 통과로 아직 인수하지 않았다.
+- 기존 표준 회귀 35개를 최종 인수했다. 최초 고정 실행은 31개 통과와 카드 메뉴·scene-core·script-placement·stage-area의 오래된 기대값 네 실패였다. 원본 경로와 정확한 오류/rollback 증거를 추가한 `668e142`의 네 공식 main 전체 재실행이 모두 종료 0, 입력 전후 동일로 통과했다. 최종 분류는 24개 current-pin 결과 + 7개 unused 함수 변경의 행동 비영향 독립 검토 결과 + 4개 수정 후 전체 재실행 결과다. 과거 7개 report/pin을 덮어쓰지 않았고 최초 실패 로그·receipt·산출물도 보존했다. 메인이 517개 frozen source/35개 report·log·current input과 최종 source-delta 분류를 직접 확인했다.
 
-상세 검토는 `docs/reviews/0258-f4-f5-acceptance.md`, 기존 회귀는 `0258-legacy-standard35.md`, 독립 출처 검토는 `0258-main-verifiers-independent.md`를 따른다. 최종 manifest·완료 기록은 모든 전체 검증 인수 후 갱신한다.
+상세 검토는 `docs/reviews/0258-f4-f5-acceptance.md`, 기존 회귀는 `0258-legacy-standard35.md`, 독립 출처 검토는 `0258-main-verifiers-independent.md`를 따른다. 최종 SHA·실행 기록은 `docs/reviews/0258-regression-manifest.json`, 네 수정의 독립 검토는 `0258-card-menu-delta-review.md`에 있다. 이번 인수 보완만 완료했으며 전체 Goal의 범위·완료 기준·기존 일시중지 상태는 바꾸지 않는다. D1 전체 프레임 구동기, D9/C1–C3, deferred b-unit·고아 사슬과 전체 게임 동등성은 후속 작업이다.
