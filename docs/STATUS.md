@@ -2117,3 +2117,12 @@
 - 남은 정렬: H8이 `0xdeac`를 routing해 이전 Python 검증기(`verify_animation_machine.py` 245~246행, `_activation` `_cleanup` `_hud` `_exit` `_readiness` `_map_transfer` `_palette_bind` `_scene` `_screen` `_transition`)의 "미연결 PC" 기대가 무효가 됐다(실행하지 않음, [U] 실패 예상). H2로 `verify_animation_machine_card_menu.py`의 `outside_range_entry_003902`도 무효다. 감사·stage_event CPP pin은 단위 병합마다 다시 맞춰야 한다.
 - 미뤄 둔 것: b 단위(N16b, N19b, U19b, N22b, N29b, N30b), 고아 사슬(`5eed2..5efe6`, `5f504..5f760`, `60516..`, `3383c..33958`, `3a4a4..3a5d2`, `3b424..3b446`, `4bfc0..4c020`, `38d56..38dd4`, `39f9c..3a1e0`, `3acd6`, `4c390..4c3de`), `4d418` 반환 C 미확인. G3(N03~N16a, N02는 U20b로 통합되어 별도 단위 없음) native 관측 도구를 병합했다(`8b14055`, 두 run 동일 `observation.json` `5bab5b21…`, 자연 unit node 30,632·typed fixture 2,459, 독립 모델 전 segment 일치, 계약 불일치 21건 기록). G3 C++ 검증기는 아직 없다.
 - 다음: 이전 검증기 정렬, G3 C++ 검증, D1 C++ frame 구동기(H → 선언 controller 생략 → N), controller 결정 D9와 C1~C3, 고아·b 단위 정리. 사용자 지시로 진행 중 단계를 마친 뒤 일시중지한다. 자연 scheduler·IRQ/timing·BIOS 실행은 주장하지 않는다. ROM·추출 데이터는 Git에 추가하지 않았다.
+
+
+## 2026-10-14 — Codex의 Claude F4/F5 진행 감사 (구현 재개 아님)
+
+- 사용자 요청으로 `codex/f4-continue`의 `b8502bf` 소스·보고서·미완료 사항을 점검했다. 메인 검토와 gpt-6.1-sol/medium 작업자 3개의 독립 감사를 수행했다. 검사 결과는 `docs/reviews/0257-claude-f4-f5-audit.md`에 기록한다. 엔진·검증기·ROM·공유 artifacts는 수정하지 않았다.
+- 격리된 새 빌드에서 C++ 시험 249개와 Python 257개 최종 통과, 경고 0. 첫 make는 격리 복사본의 참조 파일 누락으로 Python 단계에서 중단됐으며, 동일 파일 복사 후 Python과 뒤 C++ 40개를 따로 실행해 통과했다. 기존 base Python verifier의 deac 기대값 실패도 현재 새 harness로 실제 재현했다(전체 상태 복구는 유지).
+- F4 주 단위와 F5 H 단위의 구현·병합, G3 두 native 관측의 동일성은 확인됐다. 그러나 RNG 136/137은 `4800f35`, G2 확인 보고서는 `4f91481`/`a22c318` 결과이므로 현재 최종 HEAD 통과로 대신할 수 없다. F5 4,975+976은 pass-end dump 기반 H 표본 비교이며 전체 frame 통합 실행이 아니다. H8은 선언 상태 비교이고 자연 실행 증거는 없다.
+- 남은 것: 기존 회귀 기대값·stage-event source pin·RNG 감사의 134/2 결과 수 및 기본 산출물 경로 정리, 현재 HEAD 원본 비교 인수, G3 C++ 검증, D1 frame driver, D9/C1~C3, b-unit/고아 사슬·4d418 C 해석. 네 역사 보고서 복구 hash는 일치하지만 “약45개 차이”의 개별 manifest는 확인되지 않았다.
+- 이번 요청은 검사만 수행했으며 기존 일시중지 상태와 전체 Goal 범위·완료 기준을 유지한다.
