@@ -87,6 +87,14 @@ class FrameDriverHelperTests(unittest.TestCase):
         err = v.parse_response(struct.pack('>II', 0, 1) + b'x')
         self.assertEqual(v.compare(err, exp)[0]['field'], 'cpp-error')
 
+    def test_expected_failure_kind(self):
+        err = lambda text, preserved=1: v.parse_response(struct.pack('>II', 0, preserved) + text.encode())
+        self.assertTrue(v.check_expected_failure(err('unaligned animation machine PC'), 'pass', 'odd-pc')['ok'])
+        self.assertTrue(v.check_expected_failure(err('animation fade card odd JSR target'), 'pass', 'fetch-unmapped')['ok'])
+        self.assertFalse(v.check_expected_failure(err('unaligned animation machine PC'), 'pass', 'fetch-unmapped')['ok'])
+        self.assertFalse(v.check_expected_failure(err('unaligned animation machine PC', 0), 'pass', 'odd-pc')['ok'])
+        self.assertFalse(v.check_expected_failure(err('x'), 'pass', 'step-limit')['ok'])
+
     def test_page_normalisation_and_digest(self):
         page = bytearray(8192)
         page[0x1ff0:0x1ff4] = b'\xff\xff\xff\xff'

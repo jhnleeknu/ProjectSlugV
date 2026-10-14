@@ -431,10 +431,26 @@ def request_for(mode, st, queue, card_resume=True, card_answer=None):
                           card_answer=CTX.get('answer', 0x80) if card_answer is None else card_answer)
 
 
-def check_expected_failure(got, label):
+# Native non-completion kind -> the checked C++ error it must produce (verify_animation_machine_scheduler_rng_f4.py NATIVE_END_ERROR).  Any other kind is a failure.
+NATIVE_END_ERROR = {'fetch-unmapped': 'animation fade card odd JSR target', 'odd-pc': 'unaligned animation machine PC'}
+
+
+def check_expected_failure(got, label, native_kind):
     if got['ok']:
-        return dict(check=label, ok=False, why='C++ completed where native did not complete a D1 frame')
-    return dict(check=label, ok=bool(got['preserved']), error=got['error'], preserved=got['preserved'])
+        return dict(check=label, ok=False, native_kind=native_kind, why='C++ completed where native did not complete a D1 frame')
+    expected = NATIVE_END_ERROR.get(native_kind)
+    ok = bool(got['preserved']) and expected is not None and got['error'] == expected
+    r = dict(check=label, ok=ok, native_kind=native_kind, expected_error=expected, error=got['error'], preserved=got['preserved'])
+    if expected is None:
+        r['why'] = 'native stop kind without a declared C++ error'
+    elif got['error'] != expected:
+        r['why'] = 'C++ error differs from the native stop kind'
+    return r
+
+
+def native_kind(cat, fr):
+    """The native stop kind of a non-completion frame: the N stop reason, else the category (wait-not-released, undeclared device read)."""
+    return fr['n']['reason']['reason'] if cat.startswith('native-N-stop:') else cat
 
 
 def compare_frame(harness, fr):
@@ -444,10 +460,11 @@ def compare_frame(harness, fr):
     row = dict(frame=frame, category=cat, checks={})
     if ex is None:                                             # native H stopped (guard): step must fail and preserve
         got = harness.call(request_for(MODE_STEP, fr['start'], list(fr['h']['ext'])))
-        row['checks']['step'] = check_expected_failure(got, 'step')
+        kind = 'H:' + fr['h']['reason']['reason']                # no natural H stop is declared: any one is a failure
+        row['checks']['step'] = check_expected_failure(got, 'step', kind)
         row['native_stop'] = fr['h']['reason']
         row['match'] = False
-        return row, dict(fail=True, queue=list(fr['h']['ext']))
+        return row, dict(fail=True, kind=kind, queue=list(fr['h']['ext']))
     info = ex['info']
     if info['status_values'] and any(v != fr['start']['status'] for v in info['status_values']):
         row['status_varies'] = info['status_values']
@@ -460,10 +477,11 @@ def compare_frame(harness, fr):
             row['counts'] = frame_counts(got, e_counts(ex))
             chain = dict(queue=info['n_queue'], exp=ex['exp_n'], digest=state_digest(ex['exp_n']['ram'], ex['exp_n']['regs'], ex['exp_n']['pc'], ex['exp_n']['bank_base'], ex['exp_n']['pvc']))
         else:
-            row['checks']['pass'] = check_expected_failure(got, 'pass')
+            kind = native_kind(cat, fr)
+            row['checks']['pass'] = check_expected_failure(got, 'pass', kind)
             row['native_stop'] = fr['n']['reason']
             row['match'] = False
-            chain = dict(fail=True, queue=info['n_queue'])
+            chain = dict(fail=True, kind=kind, queue=info['n_queue'])
         return row, chain
     queue = info['h_queue'] + info['n_queue']
     got = harness.call(request_for(MODE_STEP, fr['start'], queue))
@@ -471,7 +489,7 @@ def compare_frame(harness, fr):
     ngot = harness.call(request_for(MODE_PASS, fr['n']['start'], info['n_queue']))
     # H segment: always a native completion here (H stopped at the controller)
     if ex['h_has_card']:
-        row['checks']['head'] = check_expected_failure(hgot, 'head')
+        row['checks']['head'] = check_expected_failure(hgot, 'head', 'H:bios-card')   # never natural; mode 2 has no card resume
     else:
         bad = compare(hgot, ex['exp_h'])
         row['checks']['head'] = dict(ok=not bad, mismatch=bad[:4])
@@ -485,11 +503,12 @@ def compare_frame(harness, fr):
         e = ex['exp_step']
         chain = dict(queue=queue, exp=e, digest=state_digest(e['ram'], e['regs'], e['pc'], e['bank_base'], e['pvc']))
     else:
-        row['checks']['step'] = check_expected_failure(got, 'step')
-        row['checks']['pass'] = check_expected_failure(ngot, 'pass')
+        kind = native_kind(cat, fr)
+        row['checks']['step'] = check_expected_failure(got, 'step', kind)
+        row['checks']['pass'] = check_expected_failure(ngot, 'pass', kind)
         row['native_stop'] = fr['n']['reason'] if cat.startswith('native-N-stop') else None
         row['match'] = False
-        chain = dict(fail=True, queue=queue)
+        chain = dict(fail=True, kind=kind, queue=queue)
     return row, chain
 
 
@@ -516,7 +535,7 @@ def full_chain_step(harness, fr, c, fc):
     fc['frames'] += 1
     got = harness.call(request_for(MODE_PASS if fr['frame'] == 0 else MODE_STEP, st, c['queue']))
     if c.get('fail'):
-        r = check_expected_failure(got, 'chain')
+        r = check_expected_failure(got, 'chain', c['kind'])
         if r['ok']:
             fc['expected_failures'] += 1
         else:
@@ -616,14 +635,18 @@ def negatives(case):
     frs = []
 
     def keep(f):                                              # frame 2 and the first frame with a native card resume
-        if f['frame'] == 2 or (f.get('n') and any(w['kind'] == 'bios-card' for w in f['n']['waits']) and not any(x['frame'] != 2 for x in frs)):
+        if f['frame'] == 2 or (f['frame'] >= 1 and f.get('n') and any(w['kind'] == 'bios-card' for w in f['n']['waits']) and not any(x['frame'] != 2 for x in frs)):
             frs.append(f)
     run = Verify(R.G['program'], R.G['fixed'], R.G['levels'], {k: v for k, v in carried.items() if k != 'prep_entry_state'}, 'continuous', 400, heavy=False, plan=None,
                  sink=None, extend=False, answer=R.DEFAULT_ANSWER, full_dump=False, prep_dump=None, cfg=dict(FH.BASE_CFG), case=case, tbset=None, keep_all=False, do_model=False)
     run.on_frame = keep
     run.run()
-    fr = [f for f in frs if f['frame'] == 2][0]
-    card_fr = [f for f in frs if f['frame'] != 2][0]
+    two = [f for f in frs if f['frame'] == 2]
+    if not two:
+        return dict(case=case, frame=2, ok=False, tests={}, why='seed %d has no frame 2' % case)
+    fr = two[0]
+    cards = [f for f in frs if f['frame'] != 2]
+    card_fr = cards[0] if cards else None
     cat, ex = frame_expectation(fr)
     assert cat == 'complete', cat
     queue = ex['info']['h_queue'] + ex['info']['n_queue']
@@ -647,6 +670,10 @@ def negatives(case):
     detected(fr['start'], [(a, n, 0x9234) if a == 0x3c0006 else (a, n, v) for a, n, v in queue], 'queue-raster-values-changed')
     detected(fr['start'], [(a, n, 0x00) if a == 0x300000 else (a, n, v) for a, n, v in queue], 'queue-input-values-changed')
     # card frame: baseline equal with card_resume / native answer; a wrong answer is detected; card_resume=false is a checked preserving error
+    if card_fr is None:
+        tests['card-negatives-skipped'] = dict(detected=True, why='seed %d has no native card frame (>= 1, other than frame 2) within 400 frames: card negatives skipped' % case)
+        ok = tests['baseline-equal'] and all(v['detected'] for k, v in tests.items() if k != 'baseline-equal')
+        return dict(case=case, frame=2, ok=ok, tests=tests)
     ccat, cex = frame_expectation(card_fr)
     assert ccat == 'complete', ccat
     cq = cex['info']['h_queue'] + cex['info']['n_queue']
@@ -763,7 +790,9 @@ def aggregate(results, historic):
             tot['natural_chain_frames_matched'] += fc.get('matched', 0)
             tot['natural_chain_expected_failures'] += fc.get('expected_failures', 0)
             tot['natural_chain_divergent_seeds'] += int(fc.get('first_divergence') is not None)
-            tot['natural_chain_seeds_full'] += int(fc.get('first_divergence') is None and fc.get('matched', 0) + fc.get('expected_failures', 0) == len(rows))
+            whole = fc.get('first_divergence') is None and fc.get('matched', 0) + fc.get('expected_failures', 0) == len(rows)
+            tot['natural_chain_seeds_to_frame_limit'] += int(whole and fc.get('expected_failures', 0) == 0 and r['stop']['reason'] == 'frame-limit')
+            tot['natural_chain_seeds_to_native_stop'] += int(whole and fc.get('expected_failures', 0) == 1 and r['stop']['reason'] != 'frame-limit')
         for x in rows:
             if x.get('match') and r['kind'] == 'natural':
                 for k, v in x.get('counts', {}).items():
@@ -803,13 +832,16 @@ def aggregate(results, historic):
 
 
 def main(argv=None):
+    global OUT
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--cases', help='comma list (default: all 142 seeds)')
     ap.add_argument('--frames', type=int, default=400)
     ap.add_argument('--workers', type=int, default=4)
     ap.add_argument('--no-build', action='store_true')
+    ap.add_argument('--out', default=str(OUT), help='report / log directory (default artifacts/animation_machine_frame_driver)')
     args = ap.parse_args(argv)
     assert not sys.flags.optimize
+    OUT = Path(args.out).absolute()                             # set before the fork: workers inherit it
     t0 = time.time()
     OUT.mkdir(parents=True, exist_ok=True)
     BUILD.mkdir(parents=True, exist_ok=True)
