@@ -20,6 +20,7 @@ from pathlib import Path
 import struct
 import subprocess
 import sys
+from acceptance_provenance import snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
 NAT = ROOT / 'artifacts/animation_machine_scheduler_rng_native'
@@ -473,10 +474,27 @@ def audit_current_boundaries(rows,variants):
                 result['classification']='cpp-error-other'
 
 
+def execution_inputs():
+    paths = [ROOT / 'Makefile', Path(__file__).resolve()]
+    paths += sorted((ROOT / 'engine/src').glob('*.cpp'))
+    paths += sorted((ROOT / 'engine/src').glob('*.h'))
+    paths += sorted((ROOT / 'engine/include').rglob('*.h'))
+    paths += sorted((ROOT / 'extracted/runtime/program_rom').glob('*.ms5d'))
+    paths += [ROOT / 'tools' / name for name in (
+        'observe_animation_machine_scheduler_rng.py', 'observe_animation_machine_scheduler.py',
+        'observe_animation_machine_objects_g1.py', 'observe_animation_machine_pvc_banks.py', 'address_map.py')]
+    dependencies = snapshot(ROOT, [Path(__file__)], [ROOT / 'extracted/program/manifest.json',
+                            ROOT / 'docs/analysis/animation-machine-stage-event-f3-contract.md'])
+    return dict(dependencies=dependencies, files={str(p.relative_to(ROOT)): sha(p.read_bytes()) for p in paths},
+                native={str(p.relative_to(NAT)): sha(p.read_bytes()) for p in sorted(NAT.rglob('*')) if p.is_file()},
+                compiler=subprocess.check_output(['clang++', '--version'], text=True))
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=False)
     executed_tool_sha256=sha(Path(__file__).read_bytes())
     source_hashes={str(path.relative_to(ROOT)):sha(path.read_bytes()) for path in (ROOT/'engine/src').glob('*.cpp')}
+    input_pins = execution_inputs()
     work = OUT / 'work'
     workers = int(os.environ.get('W', '3'))
     assert sha((NAT / 'observation.json').read_bytes()) == OBS_SHA, 'native observation changed'
@@ -491,6 +509,7 @@ def main():
     windows = sorted(str(p) for p in (ROOT / 'extracted/runtime/program_rom').glob('*.ms5d'))
     assert len(windows) == 8, windows
     exe = build_driver(work)
+    binary_sha256 = sha(exe.read_bytes())
     obs, rows, var = run_all(exe, work, windows, workers)
     audit_current_boundaries(rows,var)
     assert (sha(rom.read_bytes()), rom.stat().st_mtime_ns, rom.stat().st_size) == rom_start, 'ROM changed'
@@ -510,7 +529,9 @@ def main():
         routed_count=len(routed))
     assert executed_tool_sha256==sha(Path(__file__).read_bytes()), 'executed tool changed'
     assert all(sha((ROOT/path).read_bytes())==digest for path,digest in source_hashes.items()), 'engine sources changed'
-    report = dict(schema_version=1, tool='tools/verify_animation_machine_scheduler_rng_f4.py', executed_tool_sha256=executed_tool_sha256, engine_source_sha256=source_hashes, rom=dict(sha256=ROM_SHA, size=rom_start[2], mtime_ns=rom_start[1], unchanged=True),
+    assert execution_inputs() == input_pins, 'build, runtime or native inputs changed'
+    assert sha(exe.read_bytes()) == binary_sha256, 'executed binary changed'
+    report = dict(schema_version=2, inputs=input_pins, binary_sha256=binary_sha256, all_inputs_unchanged=True, tool='tools/verify_animation_machine_scheduler_rng_f4.py', executed_tool_sha256=executed_tool_sha256, engine_source_sha256=source_hashes, rom=dict(sha256=ROM_SHA, size=rom_start[2], mtime_ns=rom_start[1], unchanged=True),
                   native=dict(observation_sha256=OBS_SHA, observer_sha256=TOOL_SHA, rom_sha256=ROM_SHA),
                   declared=dict(frame_pass=dict(pc=0x2ac2, a6=0x1008e4, a7=0x1ff000, base_long_104ca4=0x1ff000, stop='LONG(100820)'),
                                 bios_card=dict(stop_pc=BIOS, resume_pc=CARD_RET, a7_delta=4, answer_byte=0x10fdc6, carry='Unknown'),

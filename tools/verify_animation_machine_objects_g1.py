@@ -23,6 +23,7 @@ import verify_animation_machine as common
 import observe_animation_machine_objects_g1 as native
 import pack_physical_program as physical
 import unicorn
+from acceptance_provenance import snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
 ROM_SHA = physical.SOURCE_SHA256
@@ -377,6 +378,8 @@ def main():
     parser.add_argument('--workers', type=int, default=3)
     args = parser.parse_args()
     started = time.time()
+    dependency_paths = [ROOT / 'extracted/program/manifest.json', args.g1_native]
+    dependency_before = snapshot(ROOT, [Path(__file__)], dependency_paths)
     executed_tool_sha = sha(Path(__file__).read_bytes())
     ROUTED = router_bitmap()
     args.out.mkdir(parents=True, exist_ok=False)
@@ -402,7 +405,17 @@ def main():
         if source.exists() and source not in sources:
             sources.append(source)
     command = ['clang++', '-std=c++11', '-O2', '-I' + str(ROOT / 'engine/include')] + list(map(str, sources)) + [str(harness), '-o', str(executable)]
-    input_hashes = {str(path.relative_to(ROOT)):sha(path.read_bytes()) for path in sources}
+    pinned_paths = sources + list((ROOT / 'engine/include').rglob('*.h')) + list((ROOT / 'engine/src').glob('*.h'))
+    pinned_paths += [ROOT / 'tools' / name for name in (
+        'verify_animation_machine.py', 'verify_animation_machine_objects_g1.py',
+        'observe_animation_machine_objects_g1.py', 'observe_animation_machine_pvc_banks.py',
+        'observe_animation_machine_scheduler.py', 'address_map.py', 'pack_physical_program.py')]
+    pinned_paths += list((ROOT / 'engine/tests').glob('animation_machine_objects_u*_test.cpp'))
+    pinned_paths += list((ROOT / 'docs/analysis').glob('animation-machine-objects-u*-contract.md'))
+    input_hashes = {str(path.relative_to(ROOT)):sha(path.read_bytes()) for path in pinned_paths}
+    native_hashes = {str(path.relative_to(args.g1_native)):sha(path.read_bytes())
+                     for path in args.g1_native.rglob('*') if path.is_file()}
+    compiler = subprocess.check_output(['clang++', '--version'], text=True)
     subprocess.run(command, check=True, capture_output=True)
     # A separate read-only diagnostic copy reports the failing dispatcher PC.
     # Production outputs are still the oracle and must match this copy exactly.
@@ -417,6 +430,8 @@ def main():
     diagnostic_command += [str(diagnostic_source if source.name == 'animation_machine.cpp' else source) for source in sources]
     diagnostic_command += [str(harness), '-o', str(DIAGNOSTIC_EXE)]
     subprocess.run(diagnostic_command, check=True, capture_output=True)
+    binary_hashes = {path.name:sha(path.read_bytes()) for path in (executable, DIAGNOSTIC_EXE)}
+    resource_hashes = {path.name:sha(path.read_bytes()) for path in resources}
     fixtures = []
     for unit in args.units.split(','):
         path = ROOT / ('engine/tests/animation_machine_objects_u%s_test.cpp' % unit)
@@ -438,7 +453,7 @@ def main():
             print('MISMATCH', json.dumps(row, sort_keys=True), flush=True)
         if index % 100 == 0:
             print('rows', index + 1, 'of', len(fixtures), dict(collections.Counter(r['verdict'] for r in rows)), flush=True)
-    report = dict(schema_version=1, ROM_sha256=ROM_SHA, complete_requested_matrix=not args.limit,
+    report = dict(schema_version=2, dependencies=dependency_before, native_inputs=native_hashes, compiler=compiler, binary_sha256=binary_hashes, resource_sha256=resource_hashes, all_inputs_unchanged=True, ROM_sha256=ROM_SHA, complete_requested_matrix=not args.limit,
                   total_available_inputs=total, rows=len(rows), verdicts=dict(collections.Counter(r['verdict'] for r in rows)),
                   mismatches=[row for row in rows if row.get('differences')], results=rows,
                   instruction_PC_coverage={unit:sorted(pcs) for unit, pcs in covered.items()},
@@ -452,8 +467,13 @@ def main():
                                'Checked errors and waits are boundaries, not successful original execution.',
                                'Unknown public carry is not native full CCR.',
                                'U17+ and new RNG game units are outside scope.'])
+    assert dependency_before == snapshot(ROOT, [Path(__file__)], dependency_paths), 'transitive verifier dependencies changed'
     assert executed_tool_sha == sha(Path(__file__).read_bytes()), 'verifier changed during execution'
     assert all(sha((ROOT/path).read_bytes())==digest for path,digest in input_hashes.items()), 'C++ sources changed during execution'
+    assert native_hashes == {str(path.relative_to(args.g1_native)):sha(path.read_bytes()) for path in args.g1_native.rglob('*') if path.is_file()}, 'native inputs changed'
+    assert binary_hashes == {path.name:sha(path.read_bytes()) for path in (executable, DIAGNOSTIC_EXE)}, 'binaries changed'
+    assert resource_hashes == {path.name:sha(path.read_bytes()) for path in resources}, 'runtime resources changed'
+    assert compiler == subprocess.check_output(['clang++', '--version'], text=True), 'compiler changed'
     assert native.ROM_PATH.stat().st_mtime_ns == original_stat.st_mtime_ns
     assert sha(native.ROM_PATH.read_bytes()) == ROM_SHA
     (args.out / 'execution.json').write_text(json.dumps(report, indent=1, sort_keys=True) + '\n')

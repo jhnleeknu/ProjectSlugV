@@ -4,6 +4,7 @@ This post-audit does not execute game code or turn incomplete native rows into p
 It checks the frozen full verifier output against the reviewed input/boundary manifest.
 """
 import argparse
+from acceptance_provenance import snapshot
 import hashlib
 import json
 import os
@@ -24,7 +25,7 @@ STEP_LIMITS = {
     'pvc-bank eba3e LONG80(A6)=2',
 }
 DENOMINATORS = {'01':105,'02':133,'03':83,'04':69,'05':71,'06':135,'07':85,
-                '08':181,'08b':165,'09':150,'10':223,'11':215,'12':162,
+                '08':181,'08b':166,'09':150,'10':223,'11':215,'12':162,
                 '13':76,'14':78,'15':175,'15b':144,'15c':196,'16':39}
 
 
@@ -36,18 +37,20 @@ def main():
     parser = argparse.ArgumentParser()
     # The report path may also come from the environment (OBJECTS_F4_REPORT) so the audit can run against a scratch regeneration.
     parser.add_argument('report', type=Path, nargs='?', default=Path(os.environ.get('OBJECTS_F4_REPORT') or ROOT/'artifacts/animation_machine_objects_integration_execution/execution.json'))
-    # Sanitizer anchor report (earlier header hashes); MS5_HEADER_ANCHOR overrides the default build/ location (e.g. a scratch tree).
+    # Optional historical sanitizer provenance; current execution pins are authoritative.
     parser.add_argument('--anchor', type=Path, default=Path(os.environ.get('MS5_HEADER_ANCHOR') or ROOT/'build/sanitize-u15review/verification.json'))
     args = parser.parse_args()
     report = json.loads(args.report.read_text())
     rows = report['results']
-    assert report['complete_requested_matrix'] and report['rows'] == len(rows) == 4743
-    assert report['total_available_inputs'] == 4743 and not report['mismatches']
+    assert report['complete_requested_matrix'] and report['rows'] == len(rows) == 4747
+    assert report['total_available_inputs'] == 4747 and not report['mismatches']
     assert report['executed_tool_sha256'] == sha(ROOT/'tools/verify_animation_machine_objects_g1.py')
     assert all(sha(ROOT/path) == value for path,value in report['inputs'].items())
-    # align2 run (scratch tree at 10b3c2d, objects_g1 verifier, 4743 rows): measured 4679/55/8/1.
-    # Superseded pins (later F4 units route more PCs): execution-equal 4657 -> 4679, checked-boundary 77 -> 55.
-    expected = {'execution-equal':4679,'checked-boundary':55,'native-step-limit':8,
+    assert report['dependencies'] == snapshot(ROOT, [ROOT/'tools/verify_animation_machine_objects_g1.py'],
+        [ROOT/'extracted/program/manifest.json', ROOT/'artifacts/animation_machine_objects_g1_native'])
+    # Current complete b8502bf engine matrix adds four 4bc58 fixtures. Each
+    # additional row is original-ROM execution equality, not a changed guard.
+    expected = {'execution-equal':4683,'checked-boundary':55,'native-step-limit':8,
                 'invalid-declared-flag-precondition':1}
     assert report['verdicts'] == expected, report['verdicts']
     assert {row['name'] for row in rows if row['verdict']=='native-step-limit'} == STEP_LIMITS
@@ -94,17 +97,17 @@ def main():
         assert coverage['missing_native_starts'] == missing, (unit,coverage)
         assert coverage['native_observed_starts'] == denominator-len(missing)
     assert all(0x500000 not in pcs for pcs in report['instruction_PC_coverage'].values())
+    # Current execution records header hashes before compilation and after the run.
+    # A historical sanitizer report is optional provenance, not a required input.
     anchor_path = args.anchor
-    anchor = json.loads(anchor_path.read_text())
-    headers = {path:value for path,value in anchor['inputs'].items() if path.endswith('.h')}
-    expected_headers = {str(path.relative_to(ROOT)) for path in (ROOT/'engine/include').rglob('*.h')}
     internal_header = 'engine/src/animation_machine_internal.h'
-    expected_headers.add(internal_header)
-    assert set(headers) == expected_headers and anchor['all_inputs_unchanged']
-    # align2: the private header gains declarations with each later F4 unit; public headers stay identical except the pinned additive external-read queue change in animation_machine.h, the private one additive only.
-    assert PUBLIC_HEADER in headers
-    assert all(sha(ROOT/path)==value for path,value in headers.items() if path not in (internal_header,PUBLIC_HEADER))
-    assert sha(ROOT/PUBLIC_HEADER)==PUBLIC_HEADER_SHA256 and headers[PUBLIC_HEADER]!=PUBLIC_HEADER_SHA256
+    headers = {path:value for path,value in report['inputs'].items() if path.endswith('.h')}
+    expected_headers = {str(path.relative_to(ROOT)) for path in (ROOT/'engine/include').rglob('*.h')}
+    expected_headers.update(str(path.relative_to(ROOT)) for path in (ROOT/'engine/src').glob('*.h'))
+    assert report['schema_version'] == 2 and report['all_inputs_unchanged']
+    assert set(headers) == expected_headers
+    assert all(sha(ROOT/path)==value for path,value in headers.items())
+    assert headers[PUBLIC_HEADER] == PUBLIC_HEADER_SHA256
     changed = subprocess.run(['git','diff','--name-only','9d5aa11','--','engine/include'],
                              cwd=ROOT,capture_output=True,text=True,check=True)
     assert changed.stdout.split()==[PUBLIC_HEADER], changed.stdout    # exactly the pinned additive change, no other public header
@@ -114,16 +117,16 @@ def main():
     assert numstat and int(numstat[1]) == 0, numstat    # no deleted/modified lines
     receipt = dict(schema_version=1, accepted=True, report_sha256=sha(args.report),
                    audit_tool_sha256=sha(Path(__file__)), verdicts=expected,
-                   original_execution_equal_rows=4657, excluded_native_step_limit_rows=sorted(STEP_LIMITS),
+                   historical_baseline_execution_equal_rows=4657, execution_equal_rows=expected['execution-equal'], excluded_native_step_limit_rows=sorted(STEP_LIMITS),
                    excluded_invalid_declared_flag_rows=['carry-consumer d73ca ccr=04'],
                    native_coverage_gaps={'06':[0xeb7f2],'08b':[0x46928]},
                    claim='Reviewed bounded matrix; excluded rows and checked boundaries are not execution equality.')
-    receipt['header_temporal_anchor'] = dict(earlier_report_sha256=sha(anchor_path), earlier_and_current_hash_agreement=True,
+    receipt['header_temporal_anchor'] = dict(execution_header_hashes_unchanged=True, optional_earlier_report_sha256=sha(anchor_path) if anchor_path.exists() else None,
         header_count=len(headers), git_comparison_ref='9d5aa11', header_diff_empty=False, public_header_diff_files=[PUBLIC_HEADER], public_header_additive_only=True,
         public_header_added_lines=int(public_numstat[0]), public_header_sha256=PUBLIC_HEADER_SHA256,
         public_header_identical_count=len(headers)-2, public_header_count=len(headers)-1,
         private_header_additive_only=True, private_header_added_lines=int(numstat[0]), private_header_sha256=sha(ROOT/internal_header),
-        claim='Independent earlier/current agreement; the F4 execution tool itself did not capture header hashes.')
+        claim='Header hashes captured before compilation and after execution; additive API changes independently checked against 9d5aa11.')
     path = args.report.parent/'acceptance.json'
     assert not path.exists(), path
     path.write_text(json.dumps(receipt,indent=1,sort_keys=True)+'\n')

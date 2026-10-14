@@ -52,7 +52,7 @@ Claude Opus 5.5 / high 작업자가 canonical BE ROM(SHA256 `29112a94b5c073de959
 
 ## block 목록과 실행 의미
 
-[F] 165 block. 각 줄은 block 안 명령 전체다. "(→x)"는 다음 block으로의 fall-through다. d16(An)은 부호확장한다. `.B`·`.W` 연산은 나머지 bit를 보존하고 `MOVEQ`는 LONG 전체를 쓴다. 부호 분기 `BGT`/`BLT`/`BGE`/`BLE`는 직전 연산 크기의 N·V·Z, `BVC`는 V, `BMI`/`BPL`은 N, `BCS`/`BCC`는 C다.
+[F] 166 block(아래 F4 N35의 `4bc58` 두 번째 진입 추가를 반영). 각 줄은 block 안 명령 전체다. "(→x)"는 다음 block으로의 fall-through다. d16(An)은 부호확장한다. `.B`·`.W` 연산은 나머지 bit를 보존하고 `MOVEQ`는 LONG 전체를 쓴다. 부호 분기 `BGT`/`BLT`/`BGE`/`BLE`는 직전 연산 크기의 N·V·Z, `BVC`는 V, `BMI`/`BPL`은 N, `BCS`/`BCC`는 C다.
 
 **기울기 자료 `461ec` 1**
 - `461ec`: `MOVE.W 461f2(PC,D7.W),D7; RTS`

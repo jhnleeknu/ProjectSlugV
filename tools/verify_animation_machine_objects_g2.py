@@ -36,6 +36,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from acceptance_provenance import snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
@@ -1190,7 +1191,7 @@ def probe_task(s):
             if nb['kind'] == 'guard':
                 seg = cpp_segment(srv, start_state(st2, 1 + cin), IMPOSSIBLE_STOP)
                 r['guard'] = [nb['guard'], seg.get('error')]
-                r['guard_ok'] = seg['kind'] == 'error' and (expected_error_ok(nb['guard'], seg['error']) or (seg['error'] == UNSUPPORTED_MACHINE)) and seg['preserved']
+                r['guard_ok'] = seg['kind'] == 'error' and expected_error_ok(nb['guard'], seg['error']) and seg['preserved']
         runs[cin] = r
     # destination / state dependence on C (native) and the Unknown carry run
     dep = None
@@ -1413,6 +1414,20 @@ def pins():
     names = ['animation_machine_objects_u%02d.cpp' % u for u in (17, 18, 19)] + ['animation_machine_objects_u20.cpp', 'animation_machine_objects_u20b.cpp', 'animation_machine_objects_n01.cpp']
     out['cpp_sources'] = dict((n, digest_file(ROOT / 'engine/src' / n)) for n in names)
     out['animation_machine.cpp'] = digest_file(ROOT / 'engine/src/animation_machine.cpp')
+    # Pin the complete build and runtime inputs, including transitive callees.
+    paths = [ROOT / 'Makefile', Path(__file__).resolve()]
+    paths += sorted((ROOT / 'engine/src').glob('*.cpp'))
+    paths += sorted((ROOT / 'engine/src').glob('*.h'))
+    paths += sorted((ROOT / 'engine/include').rglob('*.h'))
+    paths += sorted((ROOT / 'extracted/runtime/program_rom').glob('*.ms5d'))
+    out['build_runtime_inputs'] = dict((str(p.relative_to(ROOT)), digest_file(p)) for p in paths)
+    out['native_inputs'] = dict((str(p.relative_to(NATIVE_DIR)), digest_file(p))
+                                for p in sorted(NATIVE_DIR.rglob('*')) if p.is_file())
+    out['compiler'] = subprocess.check_output(['clang++', '--version'], text=True)
+    dependent_data = [ROOT / 'extracted/program/manifest.json', S.F3_CONTRACT, S.SEED_DIR,
+                      G2.SCHED_DIR / 'observation.json', G2.RNG_DIR / 'observation.json']
+    dependent_data += [G2.contract_path(u) for u in UIDS]
+    out['dependencies'] = snapshot(ROOT, [Path(__file__)], dependent_data)
     return out
 
 
@@ -1430,12 +1445,13 @@ def main():
     RUN_ROOT[0] = SCRATCH / 'run'
     RUN_ROOT[0].mkdir(parents=True, exist_ok=True)
     exe, dexe, cmd, dcmd = build_harness(SCRATCH / 'build')
+    binary_pins = dict(production=digest_file(exe), diagnostic=digest_file(dexe))
     EXE[0] = exe
     EXE[1] = dexe
     EXE[2] = sorted(str(p) for p in (ROOT / 'extracted/runtime/program_rom').glob('*.ms5d'))
     assert len(EXE[2]) == 8
     env = native_setup()
-    report = dict(schema_version=1, tool='tools/verify_animation_machine_objects_g2.py', pins=pin, rom=dict(sha256=ROM_SHA, size=rs[2], mtime_ns=rs[1], unchanged=True),
+    report = dict(schema_version=2, tool='tools/verify_animation_machine_objects_g2.py', pins=pin, binaries=binary_pins, rom=dict(sha256=ROM_SHA, size=rs[2], mtime_ns=rs[1], unchanged=True),
                   harness_build_command=[c.replace(str(SCRATCH), '<scratch>') for c in cmd], diagnostic_build_command=[c.replace(str(SCRATCH), '<scratch>') for c in dcmd], complete_requested_matrix=not LIMIT_ONLY_CASES and set(STAGES) == set(['natural', 'fixtures', 'probes', 'negatives']))
     table = carry_table_cpp()
     checks = {}
@@ -1578,6 +1594,9 @@ def main():
         checks['negatives_no_diff'] = not any(k.endswith(':DIFF') or k.endswith('-DIFF') or 'NOT-PRESERVED' in k for k in counts)
         checks['landing_rows_complete'] = len(landing_rows) == 0x698 + 11 or bool(LIMIT_ONLY_CASES)
     report['checks'] = checks
+    assert pins() == pin, 'build, runtime or native inputs changed during execution'
+    assert binary_pins == dict(production=digest_file(exe), diagnostic=digest_file(dexe)), 'executed binaries changed'
+    checks['inputs_and_binaries_unchanged'] = True
     rs2 = rom_stat()
     assert rs2 == rs, 'ROM changed'
     assert digest_file(ROOT / 'tools/verify_animation_machine_objects_g2.py') == EXECUTED_TOOL_SHA, 'verifier changed during execution'
