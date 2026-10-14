@@ -2139,3 +2139,9 @@
 - 기존 표준 회귀 35개를 최종 인수했다. 최초 고정 실행은 31개 통과와 카드 메뉴·scene-core·script-placement·stage-area의 오래된 기대값 네 실패였다. 원본 경로와 정확한 오류/rollback 증거를 추가한 `668e142`의 네 공식 main 전체 재실행이 모두 종료 0, 입력 전후 동일로 통과했다. 최종 분류는 24개 current-pin 결과 + 7개 unused 함수 변경의 행동 비영향 독립 검토 결과 + 4개 수정 후 전체 재실행 결과다. 과거 7개 report/pin을 덮어쓰지 않았고 최초 실패 로그·receipt·산출물도 보존했다. 메인이 517개 frozen source/35개 report·log·current input과 최종 source-delta 분류를 직접 확인했다.
 
 상세 검토는 `docs/reviews/0258-f4-f5-acceptance.md`, 기존 회귀는 `0258-legacy-standard35.md`, 독립 출처 검토는 `0258-main-verifiers-independent.md`를 따른다. 최종 SHA·실행 기록은 `docs/reviews/0258-regression-manifest.json`, 네 수정의 독립 검토는 `0258-card-menu-delta-review.md`에 있다. 이번 인수 보완만 완료했으며 전체 Goal의 범위·완료 기준·기존 일시중지 상태는 바꾸지 않는다. D1 전체 프레임 구동기, D9/C1–C3, deferred b-unit·고아 사슬과 전체 게임 동등성은 후속 작업이다.
+
+## 2026-10-14 — 정리 후 GitHub 이전 예약·협업 규칙 기록
+
+- 사용자 지시를 기록했다. 작업 완료 후 오래된 `artifacts` 검증·임시 산출물부터 정리하고, 최종 결과와 실제 검증 근거를 보존한다. 다음으로 완료된 `claude-integration` 복사본의 미반영 코드와 필요한 결과가 본 작업 폴더에 반영·보존됐는지 확인한 뒤 정리한다. 그 후 `https://github.com/jhnleeknu/ProjectSlugV.git`에 중간 결과를 올려 여러 컴퓨터에서 이어 작업할 예정이다.
+- 이번 변경은 계획·운영 규칙 기록만이다. 삭제·원격 설정·GitHub push는 아직 실행하지 않았다. 이전할 기준 브랜치 및 원격 기존 이력은 이전 실행 시 확인한다. 현재 인수 완료 결과는 `codex/f4-f5-acceptance`의 `3d7d11a`이며 다른 로컬 checkout에 자동 반영됐다고 가정하지 않는다.
+- 루트 README는 빈 상태로 유지하고 절차는 `docs/WORKFLOW.md`에 둔다. Codex·Claude 모두 서브에이전트 사용을 필수로 하며 심화 추론과 확정 사양의 분산 코딩·검증을 분리한다. 기존 모델/effort·작업자 상한과 전체 Goal 범위·완료 기준은 유지한다.
