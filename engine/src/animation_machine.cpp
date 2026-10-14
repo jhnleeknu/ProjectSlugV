@@ -983,6 +983,11 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x9126:case 0x9130:case 0x9134:case 0x9154:case 0x9168:case 0x9172:case 0x9184:case 0x91cc:case 0x91d0:case 0x91da:
     case 0x91ea:case 0x91f4:case 0x91fe:case 0x9208:case 0x9218:case 0x9222:case 0x922c:case 0x924c:case 0x9250:case 0x928a:
     case 0x928e:case 0x92ce:case 0x92ec:case 0x92fc:case 0x9326:case 0x933e:
+    // Objects N34 (F4) FLOW_ONLY blocks: BSR/JSR/BRA/RTS, LEA+JSR, MOVEM.L -(A7)+LEA+JSR, BTST (Z only)+BEQ and the BMI 4c49c (N of
+    // 4c48e SUB.W recomputed from D0.W; unique predecessor). N34 has no consumer of a callee C and no known C producer.
+    case 0x4c44a:case 0x4c488:case 0x4c49c:case 0x4c4ac:case 0x4c4ba:case 0x4c576:case 0x4c65e:case 0x4c686:case 0x4c6a2:case 0x4c83c:
+    case 0x4c840:case 0x4c844:case 0x4c8ac:case 0x4c90e:case 0x4c9ee:case 0x4c9f8:case 0x4cacc:case 0x4cb3e:case 0x4cc2e:case 0x4cc38:
+    case 0x4cd9e:case 0x4cda4:case 0x4cda8:case 0x4cdae:case 0x4ce1e:case 0x4ce70:case 0x4cf30:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1416,6 +1421,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x4d8d8 && next.pc<0x4d900) || (next.pc>=0xea680 && next.pc<0xea69c))ok=animation_objects_n35_block(c);
             else if ((next.pc>=0x313c && next.pc<0x3144) || (next.pc>=0x31d6 && next.pc<0x35a2) ||
                 (next.pc>=0x3902 && next.pc<0x3918) || (next.pc>=0x9086 && next.pc<0x9344))ok=animation_frame_head_h2_block(c);
+            else if ((next.pc>=0x4c3de && next.pc<0x4c6f0) || (next.pc>=0x4c72a && next.pc<0x4c7a4) ||
+                (next.pc>=0x4c810 && next.pc<0x4cf52))ok=animation_objects_n34_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
