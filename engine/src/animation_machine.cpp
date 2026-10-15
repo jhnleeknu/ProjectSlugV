@@ -1035,6 +1035,16 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xee44:case 0xee48:case 0xee4c:case 0xee50:case 0xee54:case 0xee58:case 0xee5c:case 0xee60:case 0xee64:case 0xee68:
     case 0xee6c:case 0xee70:case 0xee74:case 0xee78:case 0xee7c:case 0xee80:case 0xee84:case 0xee88:case 0xee8c:case 0xee90:
     case 0xee94:case 0xee98:case 0xee9c:case 0xeea0:
+    // Controller C1 (F5) FLOW blocks (43): JSR/BSR/JMP/BRA/RTS, LEA/MOVEA/ADDQ.W #1,An/ADDA.W Dn,An, BTST/BSET Dn (Z only) and the
+    // conditional branches. c4a0 c674 c67e c806 c996 c9ba are the BCC/BCS consumers of the C returned by ca32, 289e, 314c, 30bc and 30d4;
+    // 30c8 30e0 3156 (ORI CCR) and 30ce 30e6 315c (ANDI CCR) set their known C in their own block and ca32 (CMPI) sets it for c4a0.
+    // 4a9d0 4a9da (BEQ) read the Z of the TST.B (A0) that ended 4a974 and recompute it from BYTE (A0). MOVE/MOVEQ/CMP/CMPI/TST/SUBQ/
+    // SUBI/ADDQ.B/SBCD/CLR/LSR/ANDI/ADD.W blocks and the stack MOVEs stay Unknown.
+    case 0x30bc:case 0x30d4:case 0x3680:case 0x36b8:case 0x36ba:case 0x36d2:case 0x36fc:case 0x3706:case 0xc49c:case 0xc4a0:
+    case 0xc4a4:case 0xc4b6:case 0xc654:case 0xc66a:case 0xc674:case 0xc678:case 0xc67e:case 0xc682:case 0xc736:case 0xc73a:
+    case 0xc748:case 0xc7fc:case 0xc806:case 0xc80a:case 0xc990:case 0xc996:case 0xc9b4:case 0xc9ba:case 0xc9be:case 0xca20:
+    case 0x4a896:case 0x4a8ac:case 0x4a8da:case 0x4a94c:case 0x4a962:case 0x4a972:case 0x4a9ae:case 0x4a9c4:case 0x4a9d0:case 0x4a9d4:
+    case 0x4a9da:case 0x4a9de:case 0x4a9e0:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1473,6 +1483,11 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x3902 && next.pc<0x3918) || (next.pc>=0x9086 && next.pc<0x9344))ok=animation_frame_head_h2_block(c);
             else if ((next.pc>=0x4c3de && next.pc<0x4c6f0) || (next.pc>=0x4c72a && next.pc<0x4c7a4) ||
                 (next.pc>=0x4c810 && next.pc<0x4cf52))ok=animation_objects_n34_block(c);
+            else if ((next.pc>=0x30bc && next.pc<0x30ec) || (next.pc>=0x314c && next.pc<0x3162) || (next.pc>=0x3670 && next.pc<0x370c) ||
+                (next.pc>=0xc49c && next.pc<0xc4cc) || (next.pc>=0xc4f8 && next.pc<0xc52a) || (next.pc>=0xc654 && next.pc<0xc686) ||
+                (next.pc>=0xc724 && next.pc<0xc74c) || (next.pc>=0xc7fc && next.pc<0xc80e) || (next.pc>=0xc988 && next.pc<0xca22) ||
+                (next.pc>=0xca32 && next.pc<0xca3a) || (next.pc>=0x4a88e && next.pc<0x4a8f8) ||
+                (next.pc>=0x4a944 && next.pc<0x4a9e2))ok=animation_controller_c1_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
