@@ -2,6 +2,9 @@
 // Length-prefixed BE packets on stdin/stdout. Request (BE u32):
 //   pc, carry, bank_base, stop_pc, flags, wait_limit, external_status, NQ, d0..d7, a0..a7, then RAM 65536 bytes, PVC 8192 bytes, NQ x (address, size, value).
 //   flags: bits 0..5 = declared releases enabled (0 ef2, 1 16bd0, 2 3aea, 3 cda4, 4 gate 47af0/478de, 5 BIOS card c00468 resume),
+//          bit 6 = palette RAM attached (F6 scope decision E6): the request ends with bank 0 (8192 bytes), bank 1 (8192 bytes) and the
+//          selected bank (u32 0/1), the run uses run_animation_machine_with_palette and a success response ends with the same three fields;
+//          without bit 6 the run is run_animation_machine and the packets are unchanged.
 //          bits 8..15 = BIOS card answer byte.
 // Run: run_animation_machine to stop_pc; at every Waiting block the declared release of the current PC is applied (undeclared = error);
 // when a run fails and the card release is enabled, the same state is re-run to c00468 and, when the BIOS card request is there
@@ -10,6 +13,7 @@
 //   NQleft x (address,size,value), NW x (pc,address,size,before,released).
 // Malformed request response: 2, 0, 0, error text. Failure response: 0, preserved (1 = the failing run call left RAM/state/device/queue exactly as before it), committed waits, error text.
 #include "ms5/animation_machine.h"
+#include "ms5/animation_machine_irq.h"
 #include "ms5/physical_rom_resource.h"
 #include <iostream>
 #include <string>
@@ -54,6 +58,16 @@ static bool same_device(const ms5::AnimationMachineDevice& a,const ms5::Animatio
         if(a.reads[i].address!=b.reads[i].address||a.reads[i].size!=b.reads[i].size||a.reads[i].value!=b.reads[i].value)return false;
     return true;
 }
+static bool same_palette(const ms5::AnimationMachinePaletteRam& a,const ms5::AnimationMachinePaletteRam& b) {
+    return a.banks[0]==b.banks[0]&&a.banks[1]==b.banks[1]&&a.selected==b.selected;
+}
+// One run_animation_machine call, or run_animation_machine_with_palette when palette is attached.
+static bool machine(Bytes& ram,const std::vector<ms5::FixedDataResource>& windows,const ms5::ProgramBusState& bus,ms5::AnimationMachineState& s,
+    ms5::AnimationMachineDevice& dev,ms5::AnimationMachinePaletteRam* palette,std::uint32_t stop,std::uint8_t status_byte,std::uint32_t& reads,
+    ms5::AnimationMachineStatus& status,std::vector<ms5::VideoPortWrite>& ports,std::string& error) {
+    if(palette!=NULL)return ms5::run_animation_machine_with_palette(ram,windows,bus,s,dev,*palette,stop,status_byte,reads,status,ports,error);
+    return ms5::run_animation_machine(ram,windows,bus,s,dev,stop,status_byte,reads,status,ports,error);
+}
 struct Wait {std::uint32_t pc,address,size,before,released;};
 static const unsigned int REQUEST_WORDS=24;
 // Applies the declared release of the Waiting PC; returns false (error set) when it is undeclared or not releasable.
@@ -76,7 +90,9 @@ static bool run(const Bytes& input,const ms5::ProgramBusState& bus,Bytes& output
     std::size_t at=0;std::uint32_t v[REQUEST_WORDS];
     for(unsigned int i=0;i<REQUEST_WORDS;++i)if(!take(input,at,v[i])) {error="short request";return false;}
     const std::uint32_t nq=v[7],flags=v[4]&0xffU,answer=(v[4]>>8)&0xffU,limit=v[5],stop=v[3];
-    if(nq>65536U||input.size()!=4U*REQUEST_WORDS+65536U+8192U+12U*nq||v[6]>255U||v[4]>0xffffU||v[1]>2U||limit>4096U) {error="invalid request";return false;}
+    const bool with_palette=(flags&64U)!=0U;
+    if(nq>65536U||input.size()!=4U*REQUEST_WORDS+65536U+8192U+12U*nq+(with_palette?16388U:0U)||v[6]>255U||v[4]>0xffffU||v[1]>2U||limit>4096U) {
+        error="invalid request";return false;}
     ms5::AnimationMachineState s;for(unsigned int i=0;i<8;++i){s.d[i]=v[8+i];s.a[i]=v[16+i];}
     s.pc=v[0];s.carry=static_cast<ms5::AnimationCarryState>(v[1]);
     Bytes ram(input.begin()+at,input.begin()+at+65536);at+=65536;
@@ -86,6 +102,14 @@ static bool run(const Bytes& input,const ms5::ProgramBusState& bus,Bytes& output
         if(!take(input,at,e.address)||!take(input,at,size)||!take(input,at,e.value)||size>255U) {error="bad queue entry";return false;}
         e.size=static_cast<std::uint8_t>(size);dev.reads.push_back(e);
     }
+    ms5::AnimationMachinePaletteRam pal;
+    if(with_palette) {
+        pal.banks[0].assign(input.begin()+at,input.begin()+at+8192);at+=8192;
+        pal.banks[1].assign(input.begin()+at,input.begin()+at+8192);at+=8192;
+        std::uint32_t selected=0;if(!take(input,at,selected)||selected>1U) {error="bad palette selection";return false;}
+        pal.selected=static_cast<std::uint8_t>(selected);
+    }
+    ms5::AnimationMachinePaletteRam* palette=with_palette?&pal:NULL;
     const std::uint8_t status_byte=static_cast<std::uint8_t>(v[6]);
     std::vector<ms5::FixedDataResource> windows;
     std::vector<ms5::VideoPortWrite> ports;std::vector<Wait> waits;std::uint32_t reads=0;
@@ -93,20 +117,22 @@ static bool run(const Bytes& input,const ms5::ProgramBusState& bus,Bytes& output
     unsigned int count=0;
     for(;;) {
         const Bytes saved_ram(ram);const ms5::AnimationMachineState saved_state(s);const ms5::AnimationMachineDevice saved_dev(dev);
+        const ms5::AnimationMachinePaletteRam saved_pal(pal);
         std::vector<ms5::VideoPortWrite> phase;std::uint32_t consumed=0;std::string e1;
-        if(!ms5::run_animation_machine(ram,windows,bus,s,dev,stop,status_byte,consumed,status,phase,e1)) {
-            const bool preserved=ram==saved_ram&&same_state(s,saved_state)&&same_device(dev,saved_dev);
+        if(!machine(ram,windows,bus,s,dev,palette,stop,status_byte,consumed,status,phase,e1)) {
+            const bool preserved=ram==saved_ram&&same_state(s,saved_state)&&same_device(dev,saved_dev)&&same_palette(pal,saved_pal);
             bool resumed=false;
             if(flags&32U) {
                 Bytes cram(saved_ram);ms5::AnimationMachineState cs(saved_state);ms5::AnimationMachineDevice cd(saved_dev);
+                ms5::AnimationMachinePaletteRam cpal(saved_pal);
                 std::vector<ms5::VideoPortWrite> cp;std::uint32_t cr=0;std::string ce;
                 ms5::AnimationMachineStatus st=ms5::AnimationMachineWaiting;
-                if(ms5::run_animation_machine(cram,windows,bus,cs,cd,CARD_BIOS,status_byte,cr,st,cp,ce)&&st==ms5::AnimationMachineReturned&&
+                if(machine(cram,windows,bus,cs,cd,with_palette?&cpal:NULL,CARD_BIOS,status_byte,cr,st,cp,ce)&&st==ms5::AnimationMachineReturned&&
                     cs.pc==CARD_BIOS&&ram_value(cram,cs.a[7],4)==CARD_RETURN&&count<limit) {
                     ++count;Wait w;w.pc=CARD_BIOS;w.address=CARD_ANSWER;w.size=1;w.before=ram_value(cram,CARD_ANSWER,1);w.released=answer;
                     ram_put(cram,CARD_ANSWER,1,answer);waits.push_back(w);
                     cs.pc=CARD_RETURN;cs.a[7]+=4;cs.carry=ms5::AnimationCarryUnknown;
-                    ram.swap(cram);s=cs;dev=cd;ports.insert(ports.end(),cp.begin(),cp.end());reads+=cr;resumed=true;
+                    ram.swap(cram);s=cs;dev=cd;pal=cpal;ports.insert(ports.end(),cp.begin(),cp.end());reads+=cr;resumed=true;
                 }
             }
             if(resumed)continue;
@@ -132,6 +158,10 @@ static bool run(const Bytes& input,const ms5::ProgramBusState& bus,Bytes& output
     for(std::size_t i=0;i<ports.size();++i) {add(output,ports[i].address);add(output,ports[i].size);add(output,ports[i].value);}
     for(std::size_t i=0;i<dev.reads.size();++i) {add(output,dev.reads[i].address);add(output,dev.reads[i].size);add(output,dev.reads[i].value);}
     for(std::size_t i=0;i<waits.size();++i) {add(output,waits[i].pc);add(output,waits[i].address);add(output,waits[i].size);add(output,waits[i].before);add(output,waits[i].released);}
+    if(with_palette) {
+        output.insert(output.end(),pal.banks[0].begin(),pal.banks[0].end());output.insert(output.end(),pal.banks[1].begin(),pal.banks[1].end());
+        add(output,pal.selected);
+    }
     return true;
 }
 int main(int argc,char** argv) {
