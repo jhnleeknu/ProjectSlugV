@@ -1,6 +1,7 @@
 #ifndef MS5_ANIMATION_MACHINE_INTERNAL_H
 #define MS5_ANIMATION_MACHINE_INTERNAL_H
 #include "ms5/animation_machine.h"
+#include "ms5/animation_machine_irq.h"
 #include "ms5/program_stack.h"
 namespace ms5 {
 struct AnimationMachineContext {
@@ -9,6 +10,8 @@ struct AnimationMachineContext {
     ProgramBusState bus;
     AnimationMachineState& s;
     AnimationMachineDevice& device;
+    // Candidate palette RAM of run_animation_machine_with_palette (E6), or null for run_animation_machine (no palette device).
+    AnimationMachinePaletteRam* palette;
     std::vector<VideoPortWrite>& ports;
     std::uint8_t external_status;
     std::uint32_t external_reads;
@@ -18,7 +21,7 @@ struct AnimationMachineContext {
         const std::vector<FixedDataResource>& w,const ProgramBusState& b,
         AnimationMachineState& state,AnimationMachineDevice& dev,
         std::vector<VideoPortWrite>& p,std::uint8_t ext,std::string& e)
-        : ram(r),windows(w),bus(b),s(state),device(dev),ports(p),
+        : ram(r),windows(w),bus(b),s(state),device(dev),palette(0),ports(p),
           external_status(ext),external_reads(0),waiting(false),error(e) {
         bus.pvc=&device.pvc;bus.bank_base=device.bank_base;
     }
@@ -135,5 +138,16 @@ bool animation_objects_n35_block(AnimationMachineContext& c);
 bool animation_frame_head_h2_block(AnimationMachineContext& c);
 bool animation_objects_n34_block(AnimationMachineContext& c);
 bool animation_frame_head_h8_block(AnimationMachineContext& c);
+bool animation_objects_b1c_block(AnimationMachineContext& c);
+bool animation_irq_f6a_block(AnimationMachineContext& c);
+bool animation_irq_f6c_block(AnimationMachineContext& c);
+bool animation_objects_b2b_block(AnimationMachineContext& c);
+bool animation_controller_c3_block(AnimationMachineContext& c);
+bool animation_objects_b1b_block(AnimationMachineContext& c);
+bool animation_irq_f6b_block(AnimationMachineContext& c);
+bool animation_controller_c1_block(AnimationMachineContext& c);
+bool animation_objects_b2a_block(AnimationMachineContext& c);
+bool animation_objects_b1a_block(AnimationMachineContext& c);
+bool animation_controller_c2_block(AnimationMachineContext& c);
 }
 #endif

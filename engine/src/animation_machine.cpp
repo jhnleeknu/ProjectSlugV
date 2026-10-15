@@ -10,9 +10,11 @@ std::uint32_t am_extend_word(std::uint32_t value) {
 std::uint32_t am_index(std::uint32_t base,std::uint32_t word) {return base+am_extend_word(word);}
 bool am_error(AnimationMachineContext& c,const char* message) {c.error=message;return false;}
 namespace {
-// Declared external-read devices: WORD raster 3c0006 and BYTE inputs 300000 / 340000 / 380000 (24-bit address, exact size).
+// Declared external-read devices: WORD raster 3c0006, BYTE inputs 300000 / 340000 / 380000 and the BYTE Z80 reply 320000 (F6 scope
+// decision E7; 24-bit address, exact size).
 bool external_queue_device(std::uint32_t address,unsigned int size) {
-    return (address==0x3c0006U && size==2) || ((address==0x300000U || address==0x340000U || address==0x380000U) && size==1);
+    return (address==0x3c0006U && size==2) ||
+        ((address==0x300000U || address==0x320000U || address==0x340000U || address==0x380000U) && size==1);
 }
 }
 bool am_read(AnimationMachineContext& c,std::uint32_t address,unsigned int size,std::uint32_t& value) {
@@ -27,6 +29,13 @@ bool am_read(AnimationMachineContext& c,std::uint32_t address,unsigned int size,
         value=size==1?(head.value&255U):(head.value&65535U);
         c.device.reads.erase(c.device.reads.begin());++c.external_reads;return true;
     }
+    const std::uint32_t at=address&0xffffffU;
+    if (c.palette!=0 && (size==1 || size==2 || size==4) && (size==1 || (at&1U)==0U) && at>=0x400000U && at+size<=0x800000U) {
+        // Palette RAM mirror (E6): the selected 8 KiB bank at (address & 1fff); only with an attached palette device.
+        const std::vector<std::uint8_t>& bank=c.palette->banks[c.palette->selected];
+        value=0;for (unsigned int i=0;i<size;++i)value=(value<<8)|bank[(at+i)&0x1fffU];
+        return true;
+    }
     c.bus.bank_base=c.device.bank_base;
     return read_program_bus(c.ram,c.windows,c.bus,address,size,value,c.error);
 }
@@ -34,6 +43,8 @@ namespace {
 bool carry_preserving_pc(std::uint32_t pc) {
     // Entire original blocks must preserve C. Shared bus/stack operations do
     // not imply MOVE flags: MOVEM, PEA, JSR and RTS use those operations too.
+    // F6b palette cells 7326 <= pc < 871a (BCLR (Z only)+BEQ and the MOVEM copy pairs; the even non-start PCs there are interior errors).
+    if (pc>=0x7326U && pc<0x871aU)return true;
     switch(pc) {
     case 0x1dc84:case 0x1dc8a:case 0x210ae:case 0x210b4:
     case 0x47d0a:case 0x47d14:case 0x47d1a:case 0x47f04:
@@ -824,6 +835,22 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x3104a:case 0x310ca:case 0x310d0:case 0x310d6:case 0x310d8:case 0x3164a:case 0x3165c:case 0x3165e:case 0x31664:case 0x3166a:
     case 0x31676:case 0x31694:case 0x31696:case 0x316ac:case 0x3195c:case 0x3199a:case 0x319b4:case 0x31a04:case 0x31a10:case 0x31a22:
     case 0x31a24:case 0x33116:
+    // Objects B1c (F4) blocks: the 27 BRA.W slots of 30b84 and the 9 of 335fe, JSR/JMP/BRA-only blocks, LEA+JSR (30cb8 339bc 339d2 339ec),
+    // BTST (Z only, +Bcc) blocks and the 6 BCC/BCS consumers 30c7c (C returned by 319f6), 3328e 3352c (49fc6), 33390 335b4 (4c2c4), 33a08
+    // (4d418). B1c has no known-C producer; every other block (MOVE/MOVEQ/TST/CMP/SUB/ADD/AND/ASR/LSL/SUBQ) stays Unknown.
+    case 0x30b84:case 0x30b88:case 0x30b8c:case 0x30b90:case 0x30b94:case 0x30b98:case 0x30b9c:case 0x30ba0:case 0x30ba4:case 0x30ba8:
+    case 0x30bac:case 0x30bb0:case 0x30bb4:case 0x30bb8:case 0x30bbc:case 0x30bc0:case 0x30bc4:case 0x30bc8:case 0x30bcc:case 0x30bd0:
+    case 0x30bd4:case 0x30bd8:case 0x30bdc:case 0x30be0:case 0x30be4:case 0x30be8:case 0x30bec:case 0x30c00:case 0x30c64:case 0x30c68:
+    case 0x30c78:case 0x30c7c:case 0x30c86:case 0x30c8a:case 0x30c8e:case 0x30c92:case 0x30cb4:case 0x30cb8:case 0x30cd6:case 0x30d66:
+    case 0x33248:case 0x3324c:case 0x33274:case 0x33280:case 0x33284:case 0x33288:case 0x3328e:case 0x33298:case 0x332d6:case 0x332f0:
+    case 0x33320:case 0x33324:case 0x33328:case 0x3332c:case 0x33332:case 0x33364:case 0x33368:case 0x33370:case 0x3337a:case 0x33390:
+    case 0x333ac:case 0x333b4:case 0x333b8:case 0x333bc:case 0x333c0:case 0x333e2:case 0x3341a:case 0x33428:case 0x33430:case 0x3346a:
+    case 0x3346e:case 0x33472:case 0x3349e:case 0x334a8:case 0x334ac:case 0x334b4:case 0x334bc:case 0x334c0:case 0x334c4:case 0x334c8:
+    case 0x334cc:case 0x33500:case 0x33504:case 0x3350c:case 0x33516:case 0x3351a:case 0x3351e:case 0x33522:case 0x33526:case 0x3352c:
+    case 0x33536:case 0x33546:case 0x3354a:case 0x33580:case 0x33584:case 0x33588:case 0x335b4:case 0x335cc:case 0x335d0:case 0x335d4:
+    case 0x335d8:case 0x335fe:case 0x33602:case 0x33606:case 0x3360a:case 0x3360e:case 0x33612:case 0x33616:case 0x3361a:case 0x3361e:
+    case 0x3362c:case 0x33636:case 0x3363a:case 0x3364e:case 0x336cc:case 0x33990:case 0x339aa:case 0x339bc:case 0x339d2:case 0x339dc:
+    case 0x339ec:case 0x339f6:case 0x33a08:case 0x33a50:
     // Objects N25 (F4) blocks: JSR-only blocks, ST.B+JSR 5e9ec, ST.B 5edca, BRA blocks, RTS (5e8be 5e8c6 5e9d4 5ebde 5eeaa 5f182 5f238)
     // and the consumers 5ec9c (BCS.W after JSR 49370), 5ee1c 5f190 (BCC.W after JSR 49fc6). N25 has no known C producer; every other
     // block stays Unknown.
@@ -1019,8 +1046,79 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xee44:case 0xee48:case 0xee4c:case 0xee50:case 0xee54:case 0xee58:case 0xee5c:case 0xee60:case 0xee64:case 0xee68:
     case 0xee6c:case 0xee70:case 0xee74:case 0xee78:case 0xee7c:case 0xee80:case 0xee84:case 0xee88:case 0xee8c:case 0xee90:
     case 0xee94:case 0xee98:case 0xee9c:case 0xeea0:
+    // F6a IRQ shell FLOW_ONLY blocks (contract carry section: JMP/JSR/BSR/BRA/RTS, LEA/MOVEA, BTST/BSET/BCLR (Z only)+Bcc) and the clear run
+    // RTS 1669e (n = 0 entry). F6a consumes no incoming C; 16e92 (Set), 16e9e (Clear) and the RTE blocks 248 2b6 2ce (popped SR bit 0)
+    // produce a known C inside their block; every other block stays Unknown.
+    case 0x21e:case 0x23c:case 0x242:case 0xa4c:case 0xa72:case 0xaba:case 0xacc:case 0xb06:case 0xb0a:case 0xbc8:case 0xbec:
+    case 0xc8c:case 0xc96:case 0xcb0:case 0xcbe:case 0xcc4:case 0xcd6:case 0xcdc:case 0xce2:case 0xd2a:case 0xd36:case 0xd48:
+    case 0x3cac:case 0x3cde:case 0x3ce0:case 0x3d06:case 0x3dcc:case 0x16cfa:case 0x16d52:case 0x16d66:case 0x16d84:case 0x16e0c:
+    case 0x16e22:case 0x16e40:case 0x187d8:case 0x187e2:case 0x18be6:case 0x1ae1a:case 0x1ae26:case 0x1ae32:case 0x4817e:case 0x1669e:
+    // Objects B2b blocks: the consumers 4d438 (BCC, C returned by 289e) 3a4ec (BCC, 4d6b4) 3ad26 (BCS, 288c) 3ad3c (BCC, 49fc6) 38d70 (SCC,
+    // 28ae) 38dbe (BCC, 3b334) and the blocks that return the C of the path that reached them unchanged: the RTS blocks 33950 3a4ce (Clear set by
+    // the TST of 33948 / 3a4c6) 4d506 (Set or Clear from 4d4e0 / 4d4e8 / 4d502), 3b448 (BTST + BEQ) / 3b456 (Clear of 3b42e) and 4eeea (MOVEM + RTS).
+    case 0x4d438:case 0x3a4ec:case 0x3ad26:case 0x3ad3c:case 0x38d70:case 0x38dbe:case 0x33950:case 0x3a4ce:case 0x4d506:
+    case 0x3b448:case 0x3b456:case 0x4eeea:
+    // Controller C1 (F5) FLOW blocks (43): JSR/BSR/JMP/BRA/RTS, LEA/MOVEA/ADDQ.W #1,An/ADDA.W Dn,An, BTST/BSET Dn (Z only) and the
+    // conditional branches. c4a0 c674 c67e c806 c996 c9ba are the BCC/BCS consumers of the C returned by ca32, 289e, 314c, 30bc and 30d4;
+    // 30c8 30e0 3156 (ORI CCR) and 30ce 30e6 315c (ANDI CCR) set their known C in their own block and ca32 (CMPI) sets it for c4a0.
+    // 4a9d0 4a9da (BEQ) read the Z of the TST.B (A0) that ended 4a974 and recompute it from BYTE (A0). MOVE/MOVEQ/CMP/CMPI/TST/SUBQ/
+    // SUBI/ADDQ.B/SBCD/CLR/LSR/ANDI/ADD.W blocks and the stack MOVEs stay Unknown.
+    case 0x30bc:case 0x30d4:case 0x3680:case 0x36b8:case 0x36ba:case 0x36d2:case 0x36fc:case 0x3706:case 0xc49c:case 0xc4a0:
+    case 0xc4a4:case 0xc4b6:case 0xc654:case 0xc66a:case 0xc674:case 0xc678:case 0xc67e:case 0xc682:case 0xc736:case 0xc73a:
+    case 0xc748:case 0xc7fc:case 0xc806:case 0xc80a:case 0xc990:case 0xc996:case 0xc9b4:case 0xc9ba:case 0xc9be:case 0xca20:
+    case 0x4a896:case 0x4a8ac:case 0x4a8da:case 0x4a94c:case 0x4a962:case 0x4a972:case 0x4a9ae:case 0x4a9c4:case 0x4a9d0:case 0x4a9d4:
+    case 0x4a9da:case 0x4a9de:case 0x4a9e0:
+    // Objects B2a blocks: the 16 consumers 5ef6c 5f5e6 5f744 (BCC, C returned by the boundary 4b6f4) 5ef80 5efda (BCC, 1ab02) 5efc6 (BCC, 49fc6)
+    // 5f6c2 60880 (BCC, 4b54e) 5f702 6062e 606f4 6077e 6085e 60902 (BCC, 28ae) 60828 608cc (MOVEM.W + BCC, 2986) and the five RTS blocks that return
+    // the C of the path that reached them unchanged. The ORI.B #1,CCR blocks set a known Set inside the block; every other block stays Unknown.
+    case 0x5ef6c:case 0x5f5e6:case 0x5f744:case 0x5ef80:case 0x5efda:case 0x5efc6:case 0x5f6c2:case 0x60880:case 0x5f702:case 0x6062e:
+    case 0x606f4:case 0x6077e:case 0x6085e:case 0x60902:case 0x60828:case 0x608cc:case 0x5ef8a:case 0x5efe4:case 0x5f5f0:case 0x5f75e:
+    case 0x60938:
+    // Controller C2 (F5) FLOW blocks (72): JSR/BSR/JMP/BRA/RTS, LEA/MOVEA and the conditional branches of the transitions, teardown, game start,
+    // card request, b300 / b344 menu child and the menu item handlers. c87e c916 are the BCS consumers of the C returned by 289e; c964 c97a read
+    // the Z of the TST.B (A0) that ended 4a974 and recompute it from BYTE (A0). MOVE/MOVEQ/CLR/TST/CMP/CMPI/CMPA/ADD/SUB/ADDQ/SUBQ/MULU/LSR/
+    // EXG/MOVE.L #imm,(A6) blocks stay Unknown (c326 too: its MOVE.W precedes the BTST).
+    case 0x31d4:case 0xc2fa:case 0xc4cc:case 0xc4d2:case 0xc4d8:case 0xc4ee:case 0xc4f6:case 0xc69a:case 0xc69e:case 0xc6a2:
+    case 0xc6c8:case 0xc766:case 0xc772:case 0xc776:case 0xc77a:case 0xc7c0:case 0xc7ce:case 0xc7d2:case 0xc7d6:case 0xc7e6:
+    case 0xc81a:case 0xc846:case 0xc84a:case 0xc84e:case 0xc85e:case 0xc874:case 0xc87e:case 0xc882:case 0xc886:case 0xc88a:
+    case 0xc890:case 0xc8aa:case 0xc8b0:case 0xc8b4:case 0xc8c4:case 0xc8ca:case 0xc90c:case 0xc916:case 0xc91a:case 0xc91e:
+    case 0xc922:case 0xc952:case 0xc964:case 0xc968:case 0xc97a:case 0xc97e:case 0xc982:case 0x4756e:case 0x47582:case 0x4758a:
+    case 0xe62f2:case 0xe62fc:case 0xb300:case 0xb306:case 0xb31a:case 0xb344:case 0xb360:case 0xa75a:case 0xa856:case 0xa868:
+    case 0xa86c:case 0xa874:case 0xa876:case 0xa888:case 0xa88c:case 0xa894:case 0xa896:case 0xa8a8:case 0xa8ba:case 0xa8bc:
+    case 0xa8c8:case 0xa8ce:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
+    // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
+    case 0x7302:case 0x8738:case 0x8b60:
+    // Controller C3b 4fb3c: SCC.B 62(A6) consumes the C returned by 28ae (checked error when Unknown); the block keeps C.
+    case 0x4fb3c:
     case 0x3b82:return true;
+    // Objects B1b (deferred N22b/N19b) blocks: JSR/BSR/JMP/BRA/RTS, LEA/MOVEA+JSR, BTST/BSET/BCLR (Z only, +Bcc), MOVEM, SCC and the 9
+    // BCC/BCS/SCC consumers 3d40a (C returned by 28ae), 3d478 (3dcf2), 3dbae 3e2ec (49fc6), 3dbca (3dcac -> 4d418), 3e2dc (288c), b16c2
+    // (b15e0), b1cb4 (28ae); 3dac2 (BNE) is recomputed from BYTE a4(A6). b1cc2 (ORI CCR) sets a known C. The other blocks stay Unknown.
+    case 0x3d40a:case 0x3d422:case 0x3d426:case 0x3d432:case 0x3d470:case 0x3d474:case 0x3d478:case 0x3d47c:case 0x3d494:case 0x3d4e2:
+    case 0x3d4e6:case 0x3d4ea:case 0x3d7e8:case 0x3d7ec:case 0x3d7f4:case 0x3d7fc:case 0x3d812:case 0x3d816:case 0x3d81a:case 0x3d880:
+    case 0x3d884:case 0x3d888:case 0x3d88c:case 0x3d8a8:case 0x3d8ac:case 0x3d8b0:case 0x3d8b4:case 0x3d8b8:case 0x3d8bc:case 0x3d8c0:
+    case 0x3d8c4:case 0x3d8c8:case 0x3d8da:case 0x3d8de:case 0x3d8f4:case 0x3d97e:case 0x3da72:case 0x3da7e:case 0x3da82:case 0x3da98:
+    case 0x3da9c:case 0x3daa0:case 0x3daae:case 0x3dab2:case 0x3dac2:case 0x3dacc:case 0x3dad0:case 0x3daee:case 0x3db5c:case 0x3dba2:
+    case 0x3dba8:case 0x3dbae:case 0x3dbb2:case 0x3dbb8:case 0x3dbbe:case 0x3dbc2:case 0x3dbc6:case 0x3dbca:case 0x3dc04:case 0x3dc20:
+    case 0x3dcc8:case 0x3dcd4:case 0x3dcea:case 0x3dcec:case 0x3dd0e:case 0x3dd1e:case 0x3dd2e:case 0x3def0:case 0x3e03e:case 0x3e06e:
+    case 0x3e0a6:case 0x3e0a8:case 0x3e2d6:case 0x3e2dc:case 0x3e2e0:case 0x3e2e6:case 0x3e2ec:case 0x3e2f0:case 0xb1656:case 0xb165a:
+    case 0xb16a4:case 0xb16c2:case 0xb16c6:case 0xb16cc:case 0xb16d0:case 0xb16d4:case 0xb16e6:case 0xb1cb4:case 0xb1cc2:case 0xb1cc6:
+    case 0xb1cca:case 0xb1cf6:case 0xb1d8c:
+    // Objects B1a (deferred N16b/U19b + leaf helpers) blocks: JSR/BSR/JMP/BRA/RTS, LEA+JSR, BTST/BSET (Z only, +Bcc) and the 19 BCC/BCS
+    // consumers 78408 78454 784ae 7854c 78652 (C returned by 791fa), 784a0 785dc b71a0 b726a b7392 b7538 b75ee (49fc6), 7853e (79222),
+    // 78636 (7962a), 78644 (7930a), 78cfe (1ab02), 78d1a (28ae), 79630 (4945e), 79638 (79722); 79318 (RTS) returns the C of 79292 unchanged.
+    // 79240 79648 79740 78d2a (ORI CCR) set and 79250 7931a 7964e 7973a (ANDI CCR) clear a known C. The other blocks stay Unknown.
+    case 0x783fe:case 0x78404:case 0x78408:case 0x78444:case 0x7844a:case 0x78450:case 0x78454:case 0x7845e:case 0x78462:case 0x78496:
+    case 0x7849a:case 0x784a0:case 0x784aa:case 0x784ae:case 0x784b8:case 0x784bc:case 0x784fa:case 0x784fe:case 0x78510:case 0x78528:
+    case 0x7853a:case 0x7853e:case 0x78548:case 0x7854c:case 0x78556:case 0x7855a:case 0x78564:case 0x785b4:case 0x785ba:case 0x785d0:
+    case 0x785d6:case 0x785dc:case 0x785ee:case 0x78628:case 0x7862c:case 0x78632:case 0x78636:case 0x78640:case 0x78644:case 0x7864e:
+    case 0x78652:case 0x7865c:case 0x78cc4:case 0x78cd6:case 0x78cdc:case 0x78cf4:case 0x78cfe:case 0x78d08:case 0x78d1a:case 0x7919a:
+    case 0x791a0:case 0x791aa:case 0x791b8:case 0x791be:case 0x79222:case 0x79314:case 0x79318:case 0x7962a:case 0x79630:case 0x79634:
+    case 0x79638:case 0x7963c:case 0x796fc:case 0x79720:case 0xb7100:case 0xb714a:case 0xb719a:case 0xb71a0:case 0xb71aa:case 0xb71f2:
+    case 0xb7264:case 0xb726a:case 0xb72b2:case 0xb72ee:case 0xb72f2:case 0xb733c:case 0xb7378:case 0xb7386:case 0xb738c:case 0xb7392:
+    case 0xb739c:case 0xb73ea:case 0xb7482:case 0xb7488:case 0xb7498:case 0xb749c:case 0xb74e6:case 0xb7532:case 0xb7538:case 0xb753c:
+    case 0xb754a:case 0xb7592:case 0xb75ee:case 0xb7604:case 0xb7614:case 0xb7618:case 0xb7662:case 0xb7d3a:case 0xb7d48:return true;
     default:return false;
     }
 }
@@ -1073,6 +1171,10 @@ bool am_write(AnimationMachineContext& c,std::uint32_t logical,unsigned int size
             for (unsigned int i=0;i<unit;++i)c.device.pvc[at+i]=static_cast<std::uint8_t>(part>>(8*(unit-i-1)));
             VideoPortWrite port;port.address=address;port.size=static_cast<std::uint8_t>(unit);port.value=part;
             c.ports.push_back(port);pvc_effects(c.device,at/2);
+        } else if (c.palette!=0 && address>=0x400000U && address<0x800000U) {
+            // Palette RAM mirror (E6), not a port; without an attached palette device this stays the device error below.
+            std::vector<std::uint8_t>& bank=c.palette->banks[c.palette->selected];
+            for (unsigned int i=0;i<unit;++i)bank[(address+i)&0x1fffU]=static_cast<std::uint8_t>(part>>(8*(unit-i-1)));
         } else return am_error(c,"unsupported animation machine write device");
     }
     c.bus.bank_base=c.device.bank_base;return true;
@@ -1097,9 +1199,11 @@ bool am_return(AnimationMachineContext& c) {
 bool am_zero_bank(AnimationMachineContext& c) {
     return am_write(c,c.s.a[5]-0x7ff0U,2,0) && am_write(c,0x2ffff2,2,0x1000) && am_write(c,0x2ffff0,2,0);
 }
-bool run_animation_machine(std::vector<std::uint8_t>& ram,
+namespace {
+// Shared implementation of run_animation_machine (palette null) and run_animation_machine_with_palette (validated palette).
+bool run_machine(std::vector<std::uint8_t>& ram,
     const std::vector<FixedDataResource>& windows,const ProgramBusState& resources,
-    AnimationMachineState& state,AnimationMachineDevice& device,
+    AnimationMachineState& state,AnimationMachineDevice& device,AnimationMachinePaletteRam* palette,
     std::uint32_t stop_pc,std::uint8_t external_status,std::uint32_t& external_reads,
     AnimationMachineStatus& status,std::vector<VideoPortWrite>& ports,std::string& error) {
     if (ram.size()!=65536 || device.pvc.size()!=8192 || (stop_pc&1U)) {
@@ -1113,6 +1217,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
         AnimationMachineState next=state;AnimationMachineDevice next_device=device;
         std::vector<VideoPortWrite> next_ports;
         AnimationMachineContext c(next_ram,windows,resources,next,next_device,next_ports,external_status,error);
+        AnimationMachinePaletteRam next_palette;
+        if (palette!=0) {next_palette=*palette;c.palette=&next_palette;}
         AnimationMachineStatus result=AnimationMachineReturned;bool stopped=false;
         // A legitimate 65536-column WORD loop exceeds the former 100000-block cap.
         // Keep a finite limit; malformed record walks and huge transfers still fail atomically.
@@ -1417,6 +1523,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x31002 && next.pc<0x310de) || (next.pc>=0x3164a && next.pc<0x3169c) ||
                 (next.pc>=0x316ac && next.pc<0x316c2) || (next.pc>=0x318d8 && next.pc<0x319b6) ||
                 (next.pc>=0x319f6 && next.pc<0x31a54) || (next.pc>=0x3310c && next.pc<0x3312c))ok=animation_objects_n29_block(c);
+            else if ((next.pc>=0x30b6c && next.pc<0x30d6c) || (next.pc>=0x3323e && next.pc<0x336d2) ||
+                (next.pc>=0x3395c && next.pc<0x33a88))ok=animation_objects_b1c_block(c);
             else if ((next.pc>=0x5e8b0 && next.pc<0x5ea38) || (next.pc>=0x5eac2 && next.pc<0x5eeac) ||
                 (next.pc>=0x5efe6 && next.pc<0x5f23a))ok=animation_objects_n25_block(c);
             else if ((next.pc>=0x5f24a && next.pc<0x5f4b0) || (next.pc>=0x5f760 && next.pc<0x5fb06) ||
@@ -1455,6 +1563,47 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x3902 && next.pc<0x3918) || (next.pc>=0x9086 && next.pc<0x9344))ok=animation_frame_head_h2_block(c);
             else if ((next.pc>=0x4c3de && next.pc<0x4c6f0) || (next.pc>=0x4c72a && next.pc<0x4c7a4) ||
                 (next.pc>=0x4c810 && next.pc<0x4cf52))ok=animation_objects_n34_block(c);
+            else if ((next.pc>=0x20c && next.pc<0x2d8) || next.pc==0x3dcc || (next.pc>=0xa2c && next.pc<0xb0c) ||
+                (next.pc>=0xbbe && next.pc<0xbee) || (next.pc>=0xc8c && next.pc<0xd56) || (next.pc>=0x3cac && next.pc<0x3d3a) ||
+                (next.pc>=0x48156 && next.pc<0x48180) || (next.pc>=0x1adf8 && next.pc<0x1ae56) || (next.pc>=0x187d8 && next.pc<0x18be8) ||
+                (next.pc>=0x16092 && next.pc<0x166bc) || (next.pc>=0x16cfa && next.pc<0x16ea4))ok=animation_irq_f6a_block(c);
+            else if ((next.pc>=0xf226 && next.pc<0x11792) || (next.pc>=0x13b46 && next.pc<0x16092))ok=animation_irq_f6c_block(c);
+            else if ((next.pc>=0x3383c && next.pc<0x338f8) || (next.pc>=0x33940 && next.pc<0x33958) ||
+                (next.pc>=0x38d56 && next.pc<0x38dd4) || (next.pc>=0x39f9c && next.pc<0x3a048) ||
+                (next.pc>=0x3a0dc && next.pc<0x3a1e0) || (next.pc>=0x3a4a4 && next.pc<0x3a4d6) ||
+                (next.pc>=0x3a4da && next.pc<0x3a5d2) || (next.pc>=0x3acd6 && next.pc<0x3ad48) ||
+                (next.pc>=0x3b424 && next.pc<0x3b458) || (next.pc>=0x4bfc0 && next.pc<0x4c020) ||
+                (next.pc>=0x4c2fa && next.pc<0x4c340) || (next.pc>=0x4c390 && next.pc<0x4c3ba) ||
+                (next.pc>=0x4c3cc && next.pc<0x4c3de) || (next.pc>=0x4d418 && next.pc<0x4d508) ||
+                (next.pc>=0x4d6b4 && next.pc<0x4d6f2) || (next.pc>=0x4d734 && next.pc<0x4d766) ||
+                (next.pc>=0x4d98a && next.pc<0x4d9a2) || (next.pc>=0x4d9ba && next.pc<0x4d9d6) ||
+                (next.pc>=0x4eea2 && next.pc<0x4eef4) || (next.pc>=0x4f08a && next.pc<0x4f0c4) ||
+                (next.pc>=0x4ff96 && next.pc<0x4ffba) || (next.pc>=0xd3d7c && next.pc<0xd3d9c))ok=animation_objects_b2b_block(c);
+            else if ((next.pc>=0x8b64 && next.pc<0x8bbc) || (next.pc>=0xc52a && next.pc<0xc654) || (next.pc>=0xc6da && next.pc<0xc724) ||
+                (next.pc>=0x4fb1a && next.pc<0x4fb4a))ok=animation_controller_c3_block(c);
+            else if ((next.pc>=0x3d3f0 && next.pc<0x3d526) || (next.pc>=0x3d7e8 && next.pc<0x3d982) || (next.pc>=0x3da72 && next.pc<0x3db62) ||
+                (next.pc>=0x3db68 && next.pc<0x3dbba) || (next.pc>=0x3dbbe && next.pc<0x3dc24) || (next.pc>=0x3dcac && next.pc<0x3dcf2) ||
+                (next.pc>=0x3dd0e && next.pc<0x3dd42) || (next.pc>=0x3dde4 && next.pc<0x3de06) || (next.pc>=0x3de54 && next.pc<0x3def2) ||
+                (next.pc>=0x3defa && next.pc<0x3df1a) || (next.pc>=0x3df1e && next.pc<0x3df44) || (next.pc>=0x3e03e && next.pc<0x3e0aa) ||
+                (next.pc>=0x3e250 && next.pc<0x3e302) || (next.pc>=0xb1656 && next.pc<0xb16ea) || (next.pc>=0xb1c82 && next.pc<0xb1c90) ||
+                (next.pc>=0xb1c9e && next.pc<0xb1cf8) || (next.pc>=0xb1d8c && next.pc<0xb1dae))ok=animation_objects_b1b_block(c);
+            else if (next.pc>=0x72fa && next.pc<0x8b64)ok=animation_irq_f6b_block(c);
+            else if ((next.pc>=0x30bc && next.pc<0x30ec) || (next.pc>=0x314c && next.pc<0x3162) || (next.pc>=0x3670 && next.pc<0x370c) ||
+                (next.pc>=0xc49c && next.pc<0xc4cc) || (next.pc>=0xc4f8 && next.pc<0xc52a) || (next.pc>=0xc654 && next.pc<0xc686) ||
+                (next.pc>=0xc724 && next.pc<0xc74c) || (next.pc>=0xc7fc && next.pc<0xc80e) || (next.pc>=0xc988 && next.pc<0xca22) ||
+                (next.pc>=0xca32 && next.pc<0xca3a) || (next.pc>=0x4a88e && next.pc<0x4a8f8) ||
+                (next.pc>=0x4a944 && next.pc<0x4a9e2))ok=animation_controller_c1_block(c);
+            else if ((next.pc>=0x5eed2 && next.pc<0x5efe6) || (next.pc>=0x5f504 && next.pc<0x5f760) || (next.pc>=0x60516 && next.pc<0x6093a))ok=animation_objects_b2a_block(c);
+            else if ((next.pc>=0x783ea && next.pc<0x78660) || (next.pc>=0x78cc4 && next.pc<0x78d5a) || (next.pc>=0x7919a && next.pc<0x791c0) ||
+                (next.pc>=0x79222 && next.pc<0x79256) || (next.pc>=0x7930a && next.pc<0x79320) || (next.pc>=0x7962a && next.pc<0x79654) ||
+                (next.pc>=0x796e6 && next.pc<0x79746) || (next.pc>=0xb7100 && next.pc<0xb76a4) ||
+                (next.pc>=0xb7d2e && next.pc<0xb7d4a))ok=animation_objects_b1a_block(c);
+            else if ((next.pc>=0x100e && next.pc<0x1022) || (next.pc>=0x3162 && next.pc<0x31d6) || (next.pc>=0xbbd4 && next.pc<0xbbfa) ||
+                (next.pc>=0xc2fa && next.pc<0xc364) || (next.pc>=0xc4cc && next.pc<0xc4f8) || (next.pc>=0xc686 && next.pc<0xc6ce) ||
+                (next.pc>=0xc74c && next.pc<0xc7fc) || (next.pc>=0xc80e && next.pc<0xc988) || (next.pc>=0x4755e && next.pc<0x47594) ||
+                (next.pc>=0x4823a && next.pc<0x48250) || (next.pc>=0x49a1a && next.pc<0x49a58) || (next.pc>=0x4e1cc && next.pc<0x4e216) ||
+                (next.pc>=0xe62ec && next.pc<0xe630a) || (next.pc>=0xb300 && next.pc<0xb362) || (next.pc>=0xa75a && next.pc<0xa770) ||
+                (next.pc>=0xa856 && next.pc<0xa8d0))ok=animation_controller_c2_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
@@ -1462,7 +1611,28 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
         if (!stopped)return am_error(c,"animation machine block budget exceeded");
         ram.swap(next_ram);state=next;
         device.pvc.swap(next_device.pvc);device.bank_base=next_device.bank_base;device.reads.swap(next_device.reads);
+        if (palette!=0) {
+            palette->banks[0].swap(next_palette.banks[0]);palette->banks[1].swap(next_palette.banks[1]);palette->selected=next_palette.selected;
+        }
         ports.swap(next_ports);external_reads=c.external_reads;status=result;error.clear();return true;
     } catch (const std::bad_alloc&) {error="cannot allocate animation machine transaction";return false;}
+}
+}
+bool run_animation_machine(std::vector<std::uint8_t>& ram,
+    const std::vector<FixedDataResource>& windows,const ProgramBusState& resources,
+    AnimationMachineState& state,AnimationMachineDevice& device,
+    std::uint32_t stop_pc,std::uint8_t external_status,std::uint32_t& external_reads,
+    AnimationMachineStatus& status,std::vector<VideoPortWrite>& ports,std::string& error) {
+    return run_machine(ram,windows,resources,state,device,0,stop_pc,external_status,external_reads,status,ports,error);
+}
+bool run_animation_machine_with_palette(std::vector<std::uint8_t>& ram,
+    const std::vector<FixedDataResource>& windows,const ProgramBusState& resources,
+    AnimationMachineState& state,AnimationMachineDevice& device,AnimationMachinePaletteRam& palette,
+    std::uint32_t stop_pc,std::uint8_t external_status,std::uint32_t& external_reads,
+    AnimationMachineStatus& status,std::vector<VideoPortWrite>& ports,std::string& error) {
+    if (palette.banks[0].size()!=8192 || palette.banks[1].size()!=8192 || palette.selected>1) {
+        error="invalid animation machine palette RAM";return false;
+    }
+    return run_machine(ram,windows,resources,state,device,&palette,stop_pc,external_status,external_reads,status,ports,error);
 }
 }

@@ -2191,3 +2191,44 @@
   - 독립 리뷰 지적(대기 상한, 경계 확인, 검증기 짝짓기)을 반영했다.
   - 전체 `make test` 종료 0, Python 273개 통과. 기존 파일 경고 10개는 Linux clang에서 생긴 것이다.
 - 다음: controller D9 선택 B와 C1~C3(선언 생략 제거), IRQ `c8c` F6, G3 C++ 검증, b-unit·고아 사슬. 역사 산출물 감사는 macOS 원 환경이나 0260 보존본이 필요하다. 전체 Goal 범위·완료 기준은 바꾸지 않았다.
+
+## 2026-10-15 — 전체 목표 대비 진행 현황·남은 주 작업 단위 계획
+
+- PR #1(D1 구동기 등)이 `main`에 병합됐다(`cc88bde`). 작업 브랜치는 병합된 `main`에서 다시 시작했다.
+- `docs/analysis/remaining-work-plan.md`에 GOAL 단계별 현황, 남은 주 작업 단위, 선행 기반, 권장 순서를 기록했다.
+  - 남은 단위는 약 41~58개, 진행률은 약 15~20%로 추정한다(모두 [I]).
+  - 가장 큰 선행 기반은 입력·스테이지 진행 관측이다.
+  - 사실 근거는 독립 검토로 확인했다.
+- 다음: A(controller C1~C3·IRQ F6) → 입력·스테이지 진행 관측 기반. ROM 전체 코드 대비 C++ 대응 비율의 정적 측정도 기준선으로 필요하다. 전체 Goal 범위·완료 기준은 바꾸지 않았다.
+
+## 2026-10-15 — 10개 주 작업 단위 묶음 완료 (controller·IRQ·미룬 단위·측정 기반)
+
+- **완료 단위**(상세 `docs/reviews/0263-ten-unit-batch.md`):
+
+  | 번호 | 단위 | 내용 |
+  | --- | --- | --- |
+  | 1 | M1 | 코드 커버리지 기준선: 정적 발견 72,300 명령 중 routing 48.4%, 자기참조 성분 포함. `docs/analysis/code-coverage-baseline.md` |
+  | 2 | V1 | 단위 공용 native fixture 검증기 |
+  | 3 | C1 | controller 116 block |
+  | 4 | C2 | controller 164 block |
+  | 5 | C3 | C3a 9 + C3b 38 block |
+  | 6 | D9 | frame 구동기 controller `Execute` 모드 |
+  | 7 | F6a | IRQ shell |
+  | 8 | F6b·F6c·F6-D | 팔레트 전송, IRQ writer, 구동기 실제 IRQ 실행 |
+  | 9 | B1a·B1b·B1c | 미룬 b-unit 646 block |
+  | 10 | B2a·B2b | 고아 사슬 389 block, `4c3ba`는 미사용 기록 |
+
+- **[F] 원본 비교:**
+  - controller를 실제로 실행할 때: 게임 모드 (ii) 선언 기준 137 seed × 400 frame, 54,400/54,400 일치.
+  - 실제 vblank IRQ를 실행할 때(P1 준비, IRQ 108,528회): 54,400/54,400 일치.
+  - 기본 모드(Skip, 선언 해제)의 D1 결과도 그대로다.
+  - 단위별 fixture는 모두 통과했다.
+- **최종 병합 트리:** C++ 시험 112개와 Python 310개가 통과했다.
+- **결정:** 공개 헤더 `animation_machine.h`는 바꾸지 않았다(감사 pin). 팔레트 RAM은 `animation_machine_irq.h`에 둔다. RTS를 건너는 Z는 다시 읽어 계산한다. 결정 기록은 각 계약 문서 끝 "메인 결정"에 있다.
+- **독립 리뷰:** 사용자의 크레딧 제약으로 이번 묶음에는 별도 독립 리뷰 작업자를 두지 않았다. 다음 세션의 첫 항목이다.
+- **[U] / 다음:**
+  - 하드웨어 실제 값(vblank 시점, BIOS 효과, Z80·video 응답)은 미확인이다.
+  - 자연 IRQ 전달은 `ef2`에서만 일어났다.
+  - demo (i) 모드의 자식 `e66aa`가 미연결이다.
+  - 다음 단위 후보: B2c `3a60a..3abde`, 남은 큰 사슬(`3d526`, `cc8b4`, `78776` 그룹), 입력·스테이지 진행 관측 기반(`remaining-work-plan.md` §3).
+  - 전체 Goal 범위·완료 기준은 바꾸지 않았다.

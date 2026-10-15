@@ -375,9 +375,9 @@ void errors(){
  assert(interior>=500);
  // Neighbours outside the routed ranges (a346 is now the interior RTS of the close a344 block;
  // a698 now runs in the nested unit; 364e is now an interior PC of the stage entry 364a block;
- // 10fe14 replaces 3916, now an F5 frame head H2 block start).
+ // 10fe14 replaces 3916, now an F5 frame head H2 block start). a75a now runs in the C2 menu handler unit (a770 replaces it).
  {Bytes ram;ms5::AnimationMachineState s;generic(0x364e,ram,s);reject(ram,s,STOP,"unsupported animation stage entry PC");}
- const std::uint32_t outside[]={0x3670,0x10fe14,0x392c,0x9b24,0x9f7a,0xa006,0xa080,0xa214,0xa280,0xa73c,0xa75a,
+ const std::uint32_t outside[]={0x370c,0x10fe14,0x392c,0x9b24,0x9f7a,0xa006,0xa080,0xa214,0xa280,0xa73c,0xa770,
   0xbfbe,0xc1c2,0xc214,0xc2bc,0xc2be,0xe84c6};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;ms5::AnimationMachineState s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;ms5::AnimationMachineState s;generic(0xa371,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}

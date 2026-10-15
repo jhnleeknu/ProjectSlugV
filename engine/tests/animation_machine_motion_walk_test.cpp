@@ -310,11 +310,15 @@ void dispatch(){
  assert(count[0]==37&&count[1]==37&&count[2]==37&&count[3]==37&&count[4]==74);
  for(unsigned int k=0;k<37;++k)assert(band_set[k]==1&&band_clear[k]==1);
  // Types outside the table follow the computed PC: ffff -> table-1 (odd), fffe -> the JMP extension WORD
- // (interior), 8000 -> table-8000 (no executor), 0001 -> odd.
+ // (interior), 8000 -> table-8000, 0001 -> odd. table-8000 lies in the F6c IRQ writer family A (f226..11792): 10c0e is a Duff entry
+ // (MOVE.L D4,(A6) with A6 = 8765432c: device write), 10cb2 and 112cc are F6c interior PCs, 10f02 / 10fda are cells (MOVE.W (A3)+
+ // with A3 = 87654326: the bus rejects the read).
  const std::uint32_t tables[5]={0x18c0e,0x18cb2,0x18f02,0x18fda,0x192cc};
+ const char*far[5]={"unsupported animation machine write device","unsupported animation irq f6c PC","reached program vectors require exact128BYTE view",
+  "reached program vectors require exact128BYTE view","unsupported animation irq f6c PC"};
  for(unsigned int e=0;e<5;++e){
   const std::uint32_t types[4]={0xffff,0xfffe,0x8000,0x0001};
-  const char*messages[4]={"unaligned animation machine PC","unsupported animation motion walk PC","unsupported animation machine PC","unaligned animation machine PC"};
+  const char*messages[4]={"unaligned animation machine PC","unsupported animation motion walk PC",far[e],"unaligned animation machine PC"};
   for(unsigned int t=0;t<4;++t){Bytes ram=zero_ram();put(ram,REC+2,2,types[t]);reject(ram,state(entries[e]),STOP,messages[t]);}
   // Type 90: the first PC after the 36 slots is a block start in every table (18c9e 18d42 18f92 1906a 1935c).
   Bytes ram=zero_ram();put(ram,REC+2,2,0x90);State s=state(entries[e]);Out o;
