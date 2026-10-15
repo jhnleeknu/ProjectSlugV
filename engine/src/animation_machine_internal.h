@@ -145,5 +145,6 @@ bool animation_controller_c3_block(AnimationMachineContext& c);
 bool animation_objects_b1b_block(AnimationMachineContext& c);
 bool animation_irq_f6b_block(AnimationMachineContext& c);
 bool animation_controller_c1_block(AnimationMachineContext& c);
+bool animation_controller_c2_block(AnimationMachineContext& c);
 }
 #endif

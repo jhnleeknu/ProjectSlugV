@@ -183,7 +183,6 @@ const Fixture FIXTURES[]={
  {"error-missing-rom",0xe74be,0xff000,0,{0x0,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0xe7000,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","missing or ambiguous physical program bus ROM byte",{0},0,0ULL,0,0},
  {"error-bank-table",0xeba3e,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e080:00000400","missing or ambiguous physical program bus ROM byte",{0},0,0ULL,0,0},
  {"error-boundary-3ed2",0xe743a,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","unsupported animation machine PC",{0},0,0ULL,0,0},
- {"error-boundary-101c",0xeb980,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","unsupported animation machine PC",{0},0,0ULL,0,0},
 };
 // Generic block state (native successors with incoming C clear / set).
 const char* const GENERIC_PUTS="10f004:0000e000,10e400:00080003,10e404:00110001,10e408:00000000,10e600:00000077,10e604:00000000,10e076:000e75a6,10e07a:0003,10e07c:0001,10e07e:0002,10e080:00010011,10e084:0c40,10e086:0004,10e088:0002,10e08a:01,10e046:0030,10e042:0040,10e020:0055,10d726:0013,10d72c:0102,10fd82:00,10fdb6:01,10fdb7:00,104cab:10,104cb1:02,100000:02,104cba:15,104cc0:2a";
@@ -498,7 +497,7 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u06 PC");++inside;}
  assert(even==675&&inside==540);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- const std::uint32_t outside[]={0x3ed2,0xe7562,0xeb9ba,0xeb9e4,0x101c,0xe74f8,0xe7504,0xe750c,0xe7534,0x49bca,0x49bde,0x49bf2,0x49c00,
+ const std::uint32_t outside[]={0x3ed2,0xe7562,0xeb9ba,0xeb9e4,0x10fe30,0xe74f8,0xe7504,0xe750c,0xe7534,0x49bca,0x49bde,0x49bf2,0x49c00,
   0xe7544,0xe7570,0xe7790,0xe7946,0x10fe24,0xeba3c,0xeba9e,0xebaa0};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x49be1,0x49bf1,0xe73f9,0xe74f7,0xe7547,0xe7793,0xe7945,0xeb7b7,0xeb9b9,0xeba3f,0xeba9d};
@@ -507,8 +506,8 @@ void interior(){
 // The boundaries stop when they are the stop PC and otherwise roll the whole run back; the consumers reject an Unknown C (error
 // rows of the fixture table, and below with the success inputs).
 void boundaries(){
- const char* names[]={"e742c-clear-busy","e742c-clear-key1","e7462","eb818-up","eb81e-next","eb81e-mode-1","script-jump","script-end"};
- const std::uint32_t pcs[]={0x3ed2,0xe7562,0xe7562,0xeb9ba,0xeb9e4,0x101c,0xe74f8,0xe7562};
+ const char* names[]={"e742c-clear-busy","e742c-clear-key1","e7462","eb818-up","eb81e-next","script-jump","script-end"};
+ const std::uint32_t pcs[]={0x3ed2,0xe7562,0xe7562,0xeb9ba,0xeb9e4,0xe74f8,0xe7562};
  for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(final_of(names[i]).s.pc==pcs[i]);
   Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
  const char* consumers[]={"e742c-set","e742c-clear-busy","e7916-clear","e7916-set-hit"};

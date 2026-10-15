@@ -1,6 +1,10 @@
 """D9 frame driver acceptance, controller Execute mode: C++ step_animation_machine_frame with AnimationFrameOptions.controller_mode = Execute versus native Unicorn
 execution of the original ROM in which the controller LONG (1008e4) is EXECUTED (no declared skip, no declared controller state: D9 configuration (iii)).
 
+Declared host writes (optional, --declare): `--declare game` is D9 configuration (ii) (LONG 1008e4 := c7fc and BYTE 10fdaf := 2 before the H of frame 1), `--declare demo`
+configuration (i) (LONG 1008e4 := c66a, BYTE 104cd4 := 1); other writes as ADDRESS:SIZE:VALUE[@FRAME] (hex).  The native observer applies them before the H of that frame
+(cfg['writes']) and the C++ chain applies the same writes to its own state before that frame; without --declare the run is configuration (iii) and unchanged.
+
 Native reference: the D1 verifier's FH HeadRun subclass (tools/verify_animation_machine_frame_driver.py make_verify_class, imported, not edited; same declared
 platform rebase of the stage_entry_body seeds, same routing text, base configuration, card answer) extended by a controller phase C: after the H stop at the
 controller entry, the controller runs natively from PC = LONG (1008e4) until the dispatcher return 2ac2 is fetched with A7 = SPd.  Inside C the same declared
@@ -52,6 +56,25 @@ CHAIN_SEEDS = 4
 NATIVE_END_ERROR = dict(D.NATIVE_END_ERROR)
 NATIVE_END_ERROR['C:system-return'] = 'animation frame controller system return'
 CTX = {}
+# Declared host writes (H1: before the H of the given frame, the observer's cfg['writes'] form (lo, hi, address, size, value, mode)).  Empty = configuration (iii).
+# --declare game: D9 configuration (ii) = LONG 1008e4 := c7fc and BYTE 10fdaf := 2 at frame 1 (b68 copies it to BYTE 100012 in the H of frame 1);
+# --declare demo: configuration (i) = LONG 1008e4 := c66a and BYTE 104cd4 := 1.  Any other item: ADDRESS:SIZE:VALUE[@FRAME] (hex address and value, set mode).
+DECLARED = []
+DECLARE_PRESETS = {'none': [], 'game': [(1, 1, 0x1008e4, 4, 0xc7fc, 'set'), (1, 1, 0x10fdaf, 1, 2, 'set')],
+                   'demo': [(1, 1, 0x1008e4, 4, 0xc66a, 'set'), (1, 1, 0x104cd4, 1, 1, 'set')]}
+
+
+def parse_declare(text):
+    out = []
+    for item in [x for x in (text or '').split(',') if x]:
+        if item in DECLARE_PRESETS:
+            out += DECLARE_PRESETS[item]
+            continue
+        body, _, frame = item.partition('@')
+        a, s, v = body.split(':')
+        f = int(frame) if frame else 1
+        out.append((f, f, int(a, 16), int(s), int(v, 16), 'set'))
+    return out
 
 
 # ----------------------------------------------------------------------------------
@@ -406,6 +429,20 @@ def harness_for_worker():
     return h
 
 
+def with_declared(st, frame):
+    """The C++ chain state with the declared host writes of `frame` applied (the observer applies them to the native machine before the H of that frame)."""
+    items = [w for w in DECLARED if w[0] <= frame <= w[1]]
+    if not items:
+        return st
+    ram = bytearray(st['ram'])
+    for _, _, a, n, v, mode in items:
+        old = int.from_bytes(bytes(ram[(a + i) & 0xffff] for i in range(n)), 'big')
+        new = {'set': v, 'or': old | v, 'and': old & v, 'xor': old ^ v}[mode] & ((1 << (8 * n)) - 1)
+        for i in range(n):
+            ram[(a + i) & 0xffff] = (new >> (8 * (n - 1 - i))) & 0xff
+    return dict(st, ram=bytes(ram))
+
+
 def chain_step(harness, fr, c, fc):
     if not fc['alive']:
         return
@@ -414,7 +451,7 @@ def chain_step(harness, fr, c, fc):
         fc['alive'] = False
         return
     fc['frames'] += 1
-    got = harness.call(request_for(MODE_PASS if fr['frame'] == 0 else MODE_STEP, st, c['queue']))
+    got = harness.call(request_for(MODE_PASS if fr['frame'] == 0 else MODE_STEP, with_declared(st, fr['frame']), c['queue']))
     if c.get('fail'):
         r = check_expected_failure(got, 'chain', c['kind'])
         if r['ok']:
@@ -438,7 +475,7 @@ def run_chain(harness, seed_start, chain_rows):
     for i, c in enumerate(chain_rows):
         if c is None or c.get('fail'):
             break
-        got = harness.call(request_for(MODE_PASS if i == 0 else MODE_STEP, st, c['queue']))
+        got = harness.call(request_for(MODE_PASS if i == 0 else MODE_STEP, with_declared(st, i), c['queue']))
         if not got['ok'] or got['remaining']:
             digests.append('error:' + (got.get('error') or 'queue'))
             break
@@ -489,7 +526,7 @@ def work(arg):
             chain_step(harness, fr, ch, fchain)
             ch.pop('exp', None)
         chain_rows.append(ch)
-    sd, run = make_run(case, frames, on_frame)
+    sd, run = make_run(case, frames, on_frame, DECLARED)
     run.run()
     out = dict(case=case, kind=sd['kind'], stop=run.stop, frames_done=run.frames_done, rows=rows, controller_paths=dict(paths), controller_leaders=dict(leaders),
                controller_ports=dict(cports), controller_waits=dict(cwaits), skip_bad=run.skip_bad)
@@ -710,9 +747,11 @@ def main(argv=None):
     ap.add_argument('--workers', type=int, default=2)
     ap.add_argument('--no-build', action='store_true')
     ap.add_argument('--out', default=str(OUT))
+    ap.add_argument('--declare', default='', help='declared host writes before the H of a frame: none | game | demo | ADDRESS:SIZE:VALUE[@FRAME] (comma list; hex)')
     args = ap.parse_args(argv)
     assert not sys.flags.optimize
     OUT = Path(args.out).absolute()
+    DECLARED[:] = parse_declare(args.declare)
     t0 = time.time()
     OUT.mkdir(parents=True, exist_ok=True)
     BUILD.mkdir(parents=True, exist_ok=True)
@@ -761,10 +800,10 @@ def main(argv=None):
     chains = [r['chain'] for r in results if r.get('chain')]
     determinism = dict(seeds=sorted(chain_cases), all_deterministic=all(c['deterministic'] for c in chains), chains=chains)
     report = dict(tool='tools/verify_animation_machine_frame_controller.py', full_run=args.cases is None and args.frames == 400, cases=len(cases),
-                  frames_limit=args.frames, declared_platform_rebase=rebase, observer_pins=pins, inputs=inputs, build='clang++ -std=c++11 -O2 -Wall -Wextra -pedantic',
+                  frames_limit=args.frames, declared_host_writes=[list(w) for w in DECLARED], declared_platform_rebase=rebase, observer_pins=pins, inputs=inputs, build='clang++ -std=c++11 -O2 -Wall -Wextra -pedantic',
                   negative_checks=neg, determinism=determinism, elapsed_seconds=round(time.time() - t0, 1), protocol=__doc__.strip().splitlines(), **agg,
-                  limits=['Native reference: D1 FH HeadRun + executed controller (configuration (iii), no declared controller state); IRQ c8c is not executed, so the '
-                          'c560 boot wait never opens naturally.', 'Carry has no SR oracle (Unknown tag only).  Video is ordered ports, not pixels.'])
+                  limits=['Native reference: D1 FH HeadRun + executed controller (configuration (iii) when declared_host_writes is empty, else the declared host writes of the '
+                          'report); IRQ c8c is not executed, so the c560 boot wait never opens naturally.', 'Carry has no SR oracle (Unknown tag only).  Video is ordered ports, not pixels.'])
     report_path.write_text(json.dumps(report, indent=1, sort_keys=True, default=str) + '\n')
     print(json.dumps({k: report[k] for k in ('full_run', 'totals', 'categories', 'natural_controller_paths', 'natural_controller_port_kinds', 'stop_categories',
                                              'elapsed_seconds')}, indent=1, sort_keys=True, default=str))
