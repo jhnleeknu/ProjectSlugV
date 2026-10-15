@@ -1086,6 +1086,23 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xe62f2:case 0xe62fc:case 0xb300:case 0xb306:case 0xb31a:case 0xb344:case 0xb360:case 0xa75a:case 0xa856:case 0xa868:
     case 0xa86c:case 0xa874:case 0xa876:case 0xa888:case 0xa88c:case 0xa894:case 0xa896:case 0xa8a8:case 0xa8ba:case 0xa8bc:
     case 0xa8c8:case 0xa8ce:
+    // Objects B2d (deferred chain 39366 + 28ae children 3b044 2d3ae 2d57a 2d6e6) FLOW blocks (132): JSR/BSR/JMP/BRA/RTS, LEA/MOVEA+JSR,
+    // BTST/BSET/BCLR (Z only, +Bcc), MOVEM and the 9 BCC/BCS consumers 3923c 39330 394a8 (C returned by 3a4da), 39358 395ce (3b334), 3b0ec
+    // (288c), 3b10c 2d56e 2d7b2 (49fc6). No block of the unit produces a known C; the other 88 blocks stay Unknown.
+    case 0x2d462:case 0x2d46c:case 0x2d476:case 0x2d490:case 0x2d494:case 0x2d498:case 0x2d49c:case 0x2d4a0:case 0x2d4a4:case 0x2d4a8:
+    case 0x2d4ac:case 0x2d4b0:case 0x2d4b4:case 0x2d4be:case 0x2d4ca:case 0x2d50e:case 0x2d51a:case 0x2d562:case 0x2d568:case 0x2d56e:
+    case 0x2d572:case 0x2d578:case 0x2d616:case 0x2d620:case 0x2d62a:case 0x2d644:case 0x2d648:case 0x2d64c:case 0x2d650:case 0x2d654:
+    case 0x2d658:case 0x2d65c:case 0x2d660:case 0x2d664:case 0x2d668:case 0x2d672:case 0x2d67e:case 0x2d6e4:case 0x2d75e:case 0x2d76a:
+    case 0x2d770:case 0x2d7ac:case 0x2d7b2:case 0x2d7b6:case 0x2d7bc:case 0x391e8:case 0x391f2:case 0x391f6:case 0x391fe:case 0x3920e:
+    case 0x39218:case 0x39220:case 0x3923c:case 0x39244:case 0x3924c:case 0x39254:case 0x39276:case 0x3927a:case 0x3927e:case 0x39282:
+    case 0x39292:case 0x392a6:case 0x392b0:case 0x392ba:case 0x392d8:case 0x392ea:case 0x392f2:case 0x39302:case 0x3930c:case 0x39314:
+    case 0x39330:case 0x39338:case 0x39340:case 0x39350:case 0x39354:case 0x39358:case 0x39362:case 0x39366:case 0x39380:case 0x393c6:
+    case 0x393d0:case 0x393d4:case 0x393de:case 0x39430:case 0x3943a:case 0x3943e:case 0x39454:case 0x3945e:case 0x39462:case 0x3946a:
+    case 0x3947a:case 0x39484:case 0x3948c:case 0x394a8:case 0x394b0:case 0x394b8:case 0x394c2:case 0x394c6:case 0x394ce:case 0x394d8:
+    case 0x394e2:case 0x394ea:case 0x394ee:case 0x3951a:case 0x39534:case 0x3953e:case 0x39542:case 0x3955a:case 0x39564:case 0x39568:
+    case 0x39570:case 0x39580:case 0x3958a:case 0x39592:case 0x3959a:case 0x395a4:case 0x395a8:case 0x395b0:case 0x395ba:case 0x395be:
+    case 0x395c6:case 0x395ca:case 0x395ce:case 0x395d8:case 0x3b08a:case 0x3b0e6:case 0x3b0ec:case 0x3b0f0:case 0x3b106:case 0x3b10c:
+    case 0x3b110:case 0x3b116:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1604,6 +1621,8 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x4823a && next.pc<0x48250) || (next.pc>=0x49a1a && next.pc<0x49a58) || (next.pc>=0x4e1cc && next.pc<0x4e216) ||
                 (next.pc>=0xe62ec && next.pc<0xe630a) || (next.pc>=0xb300 && next.pc<0xb362) || (next.pc>=0xa75a && next.pc<0xa770) ||
                 (next.pc>=0xa856 && next.pc<0xa8d0))ok=animation_controller_c2_block(c);
+            else if ((next.pc>=0x2d3ae && next.pc<0x2d7be) || (next.pc>=0x391e8 && next.pc<0x395dc) ||
+                (next.pc>=0x3b044 && next.pc<0x3b118))ok=animation_objects_b2d_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
