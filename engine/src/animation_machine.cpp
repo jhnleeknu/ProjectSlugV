@@ -824,6 +824,22 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x3104a:case 0x310ca:case 0x310d0:case 0x310d6:case 0x310d8:case 0x3164a:case 0x3165c:case 0x3165e:case 0x31664:case 0x3166a:
     case 0x31676:case 0x31694:case 0x31696:case 0x316ac:case 0x3195c:case 0x3199a:case 0x319b4:case 0x31a04:case 0x31a10:case 0x31a22:
     case 0x31a24:case 0x33116:
+    // Objects B1c (F4) blocks: the 27 BRA.W slots of 30b84 and the 9 of 335fe, JSR/JMP/BRA-only blocks, LEA+JSR (30cb8 339bc 339d2 339ec),
+    // BTST (Z only, +Bcc) blocks and the 6 BCC/BCS consumers 30c7c (C returned by 319f6), 3328e 3352c (49fc6), 33390 335b4 (4c2c4), 33a08
+    // (4d418). B1c has no known-C producer; every other block (MOVE/MOVEQ/TST/CMP/SUB/ADD/AND/ASR/LSL/SUBQ) stays Unknown.
+    case 0x30b84:case 0x30b88:case 0x30b8c:case 0x30b90:case 0x30b94:case 0x30b98:case 0x30b9c:case 0x30ba0:case 0x30ba4:case 0x30ba8:
+    case 0x30bac:case 0x30bb0:case 0x30bb4:case 0x30bb8:case 0x30bbc:case 0x30bc0:case 0x30bc4:case 0x30bc8:case 0x30bcc:case 0x30bd0:
+    case 0x30bd4:case 0x30bd8:case 0x30bdc:case 0x30be0:case 0x30be4:case 0x30be8:case 0x30bec:case 0x30c00:case 0x30c64:case 0x30c68:
+    case 0x30c78:case 0x30c7c:case 0x30c86:case 0x30c8a:case 0x30c8e:case 0x30c92:case 0x30cb4:case 0x30cb8:case 0x30cd6:case 0x30d66:
+    case 0x33248:case 0x3324c:case 0x33274:case 0x33280:case 0x33284:case 0x33288:case 0x3328e:case 0x33298:case 0x332d6:case 0x332f0:
+    case 0x33320:case 0x33324:case 0x33328:case 0x3332c:case 0x33332:case 0x33364:case 0x33368:case 0x33370:case 0x3337a:case 0x33390:
+    case 0x333ac:case 0x333b4:case 0x333b8:case 0x333bc:case 0x333c0:case 0x333e2:case 0x3341a:case 0x33428:case 0x33430:case 0x3346a:
+    case 0x3346e:case 0x33472:case 0x3349e:case 0x334a8:case 0x334ac:case 0x334b4:case 0x334bc:case 0x334c0:case 0x334c4:case 0x334c8:
+    case 0x334cc:case 0x33500:case 0x33504:case 0x3350c:case 0x33516:case 0x3351a:case 0x3351e:case 0x33522:case 0x33526:case 0x3352c:
+    case 0x33536:case 0x33546:case 0x3354a:case 0x33580:case 0x33584:case 0x33588:case 0x335b4:case 0x335cc:case 0x335d0:case 0x335d4:
+    case 0x335d8:case 0x335fe:case 0x33602:case 0x33606:case 0x3360a:case 0x3360e:case 0x33612:case 0x33616:case 0x3361a:case 0x3361e:
+    case 0x3362c:case 0x33636:case 0x3363a:case 0x3364e:case 0x336cc:case 0x33990:case 0x339aa:case 0x339bc:case 0x339d2:case 0x339dc:
+    case 0x339ec:case 0x339f6:case 0x33a08:case 0x33a50:
     // Objects N25 (F4) blocks: JSR-only blocks, ST.B+JSR 5e9ec, ST.B 5edca, BRA blocks, RTS (5e8be 5e8c6 5e9d4 5ebde 5eeaa 5f182 5f238)
     // and the consumers 5ec9c (BCS.W after JSR 49370), 5ee1c 5f190 (BCC.W after JSR 49fc6). N25 has no known C producer; every other
     // block stays Unknown.
@@ -1417,6 +1433,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x31002 && next.pc<0x310de) || (next.pc>=0x3164a && next.pc<0x3169c) ||
                 (next.pc>=0x316ac && next.pc<0x316c2) || (next.pc>=0x318d8 && next.pc<0x319b6) ||
                 (next.pc>=0x319f6 && next.pc<0x31a54) || (next.pc>=0x3310c && next.pc<0x3312c))ok=animation_objects_n29_block(c);
+            else if ((next.pc>=0x30b6c && next.pc<0x30d6c) || (next.pc>=0x3323e && next.pc<0x336d2) ||
+                (next.pc>=0x3395c && next.pc<0x33a88))ok=animation_objects_b1c_block(c);
             else if ((next.pc>=0x5e8b0 && next.pc<0x5ea38) || (next.pc>=0x5eac2 && next.pc<0x5eeac) ||
                 (next.pc>=0x5efe6 && next.pc<0x5f23a))ok=animation_objects_n25_block(c);
             else if ((next.pc>=0x5f24a && next.pc<0x5f4b0) || (next.pc>=0x5f760 && next.pc<0x5fb06) ||
