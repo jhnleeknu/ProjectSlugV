@@ -1049,6 +1049,12 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // the TST of 33948 / 3a4c6) 4d506 (Set or Clear from 4d4e0 / 4d4e8 / 4d502), 3b448 (BTST + BEQ) / 3b456 (Clear of 3b42e) and 4eeea (MOVEM + RTS).
     case 0x4d438:case 0x3a4ec:case 0x3ad26:case 0x3ad3c:case 0x38d70:case 0x38dbe:case 0x33950:case 0x3a4ce:case 0x4d506:
     case 0x3b448:case 0x3b456:case 0x4eeea:
+    // Objects B2a blocks: the 16 consumers 5ef6c 5f5e6 5f744 (BCC, C returned by the boundary 4b6f4) 5ef80 5efda (BCC, 1ab02) 5efc6 (BCC, 49fc6)
+    // 5f6c2 60880 (BCC, 4b54e) 5f702 6062e 606f4 6077e 6085e 60902 (BCC, 28ae) 60828 608cc (MOVEM.W + BCC, 2986) and the five RTS blocks that return
+    // the C of the path that reached them unchanged. The ORI.B #1,CCR blocks set a known Set inside the block; every other block stays Unknown.
+    case 0x5ef6c:case 0x5f5e6:case 0x5f744:case 0x5ef80:case 0x5efda:case 0x5efc6:case 0x5f6c2:case 0x60880:case 0x5f702:case 0x6062e:
+    case 0x606f4:case 0x6077e:case 0x6085e:case 0x60902:case 0x60828:case 0x608cc:case 0x5ef8a:case 0x5efe4:case 0x5f5f0:case 0x5f75e:
+    case 0x60938:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     // Objects B1b (deferred N22b/N19b) blocks: JSR/BSR/JMP/BRA/RTS, LEA/MOVEA+JSR, BTST/BSET/BCLR (Z only, +Bcc), MOVEM, SCC and the 9
@@ -1522,6 +1528,7 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x3defa && next.pc<0x3df1a) || (next.pc>=0x3df1e && next.pc<0x3df44) || (next.pc>=0x3e03e && next.pc<0x3e0aa) ||
                 (next.pc>=0x3e250 && next.pc<0x3e302) || (next.pc>=0xb1656 && next.pc<0xb16ea) || (next.pc>=0xb1c82 && next.pc<0xb1c90) ||
                 (next.pc>=0xb1c9e && next.pc<0xb1cf8) || (next.pc>=0xb1d8c && next.pc<0xb1dae))ok=animation_objects_b1b_block(c);
+            else if ((next.pc>=0x5eed2 && next.pc<0x5efe6) || (next.pc>=0x5f504 && next.pc<0x5f760) || (next.pc>=0x60516 && next.pc<0x6093a))ok=animation_objects_b2a_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
