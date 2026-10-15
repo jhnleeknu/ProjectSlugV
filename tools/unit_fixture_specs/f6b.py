@@ -285,7 +285,7 @@ def build():
                0x873c, 0x8746, 0x874e, 0x8752, 0x8a00, 0x8b4e, 0x8b52, 0x8b58, 0x8b62):
         typed('error-interior-%x' % pc, pc, pal=make_palette(52), expect=('error', 'unsupported animation irq f6b PC'))
     typed('error-odd-pc', 0x7327, pal=make_palette(53), expect=('error', 'unaligned animation machine PC'))
-    typed('error-neighbour-8b64', 0x8b64, pal=make_palette(54), expect=('error', 'unsupported animation machine PC'))
+    typed('error-neighbour-10fe00', 0x10fe00, pal=make_palette(54), expect=('error', 'unsupported animation machine PC'))  # 8b64 is routed by controller C3a since the merge
     # ---- negative checks: corrupted C++ palette input ------------------------------------------------------------------------------
     good = F6A.typed_entry(base, 0x72fa, staging_writes(60, set([3, 4])) + [(PENDING, 1, 0x80)])
     p0, p1, sel = good['palette']
