@@ -785,7 +785,7 @@ void zero_step(){
    o.status==ms5::AnimationMachineReturned&&o.dev.bank_base==0x200000);}
 }
 // Every other even PC of the 7 routed ranges is rejected (9 bundled conditional branches among them); the 478a6 TRAP and
-// the unrouted neighbours (3d62 RTS, the 3d64 entry, 3d7c, ca88, 474f4 data, 4755e, 48156; the 479b0 callback is now a
+// the unrouted neighbours (3d62 RTS, the 3d64 entry, 3d7c, ca88, 474f4 data, 48250 (4755e now runs in the C2 controller unit), 48156; the 479b0 callback is now a
 // stage area F1c2 block start and the unrouted 10fe22, outside every unit contract, stands in for it) have no executor; odd
 // PCs are rejected first.
 void interior(){
@@ -795,7 +795,7 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation stage catalog PC");++inside;if(in_list(BUNDLED,9,pc))++bundled;}
  assert(even==282&&inside==214&&bundled==9);
  for(unsigned int i=0;i<9;++i)assert(!is_start(BUNDLED[i]));
- const std::uint32_t outside[]={0x478a6,0x3d62,0x3d64,0x3d7c,0xca88,0x474f4,0x4755e,0x10fe22,0x4814c}; // 48156 is F6a now
+ const std::uint32_t outside[]={0x478a6,0x3d62,0x3d64,0x3d7c,0xca88,0x474f4,0x48250,0x10fe22,0x4814c}; // 48156 is F6a now
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x3d59,0x3d6b,0xca8b,0x474e3,0x47541,0x477e5,0x4814f};

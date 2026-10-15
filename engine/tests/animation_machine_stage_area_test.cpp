@@ -878,7 +878,7 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation stage area PC");++inside;if(in_list(BUNDLED,BUNDLED_COUNT,pc))++bundled;}
  assert(even==790&&inside==636&&bundled==24);
  for(unsigned int i=0;i<BUNDLED_COUNT;++i)assert(!is_start(BUNDLED[i]));
- const std::uint32_t outside[]={0x4d824,0x47a54,0x47a5a,0x47a5e,0x47a62,0x1bcfc,0x1be82,0x2ef8e,0x47592,0x476da,0x4817e,0x481dc,0x49a56,
+ const std::uint32_t outside[]={0x4d824,0x47a54,0x47a5a,0x47a5e,0x47a62,0x1bcfc,0x1be82,0x2ef8e,0x10fe02,0x476da,0x4817e,0x481dc,0x10fe04,
   0x4d124,0x4ddb4,0x4e664,0xb4804,0xb4a22,0xb7a1e,0xb7a2a,0xb7a2c,0xd7608};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   reject(ram,s,STOP,"unsupported animation machine PC");}

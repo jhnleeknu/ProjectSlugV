@@ -297,7 +297,7 @@ void errors(){
  // Neighbours outside the routed ranges and boundaries still without an executor
  // (a698..a708 now run in the nested unit).
  // 10fe20 replaces e84d6 (now the objects U03 glyph writer).
- const std::uint32_t outside[]={0x9ee6,0xa63c,0x10fe20,0xc2fa};
+ const std::uint32_t outside[]={0x9ee6,0xa63c,0x10fe20,0xbbfa}; // c2fa now runs in the C2 controller unit (bbfa replaces it)
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0xa663,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }

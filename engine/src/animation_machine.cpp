@@ -1074,6 +1074,18 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x5ef6c:case 0x5f5e6:case 0x5f744:case 0x5ef80:case 0x5efda:case 0x5efc6:case 0x5f6c2:case 0x60880:case 0x5f702:case 0x6062e:
     case 0x606f4:case 0x6077e:case 0x6085e:case 0x60902:case 0x60828:case 0x608cc:case 0x5ef8a:case 0x5efe4:case 0x5f5f0:case 0x5f75e:
     case 0x60938:
+    // Controller C2 (F5) FLOW blocks (72): JSR/BSR/JMP/BRA/RTS, LEA/MOVEA and the conditional branches of the transitions, teardown, game start,
+    // card request, b300 / b344 menu child and the menu item handlers. c87e c916 are the BCS consumers of the C returned by 289e; c964 c97a read
+    // the Z of the TST.B (A0) that ended 4a974 and recompute it from BYTE (A0). MOVE/MOVEQ/CLR/TST/CMP/CMPI/CMPA/ADD/SUB/ADDQ/SUBQ/MULU/LSR/
+    // EXG/MOVE.L #imm,(A6) blocks stay Unknown (c326 too: its MOVE.W precedes the BTST).
+    case 0x31d4:case 0xc2fa:case 0xc4cc:case 0xc4d2:case 0xc4d8:case 0xc4ee:case 0xc4f6:case 0xc69a:case 0xc69e:case 0xc6a2:
+    case 0xc6c8:case 0xc766:case 0xc772:case 0xc776:case 0xc77a:case 0xc7c0:case 0xc7ce:case 0xc7d2:case 0xc7d6:case 0xc7e6:
+    case 0xc81a:case 0xc846:case 0xc84a:case 0xc84e:case 0xc85e:case 0xc874:case 0xc87e:case 0xc882:case 0xc886:case 0xc88a:
+    case 0xc890:case 0xc8aa:case 0xc8b0:case 0xc8b4:case 0xc8c4:case 0xc8ca:case 0xc90c:case 0xc916:case 0xc91a:case 0xc91e:
+    case 0xc922:case 0xc952:case 0xc964:case 0xc968:case 0xc97a:case 0xc97e:case 0xc982:case 0x4756e:case 0x47582:case 0x4758a:
+    case 0xe62f2:case 0xe62fc:case 0xb300:case 0xb306:case 0xb31a:case 0xb344:case 0xb360:case 0xa75a:case 0xa856:case 0xa868:
+    case 0xa86c:case 0xa874:case 0xa876:case 0xa888:case 0xa88c:case 0xa894:case 0xa896:case 0xa8a8:case 0xa8ba:case 0xa8bc:
+    case 0xa8c8:case 0xa8ce:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1586,6 +1598,12 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x79222 && next.pc<0x79256) || (next.pc>=0x7930a && next.pc<0x79320) || (next.pc>=0x7962a && next.pc<0x79654) ||
                 (next.pc>=0x796e6 && next.pc<0x79746) || (next.pc>=0xb7100 && next.pc<0xb76a4) ||
                 (next.pc>=0xb7d2e && next.pc<0xb7d4a))ok=animation_objects_b1a_block(c);
+            else if ((next.pc>=0x100e && next.pc<0x1022) || (next.pc>=0x3162 && next.pc<0x31d6) || (next.pc>=0xbbd4 && next.pc<0xbbfa) ||
+                (next.pc>=0xc2fa && next.pc<0xc364) || (next.pc>=0xc4cc && next.pc<0xc4f8) || (next.pc>=0xc686 && next.pc<0xc6ce) ||
+                (next.pc>=0xc74c && next.pc<0xc7fc) || (next.pc>=0xc80e && next.pc<0xc988) || (next.pc>=0x4755e && next.pc<0x47594) ||
+                (next.pc>=0x4823a && next.pc<0x48250) || (next.pc>=0x49a1a && next.pc<0x49a58) || (next.pc>=0x4e1cc && next.pc<0x4e216) ||
+                (next.pc>=0xe62ec && next.pc<0xe630a) || (next.pc>=0xb300 && next.pc<0xb362) || (next.pc>=0xa75a && next.pc<0xa770) ||
+                (next.pc>=0xa856 && next.pc<0xa8d0))ok=animation_controller_c2_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
