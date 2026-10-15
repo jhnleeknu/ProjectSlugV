@@ -10,9 +10,11 @@ std::uint32_t am_extend_word(std::uint32_t value) {
 std::uint32_t am_index(std::uint32_t base,std::uint32_t word) {return base+am_extend_word(word);}
 bool am_error(AnimationMachineContext& c,const char* message) {c.error=message;return false;}
 namespace {
-// Declared external-read devices: WORD raster 3c0006 and BYTE inputs 300000 / 340000 / 380000 (24-bit address, exact size).
+// Declared external-read devices: WORD raster 3c0006, BYTE inputs 300000 / 340000 / 380000 and the BYTE Z80 reply 320000 (F6 scope
+// decision E7; 24-bit address, exact size).
 bool external_queue_device(std::uint32_t address,unsigned int size) {
-    return (address==0x3c0006U && size==2) || ((address==0x300000U || address==0x340000U || address==0x380000U) && size==1);
+    return (address==0x3c0006U && size==2) ||
+        ((address==0x300000U || address==0x320000U || address==0x340000U || address==0x380000U) && size==1);
 }
 }
 bool am_read(AnimationMachineContext& c,std::uint32_t address,unsigned int size,std::uint32_t& value) {
@@ -1035,6 +1037,13 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xee44:case 0xee48:case 0xee4c:case 0xee50:case 0xee54:case 0xee58:case 0xee5c:case 0xee60:case 0xee64:case 0xee68:
     case 0xee6c:case 0xee70:case 0xee74:case 0xee78:case 0xee7c:case 0xee80:case 0xee84:case 0xee88:case 0xee8c:case 0xee90:
     case 0xee94:case 0xee98:case 0xee9c:case 0xeea0:
+    // F6a IRQ shell FLOW_ONLY blocks (contract carry section: JMP/JSR/BSR/BRA/RTS, LEA/MOVEA, BTST/BSET/BCLR (Z only)+Bcc) and the clear run
+    // RTS 1669e (n = 0 entry). F6a consumes no incoming C; 16e92 (Set), 16e9e (Clear) and the RTE blocks 248 2b6 2ce (popped SR bit 0)
+    // produce a known C inside their block; every other block stays Unknown.
+    case 0x21e:case 0x23c:case 0x242:case 0xa4c:case 0xa72:case 0xaba:case 0xacc:case 0xb06:case 0xb0a:case 0xbc8:case 0xbec:
+    case 0xc8c:case 0xc96:case 0xcb0:case 0xcbe:case 0xcc4:case 0xcd6:case 0xcdc:case 0xce2:case 0xd2a:case 0xd36:case 0xd48:
+    case 0x3cac:case 0x3cde:case 0x3ce0:case 0x3d06:case 0x3dcc:case 0x16cfa:case 0x16d52:case 0x16d66:case 0x16d84:case 0x16e0c:
+    case 0x16e22:case 0x16e40:case 0x187d8:case 0x187e2:case 0x18be6:case 0x1ae1a:case 0x1ae26:case 0x1ae32:case 0x4817e:case 0x1669e:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1473,6 +1482,10 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x3902 && next.pc<0x3918) || (next.pc>=0x9086 && next.pc<0x9344))ok=animation_frame_head_h2_block(c);
             else if ((next.pc>=0x4c3de && next.pc<0x4c6f0) || (next.pc>=0x4c72a && next.pc<0x4c7a4) ||
                 (next.pc>=0x4c810 && next.pc<0x4cf52))ok=animation_objects_n34_block(c);
+            else if ((next.pc>=0x20c && next.pc<0x2d8) || next.pc==0x3dcc || (next.pc>=0xa2c && next.pc<0xb0c) ||
+                (next.pc>=0xbbe && next.pc<0xbee) || (next.pc>=0xc8c && next.pc<0xd56) || (next.pc>=0x3cac && next.pc<0x3d3a) ||
+                (next.pc>=0x48156 && next.pc<0x48180) || (next.pc>=0x1adf8 && next.pc<0x1ae56) || (next.pc>=0x187d8 && next.pc<0x18be8) ||
+                (next.pc>=0x16092 && next.pc<0x166bc) || (next.pc>=0x16cfa && next.pc<0x16ea4))ok=animation_irq_f6a_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
