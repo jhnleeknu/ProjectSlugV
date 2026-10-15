@@ -603,8 +603,10 @@ def fixtures(case):
     cat, ex = frame_expectation(fr) if fr else ('missing', None)
     queue = list(fr['h']['ext']) + (ex['cq'] if ex else []) + (ex['info']['n_queue'] if ex and 'info' in ex else [])
     got = harness.call(request_for(MODE_STEP, fr['start'], queue))
-    tests['controller-c560-open-c3b-boundary'] = dict(ok=(not got['ok']) and got['preserved'] and got['error'] == 'unsupported animation machine PC' and
-                                                      fr['c']['entry'] == 0xc560 and 0xc56e not in C3A_LEADERS,
+    # With C2 and C3b routed (units merged after this check was written), the released boot wait runs c56e.. through C2 to the BIOS
+    # JMP c00444 natively and in C++: the expected outcome is the controller system return on both sides, state preserved.
+    tests['controller-c560-open-c3b-boundary'] = dict(ok=(not got['ok']) and got['preserved'] and got['error'] == 'animation frame controller system return' and
+                                                      fr['c']['entry'] == 0xc560 and fr['c']['reason'].get('reason') == 'system-return',
                                                       native_category=cat, native_c=fr['c']['reason'], native_path=['%x' % p for p in fr['c']['path']],
                                                       cpp_error=got.get('error'), preserved=got.get('preserved'))
     # natural frames 1 (c52a) and 2 (c560): controller path and ports

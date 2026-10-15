@@ -43,8 +43,19 @@
   - 작업자들이 고친 card_menu·stage_catalog 등 시험 탐침
 - 예전 검증기 `tools/verify_animation_machine.py`의 `SOURCES`를 Makefile 목록과 동기화했다.
 
-## 검증(최종 병합 트리)
-아래 "최종 회귀"에 결과를 적는다.
+## 검증(최종 병합 트리 `cd9be14` + 아래 수정)
+- C++ animation_machine 시험 바이너리 112개(깨끗한 재빌드)와 Python 단위 시험 310개가 모두 통과했다.
+- V1 단위 원본 비교(C2가 들어간 상태): C3b 480/480, C2 1,607/1,607.
+- D1 구동기(case 0, 32, 116 × 120 frame): 일치했다.
+- controller Execute 모드, (ii) 게임 선언(case 0, 32, 116 × 400 frame): 1,200/1,200 일치했고, C++ 단독 연쇄 3개 seed가 모두 400 frame을 완주했다.
+  - 처음 실행에서 고정 fixture `controller-c560-open-c3b-boundary` 하나가 실패했다.
+  - 원인: C2·C3b 병합 뒤 boot가 `JMP c00444`까지 이어져, C++와 native가 모두 system return으로 끝난다(상태 보존). 기대값이 옛 "미연결 PC" 그대로였다.
+  - 기대값을 새 결과로 고쳤고 재실행에서 `fixtures_ok` true.
+- 단위 작업자 단계에서 이미 수행한 전체 실행(병합 전 각 브랜치):
+  - D1 54,400/54,400
+  - D9 Execute (iii) 54,400/54,400
+  - C2 Execute (ii) 54,400/54,400
+  - F6-D IRQ 모드 54,400/54,400
 
 ## 독립 리뷰
 사용자의 크레딧 제약으로 이번 묶음에는 별도 독립 리뷰 작업자를 배정하지 않았다. 대신 다음으로 대신했다.
