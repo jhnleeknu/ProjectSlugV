@@ -100,8 +100,9 @@ void interior(){
     for(std::uint32_t pc=0x8752;pc<0x8b52;pc+=4)assert(!is_start(pc));
     const std::uint32_t odd[]={0x72fb,0x7327,0x732f,0x871b,0x873b,0x8b61};
     for(unsigned int i=0;i<6;++i){Bytes ram;State s=fixture(ram,odd[i]);Palette p;reject(ram,s,p,SENT,"unaligned animation machine PC");}
-    // The neighbours stay outside: 72f0 is stage entry (routed), 8b64 is unrouted.
-    {Bytes ram;State s=fixture(ram,0x8b64);Palette p;reject(ram,s,p,SENT,"unsupported animation machine PC");}
+    // The neighbours stay outside: 72f0 is stage entry (routed); 8b64 is routed by controller C3a since the merge, so the unrouted
+    // probe is the work-RAM PC 10fe00 (repository convention for boundary probes).
+    {Bytes ram;State s=fixture(ram,0x10fe00);Palette p;reject(ram,s,p,SENT,"unsupported animation machine PC");}
 }
 // ---- carry: FLOW blocks keep the incoming C, the others make it Unknown -----------------------------------------------------------
 void carry(){
