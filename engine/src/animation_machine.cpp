@@ -1539,6 +1539,7 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xbbe && next.pc<0xbee) || (next.pc>=0xc8c && next.pc<0xd56) || (next.pc>=0x3cac && next.pc<0x3d3a) ||
                 (next.pc>=0x48156 && next.pc<0x48180) || (next.pc>=0x1adf8 && next.pc<0x1ae56) || (next.pc>=0x187d8 && next.pc<0x18be8) ||
                 (next.pc>=0x16092 && next.pc<0x166bc) || (next.pc>=0x16cfa && next.pc<0x16ea4))ok=animation_irq_f6a_block(c);
+            else if ((next.pc>=0xf226 && next.pc<0x11792) || (next.pc>=0x13b46 && next.pc<0x16092))ok=animation_irq_f6c_block(c);
             else if ((next.pc>=0x3383c && next.pc<0x338f8) || (next.pc>=0x33940 && next.pc<0x33958) ||
                 (next.pc>=0x38d56 && next.pc<0x38dd4) || (next.pc>=0x39f9c && next.pc<0x3a048) ||
                 (next.pc>=0x3a0dc && next.pc<0x3a1e0) || (next.pc>=0x3a4a4 && next.pc<0x3a4d6) ||

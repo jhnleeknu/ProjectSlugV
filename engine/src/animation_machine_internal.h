@@ -140,6 +140,7 @@ bool animation_objects_n34_block(AnimationMachineContext& c);
 bool animation_frame_head_h8_block(AnimationMachineContext& c);
 bool animation_objects_b1c_block(AnimationMachineContext& c);
 bool animation_irq_f6a_block(AnimationMachineContext& c);
+bool animation_irq_f6c_block(AnimationMachineContext& c);
 bool animation_objects_b2b_block(AnimationMachineContext& c);
 bool animation_controller_c3_block(AnimationMachineContext& c);
 bool animation_objects_b1b_block(AnimationMachineContext& c);
