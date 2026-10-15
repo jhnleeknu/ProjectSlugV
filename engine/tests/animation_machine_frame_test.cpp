@@ -331,9 +331,10 @@ void controller_execute(){
    same_waits(k.r.waits,b.r.waits)&&k.r.node_external_reads==b.r.node_external_reads&&same_device(k.d,b.d));
   for(unsigned int i=0;i<65536;++i)if(k.ram[i]!=b.ram[i])assert(i>=((SPD-8)&65535U)&&i<((SPD-4)&65535U));
   ++checks;
-  // WORD 107dea = 0 opens the wait: C reaches c56e (C3b, no executor) -> the checked error, everything preserved.
+  // WORD 107dea = 0 opens the wait: C reaches c56e (C3b, routed) and the palette bind e7bf4 needs ROM data this frame bus does not carry ->
+  // the checked error of the program bus, everything preserved.
   Bytes open(b.ram);put(open,0x107dea,2,0);Device d4=b.d;d4.reads=frame_reads();
-  reject(ms5::step_animation_machine_frame,open,b.s,d4,"unsupported animation machine PC",false,true);}
+  reject(ms5::step_animation_machine_frame,open,b.s,d4,"missing or ambiguous physical program bus ROM byte",false,true);}
  // Skip mode never runs the controller (the boot fill is not done).
  {const Run k=drive(true,ram,h,d);assert(k.r.controller_pc==0xc52a&&k.r.controller_exit_pc==0&&k.r.controller_ports.empty()&&get(k.ram,0x107dea,2)==0);}
  // A declared release inside C: the controller c364 (fade card) reaches the BIOS card request: card_resume answers it (segment 2).

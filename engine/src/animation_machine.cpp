@@ -1077,6 +1077,8 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
+    // Controller C3b 4fb3c: SCC.B 62(A6) consumes the C returned by 28ae (checked error when Unknown); the block keeps C.
+    case 0x4fb3c:
     case 0x3b82:return true;
     // Objects B1b (deferred N22b/N19b) blocks: JSR/BSR/JMP/BRA/RTS, LEA/MOVEA+JSR, BTST/BSET/BCLR (Z only, +Bcc), MOVEM, SCC and the 9
     // BCC/BCS/SCC consumers 3d40a (C returned by 28ae), 3d478 (3dcf2), 3dbae 3e2ec (49fc6), 3dbca (3dcac -> 4d418), 3e2dc (288c), b16c2
@@ -1551,7 +1553,8 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x4d98a && next.pc<0x4d9a2) || (next.pc>=0x4d9ba && next.pc<0x4d9d6) ||
                 (next.pc>=0x4eea2 && next.pc<0x4eef4) || (next.pc>=0x4f08a && next.pc<0x4f0c4) ||
                 (next.pc>=0x4ff96 && next.pc<0x4ffba) || (next.pc>=0xd3d7c && next.pc<0xd3d9c))ok=animation_objects_b2b_block(c);
-            else if ((next.pc>=0x8b64 && next.pc<0x8bbc) || (next.pc>=0xc52a && next.pc<0xc56e))ok=animation_controller_c3_block(c);
+            else if ((next.pc>=0x8b64 && next.pc<0x8bbc) || (next.pc>=0xc52a && next.pc<0xc654) || (next.pc>=0xc6da && next.pc<0xc724) ||
+                (next.pc>=0x4fb1a && next.pc<0x4fb4a))ok=animation_controller_c3_block(c);
             else if ((next.pc>=0x3d3f0 && next.pc<0x3d526) || (next.pc>=0x3d7e8 && next.pc<0x3d982) || (next.pc>=0x3da72 && next.pc<0x3db62) ||
                 (next.pc>=0x3db68 && next.pc<0x3dbba) || (next.pc>=0x3dbbe && next.pc<0x3dc24) || (next.pc>=0x3dcac && next.pc<0x3dcf2) ||
                 (next.pc>=0x3dd0e && next.pc<0x3dd42) || (next.pc>=0x3dde4 && next.pc<0x3de06) || (next.pc>=0x3de54 && next.pc<0x3def2) ||
