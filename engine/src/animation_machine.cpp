@@ -1455,6 +1455,7 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x3902 && next.pc<0x3918) || (next.pc>=0x9086 && next.pc<0x9344))ok=animation_frame_head_h2_block(c);
             else if ((next.pc>=0x4c3de && next.pc<0x4c6f0) || (next.pc>=0x4c72a && next.pc<0x4c7a4) ||
                 (next.pc>=0x4c810 && next.pc<0x4cf52))ok=animation_objects_n34_block(c);
+            else if ((next.pc>=0x8b64 && next.pc<0x8bbc) || (next.pc>=0xc52a && next.pc<0xc56e))ok=animation_controller_c3_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
