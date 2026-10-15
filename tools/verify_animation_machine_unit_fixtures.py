@@ -13,6 +13,9 @@ Expectations:  'match'            C++ and native agree on everything above (nati
 Declared releases (names): ef2, 16bd0, 3aea, cda4 (the D1 head waits), gate (47af0/478de carry gate), card (BIOS card c00468 resume; a failing run is
 re-run to c00468 exactly like the frame driver, answer byte written to 10fdc6, resume at c37c with A7+4).  Unlisted wait PCs are errors on both sides.
 Wait limit (default 16) counts every release including the card resume; one more Waiting block is an error on both sides.
+Palette RAM (F6 scope decision E6, optional):  a state may carry 'palette' = (bank0 8192 bytes, bank1 8192 bytes, selected 0/1).  Then C++ runs
+run_animation_machine_with_palette (harness flag bit 6), the native machine class must provide palette_load(palette) / palette_dump() (a spec
+subclass maps the device), and both banks and the selection are compared.  States without the key are verified exactly as before.
 
 Library:  Fixture, run_fixtures(fixtures, workers), fixture_from_state(...), with_host_writes(...), advance_native(...), seed_frames(...), seed_h_fixtures(...),
           seed_node_fixture(...).   CLI:  --spec module.py (FIXTURES list or build() -> list) --out dir --workers N
@@ -132,6 +135,8 @@ class Fixture(object):
         for s in (self.state, self.cpp_state):
             if s is not None:
                 h.update(s['ram'] + struct.pack('>16I', *[s['regs'][k] for k in KEYS]) + struct.pack('>IIIII', s['pc'], s['bank'][0], s['bank'][1], s['bank'][2], s['carry']) + s['pvc'])
+                if s.get('palette') is not None:
+                    h.update(b'palette' + s['palette'][0] + s['palette'][1] + bytes([s['palette'][2]]))
         h.update(json.dumps([self.queue, self.cpp_queue, self.stop, self.cpp_stop, self.expect, self.releases, self.wait_limit, self.external_status, self.card_answer], sort_keys=True).encode())
         return h.hexdigest()
 
@@ -143,14 +148,29 @@ def release_mask(names, card_answer):
 # ----------------------------------------------------------------------------------
 # Packets
 # ----------------------------------------------------------------------------------
+PALETTE_FLAG = 64
+
+
+def check_palette(palette):
+    require(len(palette) == 3 and len(palette[0]) == 8192 and len(palette[1]) == 8192 and palette[2] in (0, 1), 'palette = (8192 bytes, 8192 bytes, 0/1)')
+    return (bytes(palette[0]), bytes(palette[1]), palette[2])
+
+
 def encode_request(state, queue, stop, releases, wait_limit, external_status, card_answer):
-    v = [state['pc'], state.get('carry', 0), state['bank'][0], stop, release_mask(releases, card_answer), wait_limit, external_status, len(queue)]
+    pal = state.get('palette')
+    flags = release_mask(releases, card_answer) | (PALETTE_FLAG if pal is not None else 0)
+    v = [state['pc'], state.get('carry', 0), state['bank'][0], stop, flags, wait_limit, external_status, len(queue)]
     v += [state['regs'][k] for k in KEYS]
-    return struct.pack('>24I', *v) + state['ram'] + state['pvc'] + b''.join(struct.pack('>III', *e) for e in queue)
+    out = struct.pack('>24I', *v) + state['ram'] + state['pvc'] + b''.join(struct.pack('>III', *e) for e in queue)
+    if pal is not None:
+        b0, b1, sel = check_palette(pal)
+        out += b0 + b1 + struct.pack('>I', sel)
+    return out
 
 
-def parse_response(payload):
-    """-> dict(ok=True, ...) | dict(ok=False, preserved, committed, error).  Malformed -> ValueError (a harness fault, never a result)."""
+def parse_response(payload, palette=False):
+    """-> dict(ok=True, ...) | dict(ok=False, preserved, committed, error).  Malformed -> ValueError (a harness fault, never a result).
+    palette: the request attached palette RAM (the success packet then ends with bank 0, bank 1, selected)."""
     if len(payload) < 12:
         raise ValueError('short harness packet')
     tag = struct.unpack_from('>I', payload)[0]
@@ -164,7 +184,7 @@ def parse_response(payload):
     status, pc, carry, bank, reads, np, nq, nw = struct.unpack_from('>8I', payload, 4)
     if status != 0 or carry not in (0, 1, 2):
         raise ValueError('invalid harness status/carry')
-    if len(payload) != 36 + 64 + 65536 + 8192 + 12 * (np + nq) + 20 * nw:
+    if len(payload) != 36 + 64 + 65536 + 8192 + 12 * (np + nq) + 20 * nw + (16388 if palette else 0):
         raise ValueError('invalid harness packet length')
     regs = dict(zip(KEYS, struct.unpack_from('>16I', payload, 36)))
     at = 100
@@ -177,7 +197,14 @@ def parse_response(payload):
     remaining = [struct.unpack_from('>III', payload, at + 12 * i) for i in range(nq)]
     at += 12 * nq
     waits = [struct.unpack_from('>5I', payload, at + 20 * i) for i in range(nw)]
-    return dict(ok=True, ram=ram, pvc=pvc, regs=regs, pc=pc, carry=carry, bank_base=bank, reads=reads, ports=ports, remaining=remaining, waits=waits)
+    out = dict(ok=True, ram=ram, pvc=pvc, regs=regs, pc=pc, carry=carry, bank_base=bank, reads=reads, ports=ports, remaining=remaining, waits=waits)
+    if palette:
+        at += 20 * nw
+        sel = struct.unpack_from('>I', payload, at + 16384)[0]
+        if sel > 1:
+            raise ValueError('invalid harness palette selection')
+        out['palette'] = (payload[at:at + 8192], payload[at + 8192:at + 16384], sel)
+    return out
 
 
 class Harness(object):
@@ -190,12 +217,12 @@ class Harness(object):
         require(len(data) == n, ('truncated harness response', len(data), n))
         return data
 
-    def call(self, payload):
+    def call(self, payload, palette=False):
         self.proc.stdin.write(struct.pack('>I', len(payload)) + payload)
         self.proc.stdin.flush()
         size = struct.unpack('>I', self.exact(4))[0]
         require(12 <= size <= 4194304, 'invalid harness packet size')
-        return parse_response(self.exact(size))
+        return parse_response(self.exact(size), palette)
 
     def close(self):
         try:
@@ -224,6 +251,9 @@ class Native(object):
         unicorn, S, PB = self.unicorn, self.S, self.PB
         snap = dict(ram=fx_state['ram'], regs=fx_state['regs'], pc=fx_state['pc'], bank=fx_state['bank'])
         m = PB.PvcMachine(self.program, self.fixed, snap)
+        if fx_state.get('palette') is not None:
+            require(hasattr(m, 'palette_load') and hasattr(m, 'palette_dump'), 'palette state needs a native machine with palette_load / palette_dump')
+            m.palette_load(check_palette(fx_state['palette']))
         m.install_basic_hooks()
         c = m.cpu
         for base in (0x340000, 0x380000):
@@ -329,8 +359,11 @@ class Native(object):
         pvc = bytearray(c.mem_read(PVC_LO, 8192))
         pvc[0x1ff0:0x1ff4] = struct.pack('>HH', m.ff8, m.ff9)
         regs = m.regs()
-        return dict(ok=True, ram=m.ram(), regs=regs, pc=stop, bank=(m.bank, m.ff8, m.ff9), pvc=bytes(pvc), ports=[(a, n, v) for _, a, n, v in m.ports],
-                    consumed=consumed, remaining=rest, status_reads=status_reads[0], waits=waits)
+        out = dict(ok=True, ram=m.ram(), regs=regs, pc=stop, bank=(m.bank, m.ff8, m.ff9), pvc=bytes(pvc), ports=[(a, n, v) for _, a, n, v in m.ports],
+                   consumed=consumed, remaining=rest, status_reads=status_reads[0], waits=waits)
+        if fx_state.get('palette') is not None:
+            out['palette'] = check_palette(m.palette_dump())
+        return out
 
 
 NATIVE = [None]
@@ -343,8 +376,11 @@ def native():
 
 
 def native_state(result, carry=0):
-    """A native result as a fixture state (for chaining fixtures)."""
-    return make_state(result['ram'], result['regs'], result['pc'], result['bank'], result['pvc'], carry)
+    """A native result as a fixture state (for chaining fixtures; a native palette result is carried over)."""
+    st = make_state(result['ram'], result['regs'], result['pc'], result['bank'], result['pvc'], carry)
+    if result.get('palette') is not None:
+        st['palette'] = result['palette']
+    return st
 
 
 def advance_native(state, queue, stop, **kw):
@@ -407,6 +443,16 @@ def compare(cpp, nat, queue):
     d, _ = compare_ports(cpp['ports'], nat['ports'])
     if d:
         out.append(d)
+    if cpp.get('palette') != nat.get('palette'):
+        cp, np_ = cpp.get('palette'), nat.get('palette')
+        if cp is None or np_ is None:
+            out.append(dict(field='palette', cpp=cp is not None, native=np_ is not None))
+        elif cp[2] != np_[2]:
+            out.append(dict(field='palette-selected', cpp=cp[2], native=np_[2]))
+        else:
+            b = 0 if cp[0] != np_[0] else 1
+            i = first_diff(cp[b], np_[b])
+            out.append(dict(field='palette-bank%d' % b, offset=i, cpp=cp[b][i], native=np_[b][i]))
     if [tuple(w) for w in cpp['waits']] != [tuple(w) for w in nat['waits']]:
         i = first_diff(cpp['waits'], nat['waits'])
         out.append(dict(field='waits', index=i, cpp=cpp['waits'][i] if i < len(cpp['waits']) else None, native=nat['waits'][i] if i < len(nat['waits']) else None))
@@ -419,9 +465,9 @@ def compare(cpp, nat, queue):
 
 
 def compare_reference(nat, ref):
-    """Native result against an independent end state (ram, regs, pc, pvc keys, any subset)."""
+    """Native result against an independent end state (ram, regs, pc, pvc, palette keys, any subset)."""
     out = []
-    for k in ('pc', 'regs', 'pvc'):
+    for k in ('pc', 'regs', 'pvc', 'palette'):
         if k in ref and ref[k] != nat[k]:
             out.append(dict(field='native-vs-reference-' + k))
     if 'ram' in ref and ref['ram'] != nat['ram']:
@@ -436,7 +482,8 @@ def compare_reference(nat, ref):
 def cpp_call(harness, fx, state=None, queue=None, stop=None):
     st = fx.state if state is None else state
     q = fx.queue if queue is None else queue
-    return harness.call(encode_request(st, q, fx.stop if stop is None else stop, fx.releases, fx.wait_limit, fx.external_status, fx.card_answer))
+    return harness.call(encode_request(st, q, fx.stop if stop is None else stop, fx.releases, fx.wait_limit, fx.external_status, fx.card_answer),
+                        st.get('palette') is not None)
 
 
 def run_one(harness, fx):

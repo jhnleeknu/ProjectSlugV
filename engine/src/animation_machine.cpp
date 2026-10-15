@@ -29,6 +29,13 @@ bool am_read(AnimationMachineContext& c,std::uint32_t address,unsigned int size,
         value=size==1?(head.value&255U):(head.value&65535U);
         c.device.reads.erase(c.device.reads.begin());++c.external_reads;return true;
     }
+    const std::uint32_t at=address&0xffffffU;
+    if (c.palette!=0 && (size==1 || size==2 || size==4) && (size==1 || (at&1U)==0U) && at>=0x400000U && at+size<=0x800000U) {
+        // Palette RAM mirror (E6): the selected 8 KiB bank at (address & 1fff); only with an attached palette device.
+        const std::vector<std::uint8_t>& bank=c.palette->banks[c.palette->selected];
+        value=0;for (unsigned int i=0;i<size;++i)value=(value<<8)|bank[(at+i)&0x1fffU];
+        return true;
+    }
     c.bus.bank_base=c.device.bank_base;
     return read_program_bus(c.ram,c.windows,c.bus,address,size,value,c.error);
 }
@@ -36,6 +43,8 @@ namespace {
 bool carry_preserving_pc(std::uint32_t pc) {
     // Entire original blocks must preserve C. Shared bus/stack operations do
     // not imply MOVE flags: MOVEM, PEA, JSR and RTS use those operations too.
+    // F6b palette cells 7326 <= pc < 871a (BCLR (Z only)+BEQ and the MOVEM copy pairs; the even non-start PCs there are interior errors).
+    if (pc>=0x7326U && pc<0x871aU)return true;
     switch(pc) {
     case 0x1dc84:case 0x1dc8a:case 0x210ae:case 0x210b4:
     case 0x47d0a:case 0x47d14:case 0x47d1a:case 0x47f04:
@@ -1045,6 +1054,8 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x3cac:case 0x3cde:case 0x3ce0:case 0x3d06:case 0x3dcc:case 0x16cfa:case 0x16d52:case 0x16d66:case 0x16d84:case 0x16e0c:
     case 0x16e22:case 0x16e40:case 0x187d8:case 0x187e2:case 0x18be6:case 0x1ae1a:case 0x1ae26:case 0x1ae32:case 0x4817e:case 0x1669e:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
+    // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
+    case 0x7302:case 0x8738:case 0x8b60:
     case 0x3b82:return true;
     default:return false;
     }
@@ -1098,6 +1109,10 @@ bool am_write(AnimationMachineContext& c,std::uint32_t logical,unsigned int size
             for (unsigned int i=0;i<unit;++i)c.device.pvc[at+i]=static_cast<std::uint8_t>(part>>(8*(unit-i-1)));
             VideoPortWrite port;port.address=address;port.size=static_cast<std::uint8_t>(unit);port.value=part;
             c.ports.push_back(port);pvc_effects(c.device,at/2);
+        } else if (c.palette!=0 && address>=0x400000U && address<0x800000U) {
+            // Palette RAM mirror (E6), not a port; without an attached palette device this stays the device error below.
+            std::vector<std::uint8_t>& bank=c.palette->banks[c.palette->selected];
+            for (unsigned int i=0;i<unit;++i)bank[(address+i)&0x1fffU]=static_cast<std::uint8_t>(part>>(8*(unit-i-1)));
         } else return am_error(c,"unsupported animation machine write device");
     }
     c.bus.bank_base=c.device.bank_base;return true;
@@ -1122,9 +1137,11 @@ bool am_return(AnimationMachineContext& c) {
 bool am_zero_bank(AnimationMachineContext& c) {
     return am_write(c,c.s.a[5]-0x7ff0U,2,0) && am_write(c,0x2ffff2,2,0x1000) && am_write(c,0x2ffff0,2,0);
 }
-bool run_animation_machine(std::vector<std::uint8_t>& ram,
+namespace {
+// Shared implementation of run_animation_machine (palette null) and run_animation_machine_with_palette (validated palette).
+bool run_machine(std::vector<std::uint8_t>& ram,
     const std::vector<FixedDataResource>& windows,const ProgramBusState& resources,
-    AnimationMachineState& state,AnimationMachineDevice& device,
+    AnimationMachineState& state,AnimationMachineDevice& device,AnimationMachinePaletteRam* palette,
     std::uint32_t stop_pc,std::uint8_t external_status,std::uint32_t& external_reads,
     AnimationMachineStatus& status,std::vector<VideoPortWrite>& ports,std::string& error) {
     if (ram.size()!=65536 || device.pvc.size()!=8192 || (stop_pc&1U)) {
@@ -1138,6 +1155,8 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
         AnimationMachineState next=state;AnimationMachineDevice next_device=device;
         std::vector<VideoPortWrite> next_ports;
         AnimationMachineContext c(next_ram,windows,resources,next,next_device,next_ports,external_status,error);
+        AnimationMachinePaletteRam next_palette;
+        if (palette!=0) {next_palette=*palette;c.palette=&next_palette;}
         AnimationMachineStatus result=AnimationMachineReturned;bool stopped=false;
         // A legitimate 65536-column WORD loop exceeds the former 100000-block cap.
         // Keep a finite limit; malformed record walks and huge transfers still fail atomically.
@@ -1486,6 +1505,7 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xbbe && next.pc<0xbee) || (next.pc>=0xc8c && next.pc<0xd56) || (next.pc>=0x3cac && next.pc<0x3d3a) ||
                 (next.pc>=0x48156 && next.pc<0x48180) || (next.pc>=0x1adf8 && next.pc<0x1ae56) || (next.pc>=0x187d8 && next.pc<0x18be8) ||
                 (next.pc>=0x16092 && next.pc<0x166bc) || (next.pc>=0x16cfa && next.pc<0x16ea4))ok=animation_irq_f6a_block(c);
+            else if (next.pc>=0x72fa && next.pc<0x8b64)ok=animation_irq_f6b_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
@@ -1493,7 +1513,28 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
         if (!stopped)return am_error(c,"animation machine block budget exceeded");
         ram.swap(next_ram);state=next;
         device.pvc.swap(next_device.pvc);device.bank_base=next_device.bank_base;device.reads.swap(next_device.reads);
+        if (palette!=0) {
+            palette->banks[0].swap(next_palette.banks[0]);palette->banks[1].swap(next_palette.banks[1]);palette->selected=next_palette.selected;
+        }
         ports.swap(next_ports);external_reads=c.external_reads;status=result;error.clear();return true;
     } catch (const std::bad_alloc&) {error="cannot allocate animation machine transaction";return false;}
+}
+}
+bool run_animation_machine(std::vector<std::uint8_t>& ram,
+    const std::vector<FixedDataResource>& windows,const ProgramBusState& resources,
+    AnimationMachineState& state,AnimationMachineDevice& device,
+    std::uint32_t stop_pc,std::uint8_t external_status,std::uint32_t& external_reads,
+    AnimationMachineStatus& status,std::vector<VideoPortWrite>& ports,std::string& error) {
+    return run_machine(ram,windows,resources,state,device,0,stop_pc,external_status,external_reads,status,ports,error);
+}
+bool run_animation_machine_with_palette(std::vector<std::uint8_t>& ram,
+    const std::vector<FixedDataResource>& windows,const ProgramBusState& resources,
+    AnimationMachineState& state,AnimationMachineDevice& device,AnimationMachinePaletteRam& palette,
+    std::uint32_t stop_pc,std::uint8_t external_status,std::uint32_t& external_reads,
+    AnimationMachineStatus& status,std::vector<VideoPortWrite>& ports,std::string& error) {
+    if (palette.banks[0].size()!=8192 || palette.banks[1].size()!=8192 || palette.selected>1) {
+        error="invalid animation machine palette RAM";return false;
+    }
+    return run_machine(ram,windows,resources,state,device,&palette,stop_pc,external_status,external_reads,status,ports,error);
 }
 }
