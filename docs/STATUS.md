@@ -2160,3 +2160,34 @@
 - 정리·소스 체크포인트 `7dd25108e6f8d4569521118de11e413b6b27434c`를 `origin/main`과 `origin/codex/f4-f5-acceptance`에 게시하고 두 ref의 일치를 확인했다. 새 임시 clone에서도 HEAD·tree·450개 기존 이력·root README 0바이트를 확인했고 `git fsck --full`이 통과했다. 이 게시 확인 기록은 체크포인트 다음 커밋으로 추가한다.
 - 다음 컴퓨터는 `https://github.com/jhnleeknu/ProjectSlugV.git`을 clone하고 최신 main에서 작업 브랜치를 만들면 된다. 기존 컴퓨터는 `docs/WORKFLOW.md`대로 fetch·상태 확인·pull --ff-only를 따른다. 로컬 ROM·런타임 리소스·과거 근거 보존본은 별도이며 GitHub에 전송하지 않았다.
 - 게시 receipt: `docs/reviews/0260-publication-receipt.json`. 게임 구현 범위·기존 미완료 목록·전체 Goal 일시중지는 유지한다.
+
+## 2026-10-14 — Claude 클라우드 세션: PVC 관측기 입력 경로 이식
+
+- 새 clone(`0caa22c`)에서 시작해 `claude/projectslugv-work-cycle-yout6u` 브랜치에서 작업했다. 이 환경에는 ROM·추출 데이터·과거 artifacts가 없다. 그래서 `docs/WORKFLOW.md`가 남은 과제로 적은 PVC 관측기 경로 이식을 ROM 없이 끝낼 수 있는 단위로 골랐다.
+- 관측기 본체는 세 도구(`frame_head`, `objects_g2`, `stage_area`)가 SHA `86ebf962…`로 pin한다. 그래서 본체는 수정하지 않고 wrapper `tools/run_animation_machine_pvc_banks.py`를 추가했다.
+  - `--input-tree`·`--reference-dir`로 입력 위치를 지정하고, 누락 파일은 출력 전에 모두 표시한다.
+  - pin 키 이름과 순서는 과거와 같고, 실제 입력 위치는 `input_locations.json`에 기록한다.
+  - 독립 리뷰가 1차 설계(본체 직접 수정, `93261ed`)의 SHA pin 파손을 찾아 재설계했다.
+- 검증: 고정 MAME 참고 소스를 받은 뒤 Python 테스트가 기준 266개에서 변경 후 273개로 모두 통과했다. ROM이 없어 관측 전체 실행은 하지 않았다(미확인). 상세: `docs/reviews/0261-pvc-observer-input-paths.md`.
+- 도구 판단: REA(`morluto/rea`, Hopper/Ghidra/IDA를 MCP로 연결하는 범용 역공학 도구)를 검토했다. 68000·Neo Geo·PVC bank 전용 지원이 없고, 이 저장소의 원본 비교 기반(Unicorn 실행 비교·고정 capstone·주소 resolver·pin 체계)을 대체하지 못해 이번 단위에는 채택하지 않았다. Ghidra 68000 디컴파일을 고아 사슬·`4d418` 같은 미해석 코드 탐색의 보조로 쓸 수는 있다. 그 출력은 자동 역어셈블과 같이 분석 완료 근거로 취급하지 않는다.
+- 다음: ROM이 있는 컴퓨터에서 wrapper로 PVC 관측 재실행 확인, 기존 목록(G3 C++ 검증, D1 frame 구동기, D9/C1–C3, b-unit·고아 사슬)을 이어서 진행한다. 전체 Goal 범위·완료 기준은 바꾸지 않았다.
+
+## 2026-10-14 — D1 frame 구동기(H → 선언 controller 생략 → N) 구현과 원본 비교
+
+- 사용자가 ROM과 추출 데이터를 제공했다. `mslug5.zip` 13개 파일이 기준 정의와 일치하고, 프로그램 이미지 SHA256 `29112a94…`도 일치한다. 둘 다 Git에는 넣지 않았다.
+- 새 API `ms5::run_animation_machine_pass`와 `step_animation_machine_frame`(`engine/include/ms5/animation_machine_frame.h`)을 추가했다.
+  - F5 D1 선택 A대로 한 frame을 실행한다: H → controller 진입 → 선언 생략 → N pass.
+  - 선언 해제 `ef2`/`16bd0`/`3aea`/`cda4`/gate를 적용하고, 구간마다 대기는 최대 16회다.
+  - 선택 옵션으로 BIOS card resume(`c00468` → `c37c`, BYTE `10fdc6`:=answer)을 지원한다.
+  - 실패하면 모든 출력을 보존한다. 핵심 실행부 `animation_machine.cpp/.h`는 SHA pin 때문에 바꾸지 않았다.
+- 원본 비교(`tools/verify_animation_machine_frame_driver.py`):
+  - 정상 D1 frame 54,400/54,400이 일치했고 불일치는 0이다.
+  - C++ 출력만 이어 붙인 연쇄로 136 seed가 400 frame을 완주했다. case 141은 원본과 같은 지점에서 checked error로 끝났다.
+  - 역사 집계 22개가 일치하고, 결정성·부정 검사가 통과했다.
+- 역사 native 산출물은 Linux에서 바이트 재현이 불가능하다(보고서에 Unicorn 라이브러리 SHA가 들어 있음).
+  - seed는 `d94a832`로 다시 만든 `stage_entry_body`를 검증기 안에서만 선언 rebase로 사용했다. 역사 pin은 바꾸지 않았다.
+  - 역사 seed와의 바이트 동등성은 [U]다.
+- 근거: `docs/analysis/animation-machine-frame-driver-d1.md`, `docs/reviews/0262-frame-driver-d1.md`.
+  - 독립 리뷰 지적(대기 상한, 경계 확인, 검증기 짝짓기)을 반영했다.
+  - 전체 `make test` 종료 0, Python 273개 통과. 기존 파일 경고 10개는 Linux clang에서 생긴 것이다.
+- 다음: controller D9 선택 B와 C1~C3(선언 생략 제거), IRQ `c8c` F6, G3 C++ 검증, b-unit·고아 사슬. 역사 산출물 감사는 macOS 원 환경이나 0260 보존본이 필요하다. 전체 Goal 범위·완료 기준은 바꾸지 않았다.
