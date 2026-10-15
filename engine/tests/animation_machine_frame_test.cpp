@@ -407,8 +407,108 @@ void bios_segments(){
  {Seg x=segment(frame_ram(0xe74,""),0xc364,0x2ac2,0x2ac2,ms5::AnimationFrameController,card);
   assert(x.ok&&x.waits.size()==1&&x.s.pc==0x2ac2&&x.s.a[7]==0x10f004&&x.s.a[6]==CONTROLLER);++checks;}
 }
+// ---- IRQ execution (F6-D, options.irq_execution; scope decisions E1-E4, E7, E10)
+// Declared vectors (only vector 64 = 20c is used) and the P2-style IRQ prep of the frame fixture: 10fd80 bit 7 (game mode), raster
+// callback 3dcc, empty task queue, 10001b bit 7 = 0 (the IRQ runs the service, credit and sound/Z80 parts, not the render part).
+Bytes irq_vectors(){Bytes v(128,0);put(v,0x64,4,0x20c);return v;}
+const Bytes VECTORS=irq_vectors();
+const char* const IRQ_PREP="10fd80:80,100006:00003dcc,10000a:00003dcc,10081c:0010081c,10001b:00";
+struct IrqRun {bool ok;std::string error;Bytes ram;State s;Device d;ms5::AnimationMachinePaletteRam pal;ms5::AnimationFrameResult r;};
+IrqRun irq_drive(bool frame,const Bytes& ram,const State& s,const Device& d,const ms5::AnimationFrameOptions& o,bool vectors=true,bool palette=true){
+ IrqRun x;x.ram=ram;x.s=s;x.d=d;x.pal.banks[0][0x10]=0x5a;x.pal.selected=1;
+ ms5::ProgramBusState bus=bus_of();if(vectors)bus.vectors=&VECTORS;std::vector<ms5::FixedDataResource> w;
+ if(palette)x.ok=frame?ms5::step_animation_machine_frame(x.ram,w,bus,x.s,x.d,x.pal,0,o,x.r,x.error):ms5::run_animation_machine_pass(x.ram,w,bus,x.s,x.d,x.pal,0,o,x.r,x.error);
+ else x.ok=frame?ms5::step_animation_machine_frame(x.ram,w,bus,x.s,x.d,0,o,x.r,x.error):ms5::run_animation_machine_pass(x.ram,w,bus,x.s,x.d,0,o,x.r,x.error);
+ return x;}
+ms5::AnimationFrameOptions irq_options(std::uint8_t z80=0,std::uint16_t video=0){
+ ms5::AnimationFrameOptions o;o.irq_execution=true;o.irq_z80_reply=z80;o.irq_video_status=video;return o;}
+// Independent harness chain of one IRQ at a Waiting state: push frame, run to c0044a, declared resume, run to the wait PC.
+void manual_irq(Bytes& ram,State& s,Device& d,ms5::AnimationMachinePaletteRam& pal,std::uint8_t z80,std::uint16_t video,Ports& ports,std::uint32_t& reads){
+ ms5::ProgramBusState bus=bus_of();bus.vectors=&VECTORS;std::vector<ms5::FixedDataResource> w;const State pre=s;
+ put(ram,s.a[7]-4,4,s.pc);put(ram,s.a[7]-6,2,0x2000);s.a[7]-=6;s.pc=0x20c;s.carry=ms5::AnimationCarryUnknown;
+ d.reads.insert(d.reads.begin(),ext(0x3c0006,2,video));d.reads.insert(d.reads.begin(),ext(0x320000,1,z80));
+ ms5::AnimationMachineStatus st=ms5::AnimationMachineWaiting;std::string error;std::uint32_t n=0;
+ Ports phase;bool ok=ms5::run_animation_machine_with_palette(ram,w,bus,s,d,pal,0xc0044a,0,n,st,phase,error);ports.insert(ports.end(),phase.begin(),phase.end());
+ if(!ok)std::cerr<<"manual irq: "<<error<<"\n";
+ assert(ok&&st==ms5::AnimationMachineReturned&&s.pc==0xc0044a&&get(ram,s.a[7],4)==0x248);reads+=n;n=0;
+ s.pc=0x248;s.a[7]+=4;s.carry=ms5::AnimationCarryUnknown;
+ ok=ms5::run_animation_machine_with_palette(ram,w,bus,s,d,pal,pre.pc,0,n,st,phase,error);ports.insert(ports.end(),phase.begin(),phase.end());
+ assert(ok&&st==ms5::AnimationMachineReturned&&s.pc==pre.pc&&s.a[7]==pre.a[7]&&s.carry==ms5::AnimationCarryClear);reads+=n;}
+void irq_rejected(bool frame,const Bytes& ram,const State& s,const Device& d,const ms5::AnimationFrameOptions& o,const char* message,bool vectors=true){
+ const IrqRun x=irq_drive(frame,ram,s,d,o,vectors);IrqRun ref;ref.pal.banks[0][0x10]=0x5a;
+ if(x.ok||x.error!=message)std::cerr<<"expected '"<<message<<"' got ok="<<x.ok<<" '"<<x.error<<"'\n";
+ assert(!x.ok&&x.error==message&&x.ram==ram&&same_state(x.s,s)&&same_device(x.d,d)&&x.pal.banks[0]==ref.pal.banks[0]&&x.pal.banks[0][0x10]==0x5a&&
+  x.pal.banks[1]==ref.pal.banks[1]&&x.pal.selected==1&&x.r.irqs.empty()&&x.r.irq_ports.empty()&&x.r.waits.empty());++checks;}
+// Manual segment with IRQ delivery at the IRQ-effect waits (harness chaining, independent of the driver).
+struct ManualIrq {Ports ports,irq_ports;std::uint32_t reads,irq_reads;unsigned int irqs;};
+void manual_irq_segment(Bytes& ram,State& s,Device& d,ms5::AnimationMachinePaletteRam& pal,std::uint32_t stop,std::uint8_t z80,std::uint16_t video,ManualIrq& m){
+ ms5::ProgramBusState bus=bus_of();bus.vectors=&VECTORS;std::vector<ms5::FixedDataResource> w;s.carry=ms5::AnimationCarryUnknown;
+ for(unsigned int k=0;k<17;++k){
+  std::uint32_t n=0;ms5::AnimationMachineStatus st=ms5::AnimationMachineReturned;std::string error;
+  Ports phase;const bool ok=ms5::run_animation_machine_with_palette(ram,w,bus,s,d,pal,stop,0,n,st,phase,error);m.ports.insert(m.ports.end(),phase.begin(),phase.end());
+  if(!ok)std::cerr<<"manual irq segment: "<<error<<"\n";
+  assert(ok);m.reads+=n;
+  if(st==ms5::AnimationMachineReturned)return;
+  const std::size_t q=d.reads.size();manual_irq(ram,s,d,pal,z80,video,m.irq_ports,m.irq_reads);assert(d.reads.size()==q);++m.irqs;}
+ assert(false);}
+void irq_execution(){
+ const std::uint8_t z80s[2]={0x37,0};const std::uint16_t videos[2]={8,0};
+ // ef2 vblank (BYTE 100016 0 < BYTE 100017 2): two IRQs (the c98 saturating increment each) instead of the declared release; the driver
+ // equals the manual chain (H with IRQs, the declared skip, N), the Z80 reply reaches BYTE 104d7c and video status bit 3 BYTE 100002.
+ for(unsigned int v=0;v<2;++v){
+  std::string puts=std::string(IRQ_PREP)+",100017:02";Bytes ram=frame_ram(0xe74,puts.c_str());const State s=head_state(ram);const Device d=device_with(frame_reads());
+  const IrqRun x=irq_drive(true,ram,s,d,irq_options(z80s[v],videos[v]));
+  if(!x.ok)std::cerr<<"irq frame: "<<x.error<<"\n";
+  assert(x.ok&&x.r.waits.empty()&&x.r.irqs.size()==2&&x.d.reads.empty()&&x.r.head_external_reads==7);
+  Bytes mram(ram);State ms(s);Device md(d);ms5::AnimationMachinePaletteRam mpal;mpal.banks[0][0x10]=0x5a;mpal.selected=1;ManualIrq hm,nm;
+  hm.reads=hm.irq_reads=nm.reads=nm.irq_reads=0;hm.irqs=nm.irqs=0;
+  manual_irq_segment(mram,ms,md,mpal,0xc52a,z80s[v],videos[v],hm);ms.pc=0x2ac2;ms.a[7]=SPD;manual_irq_segment(mram,ms,md,mpal,0xe74,z80s[v],videos[v],nm);
+  ms.carry=ms5::AnimationCarryUnknown;
+  assert(x.ram==mram&&same_state(x.s,ms)&&same_device(x.d,md)&&x.pal.banks[0]==mpal.banks[0]&&x.pal.banks[1]==mpal.banks[1]&&x.pal.selected==mpal.selected&&
+   same_ports(x.r.head_ports,hm.ports)&&same_ports(x.r.node_ports,nm.ports)&&same_ports(x.r.irq_ports,hm.irq_ports)&&hm.irqs==2&&nm.irqs==0&&
+   x.r.head_external_reads==hm.reads&&x.r.node_external_reads==nm.reads);
+  std::uint32_t at=0;
+  for(std::uint32_t k=0;k<2;++k){const ms5::AnimationFrameIrq& q=x.r.irqs[k];
+   assert(q.segment==ms5::AnimationFrameHead&&q.wait_pc==0xef2&&q.sequence==k&&q.ports_begin==at&&q.ports_end>q.ports_begin&&q.external_reads==2&&
+    q.bios_resumes==1&&q.rte_sr==0x2000);at=q.ports_end;}
+  assert(at==x.r.irq_ports.size()&&x.r.irq_ports[0].address==0x3c000c&&x.r.irq_ports[0].size==2&&x.r.irq_ports[0].value==6);
+  assert(get(x.ram,0x104d7c,1)==z80s[v]&&get(x.ram,0x100002,1)==(v==0?0xffU:0U));
+  // Deterministic: the same call again gives the same outputs.
+  const IrqRun y=irq_drive(true,ram,s,d,irq_options(z80s[v],videos[v]));
+  assert(y.ok&&y.ram==x.ram&&same_state(y.s,x.s)&&same_ports(y.r.irq_ports,x.r.irq_ports)&&y.r.irqs.size()==2);++checks;}
+ // irq_execution false (default): the palette overloads give exactly the declared-release results of the plain functions.
+ {std::string puts=std::string(IRQ_PREP)+",100017:05";Bytes ram=frame_ram(0xe74,puts.c_str());const State s=head_state(ram);const Device d=device_with(frame_reads());
+  ms5::AnimationFrameOptions off;const IrqRun a=irq_drive(true,ram,s,d,off,true,true);const IrqRun b=irq_drive(true,ram,s,d,off,true,false);
+  assert(a.ok&&b.ok&&a.ram==b.ram&&same_state(a.s,b.s)&&same_device(a.d,b.d)&&same_result(a.r,b.r)&&a.r.irqs.empty()&&a.r.irq_ports.empty()&&
+   a.r.waits.size()==1&&a.pal.banks[0][0x10]==0x5a&&a.pal.selected==1);
+  check_wait(a.r.waits[0],ms5::AnimationFrameHead,0xef2,0x100016,1,0,5);
+  const State p=pass_state();const IrqRun c=irq_drive(false,ram,p,d,off,true,true);const IrqRun e=irq_drive(false,ram,p,d,off,true,false);
+  assert(c.ok&&e.ok&&c.ram==e.ram&&same_state(c.s,e.s)&&same_result(c.r,e.r));++checks;}
+ // irq_execution without a palette device: the same IRQ results here (no palette access in this IRQ path).
+ {std::string puts=std::string(IRQ_PREP)+",100017:01";Bytes ram=frame_ram(0xe74,puts.c_str());const State s=head_state(ram);const Device d=device_with(frame_reads());
+  const IrqRun a=irq_drive(true,ram,s,d,irq_options(),true,true);const IrqRun b=irq_drive(true,ram,s,d,irq_options(),true,false);
+  assert(a.ok&&b.ok&&a.ram==b.ram&&same_state(a.s,b.s)&&same_ports(a.r.irq_ports,b.r.irq_ports)&&a.r.irqs.size()==1&&b.r.irqs.size()==1);++checks;}
+ // Checked errors with full preservation (ram, state, queue, palette, result).
+ {std::string puts=std::string(IRQ_PREP)+",100017:02";const Bytes ram=frame_ram(0xe74,puts.c_str());const State s=head_state(ram);const Device d=device_with(frame_reads());
+  // BYTE 10fd80 bit 7 = 0: 21e JMP c00438 (BIOS INT1 boundary).
+  {Bytes r=ram;put(r,0x10fd80,1,0);irq_rejected(true,r,s,d,irq_options(),"animation irq bios int1 boundary");}
+  // No vector table.
+  irq_rejected(true,ram,s,d,irq_options(),"animation irq vector unavailable",false);
+  // A wait the IRQ cannot release within 16 deliveries (100017 = 20: 32 increments needed).
+  {Bytes r=ram;put(r,0x100017,1,0x20);irq_rejected(true,r,s,d,irq_options(),"animation irq wait not released");}
+  // A raster callback that is not routed (LONG 100006 = 10fe40): the executor error inside the IRQ is returned as is.
+  {Bytes r=ram;put(r,0x100006,4,0x10fe40);irq_rejected(true,r,s,d,irq_options(),"unsupported animation machine PC");}
+  // Invalid palette RAM.
+  {IrqRun x;x.ram=ram;x.s=s;x.d=d;x.pal.banks[1].resize(10);ms5::ProgramBusState bus=bus_of();bus.vectors=&VECTORS;std::vector<ms5::FixedDataResource> w;
+   x.ok=ms5::step_animation_machine_frame(x.ram,w,bus,x.s,x.d,x.pal,0,irq_options(),x.r,x.error);
+   assert(!x.ok&&x.error=="invalid animation machine palette RAM"&&x.ram==ram&&same_state(x.s,s)&&same_device(x.d,d)&&x.pal.banks[1].size()==10);
+   x.ok=ms5::run_animation_machine_pass(x.ram,w,bus,x.s,x.d,x.pal,0,irq_options(),x.r,x.error);
+   assert(!x.ok&&x.error=="invalid animation machine palette RAM");++checks;}}
+ // N waits: cda4 (sprite queue) with 10001b bit 7 = 0 -- the IRQ does not run 16cfa, so the wait is never released.
+ {Bytes ram=bc_ram();apply(ram,IRQ_PREP);irq_rejected(false,ram,pass_state(),device_with(frame_reads()),irq_options(),"animation irq wait not released");}
+}
 int main(){
- pass_and_frames();card();errors();controller_execute();bios_segments();
+ pass_and_frames();card();errors();controller_execute();bios_segments();irq_execution();
  std::cout<<"animation machine frame: "<<checks<<" checks\n";
  return 0;
 }

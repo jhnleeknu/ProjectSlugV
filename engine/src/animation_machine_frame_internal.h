@@ -10,5 +10,11 @@ bool run_animation_frame_segment(std::vector<std::uint8_t>& ram, const std::vect
     AnimationMachineState& state, AnimationMachineDevice& device, std::uint8_t external_status,
     const AnimationFrameOptions& options, std::uint32_t stop_pc, AnimationFrameSegment segment, std::vector<VideoPortWrite>& ports,
     std::vector<AnimationFrameWait>& waits, std::uint32_t& external_reads, std::string& error);
+// The same with an optional palette RAM device (null: none) and the IRQ outputs of options.irq_execution (the overload above drops them).
+bool run_animation_frame_segment(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, const ProgramBusState& resources,
+    AnimationMachineState& state, AnimationMachineDevice& device, AnimationMachinePaletteRam* palette, std::uint8_t external_status,
+    const AnimationFrameOptions& options, std::uint32_t stop_pc, AnimationFrameSegment segment, std::vector<VideoPortWrite>& ports,
+    std::vector<AnimationFrameWait>& waits, std::vector<VideoPortWrite>& irq_ports, std::vector<AnimationFrameIrq>& irqs,
+    std::uint32_t& external_reads, std::string& error);
 }
 #endif
