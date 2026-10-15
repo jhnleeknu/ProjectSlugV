@@ -1092,7 +1092,21 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0x3dcc8:case 0x3dcd4:case 0x3dcea:case 0x3dcec:case 0x3dd0e:case 0x3dd1e:case 0x3dd2e:case 0x3def0:case 0x3e03e:case 0x3e06e:
     case 0x3e0a6:case 0x3e0a8:case 0x3e2d6:case 0x3e2dc:case 0x3e2e0:case 0x3e2e6:case 0x3e2ec:case 0x3e2f0:case 0xb1656:case 0xb165a:
     case 0xb16a4:case 0xb16c2:case 0xb16c6:case 0xb16cc:case 0xb16d0:case 0xb16d4:case 0xb16e6:case 0xb1cb4:case 0xb1cc2:case 0xb1cc6:
-    case 0xb1cca:case 0xb1cf6:case 0xb1d8c:return true;
+    case 0xb1cca:case 0xb1cf6:case 0xb1d8c:
+    // Objects B1a (deferred N16b/U19b + leaf helpers) blocks: JSR/BSR/JMP/BRA/RTS, LEA+JSR, BTST/BSET (Z only, +Bcc) and the 19 BCC/BCS
+    // consumers 78408 78454 784ae 7854c 78652 (C returned by 791fa), 784a0 785dc b71a0 b726a b7392 b7538 b75ee (49fc6), 7853e (79222),
+    // 78636 (7962a), 78644 (7930a), 78cfe (1ab02), 78d1a (28ae), 79630 (4945e), 79638 (79722); 79318 (RTS) returns the C of 79292 unchanged.
+    // 79240 79648 79740 78d2a (ORI CCR) set and 79250 7931a 7964e 7973a (ANDI CCR) clear a known C. The other blocks stay Unknown.
+    case 0x783fe:case 0x78404:case 0x78408:case 0x78444:case 0x7844a:case 0x78450:case 0x78454:case 0x7845e:case 0x78462:case 0x78496:
+    case 0x7849a:case 0x784a0:case 0x784aa:case 0x784ae:case 0x784b8:case 0x784bc:case 0x784fa:case 0x784fe:case 0x78510:case 0x78528:
+    case 0x7853a:case 0x7853e:case 0x78548:case 0x7854c:case 0x78556:case 0x7855a:case 0x78564:case 0x785b4:case 0x785ba:case 0x785d0:
+    case 0x785d6:case 0x785dc:case 0x785ee:case 0x78628:case 0x7862c:case 0x78632:case 0x78636:case 0x78640:case 0x78644:case 0x7864e:
+    case 0x78652:case 0x7865c:case 0x78cc4:case 0x78cd6:case 0x78cdc:case 0x78cf4:case 0x78cfe:case 0x78d08:case 0x78d1a:case 0x7919a:
+    case 0x791a0:case 0x791aa:case 0x791b8:case 0x791be:case 0x79222:case 0x79314:case 0x79318:case 0x7962a:case 0x79630:case 0x79634:
+    case 0x79638:case 0x7963c:case 0x796fc:case 0x79720:case 0xb7100:case 0xb714a:case 0xb719a:case 0xb71a0:case 0xb71aa:case 0xb71f2:
+    case 0xb7264:case 0xb726a:case 0xb72b2:case 0xb72ee:case 0xb72f2:case 0xb733c:case 0xb7378:case 0xb7386:case 0xb738c:case 0xb7392:
+    case 0xb739c:case 0xb73ea:case 0xb7482:case 0xb7488:case 0xb7498:case 0xb749c:case 0xb74e6:case 0xb7532:case 0xb7538:case 0xb753c:
+    case 0xb754a:case 0xb7592:case 0xb75ee:case 0xb7604:case 0xb7614:case 0xb7618:case 0xb7662:case 0xb7d3a:case 0xb7d48:return true;
     default:return false;
     }
 }
@@ -1568,6 +1582,10 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xca32 && next.pc<0xca3a) || (next.pc>=0x4a88e && next.pc<0x4a8f8) ||
                 (next.pc>=0x4a944 && next.pc<0x4a9e2))ok=animation_controller_c1_block(c);
             else if ((next.pc>=0x5eed2 && next.pc<0x5efe6) || (next.pc>=0x5f504 && next.pc<0x5f760) || (next.pc>=0x60516 && next.pc<0x6093a))ok=animation_objects_b2a_block(c);
+            else if ((next.pc>=0x783ea && next.pc<0x78660) || (next.pc>=0x78cc4 && next.pc<0x78d5a) || (next.pc>=0x7919a && next.pc<0x791c0) ||
+                (next.pc>=0x79222 && next.pc<0x79256) || (next.pc>=0x7930a && next.pc<0x79320) || (next.pc>=0x7962a && next.pc<0x79654) ||
+                (next.pc>=0x796e6 && next.pc<0x79746) || (next.pc>=0xb7100 && next.pc<0xb76a4) ||
+                (next.pc>=0xb7d2e && next.pc<0xb7d4a))ok=animation_objects_b1a_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
