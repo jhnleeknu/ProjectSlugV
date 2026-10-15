@@ -1068,6 +1068,12 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xc748:case 0xc7fc:case 0xc806:case 0xc80a:case 0xc990:case 0xc996:case 0xc9b4:case 0xc9ba:case 0xc9be:case 0xca20:
     case 0x4a896:case 0x4a8ac:case 0x4a8da:case 0x4a94c:case 0x4a962:case 0x4a972:case 0x4a9ae:case 0x4a9c4:case 0x4a9d0:case 0x4a9d4:
     case 0x4a9da:case 0x4a9de:case 0x4a9e0:
+    // Objects B2a blocks: the 16 consumers 5ef6c 5f5e6 5f744 (BCC, C returned by the boundary 4b6f4) 5ef80 5efda (BCC, 1ab02) 5efc6 (BCC, 49fc6)
+    // 5f6c2 60880 (BCC, 4b54e) 5f702 6062e 606f4 6077e 6085e 60902 (BCC, 28ae) 60828 608cc (MOVEM.W + BCC, 2986) and the five RTS blocks that return
+    // the C of the path that reached them unchanged. The ORI.B #1,CCR blocks set a known Set inside the block; every other block stays Unknown.
+    case 0x5ef6c:case 0x5f5e6:case 0x5f744:case 0x5ef80:case 0x5efda:case 0x5efc6:case 0x5f6c2:case 0x60880:case 0x5f702:case 0x6062e:
+    case 0x606f4:case 0x6077e:case 0x6085e:case 0x60902:case 0x60828:case 0x608cc:case 0x5ef8a:case 0x5efe4:case 0x5f5f0:case 0x5f75e:
+    case 0x60938:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1557,6 +1563,7 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xc724 && next.pc<0xc74c) || (next.pc>=0xc7fc && next.pc<0xc80e) || (next.pc>=0xc988 && next.pc<0xca22) ||
                 (next.pc>=0xca32 && next.pc<0xca3a) || (next.pc>=0x4a88e && next.pc<0x4a8f8) ||
                 (next.pc>=0x4a944 && next.pc<0x4a9e2))ok=animation_controller_c1_block(c);
+            else if ((next.pc>=0x5eed2 && next.pc<0x5efe6) || (next.pc>=0x5f504 && next.pc<0x5f760) || (next.pc>=0x60516 && next.pc<0x6093a))ok=animation_objects_b2a_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
