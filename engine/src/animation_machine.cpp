@@ -1019,6 +1019,11 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xee44:case 0xee48:case 0xee4c:case 0xee50:case 0xee54:case 0xee58:case 0xee5c:case 0xee60:case 0xee64:case 0xee68:
     case 0xee6c:case 0xee70:case 0xee74:case 0xee78:case 0xee7c:case 0xee80:case 0xee84:case 0xee88:case 0xee8c:case 0xee90:
     case 0xee94:case 0xee98:case 0xee9c:case 0xeea0:
+    // Objects B2b blocks: the consumers 4d438 (BCC, C returned by 289e) 3a4ec (BCC, 4d6b4) 3ad26 (BCS, 288c) 3ad3c (BCC, 49fc6) 38d70 (SCC,
+    // 28ae) 38dbe (BCC, 3b334) and the blocks that return the C of the path that reached them unchanged: the RTS blocks 33950 3a4ce (Clear set by
+    // the TST of 33948 / 3a4c6) 4d506 (Set or Clear from 4d4e0 / 4d4e8 / 4d502), 3b448 (BTST + BEQ) / 3b456 (Clear of 3b42e) and 4eeea (MOVEM + RTS).
+    case 0x4d438:case 0x3a4ec:case 0x3ad26:case 0x3ad3c:case 0x38d70:case 0x38dbe:case 0x33950:case 0x3a4ce:case 0x4d506:
+    case 0x3b448:case 0x3b456:case 0x4eeea:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     case 0x3b82:return true;
     default:return false;
@@ -1455,6 +1460,17 @@ bool run_animation_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x3902 && next.pc<0x3918) || (next.pc>=0x9086 && next.pc<0x9344))ok=animation_frame_head_h2_block(c);
             else if ((next.pc>=0x4c3de && next.pc<0x4c6f0) || (next.pc>=0x4c72a && next.pc<0x4c7a4) ||
                 (next.pc>=0x4c810 && next.pc<0x4cf52))ok=animation_objects_n34_block(c);
+            else if ((next.pc>=0x3383c && next.pc<0x338f8) || (next.pc>=0x33940 && next.pc<0x33958) ||
+                (next.pc>=0x38d56 && next.pc<0x38dd4) || (next.pc>=0x39f9c && next.pc<0x3a048) ||
+                (next.pc>=0x3a0dc && next.pc<0x3a1e0) || (next.pc>=0x3a4a4 && next.pc<0x3a4d6) ||
+                (next.pc>=0x3a4da && next.pc<0x3a5d2) || (next.pc>=0x3acd6 && next.pc<0x3ad48) ||
+                (next.pc>=0x3b424 && next.pc<0x3b458) || (next.pc>=0x4bfc0 && next.pc<0x4c020) ||
+                (next.pc>=0x4c2fa && next.pc<0x4c340) || (next.pc>=0x4c390 && next.pc<0x4c3ba) ||
+                (next.pc>=0x4c3cc && next.pc<0x4c3de) || (next.pc>=0x4d418 && next.pc<0x4d508) ||
+                (next.pc>=0x4d6b4 && next.pc<0x4d6f2) || (next.pc>=0x4d734 && next.pc<0x4d766) ||
+                (next.pc>=0x4d98a && next.pc<0x4d9a2) || (next.pc>=0x4d9ba && next.pc<0x4d9d6) ||
+                (next.pc>=0x4eea2 && next.pc<0x4eef4) || (next.pc>=0x4f08a && next.pc<0x4f0c4) ||
+                (next.pc>=0x4ff96 && next.pc<0x4ffba) || (next.pc>=0xd3d7c && next.pc<0xd3d9c))ok=animation_objects_b2b_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
