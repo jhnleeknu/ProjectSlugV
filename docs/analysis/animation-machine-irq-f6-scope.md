@@ -310,3 +310,30 @@ Claude Opus 5.5 / high 읽기 전용 분석 작업자가 작성했다(2026-10-15
   - 기존 `run_animation_machine`은 팔레트 RAM이 없는 것으로 동작하며, 지금과 같다(팔레트 접근은 기존 checked error).
 - E7·E8·E9·E10 채택. `irq_execution`이 꺼져 있으면 D1과 바이트 단위로 같아야 한다.
 - 단위 배정: 이번 10개 묶음의 7번 = F6a, 8번 = F6b + F6c + F6-D(구동기 통합과 native 인수). F6c는 H4/H8 계열과 같이 parametric 실행부로 구현해도 되며, 모든 진입 PC가 routing돼야 한다.
+
+## F6-D 결과 (구현 작업자 Claude Opus 5.5, 2026-10-15)
+
+구현:
+- [F] `AnimationFrameOptions`에 `irq_execution`(기본 false), `irq_z80_reply`, `irq_video_status`를 더했다. `AnimationFrameResult`에 `irqs`(`AnimationFrameIrq`: segment, 대기 PC, 순번, `irq_ports` 범위, 외부 읽기 수, BIOS resume 수, RTE가 꺼낸 SR)와 `irq_ports`를 더했다(`engine/include/ms5/animation_machine_frame.h`).
+- [F] palette RAM은 `run_animation_machine_pass`/`step_animation_machine_frame`의 새 overload(`AnimationMachinePaletteRam&` 인자)로 붙인다. 기존 함수와 호출자는 바뀌지 않았다. palette는 transaction의 일부다(성공 시 commit, 실패 시 보존).
+- [F] `irq_execution`이 참이면 대기 6 PC(`ef2` `16bd0` `cda4` `3aea` `47af0` `478de`)에서 E1–E4·E7대로 IRQ 1회를 전달하고 대기 block을 다시 실행한다. 구간당 16회 상한은 선언 해제와 공유한다. checked 오류는 `animation irq wait not released`, `... bios int1 boundary`, `... internal wait`, `... bios return mismatch`, `... register restore mismatch`, `... external read overrun`, `... vector unavailable`, `... stack invalid`이다. IRQ 안의 실행부 오류는 그대로 반환한다. 카드 BIOS resume은 그대로다.
+- [F] 내부 `run_animation_frame_segment`에 palette·IRQ 출력 overload를 더했다. 기존 signature는 wrapper로 남겼다(IRQ 기록은 버린다).
+
+검증:
+- [F] native 인수 `tools/verify_animation_machine_frame_irq.py`(harness `engine/tools/frame_irq_acceptance.cpp`)를 142 seed × 400 frame으로 실행했다. 조건은 P1 prep(원본 `3dce`·`c42` native 실행 + `10fd80`.7), Z80 응답 0, video 상태 0, 2 bank palette mirror다.
+  - 자연 137 seed 중 136이 400 frame을 완주했다. complete frame 54,400/54,400이 일치했다(step과 N 단독 pass 둘 다).
+  - 비완주 6건(guard 5 `fetch-unmapped`, case 141 frame 0 `odd-pc`)은 D1과 같은 checked 오류로 상태를 보존했다.
+  - IRQ는 108,528회 전달됐다. 모두 `ef2`(frame당 2회)였고 정상 복귀했다. BIOS resume도 108,528회였다. 탐침 6절 P1 수와 같다. palette bank 전환(`3a001f`)은 0회였다.
+  - 일치한 frame에서 비교한 IRQ port는 2,130,063건이다. H palette mirror 읽기가 있는 seed는 124개다. 카드 resume seed는 130개다.
+  - C++ 단독 chain은 54,400 frame이 일치했고 기대 실패는 1건, 발산은 0이었다. 첫 4 자연 seed에서 결정성을 확인했다.
+  - 기준 일치와 negative 검사 18종을 모두 검출했다(IRQ 끔, Z80·video 값, palette 미부착, `10fd80`.7=0 → int1 오류, queue, 결과 변조 등). 비영 값(`--z80 0x37 --video 8`, 1 seed 4 frame)도 일치했다.
+- [F] `irq_execution`=false의 D1 회귀(`tools/verify_animation_machine_frame_driver.py` 전체, workers 3): 54,400/54,400 frame 일치, 비완주 6건 checked 보존, chain 54,400, 결정성·negative 통과, historic 비교 전부 같음.
+- [F] `engine/tests/animation_machine_frame_test.cpp`는 ROM 없이 IRQ 행을 더했다(85 checks). 내용은 다음과 같다.
+  - `ef2` 2회 IRQ를 수동 harness 연쇄와 비교했다.
+  - Z80 응답 → `104d7c`, video bit3 → `100002`를 확인했다.
+  - 끔 모드에서 palette overload와 기존 함수가 같은 결과를 냈다.
+  - checked 오류와 상태 보존을 확인했다. 대상은 int1, vector 없음, 16회 초과, 미routing raster callback, 잘못된 palette, `10001b`.7=0의 `cda4`다.
+
+한계·미확인:
+- [I] 자연 P1에서는 `ef2`만 IRQ 전달 지점이었다. `16bd0`·`cda4`·`3aea`·gate의 IRQ 전달은 단위 시험(`cda4` 미해제)으로만 확인했고 자연 native 비교는 없다.
+- [U] 실제 vblank 시점, BIOS `c0044a` 효과, Z80 응답·video 상태의 실제 값은 미확인이다(7절과 같다).
