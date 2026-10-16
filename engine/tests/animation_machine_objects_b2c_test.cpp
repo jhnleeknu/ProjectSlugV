@@ -656,9 +656,11 @@ void errors(){
  // Rollback probes only in work RAM 10fe00..10fefe (code never executes in RAM; F4 unit test boundary convention).
  const std::uint32_t outside[]={0x10fe00,0x10fe40,0x10fefe};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,outside[i],2),STOP,"unsupported animation machine PC");}
- // Unrouted neighbours: the data after the ranges (3ab80 3abde 3af6c 3b03c 3b4bc 1d1b0), work-RAM probes 10fe02 10fe04 10fe06 (the B2c-b entries 3abee 3b458
- // 3b62a are routed by B2e), the unreferenced 3b4e0, 1bf94.
- const std::uint32_t neighbours[]={0x3ab80,0x3abde,0x3af6c,0x3b03c,0x3b4bc,0x1d1b0,0x10fe02,0x10fe04,0x10fe06,0x3b4e0,0x1bf94};
+ // Review 0264 M-3: the probes without an executor are work-RAM PCs (10fe02 10fe04 10fe06 as before, 10fe10..10fe1e for the former ROM neighbours); the ROM neighbours
+ // (the data after the ranges 3ab80 3abde 3af6c 3b03c 3b4bc 1d1b0, the unreferenced 3b4e0, 1bf94) are only asserted to be outside the unit's own ranges.
+ const std::uint32_t ends[]={0x3ab80,0x3abde,0x3af6c,0x3b03c,0x3b4bc,0x1d1b0,0x3b4e0,0x1bf94};
+ for(unsigned int i=0;i<sizeof(ends)/sizeof(ends[0]);++i)assert(!in_ranges(ends[i]));
+ const std::uint32_t neighbours[]={0x10fe10,0x10fe12,0x10fe14,0x10fe16,0x10fe18,0x10fe1a,0x10fe02,0x10fe04,0x10fe06,0x10fe1c,0x10fe1e};
  for(unsigned int i=0;i<sizeof(neighbours)/sizeof(neighbours[0]);++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,neighbours[i],2),STOP,"unsupported animation machine PC");}
  // JMP (A0): a work-RAM target and an odd target; JMP (A0,D1.W) of 3abc0 with a work-RAM / odd popped LONG; the failure keeps the pre-run state.
  {Bytes ram=base_ram("");State s=state_of(NULL,0x3ab7e,0);s.a[0]=0x10fe00;reject(ram,s,STOP,"unsupported animation machine PC");

@@ -899,8 +899,10 @@ void errors(){
  // Rollback probes only in work RAM 10fe00..10fefe (code never executes in RAM; F4 unit test boundary convention).
  const std::uint32_t outside[]={0x10fe00,0x10fe40,0x10fefe};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,outside[i],2),STOP,"unsupported animation machine PC");}
- // Neighbours: 30d6c (the 2986 child value, unrouted), 3323c / 336d4 / 3395a / 33a8a (interiors of the N30 blocks 3323a / 336d2 / 33958 / 33a88).
- {Bytes ram=base_ram("");reject(ram,state_of(NULL,0x30d6c,2),STOP,"unsupported animation machine PC");}
+ // Neighbours: 3323c / 336d4 / 3395a / 33a8a (interiors of the N30 blocks 3323a / 336d2 / 33958 / 33a88).  30d6c (the 2986 child value, unrouted ROM code of a later unit)
+ // is the work-RAM PC 10fe80 since review 0264 M-3; the exact range end is asserted against the unit's own ranges.
+ assert(!in_ranges(0x30d6c));
+ {Bytes ram=base_ram("");reject(ram,state_of(NULL,0x10fe80,2),STOP,"unsupported animation machine PC");}
  const std::uint32_t n30[]={0x3323c,0x336d4,0x3395a,0x33a8a};
  for(unsigned int i=0;i<sizeof(n30)/sizeof(n30[0]);++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,n30[i],2),STOP,"unsupported animation objects n30 PC");}
  // Computed JMP blocks: no bound check (F1 decision 3): 30b78 D0.B = 28 -> 30bf4 (inside a block), D0.B = ff -> 30f80 (N29 interior);

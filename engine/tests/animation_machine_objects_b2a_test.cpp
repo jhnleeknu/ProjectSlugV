@@ -593,24 +593,27 @@ void part_errors() {
     // The folded branches are interior PCs.
     const std::uint32_t folded[]={0x5f592,0x5f678,0x60680,0x60690};
     for(unsigned int i=0;i<4;++i){Bytes ram;State s;world(ram,s,folded[i],0);reject(ram,s,SENT,"unsupported animation objects b2a PC");}
-    // Boundaries: 4b6f4 (pinned area_clear verifier), the work-RAM probe 10fe08 (44602 is routed by B2e) and the neighbours of the three ranges.
-    const std::uint32_t unrouted[]={0x4b6f4,0x10fe08,0x5eed0,0x5f4b0,0x5f502,0x60514,0x6093a};
+    // Boundaries (review 0264 M-3): the probes without an executor are work-RAM PCs; the ROM neighbours 4b6f4 5eed0 5f4b0 5f502 60514 6093a (code of later units)
+    // are only asserted to be outside the unit's own ranges.  The leaving call 5ef66 -> 4b6f4 is a stop-only check.
+    const std::uint32_t ends[]={0x4b6f4,0x5eed0,0x5f4b0,0x5f502,0x60514,0x6093a};
+    for(unsigned int i=0;i<sizeof(ends)/sizeof(ends[0]);++i)check(!in_ranges(ends[i]),"neighbour outside the unit ranges",ends[i]);
+    const std::uint32_t unrouted[]={0x10fe00,0x10fe02,0x10fe04,0x10fe06,0x10fe08,0x10fe0c,0x10fe0e};
     for(unsigned int i=0;i<sizeof(unrouted)/sizeof(unrouted[0]);++i) {
         Bytes ram;State s;world(ram,s,unrouted[i],0);reject(ram,s,SENT,"unsupported animation machine PC");
     }
-    {   // Without a stop PC the call into a boundary is a checked error too.
-        Bytes ram;State s;world(ram,s,0x5ef66,0);reject(ram,s,SENT,"unsupported animation machine PC");
-        world(ram,s,0x10fe0a,0);reject(ram,s,SENT,"unsupported animation machine PC");   // work-RAM rollback probe (6064a -> 44602 is routed by B2e)
+    {   // The call 5ef66 -> JSR 4b6f4 stops exactly at 4b6f4; the work-RAM probe 10fe0a is the rollback probe (6064a -> 44602 is routed by B2e).
+        Bytes ram;State s;Out o;world(ram,s,0x5ef66,0);check(run(ram,s,0x4b6f4,o)&&s.pc==0x4b6f4,"stop at the boundary 4b6f4",s.pc);
+        world(ram,s,0x10fe0a,0);reject(ram,s,SENT,"unsupported animation machine PC");
     }
     {
         Bytes ram;State s;world(ram,s,0x5eed3,0);reject(ram,s,SENT,"unaligned animation machine PC");
         world(ram,s,0x5eee2,0);s.a[6]=NODE+1U;reject(ram,s,SENT,"invalid animation machine write size/alignment");          // odd LONG store 36(A6)
         world(ram,s,0x5f520,0);s.a[6]=NODE+1U;reject(ram,s,SENT,"invalid animation machine write size/alignment");
     }
-    {   // A failure after an earlier store rolls the store back: 5f5da installs 5f5f2 at (A6), then falls into 5f5e0 and calls the boundary 4b6f4.
-        Bytes ram;State s;world(ram,s,0x5f5da,0);
-        reject(ram,s,SENT,"unsupported animation machine PC");
-        check(get(ram,NODE,4)==0,"the install store of the failed run is not committed");
+    {   // 5f5da installs 5f5f2 at (A6), then falls into 5f5e0 and calls the boundary 4b6f4: the stop at 4b6f4 commits the install (the former
+        // rollback variant without a stop PC depended on 4b6f4 staying unrouted; rollback of earlier stores is covered by the work-RAM probes above).
+        Bytes ram;State s;Out o;world(ram,s,0x5f5da,0);
+        check(run(ram,s,0x4b6f4,o)&&s.pc==0x4b6f4&&get(ram,NODE,4)==0x5f5f2,"the install store is committed at the boundary stop",get(ram,NODE,4));
     }
 }
 }

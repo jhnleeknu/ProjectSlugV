@@ -469,16 +469,18 @@ void errors(){
  // Rollback probes only in work RAM 10fe00..10fefe (code never executes in RAM; F4 unit test boundary convention).
  const std::uint32_t outside[]={0x10fe00,0x10fe40,0x10fefe};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,outside[i],2),STOP,"unsupported animation machine PC");}
- // Unrouted neighbours: data before / after the ranges, the TRAP sites e6836 / e6896 and the string e6838, the unreferenced 3b4e0.
- const std::uint32_t neighbours[]={0x3abec,0x3b68a,0x44600,0x4464a,0x4db16,0x4dc66,0xe66a8,0xe6836,0xe6838,0xe6896,0xe693a,0xe89d8,0xe89e4,0x3b4e0};
- for(unsigned int i=0;i<sizeof(neighbours)/sizeof(neighbours[0]);++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,neighbours[i],2),STOP,"unsupported animation machine PC");}
+ // Review 0264 M-3: the probes without an executor are work-RAM PCs 10fe10..10fe2a; the ROM neighbours (data before / after the ranges, the TRAP sites e6836 / e6896,
+ // the string e6838, the unreferenced 3b4e0) are only asserted to be outside the unit's own ranges.
+ const std::uint32_t ends[]={0x3abec,0x3b68a,0x44600,0x4464a,0x4db16,0x4dc66,0xe66a8,0xe6836,0xe6838,0xe6896,0xe693a,0xe89d8,0xe89e4,0x3b4e0};
+ for(unsigned int i=0;i<sizeof(ends)/sizeof(ends[0]);++i)assert(!in_ranges(ends[i]));
+ for(unsigned int i=0;i<14;++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,0x10fe10U+2U*i,2),STOP,"unsupported animation machine PC");}
  // JSR (A1) of 4dc40: a work-RAM target and an odd target (the failure keeps the pre-run state).
  {reject(base_ram("10e07a:0010fe00"),state_of(NULL,0x4dc40,0),STOP,"unsupported animation machine PC");
   reject(base_ram("10e07a:0004dc29"),state_of(NULL,0x4dc40,0),STOP,"unaligned animation machine PC");}
- // e6890: MOVE.W #1,1.w is an odd WORD write; e6884 with D1 = a reaches it; e682e with D7 = a goes to the TRAP e6836 (no stop PC).
+ // e6890: MOVE.W #1,1.w is an odd WORD write; e6884 with D1 = a reaches it; e682e with D7 = a goes to the TRAP e6836 (stop-only check, review 0264 M-3).
  {reject(base_ram(""),state_of(NULL,0xe6890,0),STOP,"invalid animation machine write size/alignment");
   State s=state_of(NULL,0xe6884,0);s.d[1]=10;s.a[1]=RECORDS;reject(base_ram(""),s,STOP,"invalid animation machine write size/alignment");
-  State t=state_of(NULL,0xe682e,0);t.d[7]=0xffff000a;reject(base_ram(""),t,STOP,"unsupported animation machine PC");}
+  State t=state_of(NULL,0xe682e,0);t.d[7]=0xffff000a;Bytes tr=base_ram("");Out to;assert(run(tr,t,0xe6836,to)&&t.pc==0xe6836);}
  // A failure after earlier stores: 3ac58 stores BYTE a3 and pushes A0, then 2986 / 28ae fails (WORD 104ca0 = 0 <= D0.W): the 2986 caller-X limitation is a
  // checked error and every store is rolled back.
  {reject(base_ram(""),state_of(NULL,0x3ac58,0),STOP,"cue wrapper failure requires known caller X");}

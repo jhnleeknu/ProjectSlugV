@@ -55,8 +55,10 @@ SUBSTATE_ENTRIES = (0x3a60a, 0x3a622, 0x3a670, 0x3a69c, 0x3a6b8, 0x3a6d4, 0x3a6f
 CONTINUATIONS = (0x3a62a, 0x3a766, 0x3a8ac, 0x3a8f4, 0x3a932, 0x3aa7a, 0x3ab08, 0x3ab2c)
 SLOT_TABLES = (0x3a63c, 0x3a782, 0x3a960)
 STATE_ENTRIES = (0x3a62e, 0x3a774, 0x3a8ba, 0x3a8f8, 0x3aae8, 0x3ab0c)
-UNROUTED_NEIGHBOURS = (0x3ab80, 0x3ab98, 0x3abde, 0x10fe02, 0x3af6c, 0x3af74, 0x3b03c, 0x3b4bc, 0x3b4e0, 0x10fe04, 0x10fe06, 0x10fe08, 0x10fe0a, 0x1bf94, 0x1d1b0,
-                       0x10fe0c, 0x10fe0e, 0x4b6f4, 0x3ad48, 0x10fe00, 0x10fefe)
+# work-RAM PCs without an executor (review 0264 M-3).  The ROM neighbours 3ab80 3ab98 3abde 3af6c 3af74 3b03c 3b4bc 3b4e0 1bf94 1d1b0 4b6f4 3ad48 (code or data of later units)
+# are 10fe10..10fe26 in this order; the exact range ends are asserted against the routing in build().
+UNROUTED_NEIGHBOURS = (0x10fe10, 0x10fe12, 0x10fe14, 0x10fe02, 0x10fe16, 0x10fe18, 0x10fe1a, 0x10fe1c, 0x10fe1e, 0x10fe04, 0x10fe06, 0x10fe08, 0x10fe0a, 0x10fe20, 0x10fe22,
+                       0x10fe0c, 0x10fe0e, 0x10fe24, 0x10fe26, 0x10fe00, 0x10fefe)
 # helpers with their real return LONG inside the unit
 CHAIN_RETURNS = {0x3b48c: (0x3ab34,), 0x1bf80: (0x3afa2,), 0x1d198: (0x3af94,)}
 # producer blocks (JSR 49fc6) and the longer chains reaching them
@@ -350,7 +352,9 @@ def build():
     require(len(STARTS) == 218 and len(STARTS_SET) == 218, ('starts', len(STARTS), len(STARTS_SET)))
     require(unit_of(SENTINEL) is None and not mine(SENTINEL), 'sentinel must be unrouted')
     for pc in UNROUTED_NEIGHBOURS:
-        require(unit_of(pc) is None, ('neighbour is routed', hex(pc)))
+        require(unit_of(pc) is None, ('probe is routed', hex(pc)))
+    for lo, hi in RANGES:
+        require(unit_of(hi) != UNIT and unit_of(lo - 2) != UNIT, ('range end routed to b2c', hex(lo), hex(hi)))
     for s in STARTS:
         require(unit_of(s) == UNIT, ('start is not routed to b2c', hex(s), unit_of(s)))
     rng = random.Random(0xB2C)
@@ -712,16 +716,16 @@ def error_fixtures(bases, add):
         add(U.Fixture('error-unknown-carry-%05x' % pc, U.with_host_writes(st, pc=pc), [], SENTINEL, ('error', 'objects b2c caller requires known carry')))
     node = st['regs']['a6']
     # JMP (A0) of 3ab7e and JMP (A0,D1.W) of 3abc0: a work-RAM target (unrouted) and an odd target; the LONG table read of 3ab72 to a RAM pointer is a match fixture
-    add(U.Fixture('error-3ab7e-ram-target', U.with_host_writes(st, regs=dict(a0=0x10fe00), pc=0x3ab7e), [], SENTINEL, ('error', 'unsupported animation machine PC')))
-    add(U.Fixture('error-3ab7e-odd-target', U.with_host_writes(st, regs=dict(a0=0x3a62b), pc=0x3ab7e), [], SENTINEL, ('error', 'unaligned animation machine PC')))
+    add(U.Fixture('error-3ab7e-ram-target', U.with_host_writes(st, regs=dict(a0=0x10fe00), pc=0x3ab7e), [], SENTINEL, ('error', 'unsupported animation machine PC'), fail_pc=0x10fe00))
+    add(U.Fixture('error-3ab7e-odd-target', U.with_host_writes(st, regs=dict(a0=0x3a62b), pc=0x3ab7e), [], SENTINEL, ('error', 'unaligned animation machine PC'), fail_pc=0x3a62b))
     sp = st['regs']['a7']
     add(U.Fixture('error-3abc0-ram-target', U.with_host_writes(st, [(sp & 0xffff, 4, 0x10fe40), ((node + 0x9a) & 0xffff, 1, 0)], regs=dict(d1=0), pc=0x3abc0), [], SENTINEL,
-                  ('error', 'unsupported animation machine PC')))
+                  ('error', 'unsupported animation machine PC'), fail_pc=0x10fe40))
     add(U.Fixture('error-3abc0-odd-target', U.with_host_writes(st, [(sp & 0xffff, 4, 0x3a63d), ((node + 0x9a) & 0xffff, 1, 0)], regs=dict(d1=0), pc=0x3abc0), [], SENTINEL,
-                  ('error', 'unaligned animation machine PC')))
+                  ('error', 'unaligned animation machine PC'), fail_pc=0x3a655))   # landing = popped 3a63d + 4 * ROM BYTE 3abe1 (06) = 3a655 (odd; computed, not stoppable)
     # 3ab72 has no bound check: BYTE index 6 reads the WORD masks of the original ROM as the LONG 00010002, an interior PC of F6c (that unit's checked error)
     add(U.Fixture('error-3ab72-index-6', U.with_host_writes(st, regs=dict(d0=6), pc=0x3ab72), [], SENTINEL, ('error', 'unsupported animation irq f6c PC')))
-    add(U.Fixture('error-3a5be-ram-substate', U.with_host_writes(st, regs=dict(a0=0x10fe80), pc=0x3a5be), [], SENTINEL, ('error', 'unsupported animation machine PC')))
+    add(U.Fixture('error-3a5be-ram-substate', U.with_host_writes(st, regs=dict(a0=0x10fe80), pc=0x3a5be), [], SENTINEL, ('error', 'unsupported animation machine PC'), fail_pc=0x10fe80))
     # odd LONG install 82(A6) (A6 odd) and an odd LONG (A6) install
     add(U.Fixture('error-3a614-odd-install', U.with_host_writes(st, regs=dict(a6=node + 1), pc=0x3a614), [], SENTINEL, ('error', 'invalid animation machine write size/alignment')))
     add(U.Fixture('error-3aff8-odd-install', U.with_host_writes(st, regs=dict(a6=node + 1), pc=0x3aff8), [], SENTINEL, ('error', 'invalid animation machine write size/alignment')))

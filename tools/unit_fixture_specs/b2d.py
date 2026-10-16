@@ -14,7 +14,7 @@ Fixture families (native Unicorn on the original ROM versus the C++ run, V1 comp
             Native branches on the real flags, the C++ branches on the known C.  Stop: the consumer's successor (or the first unrouted PC of the run).
   node      the installed callbacks and child entries as node callbacks ((A6) := entry, PC := entry) run through every routed callee up to the dispatcher return or the
             first unrouted PC (LONG 82(A6) := 3a5d2 (N33, routed) for the JSR (A0) of 3a5be, or a natural value).
-  error     every even non-start PC of the unit ranges, an odd PC, Unknown C at the nine consumers, 3a5be -> 3a60a (unrouted, B2c) without a stop PC, odd node stores: checked
+  error     every even non-start PC of the unit ranges, an odd PC, Unknown C at the nine consumers, 3a5be -> the work-RAM PC 10fe00 without a stop PC, odd node stores: checked
             error, state preserved.
   negative  C++ input differs from the native input in one RAM bit / one register / the stop / the queue: the comparison must report it.
 Carry: the V1 comparison has no SR oracle; carry_oracle() checks the C++ known-C tags against the native C flag at the stop (as the B2b spec does).
@@ -332,7 +332,7 @@ def build():
     _BLK.clear()
     require(len(STARTS) == 220 and len(STARTS_SET) == 220, ('starts', len(STARTS), len(STARTS_SET)))
     require(unit_of(SENTINEL) is None and not mine(SENTINEL), 'sentinel must be unrouted')
-    require(unit_of(0x3a60a) is None, '3a60a is routed: update the 3a5be error fixture')
+    require(unit_of(0x10fe00) is None, 'work-RAM probe 10fe00 must be unrouted')
     for s in STARTS:
         require(unit_of(s) == 'animation_objects_b2d_block', ('start is not routed to b2d', hex(s), unit_of(s)))
     rng = random.Random(0xB2D)
@@ -591,7 +591,7 @@ def node_fixtures(world, add, record):
             base = rng.choice(world.bases)
             st = world.make(entry, base.stop, flds)
             ret = base.stop
-            st = U.with_host_writes(st, [((st['regs']['a6']) & 0xffff, 4, entry), ((st['regs']['a6'] + 0x82) & 0xffff, 4, rng.choice((0x3a5d2, 0x3a5d2, 0x3a60a)))])
+            st = U.with_host_writes(st, [((st['regs']['a6']) & 0xffff, 4, entry), ((st['regs']['a6'] + 0x82) & 0xffff, 4, rng.choice((0x3a5d2, 0x3a5d2, 0x10fe00)))])
             tr = trace(st, first_unrouted(extra=(ret,)), cap=400000)
             if tr is None:
                 continue
@@ -619,8 +619,8 @@ def error_fixtures(bases, add):
     for pc in CONSUMERS:
         add(U.Fixture('error-unknown-carry-%05x' % pc, U.with_host_writes(st, pc=pc), [], SENTINEL, ('error', 'objects b2d caller requires known carry')))
     a6 = st['regs']['a6']
-    # 394e2: MOVEA.L 82(A6),A0; JSR 3a5be -> JSR (A0) = 3a60a (unrouted, B2c) without a stop PC there
-    add(U.Fixture('error-394e2-3a5be-3a60a', U.with_host_writes(st, [((a6 + 0x82) & 0xffff, 4, 0x3a60a)], pc=0x394e2), [], SENTINEL, ('error', 'unsupported animation machine PC')))
+    # 394e2: MOVEA.L 82(A6),A0; JSR 3a5be -> JSR (A0) = a work-RAM target without a stop PC (was 3a60a, routed by B2c since the 2c7e5a4 merge, so the spec could not build; review 0264 M-3)
+    add(U.Fixture('error-394e2-3a5be-10fe00', U.with_host_writes(st, [((a6 + 0x82) & 0xffff, 4, 0x10fe00)], pc=0x394e2), [], SENTINEL, ('error', 'unsupported animation machine PC'), fail_pc=0x10fe00))
     # odd node: CLR.L 64(A6) / MOVE.W 2c(A6) at an odd A6
     add(U.Fixture('error-39370-odd-node', U.with_host_writes(st, regs=dict(a6=a6 + 1), pc=0x39370), [], SENTINEL, ('error', 'invalid animation machine write size/alignment')))
     add(U.Fixture('error-2d4e6-odd-node', U.with_host_writes(st, regs=dict(a6=a6 + 1), pc=0x2d4e6), [], SENTINEL, ('error', 'program bus requires even WORD/LONG address')))

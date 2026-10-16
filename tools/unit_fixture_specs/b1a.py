@@ -47,8 +47,10 @@ STARTS = [int(x, 16) for x in (
     'b75f8 b75fe b7604 b760e b7614 b7618 b761e b762a b7662 b7666 b769e b7d2e b7d3a b7d3c b7d48').split()]
 CONSUMERS = (0x78408, 0x78454, 0x784a0, 0x784ae, 0x7853e, 0x7854c, 0x785dc, 0x78636, 0x78644, 0x78652, 0x78cfe, 0x78d1a, 0x79630, 0x79638,
              0xb71a0, 0xb726a, 0xb7392, 0xb7538, 0xb75ee)
-# neighbours / boundaries that no unit routes: the state chains 78660 78716 78776, the tail cc8b4 and the end of every range
-UNROUTED_NEIGHBOURS = (0x78660, 0x78716, 0x78776, 0x78d5a, 0x79320, 0x79654, 0x79746, 0xb7d4a, 0xcc8b4, 0x79400, 0x7942e, 0x79454, 0x7949c, 0x794e2)
+# PCs without an executor for the shared-text checks: even work-RAM PCs (code never executes in RAM, so the routing never claims them; review 0264 M-3).
+# Until the review fix this list held ROM code of later units (state chains 78660 78716 78776, the tail cc8b4, the range ends 78d5a 79320 79654 79746 b7d4a and
+# 79400 7942e 79454 7949c 794e2); the exact range ends are asserted against the routing in build() instead.
+UNROUTED_NEIGHBOURS = tuple(range(0x10fe00, 0x10fe00 + 2 * 14, 2))
 STARTS_SET = set()
 # producer extra fields: node bytes the routed producer reads (the unit's own blocks do not touch them)
 CHAIN_FIELDS = {0x78404: [(6, 0x15, 1), (6, 0x97, 1)], 0x78450: [(6, 0x15, 1), (6, 0x97, 1)], 0x784aa: [(6, 0x15, 1), (6, 0x97, 1)],
@@ -311,7 +313,9 @@ def build():
     require(len(STARTS) == 215 and len(STARTS_SET) == 215, ('starts', len(STARTS), len(STARTS_SET)))
     require(unit_of(SENTINEL) is None and not mine(SENTINEL), 'sentinel must be unrouted')
     for pc in UNROUTED_NEIGHBOURS:
-        require(unit_of(pc) is None, ('neighbour is routed', hex(pc), unit_of(pc)))
+        require(unit_of(pc) is None, ('probe is routed', hex(pc), unit_of(pc)))
+    for lo, hi in RANGES:                                    # the exact range ends: the first PC after a range and the PC before it are not b1a
+        require(unit_of(hi) != 'animation_objects_b1a_block' and unit_of(lo - 2) != 'animation_objects_b1a_block', ('range end routed to b1a', hex(lo), hex(hi)))
     for s in STARTS:
         require(unit_of(s) == 'animation_objects_b1a_block', ('start is not routed to b1a', hex(s), unit_of(s)))
         require(any(lo <= s < hi for lo, hi in RANGES), ('start outside the ranges', hex(s)))
@@ -612,10 +616,11 @@ def error_fixtures(groups, add):
     # Unknown C at the 19 consumers (carry tag 0)
     for pc in CONSUMERS:
         add(U.Fixture('error-unknown-carry-%05x' % pc, U.with_host_writes(ust if pc >= 0xb0000 else st, pc=pc), [], SENTINEL, ('error', 'objects b1a caller requires known carry')))
-    # boundaries reached without a stop PC: the state-chain installs 78660 / 78716 (after 78648 / 7863a) and the branch 78776 (78564), the tail jump cc8b4 (78d3a)
+    # boundaries of the unit: the tail jump cc8b4 (78d3a) and the branch 78776 (78564) leave the unit through fixed code addresses (not RAM-producible), so the boundary is a
+    # stop-only check (native and C++ stop exactly there); the former expected-error rows depended on cc8b4 / 78776 staying unrouted (review 0264 M-3)
     nat = st['regs']['a6']
-    add(U.Fixture('error-boundary-78d3a-cc8b4', U.with_host_writes(st, pc=0x78d3a), [], SENTINEL, ('error', 'unsupported animation machine PC')))
-    add(U.Fixture('error-boundary-78564-78776', U.with_host_writes(st, [((nat + 0x9b) & 0xffff, 1, 0)], pc=0x78564), [], SENTINEL, ('error', 'unsupported animation machine PC')))
+    add(U.Fixture('boundary-stop-78d3a-cc8b4', U.with_host_writes(st, pc=0x78d3a), [], 0xcc8b4))
+    add(U.Fixture('boundary-stop-78564-78776', U.with_host_writes(st, [((nat + 0x9b) & 0xffff, 1, 0)], pc=0x78564), [], 0x78776))
     # odd LONG write: the install MOVE.L #x,(A6) with an odd A6
     add(U.Fixture('error-odd-install', U.with_host_writes(st, regs=dict(a6=nat + 1), pc=0x7843e), [], SENTINEL, ('error', 'invalid animation machine write size/alignment')))
     # a0-relative store with a read-only target (78d2e: MOVE.B 5f(A6),5f(A0), A0 in ROM)

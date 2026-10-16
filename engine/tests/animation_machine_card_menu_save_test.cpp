@@ -322,7 +322,7 @@ void errors(){
  const std::uint32_t bundled[]={0x9f44,0x9f4a,0x9f72,0xbb7e,0xbb8a,0xbbbc,0xbbc6,0xbbc2,0xbbce,0xbe2a,0xbe32,0xbe38,0xbd5a,0xbd8a,0xbe16,0xbd92,0xa724,0xbd30,0xbd38};
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){assert(!listed(bundled[i]));Bytes ram;State s;generic(bundled[i],ram,s);reject(ram,s,STOP,"unsupported animation card menu save PC");}
  // Neighbours outside the routed ranges (data at bb8e/be3a, BRA operand bd94) and the BIOS boundaries.
- const std::uint32_t outside[]={0x9f34,0x9f78,0xa72c,0xbb72,0xbb8e,0xbbb6,0xbbfa,0xbd24,0xbd94,0xbe0a,0xbe3a,BIOS,BIOS_STATUS};
+ const std::uint32_t outside[]={0x9f34,0x9f78,0xa72c,0xbb72,0xbb8e,0xbbb6,0x10fe20,0xbd24,0xbd94,0xbe0a,0xbe3a,BIOS,BIOS_STATUS};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0xbd27,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }

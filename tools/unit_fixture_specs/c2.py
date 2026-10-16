@@ -489,9 +489,11 @@ def error_fixtures(case):
                 out.append(U.Fixture('error-interior-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unsupported animation controller c2 PC')))
         for pc in (lo + 1, hi - 1):
             out.append(U.Fixture('error-odd-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unaligned animation machine PC')))
-    for pc in (0x1022, 0xbbfa, 0xc6ce, 0x48250, 0xe630a, 0xb362, 0xa770, 0xa8d0, 0xc00444, 0xc00468):
-        if not routed(pc):
-            out.append(U.Fixture('error-outside-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unsupported animation machine PC')))
+    # PCs without an executor: even work-RAM PCs 10fe10..10fe1e (review 0264 M-3; were the ROM range ends 1022 bbfa c6ce 48250 e630a b362 a770 a8d0, code of later units)
+    # and the two BIOS entries (stay unrouted)
+    for pc in (0x10fe10, 0x10fe12, 0x10fe14, 0x10fe16, 0x10fe18, 0x10fe1a, 0x10fe1c, 0x10fe1e, 0xc00444, 0xc00468):
+        U.require(not routed(pc), ("probe is routed", hex(pc)))
+        out.append(U.Fixture('error-outside-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unsupported animation machine PC')))
     # Z flag source guard: A0 outside 10fdb0 / 10fdb1 / 100004 / 100005
     for consumer in Z_CONSUMERS:
         for a0 in (0, 0x3000, 0x10fdaf, 0x10fdb2, 0x100003, 0x100006, 0x10fe00, 0xd00034, 0x1010fdb0, 0xffffffff):

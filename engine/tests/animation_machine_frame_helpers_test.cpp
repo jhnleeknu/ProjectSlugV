@@ -296,10 +296,10 @@ void errors(){
  // 49ab4; 47640 2efa4 2efdc b4a28 b481c 46f50 are now stage area F1c2 PCs, and the unrouted 10fe20 10fe22 10fe24 10fe26 10fe28
  // 10fe2a, outside every unit contract, stand in for them; 4706c is an objects U09 block start and the unrouted 10fe42 stands in
  // for it; 49390 is inside the objects U11 block 4938c and the unrouted 10fe40 stands in for it; 493bc is an objects N15 block start
- // and the work RAM PC 10fe90 stands in for it; 4d9d4 is the interior RTS of the objects B2b helper 4d9ba and the unrouted 4d9b8 stands in
- // for it); odd PCs are rejected first.
+ // and the work RAM PC 10fe90 stands in for it; 4d9d4 is the interior RTS of the objects B2b helper 4d9ba and the unrouted 10fe2c stands in
+ // for it; review 0264 M-3: 4d9b8 was used before); odd PCs are rejected first.
  const std::uint32_t outside[]={0x480f2,0x10fe20,0x6f1c0,0x6f1c4,0x10fe22,0x10fe24,0x3c42,0x3c7c,0x10fe26,0xb4ab0,0x10fe40,0x4939c,0x10fe90,
-  0x1c026,0x1c052,0x4d9b8,0x4da08,0x10fe28,0xb4850,0x10fe2a,0x10fe42,0x49ab2};
+  0x1c026,0x1c052,0x10fe2c,0x4da08,0x10fe28,0xb4850,0x10fe2a,0x10fe42,0x49ab2};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0x47657,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
