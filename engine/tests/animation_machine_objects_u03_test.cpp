@@ -397,7 +397,7 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u03 PC");++inside;}
  assert(even==504&&inside==421);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- const std::uint32_t outside[]={0xe84d2,0xe84d4,0xe88c6,0xe88c8,0xe89d8,0xe89da,0xe7c44,0xe7cc8,0xe84c6};
+ const std::uint32_t outside[]={0xe84d2,0xe84d4,0xe88c6,0xe88c8,0xe89d8,0x10fe0c,0xe7c44,0xe7cc8,0xe84c6};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0xe84d7,0xe8559,0xe8611,0xe875d,0xe885b,0xe88c1,0xe88c5};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}

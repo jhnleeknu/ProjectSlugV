@@ -584,10 +584,10 @@ void part_chains() {
         world(ram,s,0xd3d7c,0);expect_run(ram,s,o,0x2986);check(s.a[0]==0xd3d9c && (s.d[0]&65535U)==0x1e && s.a[1]==0x100bf4 && get(ram,s.a[7],4)==0xd3d92,"d3d7c");
         world(ram,s,0xd3d92,0);s.d[0]=5;s.d[1]=6;expect_run(ram,s,o,0x49214);check(s.d[0]==0 && s.d[1]==0,"d3d92 JMP 49214");
     }
-    {   // 38d56: stop at 3b5a6 (routed by B2c; stop-only check); 3a1b2: the boundary 4db18; work-RAM rollback probe 10fe02.
+    {   // 38d56: stop at 3b5a6 (routed by B2c; stop-only check); work-RAM rollback probes 10fe02 and 10fe06 (3a1b2 -> 4db18 is routed by B2e).
         Bytes ram;State s;Out o;world(ram,s,0x38d56,0);expect_run(ram,s,o,0x3b5a6);check(get(ram,NODE+0xb5,1)==0xff && get(ram,s.a[7],4)==0x38d60,"38d56");
         world(ram,s,0x10fe02,0);reject(ram,s,SENT,"unsupported animation machine PC");
-        world(ram,s,0x3a1b2,0);reject(ram,s,SENT,"unsupported animation machine PC");
+        world(ram,s,0x10fe06,0);reject(ram,s,SENT,"unsupported animation machine PC");
         world(ram,s,0x38d80,0);put(ram,NODE+0x62,1,0xff);expect_run(ram,s,o,0x3af8);check((s.d[0]&65535U)==0x1a60,"38d80 BYTE 62 != 0");
         world(ram,s,0x38dc2,0);expect_run(ram,s,o,0x3b2ee);check(get(ram,NODE,4)==0x39366 && (s.d[0]&65535U)==0x1e,"38dc2 installs 39366");
         world(ram,s,0x38d7a,0);expect_run(ram,s,o,0x3b288);check(get(ram,NODE,4)==0x38d80,"38d7a installs 38d80");
@@ -617,7 +617,7 @@ void part_errors() {
         Bytes ram;State s;world(ram,s,pc,0);reject(ram,s,SENT,"unsupported animation objects b2b PC");++internal;
     }
     check(internal>300,"internal even PCs are checked errors",internal);
-    const std::uint32_t unrouted[]={0x4c3ba,0x4c3c2,0x3a4d6,0x3a4d8,0x10fe04,0x4db18,0x4b6f4,0x3a048,0x3a0d2,0x3ad48,0x3b458,0x4d9a2,0x338f8,0x4c340,
+    const std::uint32_t unrouted[]={0x4c3ba,0x4c3c2,0x3a4d6,0x3a4d8,0x10fe04,0x10fe08,0x4b6f4,0x3a048,0x3a0d2,0x3ad48,0x10fe0a,0x4d9a2,0x338f8,0x4c340,
         0x4eef4,0x4f0c4,0x4ffba,0xd3d9c,0x4d6f2};
     for(unsigned int i=0;i<sizeof(unrouted)/sizeof(unrouted[0]);++i) {
         Bytes ram;State s;world(ram,s,unrouted[i],0);reject(ram,s,SENT,"unsupported animation machine PC");
