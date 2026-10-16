@@ -130,3 +130,64 @@ d1aabe9221eccd3b tools/verify_animation_machine_unit_fixtures.py
 - buffer_cue `e8a1c`/`4b82e`, frame_helpers `47672 2efdc 493bc`와 natural 480bc 두 stop은 external read queue empty로 끝나는 원인 routing을 특정하지 않았다 [U].
 - `0258`의 35개 pin은 이번에 `e5bfb73` 소스 기준으로 다시 정렬되었으나 `docs/reviews/0258-regression-manifest.json`은 갱신하지 않았다.
 - 전체 게임 완료를 뜻하지 않는다.
+
+
+## de0e5be 재실행 (후속 단위 B2c-a/B2d/B2e/B3a/B3b 반영 후 소스 pin 재정렬)
+
+대상 커밋 `de0e5be`(브랜치 `claude/pins-wip`, 작업 트리 `/Users/start/Workspce/metalslug-pins`). 변경은 커밋하지 않았다. ROM·추출 데이터·`artifacts/` 공유 산출물은 수정하지 않았다(실행 후 `find -newer`로 확인, 변경 없음). 엔진 C++는 바꾸지 않았다.
+
+### pin 변경
+`e5bfb73` 이후 단위가 `engine/src/animation_machine.cpp`·`animation_machine_internal.h`에 routing/선언을 추가해(`e5bfb73..de0e5be`: B2c-a, B2d, B2e, B3a, B3b) 두 검증기의 `CPP_PINS`가 다시 낡았다. 소스 전수 grep(`7e76e64b`, `4585a260`, `animation_machine.cpp`) 결과 해시 pin은 이 두 파일뿐이다. 다른 `*_f4_execution` audit와 그 외 검증기는 이 파일을 해시로 pin하지 않고 이름/경로만 참조한다. 같은 `CPP_PINS`의 나머지 단위 소스 pin은 모두 현재 값과 일치한다.
+
+| 파일 | 대상 | 이전 | 현재 |
+| --- | --- | --- | --- |
+| `tools/verify_animation_machine_stage_event.py`, `tools/verify_animation_machine_stage_event_ops.py` | `engine/src/animation_machine.cpp` | `7e76e64b…f951a6` | `aba5bec0b6450b00…a68cc9` |
+| 같음 | `engine/src/animation_machine_internal.h` | `4585a260…6d6cfbd` | `706f6a5bcd3ce44c…a0e78` |
+
+이전 값은 각 소스 주석에 남겼다. 수정 파일 SHA256(앞 16): `707b3f71f464b3eb tools/verify_animation_machine_stage_event.py`, `3a171e83f64858c4 tools/verify_animation_machine_stage_event_ops.py`.
+
+### 실행 방식
+`de0e5be`를 scratch(`ms5-scratch/pins/roots/<도구>/`)에 clone하고 위 두 수정 파일을 덮어쓴 뒤, 공유 산출물은 심볼릭 링크, 해당 검증기 자기 출력 폴더만 실제 폴더로 두었다(앞선 legacy 실행기와 동일 방식). C++ 바이너리는 `de0e5be` clone에서 `make -j3 all test`로 빌드한 한 벌을 각 root에 복사했다: C++ 테스트는 모두 통과했고, 마지막 단계 `python -m unittest discover`만 clone에 `.venv`가 없어 실행되지 않았다(이번 재실행 범위 밖). 동시 프로세스 2개.
+
+### 결과 (표준 35개, 기대값 정렬 없이 pin 갱신 후 모두 통과)
+실패 없음: 기대값 정렬이 필요한 항목은 발견되지 않았다(B2c/B2d/B2e/B3a/B3b가 기존 검증기의 PC 경계 기대를 무효화한 경우 없음).
+
+| 검증기 | 결과 | 시간(s) | 보고서 SHA256(앞 16) |
+| --- | --- | --- | --- |
+| `verify_animation_machine.py` | PASS | 50 | `46453720f139d223` |
+| `verify_animation_machine_activation.py` | PASS | 38 | `1cd48d88fc96de2f` |
+| `verify_animation_machine_area_clear.py` | PASS | 214 | `edd84870d8551255` |
+| `verify_animation_machine_buffer_cue.py` | PASS | 821 | `e5f59a65f69165ba` |
+| `verify_animation_machine_callers.py` | PASS | 63 | `f6ee0a93d8fc21ec` |
+| `verify_animation_machine_card_child.py` | PASS | 118 | `fb47c8637d323a31` |
+| `verify_animation_machine_card_menu.py` | PASS | 821 | `3dda09b5c14e6de3` |
+| `verify_animation_machine_card_menu_close.py` | PASS | 2793 | `ab4122c79c56af1e` |
+| `verify_animation_machine_card_menu_input.py` | PASS | 1440 | `0640edc7951322b9` |
+| `verify_animation_machine_card_menu_nested.py` | PASS | 625 | `6dcda72c679d64e5` |
+| `verify_animation_machine_card_menu_open.py` | PASS | 11426 | `66cb8a6a16ab146d` |
+| `verify_animation_machine_card_menu_save.py` | PASS | 466 | `66e6a6f05fea45e1` |
+| `verify_animation_machine_carry.py` | PASS | 78 | `95b287f587c53757` |
+| `verify_animation_machine_cleanup.py` | PASS | 278 | `0f71644934b4a6f5` |
+| `verify_animation_machine_exit.py` | PASS | 72 | `dec9115f8b394f1d` |
+| `verify_animation_machine_fade_card.py` | PASS | 76 | `ae8d2962659607f1` |
+| `verify_animation_machine_frame_helpers.py` | PASS | 1371 | `50baa696110aef57` |
+| `verify_animation_machine_hud.py` | PASS | 232 | `0edbe7299d01d8b9` |
+| `verify_animation_machine_input.py` | PASS | 598 | `9b70ca8ad8e2e3a9` |
+| `verify_animation_machine_map_transfer.py` | PASS | 166 | `3ec2fd5a3647906a` |
+| `verify_animation_machine_motion_walk.py` | PASS | 3069 | `f9f1e2906fa77ae8` |
+| `verify_animation_machine_palette_bind.py` | PASS | 94 | `467f9c0a3dc1277e` |
+| `verify_animation_machine_readiness.py` | PASS | 51 | `a8383b453054e8f1` |
+| `verify_animation_machine_scene.py` | PASS | 196 | `854b2ebf7bc599d3` |
+| `verify_animation_machine_scene_core.py` | PASS | 979 | `4c31e29d05dba6cd` |
+| `verify_animation_machine_scene_update.py` | PASS | 599 | `9b19bb1c92396316` |
+| `verify_animation_machine_scheduler.py` | PASS | 278 | `bd3721432977c9d8` |
+| `verify_animation_machine_screen.py` | PASS | 116 | `d685c052b944a519` |
+| `verify_animation_machine_script_placement.py` | PASS | 300 | `6e0660d328b227fd` |
+| `verify_animation_machine_stage_area.py` | PASS | 153 | `8817f0262b775367` |
+| `verify_animation_machine_stage_catalog.py` | PASS | 2061 | `225af7a60b75fe2c` |
+| `verify_animation_machine_stage_entry.py` | PASS | 1683 | `9f8cd949b6fa6df3` |
+| `verify_animation_machine_stage_event.py` | PASS | 142 | `84fc6c63fe736df1` |
+| `verify_animation_machine_stage_event_ops.py` | PASS | 80 | `e9854007a36056b5` |
+| `verify_animation_machine_transition.py` | PASS | 107 | `b74427c412d15869` |
+
+PASS = 종료 코드 0. 시간은 기계 부하에 좌우된다. 단위 fixture·frame 구동기 계열(표준 35개 밖)은 이번에 재실행하지 않았다 [미확인].
