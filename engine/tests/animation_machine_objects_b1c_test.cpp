@@ -904,11 +904,13 @@ void errors(){
  const std::uint32_t n30[]={0x3323c,0x336d4,0x3395a,0x33a8a};
  for(unsigned int i=0;i<sizeof(n30)/sizeof(n30[0]);++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,n30[i],2),STOP,"unsupported animation objects n30 PC");}
  // Computed JMP blocks: no bound check (F1 decision 3): 30b78 D0.B = 28 -> 30bf4 (inside a block), D0.B = ff -> 30f80 (N29 interior);
- // 335f6 D0.W = 10 -> 33626 (inside a block), D0.W = 2000 -> 4 * 2000 = 8000 (sign-extended) -> 2b5fe (unrouted), D0.W = 7fff -> fffc = -4 -> 335fa (inside 335f6).
+ // 335f6 D0.W = 10 -> 33626 (inside a block), D0.W = 2000 -> 4 * 2000 = 8000 (sign-extended) -> 2b5fe (inside the B3a block 2b5fc; was unrouted before B3a), D0.W = 7fff -> fffc = -4 -> 335fa (inside 335f6).
  {const std::uint32_t a[8]={28,0,0,0,0,0,0,0},b[8]={0xff,0,0,0,0,0,0,0},c[8]={10,0,0,0,0,0,0,0},d[8]={0x2000,0,0,0,0,0,0,0},e[8]={0x00ff7fff,0,0,0,0,0,0,0};
   Bytes ram=base_ram("");reject(ram,state_of(a,0x30b78,0),STOP,"unsupported animation objects b1c PC");reject(ram,state_of(b,0x30b78,0),STOP,"unsupported animation objects n29 PC");
-  reject(ram,state_of(c,0x335f6,0),STOP,"unsupported animation objects b1c PC");reject(ram,state_of(d,0x335f6,0),STOP,"unsupported animation machine PC");
-  reject(ram,state_of(e,0x335f6,0),STOP,"unsupported animation objects b1c PC");}
+  reject(ram,state_of(c,0x335f6,0),STOP,"unsupported animation objects b1c PC");reject(ram,state_of(d,0x335f6,0),STOP,"unsupported animation objects b3a PC");
+  reject(ram,state_of(e,0x335f6,0),STOP,"unsupported animation objects b1c PC");
+  // The failing PC of D0.W = 2000 is 2b5fe (sign-extended 8000 from 335fe): a run with that stop PC ends exactly there.
+  {Bytes r2=base_ram("");State s=state_of(d,0x335f6,0);Out o;assert(run(r2,s,0x2b5fe,o)&&s.pc==0x2b5fe&&r2==ram);}}
  // Unknown C into a consumer (all three Unknown / Clear / Set variants are rows above).
  for(unsigned int i=0;i<CONSUMER_COUNT;++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,CONSUMERS[i],0),STOP,"objects b1c caller requires known carry");}
 }

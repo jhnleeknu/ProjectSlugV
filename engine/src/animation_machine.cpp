@@ -1109,6 +1109,10 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // Objects B2e blocks: the five consumers 3ac76 (MOVEA.L (A7)+,A1; BCC: C of 2986), 3b666 (BCC: 28ae), 4dc34 (BCS: 49fc6), 4dc46 (BCS: the live
     // JSR (A1) callee) and 4dc50 (BCC: 288c). No B2e block produces a known C for another block; every other B2e block stays Unknown.
     case 0x3ac76:case 0x3b666:case 0x4dc34:case 0x4dc46:case 0x4dc50:
+    // Objects B3a blocks: the 10 consumers 2b544 (BCC, C returned by 4d6b4), 2ba66 (SCC, 28ae; its MOVE.L install then clears C), 2bac8 2c1a0
+    // 2c2d0 2c382 2c43c 2c6fc (BCC, 2b418), 2c618 (BCC, 4d766) and 2c626 (BCS, 2b63e -> 4d418). 2b5fc (ORI) / 2b602 (ANDI) set their known C in
+    // their own block; every other B3a block stays Unknown.
+    case 0x2b544:case 0x2ba66:case 0x2bac8:case 0x2c1a0:case 0x2c2d0:case 0x2c382:case 0x2c43c:case 0x2c618:case 0x2c626:case 0x2c6fc:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1636,6 +1640,8 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x44602 && next.pc<0x4464a) || (next.pc>=0x4db18 && next.pc<0x4db42) || (next.pc>=0x4dbdc && next.pc<0x4dc66) ||
                 (next.pc>=0xe66aa && next.pc<0xe6836) || (next.pc>=0xe6854 && next.pc<0xe6896) || (next.pc>=0xe6898 && next.pc<0xe693a) ||
                 (next.pc>=0xe89da && next.pc<0xe89e4))ok=animation_objects_b2e_block(c);
+            else if ((next.pc>=0x8d34 && next.pc<0x8da2) || (next.pc>=0x2b532 && next.pc<0x2b668) || (next.pc>=0x2ba50 && next.pc<0x2baf4) ||
+                (next.pc>=0x2c0fc && next.pc<0x2c760))ok=animation_objects_b3a_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
