@@ -546,7 +546,9 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation stage event ops PC");++inside;if(in_list(BUNDLED,BUNDLED_COUNT,pc))++bundled;}
  assert(even==476&&inside==359&&bundled==31&&traps==8);
  for(unsigned int i=0;i<BUNDLED_COUNT;++i)assert(!is_start(BUNDLED[i])&&in_ranges(BUNDLED[i]));
- const std::uint32_t outside[]={0x288a,0x1a92a,0xe93da,0xe93e4,0xe93ee,0xe957c,0xe9584,0xe958c};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder); the former ROM probe PCs only have to stay outside the unit ranges.
+ {const std::uint32_t rom_outside[]={0x288a,0x1a92a,0xe93da,0xe93e4,0xe93ee,0xe957c,0xe9584,0xe958c};for(unsigned int i=0;i<sizeof(rom_outside)/sizeof(rom_outside[0]);++i)assert(!in_ranges(rom_outside[i]));}
+ const std::uint32_t outside[]={0x10fe00,0x10fe02,0x10fe04,0x10fe06,0x10fe08,0x10fe0a,0x10fe0c,0x10fe0e};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   if(outside[i]==0x288a){Out o;assert(run(ram,s,STOP,o));continue;} // 288a (RTS of 287e) belongs to the cleanup executor.
   reject(ram,s,STOP,"unsupported animation machine PC");}

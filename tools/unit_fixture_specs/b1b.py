@@ -19,8 +19,8 @@ Declared host writes (U.with_host_writes) and register overrides supply the type
   callbacks  whole callbacks as the dispatcher runs them (entry to the RTS return LONG or to JMP 2a00) over every routed callee; skipped
              when a callee of another unit is not routed yet, so a defect of this unit is never hidden.
   errors     expected checked errors with state preserved: Unknown C at the consumers, every internal even PC of the routed ranges,
-             odd PCs, the boundaries 3d526 3d982 3dd42 3def2 3df1a 3e0aa 3e302, the TRAP #f b1c90 (reached from b1c82 with D0.W - 1 > 5 and
-             directly) and 3d234 / 3da6c.
+             odd PCs, twelve PCs without an executor (work RAM 10fe00..10fe16, review 0264 M-3), and the TRAP #f b1c90 as a stop-only boundary
+             (reached from b1c82 with D0.W - 1 > 5).
   negative   C++ input with one flipped RAM byte / register must be detected.
 The native probe is only a search device; each kept fixture is verified again by the verifier (native must reach the stop).
 """
@@ -626,18 +626,18 @@ def error_fixtures(bases):
         for pc in (lo + 1, hi - 1):
             st = U.with_host_writes(base.state, [], pc=pc)
             out.append(U.Fixture('b1b-error-odd-%x' % pc, st, base.queue, 0x10fe40, ('error', 'unaligned animation machine PC'), external_status=base.status))
-    # boundaries without an executor (and the TRAP #f b1c90)
-    for pc in (0x3d526, 0x3d982, 0x3dd42, 0x3def2, 0x3df1a, 0x3e0aa, 0x3e302, 0xb1c90, 0xb1c92, 0xb1c9c, 0x3d234, 0x3da6c):
-        base = bases[pc >= 0xb0000][0]
-        if any(lo <= pc < hi for lo, hi in RANGES):
-            continue
+    # PCs without an executor: even work-RAM PCs (10fe00..10fe16; the stop 10fe40 stays distinct).  Review 0264 M-3: these were the ROM boundaries 3d526 3d982 3dd42
+    # 3def2 3df1a 3e0aa 3e302 b1c90 b1c92 b1c9c 3d234 3da6c, code of later units; the pairs keep the base node set of the old probe (< b0000: bases[0], else bases[1]).
+    for k, side in enumerate((0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0)):
+        pc = 0x10fe00 + 2 * k
+        base = bases[side][0]
         st = U.with_host_writes(base.state, [], pc=pc)
         out.append(U.Fixture('b1b-error-boundary-%x' % pc, st, base.queue, 0x10fe40, ('error', 'unsupported animation machine PC'), external_status=base.status))
-    # b1c82: D0.W - 1 > 5 falls into the TRAP #f (error), 1..6 passes
+    # b1c82: D0.W - 1 > 5 falls into the TRAP #f at b1c90 (end of the range, a fixed ROM address): a stop-only boundary check, both sides stop exactly at b1c90
     base = bases[1][0]
     for w78, label in ((0, 'zero'), (7, 'seven'), (0x100, 'x100'), (0xffff, 'ffff')):
         st = U.with_host_writes(base.state, [(base.a6 + 0x78, 2, w78), (base.a7, 4, STOP_RET)], pc=0xb1c82)
-        out.append(U.Fixture('b1b-error-trap-b1c82-%s' % label, st, base.queue, 0x10fe40, ('error', 'unsupported animation machine PC'), external_status=base.status))
+        out.append(U.Fixture('b1b-boundary-stop-trap-b1c82-%s' % label, st, base.queue, 0xb1c90, external_status=base.status))
     for w78 in range(1, 7):
         st = U.with_host_writes(base.state, [(base.a6 + 0x78, 2, w78), (base.a7, 4, STOP_RET)], pc=0xb1c82)
         out.append(U.Fixture('b1b-b1c82-w78-%d' % w78, st, base.queue, 0xb1ca0, external_status=base.status))

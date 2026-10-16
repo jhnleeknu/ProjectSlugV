@@ -884,9 +884,10 @@ void boundaries(){
  // 1bef8 data after it stands in; 4d81c and 49a8e are now stage area F1c2 block starts, and the unrouted 10fe20 and 10fe22,
  // outside every unit contract, stand in for them; e73f8 is now an objects U06 block start and the unrouted 10fe24 stands in for
  // it); odd PCs are rejected first.
- const std::uint32_t outside[]={0x4d7f0,0x49ab0,0x49ab2,0x49bca,0x49c1e,0x49c38,0x49c64,0x49c6c,0x49d86,0x1d8ca,0x1d8ce,0xe73f0,0x10fe24,
-  0x1bebe,0x1bef8,0x1d5aa,0x1d5c4,0x1d5e0,0x1d5fc,0x1d618,0x1d63a,0x1d662,0x1d698,0x1d6c0,0x1d6fa,0x1da5e,0x1daba,0x4836c,0x48384,
-  0x4d7a4,0x10fe20,0x10fe22,0x49cc2};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder; RANGES here lists block spans, not routing, so no static outside check).
+ const std::uint32_t outside[]={0x10fe00,0x10fe02,0x10fe04,0x10fe06,0x10fe08,0x10fe0a,0x10fe0c,0x10fe0e,0x10fe10,0x10fe12,0x10fe14,0x10fe16,0x10fe24,
+  0x10fe18,0x10fe1a,0x10fe1c,0x10fe1e,0x10fe26,0x10fe28,0x10fe2a,0x10fe2c,0x10fe2e,0x10fe30,0x10fe32,0x10fe34,0x10fe36,0x10fe38,0x10fe3a,0x10fe3c,
+  0x10fe3e,0x10fe20,0x10fe22,0x10fe40};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0x49b0d,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }

@@ -40,7 +40,8 @@ sys.path.insert(0, str(TOOLS))
 OUT = ROOT / 'artifacts/animation_machine_frame_driver'
 BUILD = ROOT / 'build/frame_driver_acceptance'
 HARNESS = ROOT / 'engine/tools/frame_driver_acceptance.cpp'
-SEED_DIR = ROOT / 'artifacts/linux_rebase/stage_entry_body'
+SEED_DIR_DEFAULT = ROOT / 'artifacts/linux_rebase/stage_entry_body'
+SEED_DIR = SEED_DIR_DEFAULT
 SEED_SHA = 'f74048bbeaa83a80e93473038e1867b07b14d0c4693ab5a05d4f73b3beeab04a'
 HISTORIC_SEED_SHA = '1f65100f1fedc36b4999543c720814dc6f9eb4bf634f3af3439aa68d70e31207'
 KEYS = ('d0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7')
@@ -257,15 +258,46 @@ def import_observers():
     FH, R, S = fh, r, s
 
 
+def add_seed_option(ap):
+    """Machine-specific seed directory: --seed-dir PATH or env MS5_SEED_DIR (default: the Linux rebase directory). Validated in declared_rebase."""
+    ap.add_argument('--seed-dir', default=None, help='stage_entry_body seed directory (observation.json SHA256 must equal the Linux rebase pin or the historic pin); env MS5_SEED_DIR; '
+                    'default artifacts/linux_rebase/stage_entry_body')
+
+
+def apply_seed_option(args):
+    """Select SEED_DIR from --seed-dir, else env MS5_SEED_DIR, else the default; no fallback between them."""
+    global SEED_DIR
+    chosen = getattr(args, 'seed_dir', None) or os.environ.get('MS5_SEED_DIR')
+    if chosen:
+        path = Path(chosen)
+        SEED_DIR = path if path.is_absolute() else ROOT / path
+    else:
+        SEED_DIR = SEED_DIR_DEFAULT
+
+
 def declared_rebase():
-    """Declared platform rebase of the seed observation (recorded in the report)."""
+    """Declared seed observation (recorded in the report). The observation.json SHA256 must be the Linux rebase pin (seed_kind linux_rebase) or the
+    historic macOS stage_entry_body pin (historic); anything else, or a missing directory, is an error (no silent fallback)."""
+    obs = SEED_DIR / 'observation.json'
+    if not obs.is_file():
+        raise SystemExit('seed observation missing: %s (use --seed-dir PATH or MS5_SEED_DIR; accepted SHA256 %s (linux_rebase) or %s (historic))' % (obs, SEED_SHA, HISTORIC_SEED_SHA))
     S.SEED_DIR = SEED_DIR
-    S.SEED_OBS = SEED_DIR / 'observation.json'
-    actual = file_sha(S.SEED_OBS)
+    S.SEED_OBS = obs
+    actual = file_sha(obs)
+    if actual == SEED_SHA:
+        kind = 'linux_rebase'
+    elif actual == HISTORIC_SEED_SHA:
+        kind = 'historic'
+    else:
+        raise SystemExit('seed observation SHA256 %s of %s is neither the Linux rebase pin %s nor the historic pin %s' % (actual, obs, SEED_SHA, HISTORIC_SEED_SHA))
     S.SEED_SHA = actual
-    return dict(seed_dir=str(SEED_DIR.relative_to(ROOT)), observation_sha256=actual, expected_sha256=SEED_SHA, matches_expected=actual == SEED_SHA,
-                historic_pin=HISTORIC_SEED_SHA, why='Linux-regenerated stage_entry_body observation (tools/observe_stage_entry_body.py at d94a832); the historic pin differs; '
-                'S.SEED_DIR/SEED_OBS/SEED_SHA monkeypatched in-process; equality of seed RAM to the historic run is NOT verified byte-wise (artifact absent)')
+    try:
+        shown = str(SEED_DIR.relative_to(ROOT))
+    except ValueError:
+        shown = str(SEED_DIR)
+    return dict(seed_dir=shown, seed_sha256=actual, seed_kind=kind, observation_sha256=actual, expected_sha256=SEED_SHA, matches_expected=actual == SEED_SHA,
+                historic_pin=HISTORIC_SEED_SHA, why='declared seed observation: linux_rebase = Linux-regenerated stage_entry_body (tools/observe_stage_entry_body.py at d94a832), '
+                'historic = original macOS run; S.SEED_DIR/SEED_OBS/SEED_SHA monkeypatched in-process; equality of Linux seed RAM to the historic run is NOT verified byte-wise')
 
 
 def setup_native():
@@ -762,7 +794,7 @@ def aggregate(results, historic):
         rows = r['rows']
         first = next((x for x in rows if x['category'] == 'complete' and not x['match']), None)
         nonc = [x for x in rows if x['category'] != 'complete']
-        bad_fail = [x for x in nonc if not all(c.get('ok') for c in x['checks'].values())]
+        bad_fail = [x for x in nonc if x['category'] == 'verifier-error' or not all(c.get('ok') for c in x['checks'].values())]   # a verifier exception (empty checks) is an acceptance failure (review 0264 L-2)
         for x in rows:
             cats[x['category']] += 1
             for c in x['checks'].values():
@@ -839,7 +871,9 @@ def main(argv=None):
     ap.add_argument('--workers', type=int, default=4)
     ap.add_argument('--no-build', action='store_true')
     ap.add_argument('--out', default=str(OUT), help='report / log directory (default artifacts/animation_machine_frame_driver)')
+    add_seed_option(ap)
     args = ap.parse_args(argv)
+    apply_seed_option(args)
     assert not sys.flags.optimize
     OUT = Path(args.out).absolute()                             # set before the fork: workers inherit it
     t0 = time.time()

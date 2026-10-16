@@ -583,9 +583,11 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects u08b PC");++inside;}
  assert(even==754&&inside==588);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder); the former ROM probe PCs only have to stay outside the unit ranges.
+ {const std::uint32_t rom_outside[]={0x461f2,0x46370,0x46994,0x4bb20,0x4bb52,0x4bca0};for(unsigned int i=0;i<sizeof(rom_outside)/sizeof(rom_outside[0]);++i)assert(!in_ranges(rom_outside[i]));}
  const std::uint32_t outside[]={0x10fe1c,0x10fe46,0x10fe04,0x10fe48,0x10fe4a, // 44ade is U20 now, 469d8 is U09 now, 492c8 is U12 now, 4662e is U15a now, 4578a is U15b now, 45b12 is U15c now
- 0x10fe50,0x10fe52,0x10fe08,0x461f2,0x46370,0x10fe4c, // 4683a is inside the U15a range 4662e..4683c now, 461ea is inside U15c now, 4b8e8 4bce0 are N33 now
-  0x46994,0x4bb20,0x4bb52,0x10fe14,0x4bca0,0x10fe0c,0x10fe54,0x10fe56,0x10fe58,0x10fe18}; // 4be32 is U18, 4bfa4 is U17 now, 4bc42 is inside N04 now, 4be50 4be68 4be80 are N33 now
+ 0x10fe50,0x10fe52,0x10fe08,0x10fe02,0x10fe06,0x10fe4c, // 4683a is inside the U15a range 4662e..4683c now, 461ea is inside U15c now, 4b8e8 4bce0 are N33 now
+  0x10fe0a,0x10fe0e,0x10fe10,0x10fe14,0x10fe12,0x10fe0c,0x10fe54,0x10fe56,0x10fe58,0x10fe18}; // 4be32 is U18, 4bfa4 is U17 now, 4bc42 is inside N04 now, 4be50 4be68 4be80 are N33 now
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x461ed,0x461f1,0x46373,0x4662d,0x4683d,0x46993,0x4bb23,0x4bb51,0x4bc45,0x4bc9f,0x4be35,0x4be4f,0x4be83,0x4bfa3};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}

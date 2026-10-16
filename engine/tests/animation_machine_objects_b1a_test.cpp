@@ -789,16 +789,18 @@ void interior() {
  for(unsigned int r=0;r<RANGE_COUNT;++r){const std::uint32_t odd[]={RANGES[r][0]+1,RANGES[r][1]-1};
   for(unsigned int i=0;i<2;++i){Bytes ram=base_ram("");State s;s.pc=odd[i];s.a[6]=NODE;s.a[7]=SP;reject(ram,s,STOP,"unaligned animation machine PC");}}
 }
-// Boundaries have no executor here: the neighbours of the routed ranges (the state chains 78660 78716 78776, the tail cc8b4, unreferenced
-// code and data) stay unrouted, so a run that reaches one without stopping there is a checked error; the RTS blocks end at an unrouted
-// return LONG in RAM.
+// Boundaries have no executor here: a run that reaches a PC without an executor without stopping there is a checked error.  The probes are work-RAM PCs
+// (review 0264 M-3: the ROM neighbours of the ranges, the state chains 78660 78716 78776 and the tail cc8b4 belong to later units and are no longer used as
+// "unrouted" probes); the exact range ends are asserted against the unit's own ranges, the two leaving jumps are stop-only checks.
 void boundaries() {
- const std::uint32_t neighbours[]={0x78660,0x78716,0x78776,0x78d5a,0x79320,0x79654,0x79746,0xb7d4a,0xcc8b4};
- for(unsigned int i=0;i<sizeof(neighbours)/sizeof(neighbours[0]);++i){assert(!in_ranges(neighbours[i]));
-  Bytes ram=base_ram("");State s;s.pc=neighbours[i];s.a[6]=NODE;s.a[7]=SP;reject(ram,s,0x10fe40,"unsupported animation machine PC");}
- // 78564 falls to the boundary 78776 (BTST.B #2,9b(A6) clear) and 78d3a jumps to the boundary cc8b4.
- {Bytes ram=base_ram("");State s;s.pc=0x78564;s.a[6]=NODE;s.a[7]=SP;reject(ram,s,0x10fe40,"unsupported animation machine PC");}
- {Bytes ram=base_ram("");State s;s.pc=0x78d3a;s.a[6]=NODE;s.a[7]=SP;reject(ram,s,0x10fe40,"unsupported animation machine PC");}
+ const std::uint32_t ends[]={0x78660,0x78716,0x78776,0x78d5a,0x79320,0x79654,0x79746,0xb7d4a,0xcc8b4};
+ for(unsigned int i=0;i<sizeof(ends)/sizeof(ends[0]);++i)assert(!in_ranges(ends[i]));
+ const std::uint32_t probes[]={0x10fe00,0x10fe02,0x10fe04,0x10fe06,0x10fe08,0x10fe0a,0x10fe0c,0x10fe0e,0x10fe10};
+ for(unsigned int i=0;i<sizeof(probes)/sizeof(probes[0]);++i){
+  Bytes ram=base_ram("");State s;s.pc=probes[i];s.a[6]=NODE;s.a[7]=SP;reject(ram,s,0x10fe40,"unsupported animation machine PC");}
+ // 78564 falls to 78776 (BTST.B #2,9b(A6) clear) and 78d3a jumps to cc8b4: the stop at the leaving PC succeeds and is exact.
+ {Bytes ram=base_ram("");State s;Out o;s.pc=0x78564;s.a[6]=NODE;s.a[7]=SP;assert(run(ram,s,0x78776,o)&&s.pc==0x78776);}
+ {Bytes ram=base_ram("");State s;Out o;s.pc=0x78d3a;s.a[6]=NODE;s.a[7]=SP;assert(run(ram,s,0xcc8b4,o)&&s.pc==0xcc8b4);}
  // Stop PCs at the boundaries: reached and stopped (no error) with the exact state of the native run (covered by the fixtures); rollback
  // through them uses the RAM probe 10fe90 as the return LONG of runs that end in a unit RTS.
  for(unsigned int i=0;i<RETURN_COUNT;++i){Bytes ram=base_ram("");put(ram,SP,4,0x10fe90);State s;s.pc=RETURNS[i];s.a[6]=NODE;s.a[7]=SP;

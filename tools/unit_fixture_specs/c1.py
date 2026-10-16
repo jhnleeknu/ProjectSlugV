@@ -432,9 +432,11 @@ def error_fixtures(case):
                 out.append(U.Fixture('error-interior-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unsupported animation controller c1 PC')))
         for pc in (lo + 1, hi - 1):
             out.append(U.Fixture('error-odd-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unaligned animation machine PC')))
-    for pc in (0x30ec, 0x3162, 0x370c, 0xc4cc, 0xc52a, 0xc686, 0xc74c, 0xc76a, 0xc80e, 0xca22, 0xca3a, 0x4a8f8, 0x4a9e2, 0xc00450, 0xc00444):
-        if not routed(pc):
-            out.append(U.Fixture('error-outside-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unsupported animation machine PC')))
+    # PCs without an executor: even work-RAM PCs 10fe10..10fe1a (review 0264 M-3; were the ROM range ends 30ec 370c ca22 ca3a 4a8f8 4a9e2, code of later units; the other
+    # range ends 3162 c4cc c52a c686 c74c c76a c80e are routed by other units and gave no fixture) and the two BIOS entries (stay unrouted)
+    for pc in (0x10fe10, 0x10fe12, 0x10fe14, 0x10fe16, 0x10fe18, 0x10fe1a, 0xc00450, 0xc00444):
+        U.require(not routed(pc), ("probe is routed", hex(pc)))
+        out.append(U.Fixture('error-outside-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unsupported animation machine PC')))
     # Z flag source guard: A0 outside 10fdb0 / 10fdb1 / 100004 / 100005
     for consumer in Z_CONSUMERS:
         for a0 in (0, 0x3000, 0x10fdaf, 0x10fdb2, 0x100003, 0x100006, 0x10fe00, 0xd00034, 0x1010fdb0 & 0xffffffff, 0xffffffff):
@@ -456,9 +458,9 @@ def error_fixtures(case):
     # unrouted live JSR (A1) target (work RAM) and an odd one: the next dispatch step fails
     regs = dict(probe['regs'])
     regs['a1'] = 0x10fe00
-    out.append(U.Fixture('error-live-jsr-unrouted', U.with_host_writes(probe, [], regs=regs, pc=0x36a2), [], 0xffffe, ('error', 'unsupported animation machine PC')))
+    out.append(U.Fixture('error-live-jsr-unrouted', U.with_host_writes(probe, [], regs=regs, pc=0x36a2), [], 0xffffe, ('error', 'unsupported animation machine PC'), fail_pc=0x10fe00))
     regs['a1'] = 0x3651
-    out.append(U.Fixture('error-live-jsr-odd', U.with_host_writes(probe, [], regs=regs, pc=0x36ec), [], 0xffffe, ('error', 'unaligned animation machine PC')))
+    out.append(U.Fixture('error-live-jsr-odd', U.with_host_writes(probe, [], regs=regs, pc=0x36ec), [], 0xffffe, ('error', 'unaligned animation machine PC'), fail_pc=0x3651))
     # odd WORD address of the credit pointer
     regs = dict(probe['regs'])
     regs['a1'] = 0x100005

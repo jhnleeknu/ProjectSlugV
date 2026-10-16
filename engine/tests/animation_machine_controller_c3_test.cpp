@@ -117,9 +117,10 @@ void errors(){
  // Odd PCs.
  fail(ram,base_state(0xc52b),base_device(),RET,"unaligned animation machine PC");
  fail(ram,base_state(0x8b65),base_device(),RET,"unaligned animation machine PC");
- // Neighbours outside the unit are not routed here (c6ce: the "TIME" string data; 4fb4a: after the demo child allocation).
- fail(ram,base_state(0xc6ce),base_device(),RET,"unsupported animation machine PC");
- fail(ram,base_state(0x4fb4a),base_device(),RET,"unsupported animation machine PC");
+ // Neighbours outside the unit are not routed here.  Review 0264 M-3: c6ce (the "TIME" string data) and 4fb4a (after the demo child allocation) are the work-RAM PCs
+ // 10fe10 / 10fe12.
+ fail(ram,base_state(0x10fe10),base_device(),RET,"unsupported animation machine PC");
+ fail(ram,base_state(0x10fe12),base_device(),RET,"unsupported animation machine PC");
  // Odd node A6: the c530 WORD clears fail and everything is rolled back (no port, no RAM write).
  {State s=base_state(0xc530);s.a[6]=NODE+1;fail(ram,s,base_device(),0x4718,"invalid animation machine write size/alignment");}
  // c55a with A6 outside work RAM: the LONG write fails (rolled back).

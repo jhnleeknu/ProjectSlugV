@@ -899,13 +899,19 @@ def compare_guards(exe, guards, resources):
 
 
 # ----------------------------------------------------------------------------------------------------------------- API-only checks
+SUPERSEDED_OUTSIDE = {0x72fa: 'animation machine external read queue empty', 0x7300: 'unsupported animation irq f6b PC'}
+
+
 def reject_one(args):
     exe, label, start, changes, stop, error_expected, resources = args
     r, s, p, b = start
     s = dict(s, carry=2)
     s.update(changes or {})
     actual = inv('negative_' + label, exe, r, s, p, b, resources, stop=stop)
-    check_preserved(actual, r, s, p, b, error_expected)
+    try:
+        check_preserved(actual, r, s, p, b, error_expected)
+    except AssertionError as error:      # collected by negatives(): every stale probe is reported together with its label
+        return dict(label=label, failed=error.args)
     return dict(label=label, error=error_expected, all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False)
 
 
@@ -927,10 +933,13 @@ def negatives(exe, base, st, resources):
     jobs.append((exe, 'trap_e909c_direct_entry', base, {'pc': TRAP_PC}, 0xff000, UNSUPPORTED_MACHINE, resources))
     jobs.append((exe, 'trap_e909c_direct_entry_stop_e909e', base, {'pc': TRAP_PC}, 0xe909e, UNSUPPORTED_MACHINE, resources))
     # data window and gaps between the executors: no executor of the machine
-    for pc in (0xddf98, 0xddfa4, 0xddfdc, 0x72fa, 0x7300, 0xe8a3a, 0xe8a46, 0x9068, 0x4e26c, 0xca5c, 0xddf90):
+    # 72fa / 7300 (former expectation UNSUPPORTED_MACHINE) lie in the F6b range 72f0..7326 (palette transfer, ten-unit batch): 72fa now ends with the external-read queue
+    # error (non-physical read, empty queue in this harness; not device evidence), 7300 is an F6b interior PC. Former values are recorded in the report row; the
+    # work-RAM PCs 10fe00/10fefe are the unrouted controls.
+    for pc in (0xddf98, 0xddfa4, 0xddfdc, 0x72fa, 0x7300, 0xe8a3a, 0xe8a46, 0x9068, 0x4e26c, 0xca5c, 0xddf90, 0x10fe00, 0x10fefe):
         if in_ranges(pc, F1A_RANGES):
             continue
-        jobs.append((exe, 'outside_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, resources))
+        jobs.append((exe, 'outside_entry_%06x' % pc, base, {'pc': pc}, 0xff000, SUPERSEDED_OUTSIDE.get(pc, UNSUPPORTED_MACHINE), resources))
     # odd PCs: alignment is checked before routing
     for low, high in F1A_RANGES:
         jobs.append((exe, 'odd_pc_entry_%06x' % (low + 1), base, {'pc': low + 1}, 0xff000, UNALIGNED_PC, resources))
@@ -941,6 +950,11 @@ def negatives(exe, base, st, resources):
     for pc in (0x0, 0xffffffe, 0x1000000, 0xdeadbee):
         jobs.append((exe, 'out_of_range_entry_%x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, resources))
     out = run_parallel(reject_one, jobs)
+    failed = [row for row in out if 'failed' in row]
+    assert not failed, failed
+    for row in out:
+        if row['label'].startswith('outside_entry_') and int(row['label'][14:], 16) in SUPERSEDED_OUTSIDE:
+            row.update(former_expected_API_error=UNSUPPORTED_MACHINE, superseded_by='F6b (72f0..7326)', API_only_control=True)
     # the six carry consumers need a known incoming C (Unknown -> checked error, full rollback)
     r, s, p, b = base
     for pc in CONSUMERS:

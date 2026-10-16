@@ -63,6 +63,7 @@ PRODUCERS_U2 = (0x1a2cc, 0x1a2e0, 0x1a356, 0x1a39a, 0x1a3a0)
 EORI_1A2E0 = 0x1a2ec
 UNSUPPORTED_MACHINE = 'unsupported animation machine PC'
 UNSUPPORTED_WALK = 'unsupported animation motion walk PC'
+UNSUPPORTED_F6C = 'unsupported animation irq f6c PC'
 UNKNOWN_CARRY = 'motion walk caller requires known carry'
 WRITE_DEVICE = 'unsupported animation machine write device'
 EVEN = 'program bus requires even WORD/LONG address'
@@ -88,6 +89,10 @@ GUARD_ERRORS.update({
     'guard-bad-stop-1a470-on-scene-0000': UNSUPPORTED_MACHINE, 'guard-bad-stop-19758-on-scene-0000': UNSUPPORTED_MACHINE})
 GUARD_OOR_PCS = {'guard-oor-18c06-type0001': 0x18c0f, 'guard-oor-18caa-type0002': 0x18cb4, 'guard-oor-18efa-type7ffe': 0x20f00,
                  'guard-oor-18fd2-type8000': 0x10fda, 'guard-oor-192c4-typeffff': 0x192cb, 'guard-oor-18c06-type00fe': 0x18d0c}
+# Superseded by F6c (IRQ sprite writer family A f226..11792, ten-unit batch): the oor guard target 10fda is a Duff entry of F6c routine 6 (10cc6..1122a), so it no
+# longer is an unrouted PC. Former expectation expected_pc_error(10fda) = UNSUPPORTED_MACHINE ('unsupported animation machine PC'); observed final-state error is the
+# F6c interior error (full run on e5bfb73) [I: attributed to the F6c execution, not separately traced]. The native guard record is unchanged.
+SUPERSEDED_GUARD_ERRORS = {'guard-oor-18fd2-type8000': UNSUPPORTED_F6C}
 VERIFIED_ARTIFACTS = set()
 RUN_DIR = None
 WORKERS = 8
@@ -918,6 +923,10 @@ def compare(exe, rows, resources, st, scene_in, stage_in, base_rams, base182, pr
 
 SUPERSEDED_GUARDS = ('guard-bad-stop-1a7a8-on-scene-0237',)
 SUPERSEDED_RECORDS = []
+SUPERSEDED_COMPUTED = {'oor-18c06-type8000': 'unsupported animation machine write device', 'oor-18caa-type8000': UNSUPPORTED_F6C,
+                       'oor-18efa-type8000': 'unsupported animation machine write device', 'oor-18fd2-type8000': UNSUPPORTED_F6C,
+                       'oor-192c4-type8000': UNSUPPORTED_F6C}
+SUPERSEDED_ERROR_RECORDS = []      # guards that still fail, with a new exact error (counted in rows, unlike SUPERSEDED_RECORDS)
 SUPERSEDED_NEGATIVES = []
 
 
@@ -927,6 +936,11 @@ def compare_guards(exe, guards, resources, st):
         fx = row['fixture']
         label = row['label']
         want = GUARD_ERRORS[label] if label in GUARD_ERRORS else expected_pc_error(GUARD_OOR_PCS[label], st)
+        if label in SUPERSEDED_GUARD_ERRORS:
+            assert want == UNSUPPORTED_MACHINE, (label, want)
+            SUPERSEDED_ERROR_RECORDS.append(dict(label=label, former_expected_API_error=want, observed_expected_API_error=SUPERSEDED_GUARD_ERRORS[label],
+                                           superseded_by='F6c family A', native_fault_rollback_equivalence_claimed=False))
+            want = SUPERSEDED_GUARD_ERRORS[label]
         cases = [('phase', ram, state, pvc, bank, phase['stop_pc'])]
         if (ram, state, pvc, bank) != (step_start[0], step_start[1], step_start[2], step_start[3]):
             cases.append(('whole_step', step_start[0], step_start[1], step_start[2], step_start[3], phase['step_stop_pc']))
@@ -1013,11 +1027,23 @@ def negatives(exe, base, starts_by_label, st, resources, oors, visited):
     # former boundary PCs are ordinary block starts now: stop == entry is a zero-step, any other run executes (checked in the native comparison)
     # computed out-of-range types: running on from the dispatcher (no stop at the computed PC) fails with the exact error
     computed = 0
+    computed_mismatches = []
     for label, step_start, final_pc, external in oors:
         want = expected_pc_error(final_pc, st)
         assert want is not None, label
-        reject('computed_pc_run_on_%s' % label, step_start, error_expected=want, external=external)
+        if label in SUPERSEDED_COMPUTED:
+            # Former expectation expected_pc_error(final_pc) = `want`; the computed PC lies in the F6c family A range f226..11792 (ten-unit batch), the run now executes
+            # F6c blocks and ends in the recorded exact error [I: attributed to that execution, not separately traced].
+            former, want = want, SUPERSEDED_COMPUTED[label]
+            SUPERSEDED_ERROR_RECORDS.append(dict(label='computed_pc_run_on_%s' % label, computed_pc=hex(final_pc), former_expected_API_error=former,
+                                                 observed_expected_API_error=want, superseded_by='F6c family A', native_fault_rollback_equivalence_claimed=False))
+        try:
+            reject('computed_pc_run_on_%s' % label, step_start, error_expected=want, external=external)
+        except AssertionError as error:      # collected: every stale row is reported together
+            computed_mismatches.append((hex(final_pc),) + error.args)
+            continue
         computed += 1
+    assert not computed_mismatches, computed_mismatches
     # unknown carry at the nine U3 consumers (stop at the clear branch target: the error comes first)
     for pc in sorted(CONSUMERS_U3):
         r, s, p, b = base
@@ -1231,7 +1257,7 @@ def run(report_path):
         cpp_static_audit=audit,
         actual_CPP=dict(totals, matches=matches), original_program_read_audit=program_reads,
         extra_range_19938_19978=dict(role='declared extra range outside the contract (U5 caller); expected-unsupported in C++', rows=extras),
-        native_guards_checked_API=guarded, superseded_guards=SUPERSEDED_RECORDS, superseded_negatives=SUPERSEDED_NEGATIVES, native_continuous_control_phases_replayed=totals['control'],
+        native_guards_checked_API=guarded, superseded_guards=SUPERSEDED_RECORDS, superseded_guard_errors=SUPERSEDED_ERROR_RECORDS, superseded_negatives=SUPERSEDED_NEGATIVES, native_continuous_control_phases_replayed=totals['control'],
         negatives=negative, negative_count=len(negative) + len(guarded), interior_PCs_rejected=interior_count,
         operand_word_PCs_rejected=operand_count, computed_pc_run_on_rejected=computed_count, API_controls=controls,
         zero_step_count=len(zero), zero_step_blocks=len(st['starts']), zero_step_carries=[0, 1, 2], boundary_zero_step=boundary_zero,

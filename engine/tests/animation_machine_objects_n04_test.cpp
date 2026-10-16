@@ -1133,7 +1133,9 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation objects n04 PC");++inside;}
  assert(even==1205&&inside==982);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
- const std::uint32_t outside[]={0x72a10,0x72a16,0x72d56,0x72d64,0xab078,0xab0b6,0x10fe70,0x10fe74,0x10fe78};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder); the former ROM probe PCs only have to stay outside the unit ranges.
+ {const std::uint32_t rom_outside[]={0x72a10,0x72a16,0x72d56,0x72d64,0xab078,0xab0b6};for(unsigned int i=0;i<sizeof(rom_outside)/sizeof(rom_outside[0]);++i)assert(!in_ranges(rom_outside[i]));}
+ const std::uint32_t outside[]={0x10fe00,0x10fe02,0x10fe04,0x10fe06,0x10fe08,0x10fe0a,0x10fe70,0x10fe74,0x10fe78};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x4a46d,0x4a495,0x4bc05,0x6feb5,0x70035,0x70053,0x71c91,0x71d47,0x72a19,0x72d55,0x72dd3,0x72e8d,0xaa93f,0xaaa17,
   0xab02b,0xab077,0xab0b9,0xab225,0xeb753,0xeb75b,0xeb767,0xeb773};

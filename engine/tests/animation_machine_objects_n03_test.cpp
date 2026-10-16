@@ -638,7 +638,9 @@ void boundaries(){
  const char* rts[]={"4b878-c1","c63aa-c1","flow-c63b4-c2","c61ec-1","4b82e-80-a0zero","c6444","c63be-0"};
  for(unsigned int i=0;i<sizeof(rts)/sizeof(rts[0]);++i){const Fixture&f=fixture_of(rts[i]);assert(f.stop==STOP);Bytes ram=base_ram(f.puts);
   put(ram,SP,4,0x10fe40);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
- const std::uint32_t outside[]={0xc63b6,0xc63b8,0xc63ba,0xc644a,0xc647c,0xc64a0,0xc6038,0x4b8a2};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder); the former ROM probe PCs only have to stay outside the unit ranges.
+ {const std::uint32_t rom_outside[]={0xc63b6,0xc63b8,0xc63ba,0xc644a,0xc647c,0xc64a0,0xc6038,0x4b8a2};for(unsigned int i=0;i<sizeof(rom_outside)/sizeof(rom_outside[0]);++i)assert(!in_ranges(rom_outside[i]));}
+ const std::uint32_t outside[]={0x10fe00,0x10fe02,0x10fe04,0x10fe06,0x10fe08,0x10fe0a,0x10fe0c,0x10fe0e};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const char* boundary[]={"c6386-10c800","flow-c6398-c1","flow-c6398-c2"};
  for(unsigned int i=0;i<sizeof(boundary)/sizeof(boundary[0]);++i)assert(pc_of(boundary[i])==0x4ae4a);

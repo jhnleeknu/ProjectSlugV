@@ -45,6 +45,8 @@ BOUNDARY_PCS = (0x9e94, 0x9f36, 0xa2be, A406, A662, 0xa6da, 0xa70a, 0xa71a, 0xbd
 EXECUTED_BOUNDARIES = (0x9e94, 0x9f36, 0xa2be, A406, A662, 0xa6da, 0xa70a, 0xa71a, 0xbd26, 0xe84d6)
 EXECUTED_RANGE_ENDS = (0x9fc4,)
 NEGATIVE_BOUNDARY_PCS = (A63C, 0xc00468, 0xc0046e)      # c00468/c0046e BIOS: no executor anywhere
+SUPERSEDED_OUTSIDE = {0x3670: 'unsupported program bus device address',      # controller C1 digit reader 3670..36ba
+                      0xa75a: 'program bus requires even WORD/LONG address'}   # controller C2 stage-end menu entry a75a..a770 (C2 routing list)
 SUPERSEDED_DIRECT_PCS = (0x1a73c, 0xe84d6)      # scene core and U03 execute these API entries; exact later errors are checked below
 DEVICE_ADDR = 'unsupported program bus device address'
 SUPERSEDED_RECORDS = []
@@ -524,8 +526,23 @@ def negatives(exe, rows, starts, instructions, push_end, resources):
                                        observed_error=expected, entry_executor=('scene core' if pc == 0x1a73c else 'objects U03'), all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
     ends_outside = sorted({high for _low, high in OPEN_RANGES} - set(BLOCK_STARTS) - set(BOUNDARY_PCS) - {C2C8}
                           - set(EXECUTED_RANGE_ENDS))
+    # Former expectation UNSUPPORTED_MACHINE for every range end. 3670 is a block start of controller C1 (digit reader 3670..36ba, ten-unit batch): the
+    # entry executes BYTE (A0) and, with the frozen A0 (not a RAM address), ends in the checked device-address error; a75a is a C2 block start (a75a..a770) and ends in the checked odd-address error [I: not separately traced]. Observed value recorded; every
+    # mismatch of the loop is collected and reported together. Work-RAM PCs are the unrouted controls.
+    mismatches = []
     for pc in ends_outside:
-        reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_MACHINE)
+        expected = SUPERSEDED_OUTSIDE.get(pc, UNSUPPORTED_MACHINE)
+        try:
+            reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, expected=expected)
+        except AssertionError as error:
+            mismatches.append(error.args)
+            continue
+        if pc in SUPERSEDED_OUTSIDE:
+            SUPERSEDED_RECORDS.append(dict(label='outside_range_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE, observed_error=expected,
+                                           entry_executor='controller C1 (3670) / controller C2 (a75a)', all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
+    assert not mismatches, mismatches
+    for pc in (0x10fe00, 0x10fefe):
+        reject('unrouted_work_ram_control_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_MACHINE)
     # Each stop boundary reached from the native boundary row's final step with any other stop: full rollback.
     rollback = {}
     for boundary, label in sorted(BOUNDARY_ROWS.items()):
