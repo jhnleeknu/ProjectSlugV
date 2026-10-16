@@ -519,8 +519,9 @@ void errors() {
  assert(even==429&&inside==313);
  for(unsigned int r=0;r<RANGE_COUNT;++r){const std::uint32_t odd[]={RANGES[r][0]+1,RANGES[r][1]-1};
   for(unsigned int i=0;i<2;++i){Bytes ram=base_ram("");reject(ram,dstate(odd[i],2),STOP,"unaligned animation machine PC");}}
- // c686 c74c c76a now run in the C2 unit (the rows above stop there); the BIOS and the unrouted neighbours c6ce 1022 bbfa stay boundaries (no executor): checked errors unless they are the stop.
- const std::uint32_t outside[]={0xc6ce,0x1022,0xbbfa,0xc00450,0xc00444,0x10fe00,0x10fe40,0x10fefe};
+ // c686 c74c c76a now run in the C2 unit (the rows above stop there); the BIOS entries stay boundaries (no executor): checked errors unless they are the stop.
+ // Review 0264 M-3: the former ROM neighbours c6ce 1022 bbfa (code of later units) are the work-RAM PCs 10fe10 10fe12 10fe14.
+ const std::uint32_t outside[]={0x10fe10,0x10fe12,0x10fe14,0xc00450,0xc00444,0x10fe00,0x10fe40,0x10fefe};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram=base_ram("");reject(ram,dstate(outside[i],2),STOP,"unsupported animation machine PC");}
  {Run a=begin(0xc686,"");go(a,0xc686);}
  // JSR (A1) follows the live target: work RAM is unrouted, an odd target is an unaligned PC.

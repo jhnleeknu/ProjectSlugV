@@ -21,8 +21,8 @@ Fixture families (everything is native Unicorn on the original ROM versus the C+
             controller tears the nodes down (c4cc), resets the screen (caf0), spawns e66aa (c6a6), returns to 2ac2, and the dispatcher runs e66aa (e6756, child e68c6,
             e66cc, e66ee) and the child e68c6 up to e66ee / e6938.  From the e6938 state the display node is re-entered at e66ee with the declared progress fields
             (80 := ff, 7c 78 7a 76) through the title (e6898 -> e89da -> 3918), the rank rows (e6784 -> e84c8 / 3670) and the end request (e6748 -> 2a00).
-  error     every even non-start PC of the unit ranges, the unrouted neighbours and TRAP sites, an odd PC, Unknown C at the five consumers, e6890 / e6884 -> e6890
-            (odd write), e682e -> TRAP without a stop PC, the live JSR (A1) to a work-RAM PC and to an odd PC, a 2986 allocation failure (2986 caller-X limitation),
+  error     every even non-start PC of the unit ranges, the PCs without an executor (work RAM), an odd PC, Unknown C at the five consumers, e6890 / e6884 -> e6890
+            (odd write), e682e -> TRAP e6836 as a stop-only fixture, the live JSR (A1) to a work-RAM PC and to an odd PC, a 2986 allocation failure (2986 caller-X limitation),
             an odd LONG install: checked error, state preserved.
   negative  C++ input differs from the native input in one RAM bit / one register / the queue / the stop: the comparison must report it.
 """
@@ -58,7 +58,9 @@ CONSUMERS = (0x3ac76, 0x3b666, 0x4dc34, 0x4dc46, 0x4dc50)
 ERROR_ONLY = (0xe6890,)                 # MOVE.W #1,1.w: the odd WORD write (C++ checked alignment error; Unicorn performs no address error)
 TRAPS = (0xe6836, 0xe6896)
 CALLBACKS = {0x23: 0x3abee, 0x24: 0x3b656, 0x25: 0x3b458, 0x26: 0x3b648, 0x27: 0x3b62a}
-UNROUTED_NEIGHBOURS = (0x3abec, 0x3b68a, 0x44600, 0x4464a, 0x4db16, 0x4dc66, 0xe66a8, 0xe6836, 0xe6838, 0xe6896, 0xe693a, 0xe89d8, 0xe89e4, 0x3b4e0, 0x4b6f4,
+# work-RAM PCs without an executor (review 0264 M-3).  The ROM neighbours / TRAP sites 3abec 3b68a 44600 4464a 4db16 4dc66 e66a8 e6836 e6838 e6896 e693a e89d8 e89e4 3b4e0 4b6f4
+# are 10fe10..10fe2c in this order; the exact range ends are asserted against the routing in build().
+UNROUTED_NEIGHBOURS = (0x10fe10, 0x10fe12, 0x10fe14, 0x10fe16, 0x10fe18, 0x10fe1a, 0x10fe1c, 0x10fe1e, 0x10fe20, 0x10fe22, 0x10fe24, 0x10fe26, 0x10fe28, 0x10fe2a, 0x10fe2c,
                        0x10fe00, 0x10fefe)
 # producer chains: entry block, the consumer it reaches
 CHAINS = ((0x3ac58, 0x3ac76), (0x3b656, 0x3b666), (0x4dc28, 0x4dc34), (0x4dc40, 0x4dc46), (0x4dc4a, 0x4dc50))
@@ -372,7 +374,9 @@ def build():
     require(len(STARTS) == 109 and len(STARTS_SET) == 109, ('starts', len(STARTS), len(STARTS_SET)))
     require(unit_of(SENTINEL) is None and not mine(SENTINEL), 'sentinel must be unrouted')
     for pc in UNROUTED_NEIGHBOURS:
-        require(unit_of(pc) is None, ('neighbour is routed', hex(pc)))
+        require(unit_of(pc) is None, ('probe is routed', hex(pc)))
+    for lo, hi in RANGES:
+        require(unit_of(hi) != UNIT and unit_of(lo - 2) != UNIT, ('range end routed to b2e', hex(lo), hex(hi)))
     for s in STARTS:
         require(unit_of(s) == UNIT, ('start is not routed to b2e', hex(s), unit_of(s)))
     rng = random.Random(0xB2E)
@@ -788,12 +792,13 @@ def error_fixtures(bases, add):
     wr = 'invalid animation machine write size/alignment'
     add(U.Fixture('error-e6890-odd-write', U.with_host_writes(st, pc=0xe6890), [], SENTINEL, ('error', wr)))
     add(U.Fixture('error-e6884-to-e6890', U.with_host_writes(st, regs=dict(d1=10, a1=0x10f02e), pc=0xe6884), [], SENTINEL, ('error', wr)))
-    add(U.Fixture('error-e682e-trap', U.with_host_writes(st, regs=dict(d7=10), pc=0xe682e), [], SENTINEL, ('error', 'unsupported animation machine PC')))
+    # e682e falls into the TRAP #f at e6836 (a fixed ROM address): stop-only boundary check (both sides stop exactly at e6836)
+    add(U.Fixture('boundary-stop-e682e-e6836', U.with_host_writes(st, regs=dict(d7=10), pc=0xe682e), [], 0xe6836))
     add(U.Fixture('error-e6854-trap-loop', U.with_host_writes(st, regs=dict(d7=0xffff), pc=0xe6854), [], SENTINEL, ('error', wr)))
     add(U.Fixture('error-4dc40-ram-target', U.with_host_writes(st, [((node + 0x7a) & 0xffff, 4, 0x10fe00)], pc=0x4dc40), [], SENTINEL,
-                  ('error', 'unsupported animation machine PC')))
+                  ('error', 'unsupported animation machine PC'), fail_pc=0x10fe00))
     add(U.Fixture('error-4dc40-odd-target', U.with_host_writes(st, [((node + 0x7a) & 0xffff, 4, 0x4dc29)], pc=0x4dc40), [], SENTINEL,
-                  ('error', 'unaligned animation machine PC')))
+                  ('error', 'unaligned animation machine PC'), fail_pc=0x4dc29))
     # 2986 allocation failure (D0.W = 1e >= WORD 104ca0 = 0): 298e has no known caller X for 3ac44 (buffer_cue decision 1, deliberate checked error)
     add(U.Fixture('error-3ac2c-2986-failure', U.with_host_writes(st, [(0x4ca0, 2, 0)], pc=0x3ac2c), [], SENTINEL,
                   ('error', 'cue wrapper failure requires known caller X')))

@@ -29,6 +29,7 @@ import json
 import multiprocessing
 import os
 from pathlib import Path
+import re
 import shutil
 import struct
 import subprocess
@@ -119,15 +120,15 @@ def flip_ram(state, address, mask=1):
 class Fixture(object):
     """name; state (see make_state); queue [(address, size, value)]; stop PC; expect ('match' | ('error', text) | 'mismatch'); releases (names); wait_limit;
     external_status (byte read at d00046); card_answer; max_insn (native instruction budget per start); cpp_state / cpp_queue (override the C++ input only,
-    for negative checks; also cpp_stop); reference (optional independent end state {ram, regs, pc, pvc} that the NATIVE result must equal); meta (free JSON)."""
+    for negative checks; also cpp_stop); fail_pc (expected-error fixtures: the PC at which the dispatcher fails; default = the start PC of the C++ input; see check_fail_pc); reference (optional independent end state {ram, regs, pc, pvc} that the NATIVE result must equal); meta (free JSON)."""
     def __init__(self, name, state, queue=(), stop=None, expect='match', releases=DEFAULT_RELEASES, wait_limit=DEFAULT_WAIT_LIMIT, external_status=0,
-                 card_answer=0x80, max_insn=DEFAULT_MAX_INSN, cpp_state=None, cpp_queue=None, cpp_stop=None, reference=None, meta=None):
+                 card_answer=0x80, max_insn=DEFAULT_MAX_INSN, cpp_state=None, cpp_queue=None, cpp_stop=None, reference=None, meta=None, fail_pc=None):
         require(stop is not None, 'stop PC required')
         require(expect in ('match', 'mismatch') or (isinstance(expect, tuple) and len(expect) == 2 and expect[0] == 'error'), ('expect', expect))
         require(all(r in RELEASE_BITS for r in releases), ('unknown release', releases))
         self.name, self.state, self.queue, self.stop, self.expect = name, state, [tuple(e) for e in queue], stop, expect
         self.releases, self.wait_limit, self.external_status, self.card_answer, self.max_insn = tuple(releases), wait_limit, external_status, card_answer, max_insn
-        self.cpp_stop = cpp_stop
+        self.cpp_stop, self.fail_pc = cpp_stop, fail_pc
         self.cpp_state, self.cpp_queue, self.reference, self.meta = cpp_state, (None if cpp_queue is None else [tuple(e) for e in cpp_queue]), reference, meta or {}
 
     def digest(self):
@@ -137,7 +138,7 @@ class Fixture(object):
                 h.update(s['ram'] + struct.pack('>16I', *[s['regs'][k] for k in KEYS]) + struct.pack('>IIIII', s['pc'], s['bank'][0], s['bank'][1], s['bank'][2], s['carry']) + s['pvc'])
                 if s.get('palette') is not None:
                     h.update(b'palette' + s['palette'][0] + s['palette'][1] + bytes([s['palette'][2]]))
-        h.update(json.dumps([self.queue, self.cpp_queue, self.stop, self.cpp_stop, self.expect, self.releases, self.wait_limit, self.external_status, self.card_answer], sort_keys=True).encode())
+        h.update(json.dumps([self.queue, self.cpp_queue, self.stop, self.cpp_stop, self.expect, self.releases, self.wait_limit, self.external_status, self.card_answer] + ([] if self.fail_pc is None else [self.fail_pc]), sort_keys=True).encode())
         return h.hexdigest()
 
 
@@ -486,6 +487,54 @@ def cpp_call(harness, fx, state=None, queue=None, stop=None):
                         st.get('palette') is not None)
 
 
+UNSUPPORTED_PC = 'unsupported animation machine PC'
+UNALIGNED_PC = 'unaligned animation machine PC'
+_ROUTING = []
+_TRAPS = frozenset([0xe93d8, 0xe9528, 0xe9530, 0xe957a, 0xe96d4, 0xe9702, 0xe9780, 0xe9788])    # stage_event_ops_trap sites: not routed
+
+
+def pc_routed(pc):
+    """True when the checked-out dispatch chain of engine/src/animation_machine.cpp has an executor for pc (the chain text is parsed once)."""
+    if not _ROUTING:
+        src = (ROOT / 'engine/src/animation_machine.cpp').read_text()
+        body = src[src.index('if ((next.pc>=0x3ac8'):src.index('else return am_error(c,"%s")' % UNSUPPORTED_PC)]
+        for m in re.finditer(r'(?:else )?if \((.*?)\)ok=(\w+)\(c\);', body, re.S):
+            e = m.group(1).replace('next.pc', 'p').replace('&&', ' and ').replace('||', ' or ')
+            e = re.sub(r'!stage_event_ops_trap\(p\)', 'not trap(p)', e).replace('!=', '<>').replace('!', ' not ').replace('<>', '!=')
+            _ROUTING.append(compile('(' + e.replace('\n', ' ') + ')', 'routing', 'eval'))
+        require(len(_ROUTING) >= 100, ('routing rules', len(_ROUTING)))
+    env = dict(p=pc, trap=lambda x: x in _TRAPS)
+    return any(eval(r, env) for r in _ROUTING)
+
+
+def check_fail_pc(harness, fx, state, queue):
+    """Failing-PC evidence of an expected-error fixture (L-1 of review 0264).  The C++ error is atomic and carries no PC, so the PC is pinned by three facts:
+    (1) the C++ run with stop = P (same state, queue, releases) succeeds and ends exactly at P, so the failing run does reach P through the same path;
+    (2) for the shared text 'unsupported animation machine PC', P has no executor in the checked-out dispatch chain (the dispatcher fails there, not later);
+    (3) for 'unaligned animation machine PC', P is odd (an odd landing reached from an even start must be declared; it cannot be a stop PC, so its reach is not checked).
+    P = fx.fail_pc, default = the start PC of the C++ input.  The PC-carrying texts (1)-(3) need it; executor-specific texts only check it when it is declared.
+    -> (ok, note)."""
+    text = fx.expect[1]
+    shared = text in (UNSUPPORTED_PC, UNALIGNED_PC)
+    if fx.fail_pc is None and not shared:
+        return True, None
+    pc = state['pc'] if fx.fail_pc is None else fx.fail_pc
+    if text == UNALIGNED_PC:
+        if not pc & 1:
+            return False, dict(field='fail-pc-not-odd (the start PC is even: declare the odd landing as fail_pc)', fail_pc=pc)
+        if pc != state['pc']:
+            return True, dict(fail_pc=pc, reach='odd landing (declared; an odd stop PC is not allowed, so the run to it is not checked)')
+        return True, dict(fail_pc=pc)
+    if text == UNSUPPORTED_PC:
+        if pc & 1 or pc_routed(pc):
+            return False, dict(field='fail-pc-routed-or-odd', fail_pc=pc)
+    if pc != state['pc']:
+        got = cpp_call(harness, fx, state, queue, pc)
+        if not got['ok'] or got['pc'] != pc:
+            return False, dict(field='fail-pc-not-reached', fail_pc=pc, got=got['error'] if not got['ok'] else hex(got['pc']))
+    return True, dict(fail_pc=pc)
+
+
 def run_one(harness, fx):
     """-> row dict (name, ok, expect, first_difference, stats)."""
     t0 = time.time()
@@ -499,6 +548,12 @@ def run_one(harness, fx):
         row.update(ok=ok, cpp_error=None if got['ok'] else got['error'], preserved=got.get('preserved'), committed=got.get('committed'))
         if not ok:
             row['first_difference'] = dict(field='expected-error', wanted=text, got=got['error'] if not got['ok'] else 'C++ completed', preserved=got.get('preserved'))
+        else:
+            ok, note = check_fail_pc(harness, fx, cst, cq)
+            row['fail_pc'] = note
+            if not ok:
+                row['ok'] = False
+                row['first_difference'] = note
         row['seconds'] = round(time.time() - t0, 3)
         return row
     nat = native().run(fx.state, fx.queue, fx.stop, fx.releases, fx.wait_limit, fx.external_status, fx.card_answer, fx.max_insn)
@@ -738,7 +793,7 @@ def make_report(rows, fixtures, inputs, build, started, spec):
                 elapsed_seconds=round(time.time() - started, 1), rows=rows,
                 limits=['Carry has no SR oracle; only a valid tag is checked.  Video is ordered ports, not pixels.',
                         'C++ LONG device writes equal two native WORD writes at a and a+2 (declared rule).',
-                        'An expected-error fixture checks the C++ error text and state preservation only; native is not run for it.'])
+                        'An expected-error fixture checks the C++ error text, state preservation and (shared PC texts, or when declared) the failing PC; native is not run for it.'])
 
 
 def main(argv=None):

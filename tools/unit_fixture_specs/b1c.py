@@ -425,8 +425,8 @@ def error_fixtures(case):
     for lo, hi in RANGES:
         for pc in (lo + 1, hi - 1):
             out.append(U.Fixture('error-odd-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unaligned animation machine PC')))
-    # neighbouring PCs just outside the ranges stay in their own units / unrouted
-    for pc, text in ((0x30d6c, 'unsupported animation machine PC'), (0x3323c, 'unsupported animation objects n30 PC'), (0x336d4, 'unsupported animation objects n30 PC'),
+    # neighbouring PCs just outside the ranges stay in their own units; 30d6c (unrouted ROM code of a later unit) is the work-RAM PC 10fe80 since review 0264 M-3
+    for pc, text in ((0x10fe80, 'unsupported animation machine PC'), (0x3323c, 'unsupported animation objects n30 PC'), (0x336d4, 'unsupported animation objects n30 PC'),
                     (0x3395a, 'unsupported animation objects n30 PC'), (0x33a8a, 'unsupported animation objects n30 PC')):
         out.append(U.Fixture('error-outside-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', text)))
     return out

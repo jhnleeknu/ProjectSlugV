@@ -193,12 +193,13 @@ def error_fixtures(case):
                 out.append(U.Fixture('error-interior-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unsupported animation controller c3 PC')))
         for pc in (lo + 1, hi - 1):
             out.append(U.Fixture('error-odd-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unaligned animation machine PC')))
-    for pc in (0xc6ce, 0xc6d8, 0x4fb4a, 0x4fb18, 0xc00444):
-        if not routed(pc):
-            out.append(U.Fixture('error-outside-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unsupported animation machine PC')))
-    # c598 / c5a6 end in JMP c00444: running past the BIOS fetch is the checked unsupported-PC error (no executor), state preserved.
+    # PCs without an executor: even work-RAM PCs 10fe10..10fe16 (review 0264 M-3; were the ROM range ends c6ce c6d8 4fb4a 4fb18, code of later units) and the BIOS entry c00444
+    for pc in (0x10fe10, 0x10fe12, 0x10fe14, 0x10fe16, 0xc00444):
+        U.require(not routed(pc), ('probe is routed', hex(pc)))
+        out.append(U.Fixture('error-outside-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unsupported animation machine PC')))
+    # c598 / c5a6 end in JMP c00444: running past the BIOS fetch is the checked unsupported-PC error (no executor) at the BIOS entry c00444 (failing PC asserted), state preserved.
     for pc in (0xc598, 0xc5a6):
-        out.append(U.Fixture('error-bios-return-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unsupported animation machine PC')))
+        out.append(U.Fixture('error-bios-return-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unsupported animation machine PC'), fail_pc=0xc00444))
     return out
 
 

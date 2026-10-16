@@ -617,8 +617,12 @@ void part_errors() {
         Bytes ram;State s;world(ram,s,pc,0);reject(ram,s,SENT,"unsupported animation objects b2b PC");++internal;
     }
     check(internal>300,"internal even PCs are checked errors",internal);
-    const std::uint32_t unrouted[]={0x4c3ba,0x4c3c2,0x3a4d6,0x3a4d8,0x10fe04,0x10fe08,0x4b6f4,0x3a048,0x3a0d2,0x3ad48,0x10fe0a,0x4d9a2,0x338f8,0x4c340,
-        0x4eef4,0x4f0c4,0x4ffba,0xd3d9c,0x4d6f2};
+    // Review 0264 M-3: the probes without an executor are work-RAM PCs; the ROM neighbours / gaps (4c3ba 4c3c2 3a4d6 3a4d8 4b6f4 3a048 3a0d2 3ad48 4d9a2 338f8 4c340
+    // 4eef4 4f0c4 4ffba d3d9c 4d6f2: code or data of later units) are only asserted to be outside the unit's own ranges.
+    const std::uint32_t ends[]={0x4c3ba,0x4c3c2,0x3a4d6,0x3a4d8,0x4b6f4,0x3a048,0x3a0d2,0x3ad48,0x4d9a2,0x338f8,0x4c340,0x4eef4,0x4f0c4,0x4ffba,0xd3d9c,0x4d6f2};
+    for(unsigned int i=0;i<sizeof(ends)/sizeof(ends[0]);++i)check(!in_ranges(ends[i]),"neighbour outside the unit ranges",ends[i]);
+    std::uint32_t unrouted[19];
+    for(unsigned int i=0;i<19;++i)unrouted[i]=0x10fe00U+2U*i;
     for(unsigned int i=0;i<sizeof(unrouted)/sizeof(unrouted[0]);++i) {
         Bytes ram;State s;world(ram,s,unrouted[i],0);reject(ram,s,SENT,"unsupported animation machine PC");
     }

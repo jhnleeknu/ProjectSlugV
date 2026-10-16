@@ -14,8 +14,8 @@ Fixture families (everything is native Unicorn on the original ROM versus the C+
             60902, 2986 -> 60828 608cc through MOVEM.W): native branches on the real flags, the C++ branches on the known C; the 28ae count limit (WORD 104ca0) is edited for both outcomes.
   c4b6f4    the consumers 5ef6c 5f5e6 5f744 of the boundary 4b6f4: the NATIVE run starts at 4b6f4 (TST.B 5b86(A5); BEQ; ORI.B #1,CCR; RTS) with the consumer as the return LONG, the C++ run
             (cpp_state) starts at the consumer with A7 + 4 and the carry tag the native 4b6f4 leaves (Clear for BYTE 5b86(A5) = 0, Set otherwise): both outcomes of each consumer.
-  error     every even non-start PC of the unit ranges (the folded Bcc 5f592 5f678 60680 60690 included), the unrouted neighbours (4b6f4 work-RAM 10fe08 5eed0 5f4b0 5f502 60514 6093a), an odd PC, Unknown C at
-            the 16 consumers, an odd LONG write, the boundary stop 5ef66 -> 4b6f4 without a stop PC, the work-RAM probe 10fe0a: checked error, state preserved.
+  error     every even non-start PC of the unit ranges (the folded Bcc 5f592 5f678 60680 60690 included), the PCs without an executor (work RAM 10fe00..10fe0e), an odd PC, Unknown C at
+            the 16 consumers, an odd LONG write, the boundary 5ef66 -> 4b6f4 as a stop-only fixture, the work-RAM probe 10fe0a: checked error, state preserved.
   negative  C++ input differs from the native input in one RAM bit / one register / the queue: the comparison must report it.
 """
 import random
@@ -46,7 +46,9 @@ STARTS = [int(x, 16) for x in (
 FOLDED = (0x5f592, 0x5f678, 0x60680, 0x60690)
 CONSUMERS = tuple(int(x, 16) for x in '5ef6c 5ef80 5efc6 5efda 5f5e6 5f6c2 5f702 5f744 6062e 606f4 6077e 6085e 60880 60902 60828 608cc'.split())
 B4B6F4_CONSUMERS = (0x5ef6c, 0x5f5e6, 0x5f744)
-UNROUTED_NEIGHBOURS = (0x4b6f4, 0x10fe08, 0x5eed0, 0x5f4b0, 0x5f502, 0x60514, 0x6093a)
+# work-RAM PCs without an executor (review 0264 M-3; were the ROM PCs 4b6f4 5eed0 5f4b0 5f502 60514 6093a, code of later units; 10fe0a is the extra probe below).
+# The exact range ends are asserted against the routing in build().
+UNROUTED_NEIGHBOURS = (0x10fe00, 0x10fe08, 0x10fe02, 0x10fe04, 0x10fe06, 0x10fe0c, 0x10fe0e)
 # producer blocks (a JSR of a routed callee that returns the C) whose consumer is the next block: entry -> consumer
 PRODUCER_CHAINS = (0x5efc0, 0x5ef76, 0x5efd0, 0x5f6bc, 0x6087a, 0x6061e, 0x606e4, 0x6076e, 0x6084e, 0x608f2, 0x5f6f2, 0x607f6, 0x6089a)
 
@@ -352,7 +354,9 @@ def build():
     require(len(STARTS) == 180 and len(STARTS_SET) == 180, ('starts', len(STARTS), len(STARTS_SET)))
     require(unit_of(SENTINEL) is None and not mine(SENTINEL), 'sentinel must be unrouted')
     for pc in UNROUTED_NEIGHBOURS:
-        require(unit_of(pc) is None, ('neighbour is routed', hex(pc)))
+        require(unit_of(pc) is None, ('probe is routed', hex(pc)))
+    for lo, hi in RANGES:
+        require(unit_of(hi) != 'animation_objects_b2a_block' and unit_of(lo - 2) != 'animation_objects_b2a_block', ('range end routed to b2a', hex(lo), hex(hi)))
     for s in STARTS:
         require(unit_of(s) == 'animation_objects_b2a_block', ('start is not routed to b2a', hex(s), unit_of(s)))
     for pc in FOLDED:
@@ -749,8 +753,8 @@ def error_fixtures(bases, add):
         add(U.Fixture('error-unknown-carry-%05x' % pc, U.with_host_writes(st, pc=pc), [], SENTINEL, ('error', 'objects b2a caller requires known carry')))
     # odd LONG write (5eee2 stores 36(A6)): A6 odd
     add(U.Fixture('error-5eee2-odd-store', U.with_host_writes(st, regs=dict(a6=st['regs']['a6'] + 1), pc=0x5eee2), [], SENTINEL, ('error', 'invalid animation machine write size/alignment')))
-    # boundary stop without a stop PC: 5ef66 -> JSR 4b6f4; work-RAM rollback probe 10fe0a (6064a -> 44602 is routed by B2e)
-    add(U.Fixture('error-boundary-4b6f4', U.with_host_writes(st, pc=0x5ef66), [], SENTINEL, ('error', 'unsupported animation machine PC')))
+    # boundary 5ef66 -> JSR 4b6f4 (a fixed ROM address): stop-only check (native and C++ stop exactly at 4b6f4); work-RAM rollback probe 10fe0a (6064a -> 44602 is routed by B2e)
+    add(U.Fixture('boundary-stop-4b6f4', U.with_host_writes(st, pc=0x5ef66), [], 0x4b6f4))
     add(U.Fixture('error-probe-10fe0a', U.with_host_writes(st, pc=0x10fe0a), [], SENTINEL, ('error', 'unsupported animation machine PC')))
 
 
