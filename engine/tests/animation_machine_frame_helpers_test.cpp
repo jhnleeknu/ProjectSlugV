@@ -298,8 +298,9 @@ void errors(){
  // for it; 49390 is inside the objects U11 block 4938c and the unrouted 10fe40 stands in for it; 493bc is an objects N15 block start
  // and the work RAM PC 10fe90 stands in for it; 4d9d4 is the interior RTS of the objects B2b helper 4d9ba and the unrouted 10fe2c stands in
  // for it; review 0264 M-3: 4d9b8 was used before); odd PCs are rejected first.
- const std::uint32_t outside[]={0x480f2,0x10fe20,0x6f1c0,0x6f1c4,0x10fe22,0x10fe24,0x3c42,0x3c7c,0x10fe26,0xb4ab0,0x10fe40,0x4939c,0x10fe90,
-  0x1c026,0x1c052,0x10fe2c,0x4da08,0x10fe28,0xb4850,0x10fe2a,0x10fe42,0x49ab2};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder; this test has no in_ranges() helper).
+ const std::uint32_t outside[]={0x10fe00,0x10fe20,0x10fe02,0x10fe04,0x10fe22,0x10fe24,0x10fe06,0x10fe08,0x10fe26,0x10fe0a,0x10fe40,0x10fe0c,0x10fe90,
+  0x10fe0e,0x10fe10,0x10fe2c,0x10fe12,0x10fe28,0x10fe14,0x10fe2a,0x10fe42,0x10fe16};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0x47657,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }

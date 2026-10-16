@@ -301,7 +301,8 @@ void errors(){
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){Bytes ram;State s;generic(bundled[i],ram,s);reject(ram,s,STOP,"unsupported animation card menu input PC");}
  // Neighbours outside the routed ranges and the boundaries (a71a/bd26 now run in the save unit;
  // its BIOS calls c00468/c0046e have no executor; a698..a708 now run in the nested unit).
- const std::uint32_t outside[]={0x9fce,0x9ff2,0x9ffe,0xa1e2,0xa1ec,0xa1fa,0xa72c,0xbf2a,0xa63c,0xc00468,0xc0046e};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder; this test has no in_ranges() helper).
+ const std::uint32_t outside[]={0x10fe00,0x10fe02,0x10fe04,0x10fe06,0x10fe08,0x10fe0a,0x10fe0c,0x10fe0e,0x10fe10,0xc00468,0xc0046e};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0xa407,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}
 }

@@ -800,7 +800,9 @@ void interior(){
  assert(even==188&&inside==149&&bundled==7);
  for(unsigned int i=0;i<7;++i)assert(!is_start(BUNDLED[i]));
  // 10fe20 replaces 4b6e2 (now an objects U01 block start); 10fe40 replaces 9054 (now an F5 frame head H1 block start).
- const std::uint32_t outside[]={0x10fe20,0x1c5ae,0x1bef8,0xca46,0x10fe40};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder); the former ROM probe PCs only have to stay outside the unit RANGES.
+ {const std::uint32_t rom_outside[]={0x1c5ae,0x1bef8,0xca46};for(unsigned int i=0;i<sizeof(rom_outside)/sizeof(rom_outside[0]);++i){for(unsigned int r=0;r<sizeof(RANGES)/sizeof(RANGES[0]);++r)assert(!(rom_outside[i]>=RANGES[r][0]&&rom_outside[i]<RANGES[r][1]));}}
+ const std::uint32_t outside[]={0x10fe20,0x10fe00,0x10fe02,0x10fe04,0x10fe40};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x47da5,0x4b6e5,0x1c5b1,0x1bee5,0xca49,0x9057};

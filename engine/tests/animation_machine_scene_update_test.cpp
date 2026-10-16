@@ -798,7 +798,8 @@ void interior(){
  // Neighbours outside the ranges (10fe40/10fe20/10fe22 unrouted, 10fe40 for the objects U08a block start 43eb8; 1a910 is an F3a block start) and the data tables; odd PCs are
  // rejected first. 17292 and 1a07a are stage entry (F1a) block starts and 19e5e is an F1a interior PC; 19e60..19e64 is U5
  // (19e60 MOVE.L A2,(A1)).
- const std::uint32_t outside[]={0x10fe40,0x10fe20,0x10fe22,0x1af12,0x1afd2,0x1afd8,0x1b128};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder; this test has no in_ranges() helper).
+ const std::uint32_t outside[]={0x10fe40,0x10fe20,0x10fe22,0x10fe00,0x10fe02,0x10fe04,0x10fe06};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0x19e5e,ram,s);reject(ram,s,STOP,"unsupported animation stage entry PC");}
  {Bytes ram;State s;generic(0x1a7a9,ram,s);reject(ram,s,STOP,"unaligned animation machine PC");}

@@ -188,7 +188,8 @@ void errors(){
  const std::uint32_t bundled[]={0xc28a,0xc28c,0xc252,0xc254,0xc256,0xc25a,0xc260,0xc26e,0xc276,0xc292,0xc298,0xc29c,0xc2a0,
   0xde434,0xde43c,0xde44a,0xde44c,0xde452,0xde470,0xde476,0xde42c,0xe7c18,0xe7c28,0xe7c2c};
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){s=state(bundled[i]);reject(ram,s,STOP,"unsupported animation card child PC",&p);}
- const std::uint32_t outside[]={0xa63c,0x9ee6,0xc2fa,0xc2a4,0xc24e,0xde422,0xde48c,0xe7c12,0xe7c14,0xe7c32,0xe7c34};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder; this test has no in_ranges() helper).
+ const std::uint32_t outside[]={0x10fe00,0x10fe02,0x10fe04,0x10fe06,0x10fe08,0x10fe0a,0x10fe0c,0x10fe0e,0x10fe10,0x10fe12,0x10fe14};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){s=state(outside[i]);reject(ram,s,STOP,"unsupported animation machine PC",&p);}
  s=state(0xc251);reject(ram,s,STOP,"unaligned animation machine PC");
 }

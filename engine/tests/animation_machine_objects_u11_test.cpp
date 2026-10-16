@@ -783,7 +783,9 @@ void interior(){
  assert(even==1109&&inside==894);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
  // Rollback probes only in work RAM 10fe00..10fefe (code never executes in RAM; F4 unit test boundary convention) and the TRAP 4937c.
- const std::uint32_t outside[]={0x10fe40,0x10fe42,0x10fe44,0x4937c};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder); the former ROM probe PCs only have to stay outside the unit ranges.
+ {const std::uint32_t rom_outside[]={0x4937c};for(unsigned int i=0;i<sizeof(rom_outside)/sizeof(rom_outside[0]);++i)assert(!in_ranges(rom_outside[i]));}
+ const std::uint32_t outside[]={0x10fe40,0x10fe42,0x10fe44,0x10fe00};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x45177,0x4517b,0x452fb,0x45789,0x47289,0x472bd,0x49371,0x4937b,0x4937f,0x49391,0x496c3,0x497b7,0x497ef,
   0x4be07,0x4be2b,0xbe889,0xbe991,0xbeab5,0xbeb79};
