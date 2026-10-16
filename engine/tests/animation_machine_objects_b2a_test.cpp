@@ -593,14 +593,14 @@ void part_errors() {
     // The folded branches are interior PCs.
     const std::uint32_t folded[]={0x5f592,0x5f678,0x60680,0x60690};
     for(unsigned int i=0;i<4;++i){Bytes ram;State s;world(ram,s,folded[i],0);reject(ram,s,SENT,"unsupported animation objects b2a PC");}
-    // Boundaries: 4b6f4 (pinned area_clear verifier), 44602 and the neighbours of the three ranges.
-    const std::uint32_t unrouted[]={0x4b6f4,0x44602,0x5eed0,0x5f4b0,0x5f502,0x60514,0x6093a};
+    // Boundaries: 4b6f4 (pinned area_clear verifier), the work-RAM probe 10fe08 (44602 is routed by B2e) and the neighbours of the three ranges.
+    const std::uint32_t unrouted[]={0x4b6f4,0x10fe08,0x5eed0,0x5f4b0,0x5f502,0x60514,0x6093a};
     for(unsigned int i=0;i<sizeof(unrouted)/sizeof(unrouted[0]);++i) {
         Bytes ram;State s;world(ram,s,unrouted[i],0);reject(ram,s,SENT,"unsupported animation machine PC");
     }
     {   // Without a stop PC the call into a boundary is a checked error too.
         Bytes ram;State s;world(ram,s,0x5ef66,0);reject(ram,s,SENT,"unsupported animation machine PC");
-        world(ram,s,0x6064a,0);reject(ram,s,SENT,"unsupported animation machine PC");
+        world(ram,s,0x10fe0a,0);reject(ram,s,SENT,"unsupported animation machine PC");   // work-RAM rollback probe (6064a -> 44602 is routed by B2e)
     }
     {
         Bytes ram;State s;world(ram,s,0x5eed3,0);reject(ram,s,SENT,"unaligned animation machine PC");

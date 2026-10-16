@@ -3,7 +3,7 @@
 Blocks (docs/analysis/animation-machine-deferred-b2c-contract.md): the 82(A6) partner sub-state chain 3a60a..3abde (170: 27 installed re-entries, the request
 dispatcher 3ab3e with the LONG table 3ab80 / WORD masks 3ab98, the input dispatcher 3aba4 with the BYTE slot table 3abde and the 7-slot BRA.W tables 3a63c 3a782 3a960,
 the indirect jumps 3ab7e JMP (A0) and 3abda JMP (A0,D1.W) to the live target), the offset helper 3b48c, the partner initialisation 3b5a6, the 28ae children 3af86 and
-3ae84 and the leaf helpers 1bf80 / 1d198.  The script callbacks 3abee 3b458 3b62a 3b648 3b656, 44602, 4db18 (B2c-b), the unreferenced 3b4e0 and 4b6f4 stay unrouted.
+3ae84 and the leaf helpers 1bf80 / 1d198.  The script callbacks 3abee 3b458 3b62a 3b648 3b656, 44602, 4db18 (B2c-b) are routed by B2e (probes 10fe02..10fe0e); the unreferenced 3b4e0 and 4b6f4 stay unrouted.
 
 Fixture families (everything is native Unicorn on the original ROM versus the C++ run, V1 comparison of RAM, D0-D7/A0-A7, PC, bank, PVC, ordered ports, waits, reads):
   block     every block start is entered directly.  The world is a natural N-pass node state of the D1 seeds 116/117 (frame 2: N31 38c36, N33 3b166, N28 2b99c, N30a 331d8,
@@ -55,8 +55,8 @@ SUBSTATE_ENTRIES = (0x3a60a, 0x3a622, 0x3a670, 0x3a69c, 0x3a6b8, 0x3a6d4, 0x3a6f
 CONTINUATIONS = (0x3a62a, 0x3a766, 0x3a8ac, 0x3a8f4, 0x3a932, 0x3aa7a, 0x3ab08, 0x3ab2c)
 SLOT_TABLES = (0x3a63c, 0x3a782, 0x3a960)
 STATE_ENTRIES = (0x3a62e, 0x3a774, 0x3a8ba, 0x3a8f8, 0x3aae8, 0x3ab0c)
-UNROUTED_NEIGHBOURS = (0x3ab80, 0x3ab98, 0x3abde, 0x3abee, 0x3af6c, 0x3af74, 0x3b03c, 0x3b4bc, 0x3b4e0, 0x3b458, 0x3b62a, 0x3b648, 0x3b656, 0x1bf94, 0x1d1b0,
-                       0x4db18, 0x44602, 0x4b6f4, 0x3ad48, 0x10fe00, 0x10fefe)
+UNROUTED_NEIGHBOURS = (0x3ab80, 0x3ab98, 0x3abde, 0x10fe02, 0x3af6c, 0x3af74, 0x3b03c, 0x3b4bc, 0x3b4e0, 0x10fe04, 0x10fe06, 0x10fe08, 0x10fe0a, 0x1bf94, 0x1d1b0,
+                       0x10fe0c, 0x10fe0e, 0x4b6f4, 0x3ad48, 0x10fe00, 0x10fefe)
 # helpers with their real return LONG inside the unit
 CHAIN_RETURNS = {0x3b48c: (0x3ab34,), 0x1bf80: (0x3afa2,), 0x1d198: (0x3af94,)}
 # producer blocks (JSR 49fc6) and the longer chains reaching them

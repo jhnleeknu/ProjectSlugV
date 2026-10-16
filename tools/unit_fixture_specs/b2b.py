@@ -1,7 +1,7 @@
 """V1 fixture spec of the animation-machine unit B2b (engine/src/animation_machine_objects_b2b.cpp, 209 block starts).
 
 Blocks: the orphan chains 3383c, 3a4a4 / 3a4be / 3a4da / 3a5be, 3b424 / 3b446, 4bfc0, 38d56, 39f9c / 3a0dc (with the 27-slot BRA.W table 3a0f4), 3acd6, 4c390 / 4c3a2 / 4c3cc,
-the slot helpers 4d418 / 4d4b4 and the 38 blocks of the shared leaf helpers 4c2fa 4d6b4 4d734 4d98a 4d9ba 4eea2 (+4f08a) 4ff96 d3d7c.  4db18, 4b6f4 and 4c3ba stay unrouted
+the slot helpers 4d418 / 4d4b4 and the 38 blocks of the shared leaf helpers 4c2fa 4d6b4 4d734 4d98a 4d9ba 4eea2 (+4f08a) 4ff96 d3d7c.  4b6f4 and 4c3ba stay unrouted
 (3b5a6 and the 82(A6) chain 3a60a are routed by B2c; their former unrouted probes are work-RAM PCs 10fe00..10fe04).
 
 Fixture families (everything is native Unicorn on the original ROM versus the C++ run, V1 comparison of RAM, D0-D7/A0-A7, PC, bank, PVC, ordered ports, waits, reads):
@@ -13,7 +13,7 @@ Fixture families (everything is native Unicorn on the original ROM versus the C+
   chain     producer helpers with a REAL consumer return LONG (4d418 -> 31a04 33212 38c5e 3a384 3d358; 3a4da -> 39128 39c30; 3b424 / 3b446 -> 3902c 3a202; 4c390 -> 2c7a0) and the
             call chains whose C is produced by a routed callee and consumed inside the unit (289e -> 4d438, 4d6b4 -> 3a4ec, 288c -> 3ad26, 49fc6 -> 3ad3c, 28ae -> 38d70, 3b334 -> 38dbe):
             native branches on the real flags, the C++ branches on the known C.  Stop: the first PC outside the unit and the consumer block.
-  error     every even non-start PC of the unit ranges, the unrouted neighbours (4c3ba 4c3c2 3a4d6 3a4d8 4db18 4b6f4 3a048, work-RAM 10fe04), an odd PC, Unknown C at the six consumers, a
+  error     every even non-start PC of the unit ranges, the unrouted neighbours (4c3ba 4c3c2 3a4d6 3a4d8 4b6f4 3a048, work-RAM 10fe04 10fe08; 4db18 is routed by B2e), an odd PC, Unknown C at the six consumers, a
             JSR (A0) target outside the routing (work-RAM 10fe00), an odd JSR (A0) target, an odd LONG write, a work-RAM rollback probe 10fe02: checked error, state preserved.
   negative  C++ input differs from the native input in one RAM bit / one register / the queue: the comparison must report it.
 """
@@ -47,7 +47,7 @@ STARTS = [int(x, 16) for x in (
     '4c2fa 4c2fe 4c308 4c30a 4c32a 4d6b4 4d6c0 4d6c6 4d6cc 4d6d4 4d6d8 4d6e0 4d6ec 4d734 4d73a 4d742 4d746 4d750 4d75e 4d98a 4d990 4d998 4d99c 4d9ba 4d9c6 4d9ca '
     '4eea2 4eeac 4eeb6 4eebc 4eeea 4f08a 4f0a8 4f0b8 4ff96 4ffb0 d3d7c d3d92').split()]
 CONSUMERS = (0x4d438, 0x3a4ec, 0x3ad26, 0x3ad3c, 0x38d70, 0x38dbe)
-UNROUTED_NEIGHBOURS = (0x4c3ba, 0x4c3c2, 0x3a4d6, 0x3a4d8, 0x10fe04, 0x4db18, 0x4b6f4, 0x3a048, 0x3a0d2)
+UNROUTED_NEIGHBOURS = (0x4c3ba, 0x4c3c2, 0x3a4d6, 0x3a4d8, 0x10fe04, 0x10fe08, 0x4b6f4, 0x3a048, 0x3a0d2)
 TABLE = 0x3a0f4
 # entries whose RTS pops stack data first: offset of the return LONG from A7 at the entry
 RET_AT = {0x33948: 2, 0x3a4c6: 2, 0x4c32a: 4, 0x4ffb0: 4, 0x4eeea: 8, 0x4d4c2: 8}
@@ -638,9 +638,9 @@ def error_fixtures(bases, add):
     # odd LONG write (4c390 stores A0 at 5c8e(A5): A5 odd) and an odd WORD write (4d454 stores D2 at 2(A4))
     add(U.Fixture('error-4c390-odd-store', U.with_host_writes(st, regs=dict(a5=st['regs']['a5'] + 1), pc=0x4c390), [], SENTINEL, ('error', 'invalid animation machine write size/alignment')))
     add(U.Fixture('error-4d454-odd-store', U.with_host_writes(st, regs=dict(a4=st['regs']['a5'] + 0x5cbb), pc=0x4d454), [], SENTINEL, ('error', 'invalid animation machine write size/alignment')))
-    # boundary stop without a stop PC: 3a1b2 -> JSR 4db18 (boundary); work-RAM rollback probe 10fe02 (38d56 -> 3b5a6 is routed by B2c)
+    # work-RAM rollback probes 10fe02 (38d56 -> 3b5a6 is routed by B2c) and 10fe06 (3a1b2 -> 4db18 is routed by B2e)
     add(U.Fixture('error-boundary-10fe02', U.with_host_writes(st, pc=0x10fe02), [], SENTINEL, ('error', 'unsupported animation machine PC')))
-    add(U.Fixture('error-boundary-4db18', U.with_host_writes(st, pc=0x3a1b2), [], SENTINEL, ('error', 'unsupported animation machine PC')))
+    add(U.Fixture('error-probe-10fe06', U.with_host_writes(st, pc=0x10fe06), [], SENTINEL, ('error', 'unsupported animation machine PC')))
 
 
 def negative_fixtures(bases, out, add):
