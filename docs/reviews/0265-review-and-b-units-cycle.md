@@ -55,6 +55,7 @@
 | V1 spec 18개 | 모두 통과. b1a 2,807, b1b 1,892, b1c 1,842, b2a 1,386, b2b 1,419, b2c 1,707, b2d 1,489, b2e 1,054, b3a 1,468, b3b 1,360, c1 1,741, c2 1,607, c3b 480, d9 26, f6a 320, f6b 726, f6c 1,538, selftest 40 |
 
 - 출력 위치는 `build/final_regression/`이며 Git에서 제외된다.
+- [F] 표준 회귀 35개도 `de0e5be`에서 모두 통과했다. stage_event·stage_event_ops의 `animation_machine.cpp`/`internal.h` pin만 `aba5bec0…`/`706f6a5b…`로 갱신했다(`0264-legacy-regression-mac.md` 추가 절). 병합 후 `751bd47`에서 `make -j4 all test` 종료 0, Python 310개 OK.
 
 ## 4. 병합 중 발견한 문제
 
