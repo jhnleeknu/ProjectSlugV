@@ -831,7 +831,8 @@ void interior(){
  // (not reached by U5) are stage entry (F1a) ranges:
  // their interior PCs below fail there.
  // 10fe42 replaces 3db2 (an F5 frame head H1 block start).
- const std::uint32_t outside[]={0x3d7c,0x10fe42,0x16ff0,0xe89f8,0xe8a0c,0x10fe40,0x10fe20}; // 43e04 is a cleanup block start since F4 U10
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder; this test has no in_ranges() helper).
+ const std::uint32_t outside[]={0x10fe00,0x10fe42,0x10fe02,0x10fe04,0x10fe06,0x10fe40,0x10fe20}; // 43e04 is a cleanup block start since F4 U10
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t f1a[]={0x19770,0x19e5e,0x1a084,0x1a440};
  for(unsigned int i=0;i<4;++i){Bytes ram;State s;generic(f1a[i],ram,s);reject(ram,s,STOP,"unsupported animation stage entry PC");}

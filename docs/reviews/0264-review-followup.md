@@ -158,3 +158,18 @@ b3a, f6a, f6b, f6c, selftest spec은 바꿀 PC가 없었다(`f6b`의 `10fe00`은
 - `make -j3 all test` -> **종료 0**(로그 `/Users/start/Workspce/ms5-scratch/m3fix/make_all_test.log`, 저장소 밖). 컴파일 경고 0, `Assert`/assertion 줄 0, Python `Ran 310 tests ... OK`.
 - ROM `extracted/program/maincpu.decrypted.be.bin`: SHA256 `29112a94...c860f`, mtime `1791291625`가 시작과 끝에 같다.
 
+
+## M-3 잔여: F4 이전 C++ 시험의 ROM 탐침 이전
+
+대상: `outside[]`에 ROM PC를 둔 55개 C++ 시험(`n01`~`n35`(`n02` 없음, `n32b` 포함), `u01`~`u20b`의 해당 파일, `input`, `area_clear`, `buffer_cue`, `card_child`, `card_menu`, `card_menu_close/input/open/save`, `fade_card`, `frame_helpers`, `scene_core`, `scene_update`, `script_placement`, `stage_area`, `stage_catalog`, `stage_entry`, `stage_event`, `stage_event_ops`). 이미 이전한 `b1a`~`b2e`의 `ends[]`는 대상이 아니다.
+
+- 이전한 탐침: **427개**(짝수 ROM PC, 55개 파일). `2baf4..2c0fc`, `2c96a..2ca68` 안의 PC는 이 배열에 없어 건너뛴 것이 없다.
+- 규칙 [F]: 각 `outside[]`의 짝수 ROM PC를 파일 안에서 겹치지 않는 짝수 작업 RAM PC `10fe00..10fefe`로 바꿨다(그 파일에 이미 쓰인 `0x10fe..` 값은 피함, 낮은 주소부터 순서대로). 기대 결과(`unsupported animation machine PC` 롤백)와 다른 기대 상태는 바꾸지 않았다. BIOS 값(`c004xx`, `BIOS`, `TRAP_*` 상수), 이미 RAM인 값, 홀수 PC(`unaligned` 검사)는 그대로 둔다.
+- 범위 끝 정보 보존: `in_ranges()`가 있는 38개 파일은 이전한 ROM PC를 `{const std::uint32_t rom_outside[]={...};...assert(!in_ranges(rom_outside[i]));}`로 확인한다(모두 통과). `in_ranges()`가 없는 17개 파일 중 `area_clear`, `stage_entry`는 `RANGES[][2]`로 같은 확인을 넣었다. `input`, `stage_area`, `stage_catalog`는 `RANGES`가 블록 구간 목록일 뿐 routing이 아니라서(일부 이전 PC가 구간 안의 비블록 PC) 같은 확인을 넣으면 실패한다 [F: 시도 후 철회]. 나머지 12개(card 계열, `buffer_cue`, `fade_card`, `frame_helpers`, `scene_core/update`, `script_placement`)는 범위 표가 없어 정적 확인이 없다 [U].
+- 의도적으로 유지: 실제 경계 stop 시험, 계산된 도착(`input` 시험의 `targets[]` 등 `JSR (A1)` 도착값), BIOS 항목, 홀수 PC.
+- 전체 매핑표(파일별 `old->new`)는 저장소 밖 `/Users/start/Workspce/ms5-scratch/m3b/mapping.md`, 기계 판독용은 같은 폴더의 `map.json`.
+
+### 검증
+- 변경 시험 55개를 개별 빌드·실행: 전부 종료 0, 경고 0, `Assert` 줄 0.
+- `make -j3 all test` -> 종료 0(로그 `/Users/start/Workspce/ms5-scratch/m3b/make_all_test.log`), 경고 0, `Assert` 줄 0.
+- 도구(`tools/*.py`)와 `engine/src`는 변경하지 않았다.

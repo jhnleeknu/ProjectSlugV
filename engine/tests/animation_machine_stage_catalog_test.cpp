@@ -795,7 +795,8 @@ void interior(){
   reject(ram,s,STOP,"unsupported animation stage catalog PC");++inside;if(in_list(BUNDLED,9,pc))++bundled;}
  assert(even==282&&inside==214&&bundled==9);
  for(unsigned int i=0;i<9;++i)assert(!is_start(BUNDLED[i]));
- const std::uint32_t outside[]={0x478a6,0x3d62,0x3d64,0x3d7c,0xca88,0x474f4,0x10fe24,0x10fe22,0x4814c}; // 48156 is F6a now; 48250 (4755e before it) is the work-RAM PC 10fe24 since review 0264 M-3
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder; RANGES here lists block spans, not routing, so no static outside check).
+ const std::uint32_t outside[]={0x10fe00,0x10fe02,0x10fe04,0x10fe06,0x10fe08,0x10fe0a,0x10fe24,0x10fe22,0x10fe0c}; // 48156 is F6a now; 48250 (4755e before it) is the work-RAM PC 10fe24 since review 0264 M-3
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x3d59,0x3d6b,0xca8b,0x474e3,0x47541,0x477e5,0x4814f};

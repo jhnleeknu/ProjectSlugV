@@ -718,7 +718,9 @@ void interior(){
  // Unrouted neighbours of the ranges (the other neighbours belong to existing units; 47a92 and 477a0 are now stage area
  // F1c2 PCs, and the unrouted 10fe20 and 10fe22, outside every unit contract, stand in for them; 72ee is now an F5 H3 interior PC
  // and the unrouted 10fe5c stands in for it; 72fa is now an F6b PC and the unrouted 10fe64 stands in for it).
- const std::uint32_t outside[]={0x10fe20,0x10fe5c,0x10fe64,0x19a00,0x10fe58,0xe8a1a,0xe8a3a,0x10fe22,0xddf98,0xddfa4,0x9068,0x4e26c,0xc3ce};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder); the former ROM probe PCs only have to stay outside the unit RANGES.
+ {const std::uint32_t rom_outside[]={0x19a00,0xe8a1a,0xe8a3a,0xddf98,0xddfa4,0x9068,0x4e26c,0xc3ce};for(unsigned int i=0;i<sizeof(rom_outside)/sizeof(rom_outside[0]);++i){for(unsigned int r=0;r<sizeof(RANGES)/sizeof(RANGES[0]);++r)assert(!(rom_outside[i]>=RANGES[r][0]&&rom_outside[i]<RANGES[r][1]));}}
+ const std::uint32_t outside[]={0x10fe20,0x10fe5c,0x10fe64,0x10fe00,0x10fe58,0x10fe02,0x10fe04,0x10fe22,0x10fe06,0x10fe08,0x10fe0a,0x10fe0c,0x10fe0e};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);
   reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x47a95,0x72f1,0x1a5a5,0xe909d,0x362b};
