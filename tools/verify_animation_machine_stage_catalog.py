@@ -1092,7 +1092,10 @@ def negatives(ctx, base, st, resources):
     for pc in (TRAP_STOP, CUT_STOP):
         jobs.append((exe, 'boundary_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, resources, {}))
     # neighbours of the routed ranges that no executor owns at this commit (data table, gaps, dead code)
-    for pc in (0x3d62, 0x3d7c, 0x474f4, 0x4755e, 0x48156, 0x47a54):
+    # Former probes 0x4755e and 0x48156 (expected UNSUPPORTED_MACHINE) are now inside routed ranges: 4755e..47594 (controller C2) and 48156..48180 (F6a
+    # IRQ shell). They would run that code and pass only because a later PC ends in the same message (independent review 0264 M-1), so they are no
+    # longer used as unrouted probes; the work-RAM PCs 10fe00/10fefe (code never executes in RAM) are the unrouted controls.
+    for pc in (0x3d62, 0x3d7c, 0x474f4, 0x47a54, 0x10fe00, 0x10fefe):
         jobs.append((exe, 'outside_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, resources, {}))
     for low, high in F1C1_RANGES:
         jobs.append((exe, 'odd_pc_%06x' % (low + 1), base, {'pc': low + 1}, 0xff000, UNALIGNED_PC, resources, {}))

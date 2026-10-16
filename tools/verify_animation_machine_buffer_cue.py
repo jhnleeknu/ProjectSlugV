@@ -68,7 +68,11 @@ SPRITE_CALLBACK = 'unsupported sprite callback target'
 VERIFIED_ARTIFACTS = set()
 RUN_DIR = None
 WORKERS = 8
-SUPERSEDED_OUTSIDE = {0x4b830: 'unsupported animation objects n03 PC'}
+EXTERNAL_QUEUE_EMPTY = 'animation machine external read queue empty'
+# e5bfb73 (0264-legacy): e8a1c (F1a stage_entry range e8a1c..e8a3a) and 4b82e (N03 4b82e..4b8a2) now run on into blocks routed by the ten-unit batch and end with a
+# BYTE read of a non-physical address, which takes the F5 external-read queue path (empty in this harness): the checked error is 'external read queue empty'. Former
+# expectation UNSUPPORTED_MACHINE; the superseding unit of the continuation is not traced [U]. This is not evidence of device behaviour.
+SUPERSEDED_OUTSIDE = {0x4b830: 'unsupported animation objects n03 PC', 0xe8a1c: EXTERNAL_QUEUE_EMPTY, 0x4b82e: EXTERNAL_QUEUE_EMPTY}
 DEBUG_ROWS = int(os.environ.get('BUFCUE_DEBUG_ROWS', '0'))     # development switch only: the reported run is always the full set
 
 
@@ -822,13 +826,19 @@ def negatives(exe, base, st, resources, entry_buffer, entry_cue, wrapper_fail, w
     for pc in st['bundled']:
         assert pc in interior
     # outside the four routing ranges (data window e8a0c.., unit edges): no executor
+    outside_mismatches = []
     for pc in (0xe8a0c, 0xe8a1c, 0xe8a46, 0xe8b5a, 0xe8b5c, 0x4abc0, 0x4abc2, 0x4b782, 0x4b82e, 0x4b830, 0x2984):
         if in_ranges(pc, U7_RANGES):
             continue
         # align2 run (HEAD dd61e61): 4b830 is now routed by F4 N03 ('unsupported animation objects n03 PC'); former expectation UNSUPPORTED_MACHINE.
-        reject(exe, 'outside_entry_%06x' % pc, base, {'pc': pc}, 0xff000, SUPERSEDED_OUTSIDE.get(pc, UNSUPPORTED_MACHINE), out, resources)
+        try:
+            reject(exe, 'outside_entry_%06x' % pc, base, {'pc': pc}, 0xff000, SUPERSEDED_OUTSIDE.get(pc, UNSUPPORTED_MACHINE), out, resources)
+        except AssertionError as error:      # collected: every stale probe of the loop is reported together
+            outside_mismatches.append((hex(pc), error.args))
+            continue
         if pc in SUPERSEDED_OUTSIDE:
-            out[-1].update(former_expected_API_error=UNSUPPORTED_MACHINE, classification='superseded_by_F4_N03', API_only_control=True)
+            out[-1].update(former_expected_API_error=UNSUPPORTED_MACHINE, classification='superseded_by_F4_N03' if pc == 0x4b830 else 'superseded_by_routed_continuation_unit_not_traced', API_only_control=True)
+    assert not outside_mismatches, outside_mismatches
     # Unrouted controls that no F4 unit can route: even work-RAM PCs.
     for pc in (0x10fe00, 0x10fefe):
         reject(exe, 'unrouted_ram_pc_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, out, resources)
