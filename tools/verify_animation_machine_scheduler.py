@@ -783,12 +783,15 @@ def fixture_pass(ctx, row, acc):
     if name == 'pass-head-ring-unchecked-step-limit':
         # the frame head callback is 270e (not a head stop); the host rule is bypassed: the stop is declared e4a, the ring is walked on into the controller node 1008e4 (callback c52a, no executor)
         r, end, ports, error = run_wait(ctx, tag, st, 0xe4a, [])
-        assert end is None and error == UNSUPPORTED_MACHINE
+        # Former expectation: error == UNSUPPORTED_MACHINE ('unsupported animation machine PC', controller callback c52a had no executor). The controller node c52a is
+        # routed by deferred unit C3 (c52a..c64c, with C1/C2 behind it) since the ten-unit batch; the pass now runs the controller and never reaches the declared stop
+        # e4a, so the checked error is the block budget (e5bfb73 full run; 0264-legacy). Outputs stay preserved (checked by run_wait).
+        assert end is None and error == 'animation machine block budget exceeded', (end, error)
         totals = collections.Counter()
         nend, nports, failure = node_walk(ctx, tag + 'n', st, nodes_as_records(row), totals, 0xe4a)
         assert failure is not None and failure['kind'] == 'ring-continues-past-recorded-nodes' and failure['cb'] == 0xc52a, failure
-        out.update(result='the stop e4a is never reached: the ring continues through the idle head node 270e into the controller node 1008e4 (callback c52a): whole pass = checked error, outputs preserved',
-                   cpp_error=error, node_failure=failure, nodes_equal_native=totals['node_exit_digest_equal_recorded'])
+        out.update(result='the stop e4a is never reached: the ring continues through the idle head node 270e into the controller node 1008e4 (callback c52a): whole pass = checked error (block budget exceeded: the controller node runs through C3; former unsupported-PC error), outputs preserved',
+                   cpp_error=error, former_expected_cpp_error=UNSUPPORTED_MACHINE, superseded_by='controller C3 (c52a)', node_failure=failure, nodes_equal_native=totals['node_exit_digest_equal_recorded'])
         return out
     waits = []
     r, end, ports, error = run_wait(ctx, tag, st, stop, waits)
@@ -1014,12 +1017,25 @@ def check_preserved(actual, st, expected_error=None):
     return error
 
 
+# label -> (former expected error, observed exact error, superseding unit); filled from the first full run of each stale probe.
+SUPERSEDED_PROBES = {'unrouted_after_002ab8': (UNSUPPORTED_MACHINE, 'animation machine external read queue empty', 'F6a IRQ shell 20c..2d8 [I: error attributed to the routed continuation, not separately traced]')}
+
+
 def reject_one(args):
     ctx, label, base, changes, stop, expected = args
     st = St(base.ram, dict(base.state, carry=2, **changes), base.pvc, base.bank)
     r, out, ports, error = run(ctx, 'neg_' + label, st, stop)
-    assert out is None and (expected is None or error == expected), (label, error, expected)
-    return dict(label=label, pc=changes.get('pc'), error=error, expected=expected, all_API_outputs_preserved=True)
+    if label in SUPERSEDED_PROBES:
+        # Former expectation `expected`; the probe PC is routed by a later unit and ends in the recorded exact error (0264-legacy, e5bfb73).
+        former, observed, unit = SUPERSEDED_PROBES[label]
+        assert former == expected
+        expected = observed
+    if not (out is None and (expected is None or error == expected)):
+        return dict(label=label, failed=(error, expected))      # collected by negatives(): every stale probe is reported together
+    row = dict(label=label, pc=changes.get('pc'), error=error, expected=expected, all_API_outputs_preserved=True)
+    if label in SUPERSEDED_PROBES:
+        row.update(former_expected_API_error=SUPERSEDED_PROBES[label][0], superseded_by=SUPERSEDED_PROBES[label][2], API_only_control=True)
+    return row
 
 
 def negatives(ctx, base, stinfo):
@@ -1037,7 +1053,11 @@ def negatives(ctx, base, stinfo):
         jobs.append((ctx, 'odd_pc_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNALIGNED_PC))
     for pc in (0x0, 0xffffffe, 0x1000000, 0xdeadbee):
         jobs.append((ctx, 'out_of_range_entry_%x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE))
+    for pc in (0x10fe00, 0x10fefe):      # unrouted work-RAM controls (code never executes in RAM)
+        jobs.append((ctx, 'unrouted_work_ram_control_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE))
     out = run_parallel(reject_one, jobs)
+    failed = [row for row in out if 'failed' in row]
+    assert not failed, failed
     # odd stop PC (API check) and odd operand addresses
     r, o, p, e = run(ctx, 'neg_odd_stop', St(base.ram, dict(base.state, pc=0x270e, a6=0x1009a8, a5=A5V), base.pvc, base.bank), 0x2ac3)
     assert o is None and e == 'invalid animation machine RAM/PVC/stop PC'

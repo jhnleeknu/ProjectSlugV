@@ -555,6 +555,9 @@ def compare_guards(exe, guards, resources):
     return rows, superseded
 
 
+SUPERSEDED_OUTSIDE = {0xbbd4: 'unaligned animation machine PC'}
+
+
 def expected_pc_error(pc):
     if any(low <= pc <= high for low, high in ROUTER_SAVE):
         return UNSUPPORTED_SAVE
@@ -585,7 +588,16 @@ def negatives(exe, base, bios_starts, instr, static, resources):
     for pc in sorted({high for _low, high in SAVE_RANGES} | {0x9f34, 0xbd94}):
         if pc in SAVE_SET:
             continue
+        if pc in SUPERSEDED_OUTSIDE:
+            # Former expectation expected_pc_error(pc) = 'unsupported animation machine PC'. bbd4 is a block start of controller C2 (bbd4 card menu table
+            # preparation, called from c2fa) since the ten-unit batch; the run executes C2 -> bbb8/bb74 (this unit) and ends with the checked odd-PC error [I: not separately traced].
+            former = expected_pc_error(pc)
+            reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, expected=SUPERSEDED_OUTSIDE[pc])
+            out[-1].update(former_expected_API_error=former, superseded_by='controller C2 (bbd4)', API_only_control=True)
+            continue
         reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, expected=expected_pc_error(pc))
+    for pc in (0x10fe00, 0x10fefe):      # unrouted work-RAM controls (code never executes in RAM)
+        reject('unrouted_work_ram_control_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_MACHINE)
     # c1ea consumes C: Unknown is a checked error (full rollback), known C moves PC without touching anything else.
     reject('c1ea_unknown_carry', base, {'pc': 0xc1ea}, carry=0, expected=NEEDS_CARRY)
     reject('c1ea_unknown_carry_stop_c202', base, {'pc': 0xc1ea}, carry=0, stop=0xc202, expected=NEEDS_CARRY)

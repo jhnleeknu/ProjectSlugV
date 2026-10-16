@@ -390,7 +390,10 @@ def compare(exe, rows, resources, instructions):
     return out_rows, totals, ends, guards
 
 
-SUPERSEDED_GUARD_CAUSES = {'guard-callback-480bc': ('unsupported program bus device address',)}
+# 'guard-alloc-return-clobbered' (target 4c3a2): former expectation 'unsupported animation machine PC'; 4c3a2 is routed by deferred unit B2b (4c390..4c3ba, N34 chain)
+# since the ten-unit batch (docs/reviews/0263-ten-unit-batch.md; independent review 0264 M-1), so the run now ends in the checked bus alignment error.
+SUPERSEDED_GUARD_CAUSES = {'guard-callback-480bc': ('unsupported program bus device address',),
+                           'guard-alloc-return-clobbered': ('program bus requires even WORD/LONG address',)}
 SUPERSEDED_GUARDS = []
 
 

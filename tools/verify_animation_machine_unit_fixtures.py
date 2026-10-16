@@ -802,7 +802,10 @@ def main(argv=None):
     ap.add_argument('--out', required=True, help='output directory (report.json, logs); must be inside the checkout or the scratchpad')
     ap.add_argument('--workers', type=int, default=4)
     ap.add_argument('--only', help='comma list of fixture-name substrings')
+    import verify_animation_machine_frame_driver as D
+    D.add_seed_option(ap)
     args = ap.parse_args(argv)
+    D.apply_seed_option(args)
     require(not sys.flags.optimize, 'optimized Python disables checks')
     started = time.time()
     out = Path(args.out).absolute()
