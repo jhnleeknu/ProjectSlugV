@@ -335,6 +335,8 @@ bool carry_preserving_pc(std::uint32_t pc) {
     case 0xeb83e:case 0xeb84e:case 0xeb852:case 0xeb862:case 0xeb866:case 0xeb87c:case 0xeb880:case 0xeb896:case 0xeb8ae:
     case 0xeb8ba:case 0xeb8c6:case 0xeb8d2:case 0xeb8f2:case 0xeb910:case 0xeb928:case 0xeb92c:case 0xeb942:case 0xeb96e:
     case 0xeb98e:case 0xeb9b8:
+    // Objects U06b (F4) block: MOVEA.L (A7)+,A0+RTS e756c only. e7562 (MOVE.L push + MOVEQ) and 48250 (MOVE.B) stay Unknown.
+    case 0xe756c:
     // Objects U07 (F4) blocks: LEA/BRA/JSR/JMP/RTS only, including the BCC consumer 4e1a2 (C returned by readiness 289e: Clear when
     // the LONG at A0 is 270e, else ORI CCR Set). U07 has no known-carry producer (every 4e186 caller sets its own flags);
     // MOVE/MOVEA+MOVE/MOVEQ/TST/CMP/CMPI/ADDI/SUBI/SUB/ADD/NEG/ASR/ANDI/CLR blocks stay Unknown.
@@ -1411,6 +1413,7 @@ bool run_machine(std::vector<std::uint8_t>& ram,
             else if ((next.pc>=0x49be0 && next.pc<0x49bf2) || (next.pc>=0xe73f8 && next.pc<0xe74f8) || (next.pc>=0xe7546 && next.pc<0xe7562) ||
                 (next.pc>=0xe7792 && next.pc<0xe7946) || (next.pc>=0xeb7b6 && next.pc<0xeb9ba) ||
                 (next.pc>=0xeba3e && next.pc<0xeba9e))ok=animation_objects_u06_block(c);
+            else if ((next.pc>=0xe7562 && next.pc<0xe7570) || (next.pc>=0x48250 && next.pc<0x48256))ok=animation_objects_u06b_block(c);
             else if ((next.pc>=0x4e186 && next.pc<0x4e1cc) || (next.pc>=0xe585c && next.pc<0xe5bb0))ok=animation_objects_u07_block(c);
             else if ((next.pc>=0x18be8 && next.pc<0x18c06) || (next.pc>=0x1aa3a && next.pc<0x1aa40) || (next.pc>=0x43eb8 && next.pc<0x43efa) ||
                 (next.pc>=0x447be && next.pc<0x44ade) || (next.pc>=0x49274 && next.pc<0x4929e))ok=animation_objects_u08_block(c);
