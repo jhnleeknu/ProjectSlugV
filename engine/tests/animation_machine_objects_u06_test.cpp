@@ -18,7 +18,9 @@
 // checked to stay inside the synthetic bytes; scratch generator outside the repository): each success row records the native stop
 // state (16 registers and the FNV-1a digest of RAM, D0-D7/A0-A7, PC, bank, PVC words ff8/ff9 and the ordered PVC port writes).
 // Fixtures stop at a call into another unit (8da2, 49c20, 4836e, 3918, 35a2, 16ed2, 16ea4, 8ebe, 8ff4, 49f8c, 49fc6, 43e34,
-// c6a96), at a boundary (3ed2, e7562, eb9ba, eb9e4, 101c, the script handler e74f8) or at the final RTS. The eba3e-bank4/5/9 rows
+// c6a96), at a boundary (3ed2, eb9ba, eb9e4, 101c, the script handler e74f8), at the U06b callee e7562 (stop PC rows) or at the final RTS.
+// The rows e742c-clear-key1-to-stop, e7462-to-stop and script-end-to-stop (stop = the return LONG ff000) run the former e7562 boundary through the U06b
+// blocks e7562 -> 48250 -> e756c (native digests; e7462-to-stop adds 10e07a:0005 so that the callback ends at its countdown instead of reading ROM). The eba3e-bank4/5/9 rows
 // (banks 400000/500000 and 100000 through the ff9 bit15 write) are real runs; eba3e-bank5-odd (first LONG ffffffff) and
 // eba3e-bank8-outside (bank 800000, past the 8 MiB image) end with the shared program bus errors the native observer reports as the
 // odd data access and the bank-read-outside-rom guard. The C expected after a success run is
@@ -188,6 +190,9 @@ const Fixture FIXTURES[]={
  {"eb980-to-16ea4",0xeb980,0x16ea4,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e07e:0000,10e07c:0000",NULL,{0x0,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x0,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10effc},0,0xb26131d763ffab0aULL,0,0x200000},
  {"eb81e-mode-1-to-16ea4",0xeb81e,0x16ea4,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e076:0000,10e07e:0004,10e07c:0002,10e046:0010,10e042:0020,10e088:0000,10e086:0003,10e084:0c40,10e08a:01,10e080:00012345,104cba:00,104cc0:00,104cbe:00,104cb8:00,104cbf:40,104cb9:00",NULL,{0x0,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x14345,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10effc},0,0x62e98dab82712e0cULL,0,0x200000},
  {"error-through-101c-sprite-16ea4",0xeb980,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","unsupported sprite callback target",{0},0,0ULL,0,0},
+ {"e742c-clear-key1-to-stop",0xe742c,0xff000,1,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10fd82:00,10fdb6:00,10fdb7:00,104cab:10,104cb1:00,10e07a:0005",NULL,{0x1,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x10,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f004},0,0xb39e130e27af3149ULL,0,0x200000},
+ {"e7462-to-stop",0xe7462,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e07a:0005",NULL,{0x1,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f004},0,0x9dfe0dd4e5a06ef0ULL,0,0x200000},
+ {"script-end-to-stop",0xe748a,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e076:000e759e,10e07a:0000,10de24:eeee,100000:03",NULL,{0x1,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0xe75a2,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f004},0,0x5da4f011253eceeaULL,0,0x200000},
 };
 // Generic block state (native successors with incoming C clear / set).
 const char* const GENERIC_PUTS="10f004:0000e000,10e400:00080003,10e404:00110001,10e408:00000000,10e600:00000077,10e604:00000000,10e076:000e75a6,10e07a:0003,10e07c:0001,10e07e:0002,10e080:00010011,10e084:0c40,10e086:0004,10e088:0002,10e08a:01,10e046:0030,10e042:0040,10e020:0055,10d726:0013,10d72c:0102,10fd82:00,10fdb6:01,10fdb7:00,104cab:10,104cb1:02,100000:02,104cba:15,104cc0:2a";
@@ -493,8 +498,9 @@ void zero_step(){
   const Bytes before=ram;const State old=s;Out o;assert(run(ram,s,BLOCKS[i].pc,o)&&same(s,old)&&ram==before&&o.ports.empty()&&o.reads==0&&
    o.status==ms5::AnimationMachineReturned&&o.dev.bank_base==0x200000&&o.dev.pvc==pvc_base());}
 }
-// Every other even PC of the 6 routed ranges is rejected by the U06 executor; the boundary callees 3ed2/e7562/eb9ba/eb9e4/101c,
-// the script handler e74f8 and the range neighbours by the routing; odd PCs first.
+// Every other even PC of the 6 routed ranges is rejected by the U06 executor; the boundary callees 3ed2/eb9ba/eb9e4/101c,
+// the script handler e74f8 and the range neighbours by the routing (e7562 is the U06b callee now: its stop-PC rows stay, the former
+// rollback rows run through U06b in boundaries()); odd PCs first.
 void interior(){
  unsigned int even=0,inside=0;
  for(unsigned int r=0;r<RANGE_COUNT;++r)for(std::uint32_t pc=RANGES[r][0];pc<RANGES[r][1];pc+=2){++even;
@@ -511,12 +517,17 @@ void interior(){
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
 // The boundaries stop when they are the stop PC and otherwise roll the whole run back; the consumers reject an Unknown C (error
-// rows of the fixture table, and below with the success inputs).
+// rows of the fixture table, and below with the success inputs). e7562 stopped here before U06b: the three rows that used to roll back at
+// e7562 (e742c-clear-key1, e7462, script-end) now run e7562 -> 48250 -> e756c (U06b) to the return LONG and are checked by native digests.
 void boundaries(){
- const char* names[]={"e742c-clear-busy","e742c-clear-key1","e7462","eb818-up","eb81e-next","script-jump","script-end"};
- const std::uint32_t pcs[]={0x3ed2,0xe7562,0xe7562,0xeb9ba,0xeb9e4,0xe74f8,0xe7562};
+ const char* names[]={"e742c-clear-busy","eb818-up","eb81e-next","script-jump"};
+ const std::uint32_t pcs[]={0x3ed2,0xeb9ba,0xeb9e4,0xe74f8};
  for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(final_of(names[i]).s.pc==pcs[i]);
   Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
+ // Former e7562 rollback rows: still stop at e7562 (the stop PC is checked first); without the stop PC they succeed through U06b.
+ const char* before[]={"e742c-clear-key1","e7462","script-end"};const char* via_u06b[3]={"e742c-clear-key1-to-stop","e7462-to-stop","script-end-to-stop"};
+ for(unsigned int i=0;i<3;++i){assert(final_of(before[i]).s.pc==0xe7562);
+  const Final&r=final_of(via_u06b[i]);assert(r.s.pc==STOP&&get(r.ram,0x10d681,1)==1&&r.s.a[7]==SP+4&&r.s.carry==ms5::AnimationCarryUnknown);}
  // Review 0264 L-4 (restored probe eb81e-mode-1 / error-boundary-101c): 101c is the C2 block 101c now, not a boundary. Without the stop PC 101c the runs of
  // eb81e-mode-1 and eb980 execute it and fail at the call 16ea4 with the sprite unit's checked error (exact string, state preserved); the failing PC is 16ea4 because
  // the same runs with the stop PC 16ea4 succeed and end exactly there (rows eb980-to-16ea4 / eb81e-mode-1-to-16ea4, native digests equal).
