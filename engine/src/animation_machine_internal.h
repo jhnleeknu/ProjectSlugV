@@ -156,5 +156,6 @@ bool animation_objects_b2e_block(AnimationMachineContext& c);
 bool animation_objects_b3a_block(AnimationMachineContext& c);
 bool animation_objects_b3b_block(AnimationMachineContext& c);
 bool animation_objects_b3c_block(AnimationMachineContext& c);
+bool animation_objects_b4_block(AnimationMachineContext& c);
 }
 #endif
