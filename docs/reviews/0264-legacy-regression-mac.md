@@ -223,3 +223,6 @@ d1aabe9221eccd3b tools/verify_animation_machine_unit_fixtures.py
 | `verify_animation_machine_transition.py` | PASS | 107 | `b74427c412d15869` |
 
 PASS = 종료 코드 0. 시간은 기계 부하에 좌우된다. 단위 fixture·frame 구동기 계열(표준 35개 밖)은 이번에 재실행하지 않았다 [미확인].
+
+## 후속: 0266 회귀 manifest
+`0264`의 실행 결과는 `e5bfb73` 기준이다. 이후 U06b·B3c가 `engine/src/animation_machine.cpp`와 `animation_machine_internal.h`를 바꾸어 `verify_animation_machine_stage_event.py`와 `_stage_event_ops.py`의 `CPP_PINS`를 `d66442f` 기준으로 다시 갱신했다(이전 값은 소스 주석). 표준 35개와 이후 추가된 frame_head·frame_driver·frame_controller(`--declare game`/`demo`)·frame_irq 및 `tools/unit_fixture_specs/` 전체 spec의 단위 fixture 검증기를 HEAD에서 다시 실행한 명령·도구 SHA·입력 SHA·보고서 SHA·결과·플랫폼은 `docs/reviews/0266-regression-manifest.json`에 기록한다(`0258-regression-manifest.json`은 역사 기록이므로 수정하지 않는다).
