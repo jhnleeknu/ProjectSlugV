@@ -977,10 +977,14 @@ void rules(){
    const bool ok=ms5::run_animation_machine(ram,w,bus,s,o.dev,0x3af8,0,o.reads,o.status,o.ports,o.error);
    const std::uint32_t want=((0x10U+(idx[i]>>4))<<8)|(0xa0U+(idx[i]&15U));
    check(ok&&s.pc==0x3af8&&(s.d[0]&0xffffU)==want&&(s.d[0]>>16)==(d0s[i]>>16)&&s.a[0]==0x22d82U+0U,"22e62 index keeps all eight bits",idx[i],s.d[0]);}}
- const std::uint32_t data[]={0x22c8c,0x22a02,0x22a0e,0x22a8a,0x22a9e,0x22d64,0x22d82,0x22d92,0x22f7a,0x22fe0,0x23056,0x2334c,0x2355c,0x235b6,0x235c2,0x235c8,
-  0x23774,0x4411e,0x1c9ec,0x1c9b6};
+ const std::uint32_t data[]={0x22c8c,0x22a02,0x22a0e,0x22a8a,0x22a9e,0x22d64,0x22d82,0x22d92,0x22fe0,0x23056,0x2355c,0x235b6,0x235c2,0x235c8,
+  0x4411e,0x1c9ec,0x1c9b6};
  for(unsigned int i=0;i<sizeof(data)/sizeof(data[0]);++i){Bytes ram=base_ram("");State s;s.pc=data[i];s.a[6]=NODE;s.a[7]=SP;
   check(!in_ranges(data[i]),"data PC outside the routed ranges",data[i]);reject(ram,s,STOP,"unsupported animation machine PC");}
+ // The child values 22f7a 2334c 23774 are block starts of B4b (contract B4b decision 6): outside the B4 ranges and stop-only here.
+ const std::uint32_t children[]={0x22f7a,0x2334c,0x23774};
+ for(unsigned int i=0;i<sizeof(children)/sizeof(children[0]);++i){Bytes ram=base_ram("");State s;s.pc=children[i];s.a[6]=NODE;s.a[7]=SP;Out o;
+  check(!in_ranges(children[i])&&run(ram,s,children[i],o)&&s.pc==children[i],"B4b child value: stop-only",children[i]);}
 }
 }
 int main(){
