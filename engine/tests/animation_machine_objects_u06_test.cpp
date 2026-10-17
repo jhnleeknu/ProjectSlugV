@@ -179,7 +179,7 @@ const Fixture FIXTURES[]={
  {"flow-eb866-2",0xeb866,0xeb89a,2,{0x0,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"",NULL,{0x0,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},2,0x8b07763e65bfdb2eULL,0,0x200000},
  {"error-odd-script",0xe74a2,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e076:0010e701","program bus requires even WORD/LONG address",{0},0,0ULL,0,0},
  {"error-odd-target",0xe74a2,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e076:000e75a2","unaligned animation machine PC",{0},0,0ULL,0,0},
- {"error-script-boundary",0xe748a,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e076:000e7598","unsupported animation machine PC",{0},0,0ULL,0,0},
+ {"error-script-boundary",0xe748a,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"10e076:0010fd00,10fd00:0000013c","unsupported animation machine PC",{0},0,0ULL,0,0},
  {"error-odd-stack",0xe7546,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f001},"","program bus requires even WORD/LONG address",{0},0,0ULL,0,0},
  {"error-node-write",0xe74b0,0xff000,0,{0x11110000,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0x10e600,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10,0x10f000},"","unsupported animation machine write device",{0},0,0ULL,0,0},
  {"error-missing-rom",0xe74be,0xff000,0,{0x0,0x22220001,0x33330002,0x44440003,0x55550004,0x66660005,0x77770006,0x88880007,0x10e400,0xe7000,0xa2a2a2a2,0xa3a3a3a3,0xa4a4a4a4,0x108000,0x10e000,0x10f000},"","missing or ambiguous physical program bus ROM byte",{0},0,0ULL,0,0},
@@ -520,10 +520,14 @@ void interior(){
 // rows of the fixture table, and below with the success inputs). e7562 stopped here before U06b: the three rows that used to roll back at
 // e7562 (e742c-clear-key1, e7462, script-end) now run e7562 -> 48250 -> e756c (U06b) to the return LONG and are checked by native digests.
 void boundaries(){
- const char* names[]={"e742c-clear-busy","eb818-up","eb81e-next","script-jump"};
- const std::uint32_t pcs[]={0x3ed2,0xeb9ba,0xeb9e4,0xe74f8};
+ const char* names[]={"e742c-clear-busy","eb818-up","eb81e-next"};
+ const std::uint32_t pcs[]={0x3ed2,0xeb9ba,0xeb9e4};
  for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(final_of(names[i]).s.pc==pcs[i]);
   Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
+ // e74f8 is routed by B4b (script handler e74f8..e7546): the script-jump row only stops there (stop-only, the stop PC is checked first); its
+ // former rollback expectation at e74f8 was removed (B4b contract, decision 6). The error row error-script-boundary (formerly the jump script e7598,
+ // rolled back at e74f8) now uses a RAM script 10fd00 whose handler offset 013c gives the RAM probe 10fe40 (F4 boundary convention).
+ assert(final_of("script-jump").s.pc==0xe74f8);
  // Former e7562 rollback rows: still stop at e7562 (the stop PC is checked first); without the stop PC they succeed through U06b.
  const char* before[]={"e742c-clear-key1","e7462","script-end"};const char* via_u06b[3]={"e742c-clear-key1-to-stop","e7462-to-stop","script-end-to-stop"};
  for(unsigned int i=0;i<3;++i){assert(final_of(before[i]).s.pc==0xe7562);
