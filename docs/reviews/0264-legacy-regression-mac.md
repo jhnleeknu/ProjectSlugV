@@ -273,3 +273,6 @@ PASS = 종료 코드 0. 시간은 기계 부하에 좌우된다. 단위 fixture�
 | b2d | 1,489/1,489 (error 926, match 553, mismatch 10, ports 430) | **1,485/1,485** (match 549, ports 432) | node fixture 5개가 정지 PC `8ec8`(`bcs.w $8ecc`의 4바이트 뒤 `trap #$f`, 실제 점프 목표가 아님)였고 수정 후에는 없다. `node-3b044-2`·`node-2d57a-1`·`node-2d510-1`·`node-2d6e6-1`이 사라지고(`node-2d3ae-2`는 다른 정지 PC로 대체) node 45→41, 이후 난수 소비가 달라져 나머지 world의 digest가 바뀐다. 모든 행 ok |
 
 b2d의 감소는 의도한 결과다: 이전 fixture 4개는 원본이 점프하지 않은 PC를 정지점으로 삼은 잘못된 trace였다. 새 trace의 정지점은 실제 미routing 진입 또는 sentinel뿐이다. 수정 spec SHA256(앞 16): `55625a6081c6ade7 b2d.py`, `9dbea4cd68aea487 b2e.py`, `6fd2e4641c962c8f b3a.py`, `735c9ede2eb3112b b3b.py`, `2f284797e4920ba1 b3c.py`.
+
+## 후속: 0267 회귀 manifest
+`062bfd7`(B4a, B4b, legacy trace, spec 수정 포함) 기준으로 `verify_animation_machine_stage_event.py`와 `_stage_event_ops.py`의 `CPP_PINS`(`animation_machine.cpp`, `animation_machine_internal.h`)를 다시 갱신했다(이전 값은 소스 주석). 두 검증기는 통과했다. 표준 35개, frame_head·frame_driver·frame_controller(`game`/`demo`)·frame_irq, `tools/unit_fixture_specs/` 전체(b4, b4b 포함) 단위 fixture 검증기를 HEAD에서 다시 실행한 명령·도구 SHA·입력 SHA·보고서 SHA·결과·플랫폼은 `docs/reviews/0267-regression-manifest.json`에 기록한다(`0258`, `0266` manifest는 역사 기록이므로 수정하지 않는다).
