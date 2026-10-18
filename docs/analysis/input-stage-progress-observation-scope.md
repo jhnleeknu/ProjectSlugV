@@ -6,7 +6,7 @@
 - 결정 2: ROM 쓰기는 v1에서 checked 정지(guard `rom-write`)로 둔다. 실행부는 바꾸지 않는다.
 - 구현 분할은 §8을 따른다. IO-2 관측 도구는 Sonnet/high, IO-3 C++ 비교·frontier는 Sonnet/medium이 맡는다.
 
-**상태: 구현 전 범위·설계 문서(메인 결정 전).** `remaining-work-plan.md` §3의 선행 기반을 구체화한다. 구현·검증 기록이 아니다.
+**상태: 구현 전 범위·설계 문서(메인 결정 반영, 2026-10-18).** `remaining-work-plan.md` §3의 선행 기반을 구체화한다. 구현·검증 기록이 아니다.
 
 - 작성: Claude Opus 5.5 / high 읽기 전용 분석 작업자. 작업 트리 `metalslug-io`(브랜치 `claude/input-observation`, HEAD `35a1eda`).
 - ROM: `extracted/program/maincpu.decrypted.be.bin` SHA256 `29112a94…c886c860f`, mtime_ns `1791291625887190107`. 모든 탐침이 시작·끝에 SHA·mtime이 같음을 assert했다. 대상 코드는 모두 고정 영역 `<100000`이라 CPU 주소 = 파일 오프셋이다(뱅크 코드 실행은 탐침에서 0회).
