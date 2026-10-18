@@ -2308,3 +2308,33 @@
   - 하드웨어 실제 값
 - 다음 주 단위: `remaining-work-plan.md` §3 입력·스테이지 진행 관측 기반.
 - 전체 Goal 범위·완료 기준은 바꾸지 않았다. ROM·추출 데이터는 Git에 넣지 않았다.
+
+## 2026-10-18 — 주 단위 IO: 입력·스테이지 진행 관측 기반 완료 (브랜치 `claude/input-observation`, PR #5 위)
+
+- 설계: `docs/analysis/input-stage-progress-observation-scope.md`.
+  - 메인 결정: S 계열(136 seed + 플레이어 시작 선언 + 입력 스크립트)과 B 계열(USER `852` BIOS 없는 boot)을 같은 protocol로 관측한다.
+  - stack rebase는 선언으로 처리한다.
+  - ROM 쓰기는 checked 정지로 둔다.
+- [F] native 관측 `tools/observe_animation_machine_io.py`, 입력 스크립트 `docs/analysis/data/io-input-scripts.json`, 기록 `animation-machine-io-observation.md`.
+  - 관측 구성: S P0·P1 × 136 seed × 600 frame, P1b 대표 14, B boot-demo / title-start / title-idle.
+  - 두 run이 같다. `compared_sha256 4bb6b933…`이고 파일에서 다시 계산해도 같다. platform 정보는 별도 파일에 둔다.
+  - P1: 12 seed에서 플레이어가 등장하고, 미연결 PC 1,864개가 새로 실행된다.
+  - title boot는 캐릭터 선택 → 미션 1 → 게임 오버 → BIOS 복귀까지 간다(frame 906).
+- [F] C++ 비교 `tools/verify_animation_machine_io.py` + `engine/tools/frame_io_acceptance.cpp`(Execute + IRQ + palette + 입력 queue), 기록 `animation-machine-io-execution.md`.
+  - native 완료 frame 173,966개를 비교했다. 불일치 0, 예상 밖 C++ 오류 0.
+  - P0 136 seed × 600 frame이 controller 실행 + 실제 IRQ + palette 조합으로 처음 원본과 일치했다.
+  - frontier PC 68건을 모두 확정했다(서로 다른 PC 14개). C++ 연쇄를 두 번 돌려도 같다. 부정 검사 34개를 모두 검출했다.
+- [F] frontier(`frontier.json`):
+  - 첫 정지가 가장 많은 PC: E `de660`(캐릭터 선택) 14, D `b3dbc`·`e5324` 각 12.
+  - 첫 정지가 C(플레이어)인 경우는 없다.
+  - 후보 단위는 196개다(C 9, D 147, E 40).
+  - 권장 순서: E `de660` → D `e4ffc`/`b3dbc` → C `4e94e`(502 leader)·`1cd98` → D 공용 적 코드.
+- 검증 중 고친 것: 관측기의 `compared_sha256`가 dict 정수 key 정렬 때문에 파일에서 다시 계산되지 않았다.
+  - JSON 왕복 기준으로 계산하도록 고치고 두 번 다시 관측했다. 결과는 hash 말고 모두 같았다.
+  - 공유 사본은 교체했고, 예전 사본은 `animation_machine_io_native.old_3cc9`로 보존했다.
+- [U]
+  - 선언한 `10f006`(PLAYER_START)이 BIOS 동작을 대신한다고 본 것은 추정이다.
+  - boot 장치 응답, IRQ 장치 값, `aea68` ROM 쓰기가 원본 버그인지는 확인하지 못했다.
+  - 다른 OS에서 `compared_sha256`가 같은지는 확인하지 않았다(macOS에서만 실행).
+- 다음: frontier 순서대로 E `de660` → D → C 단위를 연결하고, 단위마다 IO 비교의 일치 frame 수로 진척을 잰다.
+- 전체 Goal 범위·완료 기준은 바꾸지 않았다. ROM·추출 데이터는 Git에 넣지 않았다.
