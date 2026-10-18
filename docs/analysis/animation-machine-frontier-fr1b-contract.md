@@ -82,7 +82,7 @@ FR1 계약 "공통 규칙·native 검증 계획"을 그대로 따른다. 다른 
   - `b30ea BCC.W b30f4` / `b335e BCC.W b3368` / `b9816 BCC.W b9820`: `1ab02`(밖 Set, 안 `ANDI.B #fe,CCR` Clear). Set → `b30ee` / `b3362` / `b981a`.
   - `b31f4 BCC.W b3218`: `b3460`(이 단위; `b3474` Set / `b347e` Clear). Set → `b31f8`.
   - `b3470 BCC.W b347e`: `493bc`(N15). Clear → `b347e`, Set → `b3474`.
-  - `b32d8 BCC.W b32ee` / `b330a BCC.W b3320` / `b333c BCC.W b3352`: `28ae`(할당 실패 Set). Set → `b32dc` / `b330e` / `b3340`.
+  - `b32d8 BCC.W b32ee` / `b330a BCC.W b3320` / `b333c BCC.W b3352`: `28ae`(성공 시 C Set — `2908` ORI, 실패 시 C Clear — `2912` ANDI; 정정: 이전 문구는 반대로 적혀 있었음). Set → `b32dc` / `b330e` / `b3340`.
   - `b97fa BCC.W b980a`: `49fc6`. Set → `b97fe`.
 - [F] **known C 생산**(결정 5): `b3474`(`MOVEA.L 88(A6),A0; ORI.B #1,CCR; RTS`)는 C Set, `b347e`(`ANDI.B #fe,CCR; RTS`)는 C Clear를 남긴다(`RTS`가 같은 block 안이라 통과 block이 필요 없다; 호출자 `b31ec JSR b3460(PC)`의 복귀 `b31f4`가 읽음). `b32ea` `b331c` `b334e`(`ORI.B #1,CCR`)는 C Set을 남기지만 다음 block(`b32ee BRA` `b3320 BRA` `b3352 JMP 2a00`)이 carry 보존이 아니어서 읽는 곳이 없다(B4b `2b74a` 관례: 값은 남기고 보존 목록에는 넣지 않음).
 - [F] 그래서 `carry_preserving_pc`에 넣는 것은 소비자 11개뿐이다. Unknown C로 소비자에 들어오면 checked 오류다. 그 밖의 모든 block은 진입 때 Unknown이 되고 Unknown으로 끝난다(`b3474` `b347e` `b32ea` `b331c` `b334e` 제외).
