@@ -4,7 +4,7 @@
 
 - 범위·결정: `docs/analysis/input-stage-progress-observation-scope.md`(이하 범위 문서, 메인 결정 포함). 이 문서는 범위 문서 §8의 "IO-1 관측기" 하위 작업의 구현·결과·검증 기록이다.
 - 작성: Sonnet 5.5 / high 작업자. 작업 트리 `metalslug-io`(브랜치 `claude/input-observation`, 기준 HEAD `836035f`), 커밋하지 않았다.
-- 도구: `tools/observe_animation_machine_io.py`(관측기, SHA256 `c9f93abd75303ecd6eb4b5379fc9ec7514adc67de1ff3e7a389882d3a499e2c6`), `docs/analysis/data/io-input-scripts.json`(버전 있는 입력 스크립트·선언 host 쓰기·구성, SHA256 `d8971c44441bca01705de85467edda166523c9a5d9181175e2ac5d8850ab322a`).
+- 도구: `tools/observe_animation_machine_io.py`(관측기, SHA256 `facf49fa29b6cc0c8472ee4543c8858b5412054c7535a2cd5c4c1a69859de5bc`), `docs/analysis/data/io-input-scripts.json`(버전 있는 입력 스크립트·선언 host 쓰기·구성, SHA256 `d8971c44441bca01705de85467edda166523c9a5d9181175e2ac5d8850ab322a`).
 - 표기: [F] 이 도구가 원본 ROM을 native로 실행해 확인한 사실, [I] 추론, [U] 미확인.
 - 모든 관측은 선언 모델이다. BIOS 실행, 자연 IRQ 시점, 자연 scheduler를 주장하지 않는다. host 쓰기, 장치 값, IRQ 전달, BIOS 반환, 재진입은 모두 선언이고 기록에 남는다.
 - 원본 ROM과 추출 자료는 수정하지 않았고 Git에 넣지 않는다. 관측 산출물(`runs/`, `states/`, `boot/`)도 Git 대상이 아니다. 저장소 도구·엔진은 수정하지 않았다(관측기는 기존 도구를 프로세스 안에서 import만 한다).
@@ -14,7 +14,7 @@
 - 관측기와 입력 스크립트를 범위 문서 §8대로 구현했다. 구성은 S `P0`/`P1`(자연 seed 137개 × 600 frame; case 141은 frame 0 `odd-pc`), `P1b`(동치류 대표 14개), B `boot-demo-0`/`boot-title-start`/`boot-title-idle`이다.
 - IO-1 탐침 재현: P0 완료 136 + case 141 `odd-pc`, 모두 `c7fc`→`c79a`, 새 미routing 없음(`3900` 제외). P1 완료 136 + case 141, 플레이어 seed 12개, 새 미routing PC **1864**개. 탐침과 seed별 정지·첫 미routing·미routing PC별 횟수가 일치한다(§7).
 - B: demo는 frame 577 `rom-write`, title-start는 frame 906 `system-return`(BIOS `c00444`), title-idle은 600 frame 완주이다(IO-1과 같은 지점).
-- 반복 실행 두 디렉터리의 `compared_sha256`: 3cc9adbb2692267e (A) / 3cc9adbb2692267e (B) — 같다. split 대 continuous: 19개 실행 모두 일치(§9).
+- 반복 실행 두 디렉터리의 `compared_sha256`: 4bb6b93362747427 (A) / 4bb6b93362747427 (B) — 같다. split 대 continuous: 19개 실행 모두 일치(§9).
 - 출력 93.9 MB(상한 3 GB). 자연 실행의 입력 소비 순서 위반 0. guard(자연 2 + 합성 5) 7/7 일치.
 - 범위 문서와 다른 점 두 가지: replay mode의 입력 소비는 0건이 아니라 앞 3건(§6.5), 선언 player start는 seed 상태의 `a74` 결과가 아니라 BIOS가 enable·credit를 갖춘 상태의 결과를 선언한 것(§6.6).
 
@@ -316,12 +316,12 @@ typed fixture(`observation.json` `fixtures`). 자연 사례(B)와 합성 fixture
 
 ## 9. 결정성: 반복 실행과 split
 
-- **반복 실행**: 같은 명령을 서로 다른 디렉터리 두 곳(`runA`, `runB`)에 실행했다. `observation.json`의 `compared_sha256`: A `3cc9adbb2692267e840b7b3fbdfd24f61cf277a681db87241234be42741d9f4d`, B `3cc9adbb2692267e840b7b3fbdfd24f61cf277a681db87241234be42741d9f4d`. 같다.
+- **반복 실행**: 같은 명령을 서로 다른 디렉터리 두 곳(`runA`, `runB`)에 실행했다. `observation.json`의 `compared_sha256`: A `4bb6b9336274742a492182b8a745f48a574ba456aa94856c535395f89f969b62`, B `4bb6b9336274742a492182b8a745f48a574ba456aa94856c535395f89f969b62`. 같다.
 
 ```text
 {
- "compared_sha256_a": "3cc9adbb2692267e840b7b3fbdfd24f61cf277a681db87241234be42741d9f4d",
- "compared_sha256_b": "3cc9adbb2692267e840b7b3fbdfd24f61cf277a681db87241234be42741d9f4d",
+ "compared_sha256_a": "4bb6b9336274742a492182b8a745f48a574ba456aa94856c535395f89f969b62",
+ "compared_sha256_b": "4bb6b9336274742a492182b8a745f48a574ba456aa94856c535395f89f969b62",
  "equal": true,
  "files_a": 597,
  "files_b": 597,
@@ -382,12 +382,14 @@ diff -rq -x platform.json DIR_A DIR_B
 .venv/bin/python tools/observe_animation_machine_io.py --selftest             # 짧은 자체 검사(출력 디렉터리 없음)
 ```
 
-`--out` 기본값은 `artifacts/animation_machine_io_native`이다. 이 작업의 모든 실행은 공유 `artifacts/`가 아닌 scratch 경로를 썼다(`ms5-scratch/io2/runA`, `runB`).
+`--out` 기본값은 `artifacts/animation_machine_io_native`이다. 이 작업의 모든 실행은 공유 `artifacts/`가 아닌 scratch 경로를 썼다(`ms5-scratch/io2/runA`, `runB`; `compared_sha256` 재계산 수정 뒤의 재실행은 `ms5-scratch/io2fix/runA`, `runB`).
+
+**정정 [F]:** 첫 실행의 `compared_sha256`(`3cc9adbb…`)은 메모리 객체에서 계산해 JSON에서 재계산되지 않았다. 관측기가 JSON 왕복 객체(키 제외)로 계산하도록 고치고 `--compare`가 재계산 일치를 요구하게 했다. 재실행 결과(워커 3 / 2)는 `compared_sha256` `4bb6b9336274742a492182b8a745f48a574ba456aa94856c535395f89f969b62`, `observation.json` 파일 SHA256 `66d30130…`, `diff -rq -x platform.json` 깨끗(597개)이며 구성별 결과는 이전과 같다(`pins.observer`와 해시 값만 다름). 이 문서의 위 SHA는 새 값으로 갱신했다.
 
 | 파일 | SHA256 앞 16자리 |
 | --- | --- |
-| `tools/observe_animation_machine_io.py` | `c9f93abd75303ecd` |
+| `tools/observe_animation_machine_io.py` | `facf49fa29b6cc0c` |
 | `docs/analysis/data/io-input-scripts.json` | `d8971c44441bca01` |
-| `observation.json` (run A) | `0c251988d8b99e47` |
-| `observation.json` (run B) | `0c251988d8b99e47` |
+| `observation.json` (run A) | `66d30130d8a11a86` |
+| `observation.json` (run B) | `66d30130d8a11a86` |
 

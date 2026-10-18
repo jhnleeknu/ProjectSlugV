@@ -106,6 +106,13 @@ def canon_sha(obj):
     return sha(canon(obj).encode())
 
 
+def recompute_compared_sha(obs):
+    """compared_sha256 over the JSON round-trip of the observation without the key (string keys, as read back from observation.json)."""
+    body = json.loads(json.dumps(obs))
+    body.pop('compared_sha256', None)
+    return canon_sha(body)
+
+
 def gz(data):
     return gzip.compress(data, compresslevel=6, mtime=0)
 
@@ -1062,10 +1069,12 @@ def compare_dirs(a, b):
     only_a = sorted(set(fa) - set(fb))
     only_b = sorted(set(fb) - set(fa))
     differ = sorted(k for k in fa if k in fb and fa[k] != fb[k])
-    res = dict(compared_sha256_a=oa['compared_sha256'], compared_sha256_b=ob['compared_sha256'], equal=oa['compared_sha256'] == ob['compared_sha256'], files_a=len(fa), files_b=len(fb),
+    rec_a, rec_b = recompute_compared_sha(oa), recompute_compared_sha(ob)
+    recomputed_ok = oa['compared_sha256'] == rec_a and ob['compared_sha256'] == rec_b
+    res = dict(recomputed_a=rec_a, recomputed_b=rec_b, stored_equals_recomputed=recomputed_ok, compared_sha256_a=oa['compared_sha256'], compared_sha256_b=ob['compared_sha256'], equal=oa['compared_sha256'] == ob['compared_sha256'], files_a=len(fa), files_b=len(fb),
                only_a=only_a[:10], only_b=only_b[:10], differ=differ[:10], clean=not (only_a or only_b or differ))
     print(json.dumps(res, indent=1))
-    return 0 if res['equal'] and res['clean'] else 1
+    return 0 if res['equal'] and res['clean'] and recomputed_ok else 1
 
 
 def run_phase(ctx, args, tlist, label, t_start):
@@ -1292,7 +1301,7 @@ def write_outputs(args, out_dir, entries, classes, scripts, rom0, elapsed, fixtu
                                                                        pack='page-delta pack of frame-start states (256-byte pages: RAM 256, PVC 32, palette 2 x 32)'),
                declared=declared, configs=cfg_defs, classes=classes, class_baseline=dict(p0_union_unrouted_pcs=CTX.get('p0_union_size')), runs=entries, aggregates=agg,
                fixtures=check_fixtures(entries))
-    obs['compared_sha256'] = canon_sha(obs)
+    obs['compared_sha256'] = recompute_compared_sha(obs)
     (out_dir / 'observation.json').write_text(json.dumps(obs, indent=1, sort_keys=True))
     inv = {}
     for dirpath, dirnames, filenames in os.walk(out_dir, followlinks=False):
