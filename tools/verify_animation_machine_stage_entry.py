@@ -899,7 +899,12 @@ def compare_guards(exe, guards, resources):
 
 
 # ----------------------------------------------------------------------------------------------------------------- API-only checks
-SUPERSEDED_OUTSIDE = {0x72fa: 'animation machine external read queue empty', 0x7300: 'unsupported animation irq f6b PC'}
+SUPERSEDED_OUTSIDE = {0x72fa: 'animation machine external read queue empty', 0x7300: 'unsupported animation irq f6b PC',
+                      # FR1b routes ddfdc (contract animation-machine-frontier-fr1b-contract.md, decision 7; former expectation 'unsupported animation
+                      # machine PC'): ddfdc..de00a run, the RTS de00a returns to the base state's natural return LONG and the frame code there reads an
+                      # external device (empty queue in this harness; not device evidence). Observed with this verifier's invoke() on base 958d66a + FR1b.
+                      0xddfdc: 'animation machine external read queue empty'}
+SUPERSEDED_BY = {0x72fa: 'F6b (72f0..7326)', 0x7300: 'F6b (72f0..7326)', 0xddfdc: 'FR1b (ddfdc..de00c)'}
 
 
 def reject_one(args):
@@ -954,7 +959,7 @@ def negatives(exe, base, st, resources):
     assert not failed, failed
     for row in out:
         if row['label'].startswith('outside_entry_') and int(row['label'][14:], 16) in SUPERSEDED_OUTSIDE:
-            row.update(former_expected_API_error=UNSUPPORTED_MACHINE, superseded_by='F6b (72f0..7326)', API_only_control=True)
+            row.update(former_expected_API_error=UNSUPPORTED_MACHINE, superseded_by=SUPERSEDED_BY[int(row['label'][14:], 16)], API_only_control=True)
     # the six carry consumers need a known incoming C (Unknown -> checked error, full rollback)
     r, s, p, b = base
     for pc in CONSUMERS:

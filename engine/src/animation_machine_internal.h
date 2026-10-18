@@ -159,5 +159,6 @@ bool animation_objects_b3c_block(AnimationMachineContext& c);
 bool animation_objects_b4_block(AnimationMachineContext& c);
 bool animation_objects_b4b_block(AnimationMachineContext& c);
 bool animation_objects_fr1_block(AnimationMachineContext& c);
+bool animation_objects_fr1b_block(AnimationMachineContext& c);
 }
 #endif
