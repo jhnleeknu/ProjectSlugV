@@ -2338,3 +2338,33 @@
   - 다른 OS에서 `compared_sha256`가 같은지는 확인하지 않았다(macOS에서만 실행).
 - 다음: frontier 순서대로 E `de660` → D → C 단위를 연결하고, 단위마다 IO 비교의 일치 frame 수로 진척을 잰다.
 - 전체 Goal 범위·완료 기준은 바꾸지 않았다. ROM·추출 데이터는 Git에 넣지 않았다.
+
+## 2026-10-19 — frontier 단위 FR1a·FR1b·FR1c (브랜치 `claude/frontier-units`, PR #6 위)
+
+- IO 비교의 첫 정지 PC 14개를 세 단위로 연결했다(합계 640 block).
+  - FR1a 214: `de660` 캐릭터 선택, `e5324`, `b3dbc`, 작은 객체 `4b6f4` `d131a` `eb9ba` `51602` `b7742` `b975e`.
+  - FR1b 211: `b30f6`, `5a376`, `de376`, `de024`, leaf `b97c0` `515fc`.
+  - FR1c 215: `bc08c`, `d13b4`, helper `4941e`/`494c0`.
+  - 계약: `animation-machine-frontier-fr1{,b,c}-contract.md`.
+- [F] IO frontier 일부는 ROM 바이트로 정정했다.
+  - `e4ffc`는 ASCII 자료였고 실제 정지는 `e5324`다.
+  - `d0fec`의 실제 정지는 `d131a`다.
+  - `b3dbc`는 점프 표를 포함해 39 block이다.
+  - `28ae`는 성공 시 C Set, 실패 시 Clear다. FR1b 계약의 문장을 고쳤다.
+- [F] 검증(단위마다):
+  - 실제 ROM 7,500건 불일치 0.
+  - 변이: FR1a 143/144(1 동등), FR1b 143/143, FR1c 179/179.
+  - V1 fr1 1,631, fr1b 1,441, fr1c 1,755. FR1c 시점에 다른 spec 25개도 모두 통과했다.
+  - D1·controller game·IRQ 54,400/54,400, demo 45,684/45,684. 변한 frame은 없다.
+- [F] IO 비교(불일치 0, 두 run 동일): 첫 실패 전 일치 frame이 140,861에서 150,472로 늘었다(+9,611).
+  - P1 56,469 → 62,586, P1b 2,511 → 4,917.
+  - boot는 run당 2 frame에서 demo 381, title-idle 600(끝까지), title-start 113 frame으로 늘었다.
+  - frontier에 걸린 run은 69에서 53이 됐다.
+- 회귀 처리:
+  - b2a spawn 행: native trace 정지 조건이 연결된 block의 내부 PC에 떨어졌다. 정지 조건에 `4b6f4` stop-only 경계를 더했다.
+  - U06 시험 2행은 정지 확인으로 바꿨다.
+  - area_clear `4b6f4` 탐침과 stage_entry `ddfdc` 탐침은 이전 기대값을 기록하고 새 오류로 바꿨다.
+  - stage_event pin은 `00ff3a1b…`/`caad91c1…`로 갱신했다.
+- 다음 frontier(실행 수): `4e68e` 14, `c0ace` 12, `e5580` 12, `50dae` `5ab82` `b33d8` `bc844` 각 3, `a8ee` 1, `1d1f4` 1(플레이어). FR2 단위로 이어서 연결한다.
+- 참고: `tools/observe_animation_machine_io.py`의 `ROUTING_SHA`는 관측 당시 routing(`8ce8eb93…`)을 기록한 출처 pin이다. 다시 관측하기 전까지 바꾸지 않는다.
+- 전체 Goal 범위·완료 기준은 바꾸지 않았다.
