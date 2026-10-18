@@ -659,7 +659,12 @@ def negatives(exe, base, a698_starts, close_instructions, resources):
     # unit). 0xc2fa still ends in the machine error (BSR.W bbd4 -> out-of-range bcaa, unchanged expectation, now reached through the C2 block);
     # 0xc2fc is the interior of the 4-byte BSR.W at c2fa, so the exact error is now the C2 interior error. Former values are recorded; the work-RAM
     # PCs 10fe00/10fefe (code never executes in RAM) are the unrouted controls.
-    outside = (0x9ee6, 0xc2fa, 0x10fe00, 0x10fefe)
+    # Former outside probe 0x9ee6 (expected UNSUPPORTED_MACHINE) is a block start of the frontier unit FR2a (contract
+    # docs/analysis/animation-machine-frontier-fr2-contract.md: 9ee6 MOVEA.L -ee(A5),A2; CMPA.L -f2(A5),A2; SEQ.B D7; RTS); the work-RAM PC 0x10fe46
+    # replaces it as an unrouted control. The former expectation is recorded.
+    SUPERSEDED_RECORDS.append(dict(label='outside_range_entry_009ee6', former_expected_API_error=UNSUPPORTED_MACHINE, superseded_by='frontier unit FR2a (9ee6 block)',
+                                   replaced_by='outside_range_entry_10fe46', all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
+    outside = (0x10fe46, 0xc2fa, 0x10fe00, 0x10fefe)
     for pc in outside:
         if pc < 0x100000:
             assert expected_pc_error(close_instructions, pc) == UNSUPPORTED_MACHINE

@@ -507,11 +507,17 @@ void interior(){
 // executor. D1.W/D7.W << 2 is never odd.
 unsigned int computed_ok=0,computed_bad=0;
 bool f3b_target(std::uint32_t pc){return (pc>=0xe9350&&pc<0xe93da)||(pc>=0xe958e&&pc<0xe9768);}
+// The frontier unit FR2a routes e991c..e995c (contract docs/analysis/animation-machine-frontier-fr2-contract.md): e97d8 with D0.W = ce..dd lands there.
+// Its block starts e991c / e9930 / e993c are stop-only checks (the run stops on arrival); the other targets are FR2a interior PCs. Former expectation of
+// these 16 targets: "unsupported animation machine PC" (no executor before FR2a).
+bool fr2a_target(std::uint32_t pc){return pc>=0xe991c&&pc<0xe995c;}
+bool fr2a_start(std::uint32_t pc){return pc==0xe991c||pc==0xe9930||pc==0xe993c;}
 void computed_target(std::uint32_t entry,unsigned int reg,std::uint32_t value,std::uint32_t target,bool pushes){
  Bytes ram;State s;generic(entry,ram,s,2);s.d[reg]=(s.d[reg]&0xffff0000U)|value;
- if(is_start(target)||target==0xe9350){Out o;assert(run(ram,s,target,o)&&s.pc==target);if(pushes)assert(s.a[7]==GEN_SP-4&&get(ram,GEN_SP-4,4)==0xe91be);else assert(s.a[7]==GEN_SP);++computed_ok;}
+ if(is_start(target)||target==0xe9350||fr2a_start(target)){Out o;assert(run(ram,s,target,o)&&s.pc==target);if(pushes)assert(s.a[7]==GEN_SP-4&&get(ram,GEN_SP-4,4)==0xe91be);else assert(s.a[7]==GEN_SP);++computed_ok;}
  else{reject(ram,s,STOP,in_ranges(target)?"unsupported animation stage event PC":
-  (f3b_target(target)?"unsupported animation stage event ops PC":"unsupported animation machine PC"));++computed_bad;}}
+  (f3b_target(target)?"unsupported animation stage event ops PC":(fr2a_target(target)?"unsupported animation objects fr2 PC":"unsupported animation machine PC")));
+  ++computed_bad;}}
 void computed(){
  for(std::uint32_t k=0;k<0x60;++k)computed_target(0xe91b8,7,k,0xe91e4+k*4U,true);
  const std::uint32_t wraps[]={0x3fff,0x4000,0x4001,0x7ffe,0xbfff,0xffff};

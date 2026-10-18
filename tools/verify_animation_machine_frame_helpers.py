@@ -565,7 +565,12 @@ def negatives(exe, base, starts, instructions, block_starts, resources, neg_erro
     for pc in (0x10fe00, 0x10fefe):
         reject('unrouted_work_ram_control_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
     outside_stale = []
-    for pc in (0x480f2, 0x47672, 0x6f1c4, 0x2efdc, 0x3c7c, 0xb4ab0, 0x493bc, 0x1c052, 0x4da08, 0xb4850, 0x4706c, 0x480ba):
+    # Former outside probe 0xb4ab0 (expected UNSUPPORTED_MACHINE) is a block start of the frontier unit FR2a (contract
+    # docs/analysis/animation-machine-frontier-fr2-contract.md: b4ab0 MOVE.B 96(A6),D0; RTS); the work-RAM PC 0x10fe46 (code never executes in RAM)
+    # replaces it as an unrouted control (F4 unit test boundary convention). The former expectation is recorded.
+    SUPERSEDED_RECORDS.append(dict(label='outside_range_entry_0b4ab0', former_expected_API_error=UNSUPPORTED_MACHINE, superseded_by='frontier unit FR2a (b4ab0 block)',
+                                   replaced_by='outside_range_entry_10fe46', API_only_control=True, native_execution_equivalence_claimed=False))
+    for pc in (0x480f2, 0x47672, 0x6f1c4, 0x2efdc, 0x3c7c, 0x10fe46, 0x493bc, 0x1c052, 0x4da08, 0xb4850, 0x4706c, 0x480ba):
         # U09 contract's 4706c..470e6 range supersedes this one outside probe.
         # Keep the old address/label and pin the full-run API error, including rollback.
         expected = EVEN if pc == 0x4706c else SUPERSEDED_OUTSIDE.get(pc, UNSUPPORTED_MACHINE)
