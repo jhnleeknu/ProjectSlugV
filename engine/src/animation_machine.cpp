@@ -1161,6 +1161,10 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // Objects FR4 blocks: the 7 consumers 73124 (BCC, C returned by the N15 test 7054c), 73468 (BCC, 1ab80), 878ec (BCC, 28ae), 87a9e (BCC, 1ab02)
     // and cc60c cc638 cc67c (BCS, 497a6). No FR4 block sets a C and no FR4 RTS passes one; every other FR4 block stays Unknown.
     case 0x73124:case 0x73468:case 0x878ec:case 0x87a9e:case 0xcc60c:case 0xcc638:case 0xcc67c:
+    // Objects FR5 blocks: the 6 consumers 5abd6 (BCS, C returned by 4945e), 5acac (BCS, 4b6f4 through the RTS 4b700), 5ad60 5ae02 (BCS, 1ab80),
+    // 5ad80 (BCC, 28ae) and 5adf2 (BCS, 49fc6). 5ad8e (ORI) sets C without a reader (JMP 2a00); no FR5 RTS passes a C; every other FR5 block
+    // stays Unknown.
+    case 0x5abd6:case 0x5acac:case 0x5ad60:case 0x5ad80:case 0x5adf2:case 0x5ae02:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1738,6 +1742,8 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x87a3e && next.pc<0x87a8c) || (next.pc>=0x87a94 && next.pc<0x87aaa) || (next.pc>=0xbc7d6 && next.pc<0xbc844) ||
                 (next.pc>=0xbca2c && next.pc<0xbcaa0) || (next.pc>=0xcc600 && next.pc<0xcc696) || (next.pc>=0xcc778 && next.pc<0xcc7ac) ||
                 (next.pc>=0xcc818 && next.pc<0xcc82e) || (next.pc>=0xcca76 && next.pc<0xccade) || (next.pc>=0xcdc1c && next.pc<0xcdc24))ok=animation_objects_fr4_block(c);
+            else if ((next.pc>=0x4464a && next.pc<0x44666) || (next.pc>=0x5ab82 && next.pc<0x5ae0e) || (next.pc>=0x5ae10 && next.pc<0x5ae3e) ||
+                (next.pc>=0x5ae54 && next.pc<0x5ae98) || (next.pc>=0x5aebe && next.pc<0x5b220))ok=animation_objects_fr5_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
