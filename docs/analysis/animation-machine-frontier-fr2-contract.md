@@ -227,17 +227,19 @@ FR1 계약 "공통 규칙·native 검증 계획"과 FR1c 계약의 같은 절을
 
 ## FR2b 이후 명세
 
-[F] 각 단위는 앞 단위가 모두 routing된 상태를 가정해 같은 규칙으로 잰 값이다(scratch `specs.py`, `EXTRA_ROUTED` = 앞 단위 범위; 실제 착수 때 그 시점의 routing으로 다시 잰다). 진입(root)과 정지 집합이 정의이고, block 수·시작 목록 SHA256(`starts_<name>.txt`, 첫 16자)은 확인값이다.
+[F] **재배열(메인 결정, FR2a IO 재실행 뒤 실행 수/block 순).** FR2b는 FR2a IO 재실행의 새 작은 root `48256` `76852` `b336a` `a92a`와 그 자연 후속(214 block, 별도 계약 `animation-machine-frontier-fr2b-contract.md`)이다. 아래 FR2c 이후는 FR2b까지 routing된 상태를 가정해 같은 규칙으로 다시 잰 값이다(scratch `/Users/start/Workspce/ms5-scratch/fr2b/tools/specs_next.py`, `EXTRA_ROUTED` = 앞 단위 범위; 실제 착수 때 그 시점의 routing으로 다시 잰다). 진입과 정지 집합이 정의이고 block 수·시작 목록 SHA256 첫 16자는 확인값이다. 이전 이름(FR2b..FR2h)은 괄호에 적는다.
 
-| 단위 | 진입 | 추가 정지 | block | 명령 | 시작 목록 SHA256 | 범위 요약 | 비고 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| FR2b | `4e68e` 본체가 부르는 helper 19곳: `b0c 371e 3786 ca3a ca50 ca5c ca64 ca6a 1be3a 1bf94 1c052 1c086 4a90e 4d86e 4e0f6 4e112 b7a28 e6496 e8c3a` | — | 157 | 405 | `7159ccb85c7d82f9` | `b0c..b58` `371e..37e2` `ca3a..ca70` `1a988..1a996` `1be3a..1c0d2` `4a90e..4a944` `4c0f0..4c1de` `4d86e..4da2a` `4e0f6..4e122` `b7a28..b7a2e` `e6496..e6516` `e8b6e..e8cc0` | 계산 점프 `3772` `37d8`(표 전사 필요), `28ae` 자식 `b3dfc` |
-| FR2c | `4e68e` | `4e94e` `4ebe2`(설치 값) | 167 | 370 | `f2613ca8d1a84a02` | `4e4da..4e5e8` `4e68e..4e69a` `4e69c..4e94e` `4eb58..4ebe2` `4ed3c..4ee7a` `4f22c..4f2ba` | TRAP #15 `4e69a`(WORD `76` ≥ 2), 자식 `4f2e0` `e695a` |
-| FR2d | `4e94e` `4ebe2` | — | 160 | 398 | `b60a8687da34872c` | `4e94e..4eb58` `4ebe2..4ed3c` `4ee7a..4eea2` `4eef4..4f08a` `4f118..4f184` `4f1ac..4f22c` | FR2b·c·d가 모두 들어가야 `4e68e` 14 run이 진행 |
-| FR2e | `bc844` `e6952` | — | 195 | 453 | `7e7333a8e4d0e017` | `bc844..bcb22` `e6952..e6e06`(여러 조각) `e63fa..e6448` `3144..314c` | `bc844` 3 run(FR1c `bc08c`의 `28ae` 자식); `e6952`는 FR2a `e693a`의 자식([I] `e5580` 12 run의 다음 frontier); TRAP `e6d92` `e6dd0` |
-| FR2f | `50dae` | — | 211 | 451 | `0512008d3c01f310` | `50cf6..5160e` `482ea..4833e` `491fe..49214` `1a3a6..1a3ac` | 3 run; 자식 `5146c` `5193c` `51c36` |
-| FR2g | `5ab82` | — | 202 | 631 | `e7c303bb25793763` | `5ab82..5b220` `4464a..44666` `d1028..d10d8` | 3 run; TRAP `5ae0e`, 자식 `5ad98` `d1d08` |
-| FR2h | 아이템 처리기 28곳 `b44ac b44b2 … b45f0` + `e9b8a` | — | 201 | 481 | `aacb65f64fd5ce90` | `b44ac..b4760`(조각) `1c012..1c922`(조각) `4d55e..4d6b4` `e9b8a..e9c72` | FR2a의 live 대상·자식; TRAP `b470e` `b4730`, 계산 `e9c6e` |
+| 단위 | 진입 | 추가 정지 | block | 명령 | 시작 목록 SHA256 | 비고 |
+| --- | --- | --- | --- | --- | --- | --- |
+| FR2c(옛 FR2b) | `4e68e` 본체가 부르는 helper 19곳 `b0c 371e 3786 ca3a ca50 ca5c ca64 ca6a 1be3a 1bf94 1c052 1c086 4a90e 4d86e 4e0f6 4e112 b7a28 e6496 e8c3a` | — | 157 | 405 | `7159ccb85c7d82f9` | 계산 점프 `3772` `37d8`, `28ae` 자식 `b3dfc`; boot-title-start의 다음 frontier `ca50`(frame 122) |
+| FR2d(옛 FR2c) | `4e68e` | `4e94e` `4ebe2` | 167 | 370 | `f2613ca8d1a84a02` | TRAP `4e69a`, 자식 `4f2e0` `e695a` |
+| FR2e(옛 FR2d) | `4e94e` `4ebe2` | — | 160 | 398 | `b60a8687da34872c` | FR2c·d·e가 모두 들어가야 `4e68e` 14 run이 진행 |
+| FR2f(옛 FR2e) | `bc93c`(FR2b가 남긴 `bc844` 둘째 단계) `e6952` | — | 176 | 404 | `99a2d031496f5089` | `bc844` 3 run frame 276; TRAP `e6d92` `e6dd0`; 그 뒤 `bc404`(10, frame 301) |
+| FR2g(옛 FR2f) | `50dae` | — | 211 | 451 | `0512008d3c01f310` | 3 run |
+| FR2h(옛 FR2g) | `5ab82` | — | 202 | 631 | `e7c303bb25793763` | 3 run; TRAP `5ae0e` |
+| FR2i(옛 FR2h) | 아이템 처리기 28곳 `b44ac b44b2 … b45f0` + `e9b8a` | — | 201 | 481 | `aacb65f64fd5ce90` | FR2a의 live 대상·자식 |
+
+- [I] FR2b 다음 자연 frontier(IO 관측 run 기록 기준 예상): `c5370`(`76852` 12 run frame 252, 82 block; 위 표에 없는 새 후보), `bc93c`(FR2f), `ca50`(FR2c). 다음 배정 때 실행 수/block으로 다시 고른다.
 
 - [F] **`1d1f4` 플레이어 closure(FR2 범위 밖, 다음 플레이어 단위 연속)**: FR2a..FR2h가 모두 routing된 뒤에도 1,521 block(명령 3,248, 70 조각, 16,676 byte), 점프 표 3개(`2031c` 9 항목, `20792` 4 항목, `207ba` `1b` 항목)를 전사하면 1,775 block(명령 3,838)이다. 설치 값 104, `28ae`/`2986` 자식 12, 아직 전사하지 않은 계산 점프 `20378` `203ac` `2094e` `209d6`, live `JMP (A1)` `1aa38`·`JSR (A4)` `201a6`. block 분포: `1c000..` 96, `1d000..` 377, `1e000..` 426, `1f000..` 396, `20000..` 284, `21000..` 80, `22000..` 15, `48000..`/`49000..`/`4c000..`/`4d000..`/`4e000..` 89, 기타 3. [I] 설치 값 단위로 나누면 약 220 block 단위 8–9개가 필요하다(진입 `1d1f4`; `1d20c` 등 설치 상태별로 순서를 정함). IO frontier 실행은 boot-demo-0 1개(frame 381)뿐이다.
 
