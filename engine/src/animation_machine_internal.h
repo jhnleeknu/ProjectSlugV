@@ -164,5 +164,6 @@ bool animation_objects_fr1c_block(AnimationMachineContext& c);
 bool animation_objects_fr2_block(AnimationMachineContext& c);
 bool animation_objects_fr2b_block(AnimationMachineContext& c);
 bool animation_objects_fr3_block(AnimationMachineContext& c);
+bool animation_objects_fr4_block(AnimationMachineContext& c);
 }
 #endif
