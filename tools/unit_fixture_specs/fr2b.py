@@ -416,7 +416,8 @@ def build():
     _BLK.clear()
     require(len(STARTS) == 214 and len(STARTS_SET) == 214, ('starts', len(STARTS), len(STARTS_SET)))
     require(unit_of(SENTINEL) is None and not mine(SENTINEL), 'sentinel must be unrouted')
-    for t in (0x702fa, 0x70d72, 0x76922, 0x71884, 0xbc93c):
+    # bc93c (FR2b stop install) became an FR3 block start: the check uses the FR2b stop install 70e2a instead (FR3 contract decision 6).
+    for t in (0x702fa, 0x70d72, 0x76922, 0x71884, 0x70e2a):
         require(unit_of(t) is None and not mine(t), ('data / stop PC must stay unrouted', hex(t)))
     for s in STARTS:
         require(unit_of(s) == 'animation_objects_fr2b_block', ('start is not routed to fr2b', hex(s), unit_of(s)))
