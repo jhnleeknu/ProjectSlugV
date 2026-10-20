@@ -1,0 +1,151 @@
+{
+  "format": "ms5-io-input-script",
+  "version": 1,
+  "description": "Versioned declared stimulus of the unit IO native observer (tools/observe_animation_machine_io.py): per-frame values of the four external-read ports and the declared host writes of every observation configuration. Nothing here is a BIOS, IRQ-timing or device claim: every value is a declaration. Scope: docs/analysis/input-stage-progress-observation-scope.md.",
+  "ports": {
+    "380000": "BYTE system port (active low): bit0 P1 start, bit1 P1 select, bit2 P2 start, bit3 P2 select [I: input-sampler.md]",
+    "300000": "BYTE P1 port (active low): bit0 up, bit1 down, bit2 left, bit3 right, bit4 A, bit5 B, bit6 C, bit7 D",
+    "340000": "BYTE P2 port (active low), same bit layout as 300000",
+    "3c0006": "WORD raster / video status read by the frame head (eaa, efc); declared 0"
+  },
+  "semantics": {
+    "frame": "Frame number k of the D1 frame protocol. Frame 0 is the N0 pass (no head, no external read); the values of frame k >= 1 are served to the H of that frame.",
+    "repeat": "A value applies to every read of that port inside the frame (pause loops that read again see the same value).",
+    "defaults": "Port values of every frame before any segment applies (all released: BYTE ff, raster 0000).",
+    "segment": "{from, to (inclusive, null = open), port, optional every + phase [a, b] (absolute frame number modulo every inside [a, b], inclusive), and one or more of value (replace), clear (bits cleared, active low press), set (bits set)}. Segments apply in file order.",
+    "queue_limit": "Optional per-port number of values the frame queue holds (default 32 = FH.QLEN). A read beyond it is the checked stop external-read-queue-empty.",
+    "consumption": "What the C++ harness receives is the native consumption log (address, size, value in consumption order), not this table."
+  },
+  "scripts": {
+    "none": {
+      "description": "Nothing pressed: all ports released, raster 0.",
+      "defaults": {"380000": "ff", "300000": "ff", "340000": "ff", "3c0006": "0000"},
+      "segments": []
+    },
+    "walkfire": {
+      "description": "IO-1 probe walkfire: from frame 20 P1 right held, A toggling every 4 frames, B pulsed 6 frames out of 64. No start, select or coin bit (scope decision 3).",
+      "defaults": {"380000": "ff", "300000": "ff", "340000": "ff", "3c0006": "0000"},
+      "segments": [
+        {"from": 20, "to": null, "port": "300000", "clear": "08"},
+        {"from": 20, "to": null, "every": 8, "phase": [0, 3], "port": "300000", "clear": "10"},
+        {"from": 20, "to": null, "every": 64, "phase": [0, 5], "port": "300000", "clear": "20"}
+      ]
+    },
+    "walkfire-start": {
+      "description": "walkfire plus the P1 start bit (380000 bit0) at frames 5..7, 60..62 and 200..202. Guard fixture only: the start bit makes the c79a menu return to the BIOS (c00444).",
+      "defaults": {"380000": "ff", "300000": "ff", "340000": "ff", "3c0006": "0000"},
+      "segments": [
+        {"from": 20, "to": null, "port": "300000", "clear": "08"},
+        {"from": 20, "to": null, "every": 8, "phase": [0, 3], "port": "300000", "clear": "10"},
+        {"from": 20, "to": null, "every": 64, "phase": [0, 5], "port": "300000", "clear": "20"},
+        {"from": 5, "to": 7, "port": "380000", "clear": "01"},
+        {"from": 60, "to": 62, "port": "380000", "clear": "01"},
+        {"from": 200, "to": 202, "port": "380000", "clear": "01"}
+      ]
+    },
+    "none-raster-short": {
+      "description": "Guard fixture: the raster queue holds one value, the frame head reads 3c0006 twice.",
+      "defaults": {"380000": "ff", "300000": "ff", "340000": "ff", "3c0006": "0000"},
+      "queue_limit": {"3c0006": 1},
+      "segments": []
+    }
+  },
+  "host_write_sets": {
+    "game-mode": [
+      {"frames": [1, 1], "address": "1008e4", "size": 4, "value": "c7fc", "mode": "set",
+       "why": "D9 configuration (ii): the stage controller LONG 1008e4 := c7fc (game-mode controller)",
+       "evidence": "docs/analysis/animation-machine-frame-head-f5-scope.md D9 (ii); VC.DECLARE_PRESETS['game']"},
+      {"frames": [1, 1], "address": "10fdaf", "size": 1, "value": "02", "mode": "set",
+       "why": "D9 configuration (ii): BYTE 10fdaf := 2 (BIOS game mode); b68 copies it to 100012 in the H of frame 1",
+       "evidence": "docs/analysis/animation-machine-frame-head-f5-scope.md D9 (ii); VC.DECLARE_PRESETS['game']"}
+    ],
+    "player-start-p1": [
+      {"frames": [1, 1], "address": "10f006", "size": 1, "value": "01", "mode": "or",
+       "why": "declared effect of the BIOS PLAYER_START call for P1: BYTE 10f006 |= 1 (OR.B D0,10f006 at ae4); b68 turns the bit into BYTE 10fdb6 := 1 in the H of frame 1",
+       "evidence": "a74 -> abc -> OR.B D0,10f006 (ae4); b68 BCLR/MOVE.B #1,(A0,D0.W); scope decision 2",
+       "crosscheck": "a74"}
+    ],
+    "player-start-p2": [
+      {"frames": [1, 1], "address": "10f006", "size": 1, "value": "02", "mode": "or",
+       "why": "declared effect of the BIOS PLAYER_START call for P2: BYTE 10f006 |= 2",
+       "evidence": "a74 -> abc -> OR.B D0,10f006 (ae4); b68; scope section 3.1 configuration P1b"}
+    ],
+    "title-start": [
+      {"frames": [100, 100], "address": "10fdaf", "size": 1, "value": "02", "mode": "set",
+       "why": "declared first call of the BIOS PLAYER_START (a74) from the title state: it writes BYTE 10fdaf := 2 only; the original later writes BYTE 10fdb6 := 1 itself",
+       "evidence": "scope 3.3 (10fdaf = 1, 10fd82 = 0, f004 = 3 -> a74 a92 branch -> 10fdaf := 2 at ab2)"}
+    ],
+    "fx-bios-call": [
+      {"frames": [3, 3], "address": "1008e4", "size": 4, "value": "00c00450", "mode": "set",
+       "why": "guard fixture: the controller callback points into the BIOS window outside the declared c00444 / c00468 boundaries",
+       "evidence": "H1 guard vocabulary (bios-boundary)"}
+    ],
+    "fx-n-input-read": [
+      {"frames": [3, 3], "address": "100bf4", "size": 4, "value": "00002634", "mode": "set",
+       "why": "guard fixture: node 100bf4 callback := 2634 (MOVE.B 300000,D0 ... RTS), a direct input port read inside N",
+       "evidence": "2634 MOVE.B $300000.L,D0; 263a ANDI.B #$70,D0; 2648 RTS"}
+    ],
+    "fx-c-input-read": [
+      {"frames": [3, 3], "address": "1008e4", "size": 4, "value": "00002634", "mode": "set",
+       "why": "guard fixture: controller callback := 2634 (MOVE.B 300000,D0 ... RTS), a direct input port read inside C",
+       "evidence": "2634 MOVE.B $300000.L,D0; 263a ANDI.B #$70,D0; 2648 RTS"}
+    ]
+  },
+  "configs": {
+    "P0": {
+      "family": "stage",
+      "description": "control: game-mode declaration (ii), nothing pressed, IRQ execution",
+      "input": "none", "host_write_sets": ["game-mode"], "seed_prep": "p1", "frames": 600
+    },
+    "P1": {
+      "family": "stage",
+      "description": "main configuration: game mode + declared P1 player start at frame 1 + walkfire input",
+      "input": "walkfire", "host_write_sets": ["game-mode", "player-start-p1"], "seed_prep": "p1", "frames": 600
+    },
+    "P1b": {
+      "family": "stage",
+      "description": "P1 plus the declared P2 player start (class representatives only)",
+      "input": "walkfire", "host_write_sets": ["game-mode", "player-start-p1", "player-start-p2"], "seed_prep": "p1", "frames": 600
+    },
+    "boot-demo-0": {
+      "family": "boot",
+      "description": "BIOS-less boot with BYTE 10fdae = 2 (demo request), nothing pressed",
+      "boot_fdae": 2, "input": "none", "host_write_sets": [], "frames": 2000, "expect_guard": "rom-write", "expect_frame": 577
+    },
+    "boot-title-start": {
+      "family": "boot",
+      "description": "BIOS-less boot with BYTE 10fdae = 3 (title), walkfire, BYTE 10fdaf := 2 at frame 100 (declared first PLAYER_START)",
+      "boot_fdae": 3, "input": "walkfire", "host_write_sets": ["title-start"], "frames": 2000, "expect_guard": "system-return", "expect_frame": 906
+    },
+    "boot-title-idle": {
+      "family": "boot",
+      "description": "BIOS-less boot with BYTE 10fdae = 3 (title), nothing pressed",
+      "boot_fdae": 3, "input": "none", "host_write_sets": [], "frames": 600
+    },
+    "fx-start-c79a": {
+      "family": "stage", "fixture": true, "case": 0, "expect_guard": "system-return", "expect_frame": 273,
+      "description": "guard fixture: the P1 start bit in the c79a menu ends the controller in the BIOS (c00444)",
+      "input": "walkfire-start", "host_write_sets": ["game-mode"], "seed_prep": "p1", "frames": 400
+    },
+    "fx-queue-short": {
+      "family": "stage", "fixture": true, "case": 0, "expect_guard": "external-read-queue-empty", "expect_frame": 1,
+      "description": "guard fixture: the frame head reads 3c0006 twice, the declared queue holds one value",
+      "input": "none-raster-short", "host_write_sets": ["game-mode"], "seed_prep": "p1", "frames": 20
+    },
+    "fx-bios-call": {
+      "family": "stage", "fixture": true, "case": 0, "expect_guard": "bios-boundary", "expect_frame": 3,
+      "description": "guard fixture: a controller callback inside the BIOS window outside c00444 / c00468",
+      "input": "none", "host_write_sets": ["game-mode", "fx-bios-call"], "seed_prep": "p1", "frames": 20
+    },
+    "fx-n-input-read": {
+      "family": "stage", "fixture": true, "case": 0, "expect_guard": "undeclared-device-read", "expect_frame": 3,
+      "description": "guard fixture: a node callback reads the input port 300000 directly inside N",
+      "input": "none", "host_write_sets": ["game-mode", "fx-n-input-read"], "seed_prep": "p1", "frames": 20
+    },
+    "fx-c-input-read": {
+      "family": "stage", "fixture": true, "case": 0, "expect_guard": "undeclared-device-read", "expect_frame": 3,
+      "description": "guard fixture: the controller callback reads the input port 300000 directly inside C",
+      "input": "none", "host_write_sets": ["game-mode", "fx-c-input-read"], "seed_prep": "p1", "frames": 20
+    }
+  }
+}

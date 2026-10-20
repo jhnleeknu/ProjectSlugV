@@ -1747,3 +1747,7 @@ build/animation_machine_irq_f6b_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_M
 test: build/animation_machine_irq_f6c_test
 build/animation_machine_irq_f6c_test: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/tests/animation_machine_irq_f6c_test.cpp | build
 	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/tests/animation_machine_irq_f6c_test.cpp -o $@
+# Unit IO frame acceptance harness (Execute controller + IRQ + palette packet; driven by tools/verify_animation_machine_io.py)
+all: build/frame_io_acceptance
+build/frame_io_acceptance: $(ANIMATION_MACHINE_OBJECTS) $(ANIMATION_MACHINE_HEADERS) engine/src/physical_rom_resource.cpp engine/include/ms5/physical_rom_resource.h engine/tools/frame_io_acceptance.cpp | build
+	$(CXX) $(CXXFLAGS) $(ANIMATION_MACHINE_OBJECTS) engine/src/physical_rom_resource.cpp engine/tools/frame_io_acceptance.cpp -o $@
