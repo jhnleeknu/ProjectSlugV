@@ -52,7 +52,7 @@ SEED_OBS_SHA = 'c330e597f9585c2595006239be49ab0bcb029f4b5fed5c70ebf872fe91a2b4ff
 SEED_FILE_SHA = '86af9f05a3f127aabd96c7755f091e4a450bb8d5d70978ddb0a503f1b7fcff0f'
 CONTRACT = ROOT / 'docs/analysis/animation-machine-stage-event-f3-contract.md'
 CONTRACT_SHA = 'bba912176899ab0c21a0b9d54800c5f987f8fdcad9c592b714b8a713d5376c95'
-CPP_PINS = {'engine/src/animation_machine_stage_event.cpp': 'e074f25f82b8e1bd7d84068bfe773db6b9f435cb35d22e95a59e24ead6952d9c', 'engine/src/animation_machine_cleanup.cpp': 'b6aed30bbea37f5ab02f85ffc8e62ecd6c68e5f6f34cdc0a2b6e9487716aaf5c', 'engine/src/animation_machine.cpp': '00ff3a1b8bfb89d7682bb48506ef39809ddd9062853335707385457b2cbd9fb4', 'engine/src/animation_machine_internal.h': 'caad91c124ca03fb7dd4d77d972f577e4736fe58e30aad5054bfb957d527a04e'}  # FR1 refresh: animation_machine.cpp was 8ce8eb93c21465dd5e9355d4518ab1ca853df4549305fec98c7854caa1a82db6 and animation_machine_internal.h was 74d9c9ab7c60ffc9e7c8d3f523f7e769fb2f836fbafadfcad56ee34dcbebb71d (FR1 routing/declarations changes after 062bfd7). Earlier 062bfd7 refresh (0267): animation_machine.cpp was 1e7625c722bca323152a57d6cd81f2237a5fdff51c13a1563b6e430c26ccbf76 and animation_machine_internal.h was 874fceb112699346f95c12ee5212bbc997137eef22de17b8fe18b38bb5a079f8 (d66442f); d66442f..062bfd7 adds B4a/B4b child callback routing and private declarations. Earlier d66442f refresh (0266): animation_machine.cpp was aba5bec0b6450b00b0259478ccdbe6c0fa133ec9e481145117b3a2631aa68cc9 and animation_machine_internal.h was 706f6a5bcd3ce44c91dfa74928b5a155050af087ce1c643631c11d8a513a0e78 (de0e5be); de0e5be..d66442f adds U06b (e7562/48250) and B3c (N28 chain children, 1c114, 2291a tail) routing and private declarations. Earlier de0e5be refresh (0264-legacy rerun): animation_machine.cpp was 7e76e64bad3037cc22c6597b3c8746b05f7540dee4703c4dc18853179cf951a6 and animation_machine_internal.h was 4585a260ec43cf41c5c9fb8a8c23532505000c9dd9ea1161f659a2d6a6d6cfbd (e5bfb73); e5bfb73..de0e5be adds B2c-a/B2d/B2e/B3a/B3b routing and private declarations. Earlier e5bfb73 refresh (0264-legacy): animation_machine.cpp was c7318132fcdfd288c12a58ab7e51c03e2920b46d7e939103bd917d72ca8caad2 and animation_machine_internal.h was 6406329a911fd50c13b9765bf59b032f5afa322e1237a8a9b1dea6b1a5fa6e34 (709a706); 709a706..e5bfb73 adds the ten-unit routing (C1-C3, F6a-c, B1a-c, B2a/b), private declarations, the palette device context and the Z80 reply 320000 external-read device (the old line was replaced, not deleted). Earlier note, b8502bf: 0c89a1f..HEAD adds routing for N33/N34/N35 and H2/H3/H4/H8 plus private declarations; no existing shared lines removed. Other pinned unit sources unchanged.
+CPP_PINS = {'engine/src/animation_machine_stage_event.cpp': 'e074f25f82b8e1bd7d84068bfe773db6b9f435cb35d22e95a59e24ead6952d9c', 'engine/src/animation_machine_cleanup.cpp': 'b6aed30bbea37f5ab02f85ffc8e62ecd6c68e5f6f34cdc0a2b6e9487716aaf5c', 'engine/src/animation_machine.cpp': '4fc41a76a8ef697a93dd339af64a7deff8c62620c680d27015aad6bf2b2a3b40', 'engine/src/animation_machine_internal.h': '142f253e7e8caa020620d97ea91eeac57907506c7323af4c9d006a8186c43d24'}  # FR2b refresh: animation_machine.cpp was eadc97b080cbeacbf16524ca1626fb4013b07acdc0042340743ab34509201923 and animation_machine_internal.h was 522199f979904a60033719cccfa965edb2890a16744b267375436ede12875b14 (FR2b routing else-if, carry group of 11 and declaration after b4a7e21). Earlier FR2a refresh: animation_machine.cpp was 00ff3a1b8bfb89d7682bb48506ef39809ddd9062853335707385457b2cbd9fb4 and animation_machine_internal.h was caad91c124ca03fb7dd4d77d972f577e4736fe58e30aad5054bfb957d527a04e (FR2a routing else-if, carry group of 9 and declaration after 11be2b6). Earlier FR1 refresh: animation_machine.cpp was 8ce8eb93c21465dd5e9355d4518ab1ca853df4549305fec98c7854caa1a82db6 and animation_machine_internal.h was 74d9c9ab7c60ffc9e7c8d3f523f7e769fb2f836fbafadfcad56ee34dcbebb71d (FR1 routing/declarations changes after 062bfd7). Earlier 062bfd7 refresh (0267): animation_machine.cpp was 1e7625c722bca323152a57d6cd81f2237a5fdff51c13a1563b6e430c26ccbf76 and animation_machine_internal.h was 874fceb112699346f95c12ee5212bbc997137eef22de17b8fe18b38bb5a079f8 (d66442f); d66442f..062bfd7 adds B4a/B4b child callback routing and private declarations. Earlier d66442f refresh (0266): animation_machine.cpp was aba5bec0b6450b00b0259478ccdbe6c0fa133ec9e481145117b3a2631aa68cc9 and animation_machine_internal.h was 706f6a5bcd3ce44c91dfa74928b5a155050af087ce1c643631c11d8a513a0e78 (de0e5be); de0e5be..d66442f adds U06b (e7562/48250) and B3c (N28 chain children, 1c114, 2291a tail) routing and private declarations. Earlier de0e5be refresh (0264-legacy rerun): animation_machine.cpp was 7e76e64bad3037cc22c6597b3c8746b05f7540dee4703c4dc18853179cf951a6 and animation_machine_internal.h was 4585a260ec43cf41c5c9fb8a8c23532505000c9dd9ea1161f659a2d6a6d6cfbd (e5bfb73); e5bfb73..de0e5be adds B2c-a/B2d/B2e/B3a/B3b routing and private declarations. Earlier e5bfb73 refresh (0264-legacy): animation_machine.cpp was c7318132fcdfd288c12a58ab7e51c03e2920b46d7e939103bd917d72ca8caad2 and animation_machine_internal.h was 6406329a911fd50c13b9765bf59b032f5afa322e1237a8a9b1dea6b1a5fa6e34 (709a706); 709a706..e5bfb73 adds the ten-unit routing (C1-C3, F6a-c, B1a-c, B2a/b), private declarations, the palette device context and the Z80 reply 320000 external-read device (the old line was replaced, not deleted). Earlier note, b8502bf: 0c89a1f..HEAD adds routing for N33/N34/N35 and H2/H3/H4/H8 plus private declarations; no existing shared lines removed. Other pinned unit sources unchanged.
 ROM_SHA = '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f'
 MARKER = cc.MARKER
 sha = cc.sha
@@ -72,6 +72,12 @@ REG16 = tuple('d%d' % i for i in range(8)) + tuple('a%d' % i for i in range(8))
 UNKNOWN_CARRY = 'stage event caller requires known carry'
 UNSUPPORTED_EVENT = 'unsupported animation stage event PC'
 UNSUPPORTED_MACHINE = 'unsupported animation machine PC'
+# FR2a routes e991c..e995c (docs/analysis/animation-machine-frontier-fr2-contract.md): the e97d8 computed targets e991c..e9958 (D0.W = ce..dd) now land in it.
+# Former behaviour: every one of the 16 targets ended in 'unsupported animation machine PC' (outside the routing). Now the 3 block starts run on (stop-only
+# control, like the F3b starts) and the 13 other targets are refused by the FR2a executor ('unsupported animation objects fr2 PC').
+UNSUPPORTED_FR2 = 'unsupported animation objects fr2 PC'
+FR2A_GUARD_RANGE = (0xe991c, 0xe995c)
+FR2A_STARTS = frozenset((0xe991c, 0xe9922, 0xe9930, 0xe993c, 0xe9942, 0xe9952, 0xe9956))
 UNALIGNED_PC = 'unaligned animation machine PC'
 EVEN = 'program bus requires even WORD/LONG address'
 BUDGET = 'animation machine block budget exceeded'
@@ -576,12 +582,15 @@ CODE_TARGET_NOTE = {
     'odd': UNALIGNED_PC,
     'f3a_interior': UNSUPPORTED_EVENT,
     'outside': UNSUPPORTED_MACHINE,
+    'fr2a_interior': UNSUPPORTED_FR2,
 }
 
 
 def classify_code_target(g):
     if g.get('odd_pc'):
         return 'odd'
+    if FR2A_GUARD_RANGE[0] <= g['target'] < FR2A_GUARD_RANGE[1] and g['target'] not in FR2A_STARTS:
+        return 'fr2a_interior'
     return 'f3a_interior' if in_f3a(g['target']) else 'outside'
 
 
@@ -712,22 +721,25 @@ def guard_row(ctx, acc, res, row, ram, state_in, pvc, bank, cont, phases, how, s
     label = res['label']
     ng = nat[-1]['guard']
     assert ng and res['continuous_control'][0]['guard'] == ng, label
-    if ng['problem'] == 'unsupported_code_target' and ng.get('target') in f3b_starts():
+    if ng['problem'] == 'unsupported_code_target' and (ng.get('target') in f3b_starts() or ng.get('target') in FR2A_STARTS):
         target = ng['target']
         checks = [phase['outgoing']['pc'] for phase in nat[:-1]]
         prefix, reason = split_chain(ctx, 'superseded_guard_%03d' % row['number'], ram, state_in, pvc, bank, target, checks, external)
         assert reason == 'stop' and len(prefix) == len(nat), (label, reason, len(prefix), len(nat))
-        for k, phase in enumerate(prefix):
+        # F3b starts: the last phase ends at the target like the native guard phase.  FR2a starts: the native guard phase ends BEFORE the computed jump
+        # (e97e0, refused target), the C++ phase runs on to the target (stop-only control), so only the phases before the guard phase are compared.
+        compared = len(prefix) if target in f3b_starts() else len(prefix) - 1
+        for k, phase in enumerate(prefix[:compared]):
             compare_phase(acc['totals'], label, k, nat[k], phase['actual'], phase['entry'])
         if not cont[0]['ok']:
             check_preserved(cont, ram, state_in, pvc, bank)
         acc['guard'] = dict(label=label, group=res['group'], native_problem=ng['problem'],
-                            classification='superseded_F3b_routing_boundary', native_target=hex(target),
+                            classification='superseded_F3b_routing_boundary' if target in f3b_starts() else 'superseded_FR2a_routing_boundary', native_target=hex(target),
                             native_prefix_phases_equal=len(prefix), cpp_reaches_native_transfer_target_with_stop=hex(target),
                             checked_API_error=cont[4].strip() or None, cpp_suffix_ok=cont[0]['ok'],
                             native_suffix_equivalence_claimed=False,
-                            replacement_native_coverage='stage_event_ops typed block-start coverage')
-        acc['totals']['guard_conditions_superseded_by_F3b'] += 1
+                            replacement_native_coverage='stage_event_ops typed block-start coverage' if target in f3b_starts() else 'objects_fr2 unit test and V1 fr2 spec (e991c e9930 e993c block starts)')
+        acc['totals']['guard_conditions_superseded_by_F3b' if target in f3b_starts() else 'guard_conditions_superseded_by_FR2a'] += 1
         return
     if cont[0]['ok']:
         deliberate_accept(ctx, acc, res, row, ram, state_in, pvc, bank, cont, phases, how, stop, external, nat, ng)

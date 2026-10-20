@@ -380,8 +380,11 @@ void boundaries(){
  const char* names[]={"b4d7e-trap","b4d7e-trap-ffff","b4e3a-null","b4e22"};
  for(unsigned int i=0;i<4;++i){const Fixture&f=fixture_of(names[i]);Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);
   reject(ram,s,STOP,"unsupported animation machine PC");}
+ // dd574 (the installed callback) is a block start of the frontier unit FR2b (contract animation-machine-frontier-fr2b-contract.md): stop-only check
+ // (the former rollback expectation was "unsupported animation machine PC"; F4 unit test boundary convention).
  {const Fixture&f=fixture_of("dd512-far");Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,0);Out o;
-  assert(run(ram,s,STOP,o));s.pc=get(ram,NODE,4);put(ram,SP,4,STOP);s.a[7]=SP;assert(s.pc==0xdd574);reject(ram,s,STOP,"unsupported animation machine PC");}
+  assert(run(ram,s,STOP,o));s.pc=get(ram,NODE,4);put(ram,SP,4,STOP);s.a[7]=SP;assert(s.pc==0xdd574);
+  const Bytes before=ram;const State old=s;Out o2;assert(run(ram,s,0xdd574,o2)&&ram==before&&same(s,old));}
  const char* consumers[]={"b4e26-clear","b4e60-set"};
  for(unsigned int i=0;i<2;++i){const Fixture&f=fixture_of(consumers[i]);Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,0);
   reject(ram,s,f.stop,"objects u01 caller requires known carry");}

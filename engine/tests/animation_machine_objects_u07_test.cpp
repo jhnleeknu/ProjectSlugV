@@ -408,12 +408,12 @@ void interior(){
  const std::uint32_t odd[]={0x4e187,0x4e1a3,0x4e1cb,0xe585d,0xe5879,0xe59f7,0xe5baf};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
 }
-// The 48256 boundary stops when it is the stop PC and otherwise rolls the whole run back; the consumer rejects an Unknown C (error
-// row of the fixture table, and below with the success inputs).
+// The 48256 boundary stops when it is the stop PC; the consumer rejects an Unknown C (error row of the fixture table, and below with the
+// success inputs). 48256 is a block start of the frontier unit FR2b (contract animation-machine-frontier-fr2b-contract.md): stop-only check
+// (the former expectation "unsupported animation machine PC" for a run past 48256 is dropped; F4 unit test boundary convention).
 void boundaries(){
  const char* names[]={"e5ba6-c1","e5ba6-c2","st3-out","st3-out-max"};
- for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(final_of(names[i]).s.pc==0x48256);
-  Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
+ for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(final_of(names[i]).s.pc==0x48256&&f.stop==0x48256);}
  const char* consumers[]={"4e1a2-clear","4e1a2-set"};
  for(unsigned int i=0;i<2;++i){const Fixture&f=fixture_of(consumers[i]);Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,0);
   reject(ram,s,f.stop,"objects u07 caller requires known carry");}

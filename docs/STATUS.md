@@ -2368,3 +2368,27 @@
 - 다음 frontier(실행 수): `4e68e` 14, `c0ace` 12, `e5580` 12, `50dae` `5ab82` `b33d8` `bc844` 각 3, `a8ee` 1, `1d1f4` 1(플레이어). FR2 단위로 이어서 연결한다.
 - 참고: `tools/observe_animation_machine_io.py`의 `ROUTING_SHA`는 관측 당시 routing(`8ce8eb93…`)을 기록한 출처 pin이다. 다시 관측하기 전까지 바꾸지 않는다.
 - 전체 Goal 범위·완료 기준은 바꾸지 않았다.
+
+## 2026-10-19 — frontier 단위 FR2a·FR2b (브랜치 `claude/frontier-units-2`, PR #7 위), 일시중지
+
+- FR2a(218 block): `c0ace` item handler, `e5580` rank entry, `b33d8`, `a8ee`.
+  - 실제 ROM 7,500건 불일치 0. 변이 151/151(테스트 빈틈 6개를 채운 뒤). V1 1,592/1,592.
+  - 계약: `animation-machine-frontier-fr2-contract.md`.
+- FR2b(214 block): `48256`, `76852`, `b336a`, `a92a`와 같은 run이 이어 실행하는 코드(`70c0c` `76944` `4c2cc` `dd574` 사슬, `bc844` 첫 설치 단계까지).
+  - 실제 ROM 7,500건 불일치 0. 변이 193/193(빈틈 7개를 채운 뒤). V1 1,761/1,761.
+  - 계약: `…-fr2b-contract.md`.
+  - `4e68e` 계열 등 이후 계획은 FR2 계약 "FR2b 이후 명세"에 있다.
+- [F] frame 비교는 변화가 없다: D1·controller game·IRQ 54,400/54,400, demo 45,684/45,684.
+- [F] IO 비교(불일치 0, 두 run 동일): 첫 실패 전 일치 frame이 150,472 → 151,848(FR2a) → 158,202(FR2b)로 늘었다. frontier에 걸린 run은 53에서 39가 됐다.
+  - P1 62,586 → 69,252. P1b 4,917 → 5,964.
+  - FR2b의 증가량 예측(+6,355)과 실측(+6,354)이 일치했다.
+- legacy 검증기(scratch root): stage_entry, area_clear, frame_helpers, stage_event, stage_event_ops, card_menu_close 모두 통과.
+  - objects_g1도 통과했다. U06b 계약에 `block 목록` 절이 없어 실패하던 것을 절을 더해 고쳤다.
+  - stage_event pin은 `4fc41a76…`/`142f253e…`로 갱신했다.
+- 디스크: 여유 공간이 3.1 GiB로 줄어 검증기가 ENOSPC로 멈췄다. 사용자 승인으로 끝난 회귀 run 네 개의 scratch `roots/`에서 보고서 JSON·log를 남기고 나머지 일반 파일만 지웠다(symlink는 따라가지 않음). 여유 공간은 113 GiB가 됐다.
+- 다음 frontier(run 수):
+  - `4e68e` 15, `c5370` 12
+  - `5ab82` `bc93c` `50dae` 각 3
+  - `1d1f4` 1(플레이어, 약 1,520~1,775 block, 8~9 단위 예상)
+  - `2634` 2(guard fixture)
+- 사용자 지시로 이 묶음 PR 뒤 일시중지한다. 전체 Goal 범위·완료 기준은 바꾸지 않았다.
