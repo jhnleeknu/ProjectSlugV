@@ -14,7 +14,7 @@ Groups:
                   clearc-<pc> the matching Clear (RTS block 31a10 with the consumer as return LONG).  49fc6-fed consumers (3328e 3352c) also run the real interpreter
                   (entry at the JSR block, LONG 26(A6) = 0 -> C Set by 49fc6, a real script -> C from the script).
   table-*         30b78 for D0.B = 0..26 and the limit 27 (the block 30bf0) and 335f6 for D0.W = 0..9, the 4 * D0.W wrap (D0.W = 4000) and the checked errors for a computed
-                  PC inside a block (30b78 D0.B = 28; 335f6 D0.W = 10), in unrouted code (335f6 D0.W = 2000: 2b5fe) and in another unit's block interior.
+                  PC inside a block (30b78 D0.B = 28; 335f6 D0.W = 10), in another unit's block (335f6 D0.W = 2000: 2b5fe, the B3a block 2b5fc since B3a) and in another unit's block interior.
   chain-*         multi-block runs from the installs 30b6c / 3323e / 331d8-world through the real routed callees (interpreter 49f8c / 49fc6, 3af8, 496c2, 4ae4a, 4d8d8, N30a, N29a ...)
                   to the first boundary.
   error-*         checked errors with state preservation: Unknown C into the six consumers, every internal even PC of the three ranges, unrouted work-RAM probe PCs, odd PCs.
@@ -360,8 +360,11 @@ def table_fixtures(rng, case):
                          ('error', 'unsupported animation objects b1c PC')))
     out.append(U.Fixture('error-table-335f6-k10-s%d' % case, U.with_host_writes(base30, [], regs={'d0': 10}, pc=0x335f6), [], 0xffffe,
                          ('error', 'unsupported animation objects b1c PC')))
+    # D0.W = 2000: 335fe + sext(8000) = 2b5fe, inside the B3a block 2b5fc since B3a (was unrouted code before; the sign extension is still decided)
     out.append(U.Fixture('error-table-335f6-unrouted-s%d' % case, U.with_host_writes(base30, [], regs={'d0': 0x2000}, pc=0x335f6), [], 0xffffe,
-                         ('error', 'unsupported animation machine PC')))
+                         ('error', 'unsupported animation objects b3a PC')))
+    # the failing PC itself: the same state with the stop PC 2b5fe stops exactly there on both sides
+    out.append(U.Fixture('table-335f6-landing-2b5fe-s%d' % case, U.with_host_writes(base30, [], regs={'d0': 0x2000}, pc=0x335f6), [], 0x2b5fe))
     out.append(U.Fixture('error-table-30b78-n29-interior-s%d' % case, U.with_host_writes(base29, [], regs={'d0': 255}, pc=0x30b78), [], 0xffffe,
                          ('error', 'unsupported animation objects n29 PC')))
     return out
@@ -422,8 +425,8 @@ def error_fixtures(case):
     for lo, hi in RANGES:
         for pc in (lo + 1, hi - 1):
             out.append(U.Fixture('error-odd-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', 'unaligned animation machine PC')))
-    # neighbouring PCs just outside the ranges stay in their own units / unrouted
-    for pc, text in ((0x30d6c, 'unsupported animation machine PC'), (0x3323c, 'unsupported animation objects n30 PC'), (0x336d4, 'unsupported animation objects n30 PC'),
+    # neighbouring PCs just outside the ranges stay in their own units; 30d6c (unrouted ROM code of a later unit) is the work-RAM PC 10fe80 since review 0264 M-3
+    for pc, text in ((0x10fe80, 'unsupported animation machine PC'), (0x3323c, 'unsupported animation objects n30 PC'), (0x336d4, 'unsupported animation objects n30 PC'),
                     (0x3395a, 'unsupported animation objects n30 PC'), (0x33a8a, 'unsupported animation objects n30 PC')):
         out.append(U.Fixture('error-outside-%x' % pc, U.with_host_writes(probe, [], pc=pc), [], 0xffffe, ('error', text)))
     return out

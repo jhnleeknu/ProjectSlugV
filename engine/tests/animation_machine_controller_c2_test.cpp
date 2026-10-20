@@ -396,8 +396,9 @@ void errors(){
  for(unsigned int r=0;r<RANGE_COUNT;++r){
   for(std::uint32_t pc=RANGES[r][0];pc<RANGES[r][1];pc+=2)if(!is_start(pc))fail(ram,base_state(pc),RET,"unsupported animation controller c2 PC");
   fail(ram,base_state(RANGES[r][0]+1),RET,"unaligned animation machine PC");fail(ram,base_state(RANGES[r][1]-1),RET,"unaligned animation machine PC");}
- // The neighbours outside the unit are not routed here.
- const std::uint32_t outside[]={0x1022,0xbbfa,0xc6ce,0x48250,0xe630a,0xb362,0xa770,0xa8d0,BIOS_RETURN,BIOS_CARD};
+ // The neighbours outside the unit are not routed here.  Review 0264 M-3: the ROM range ends 1022 bbfa c6ce 48250 e630a b362 a770 a8d0 (code of later units) are the
+ // work-RAM PCs 10fe10..10fe1e; the BIOS entries stay.
+ const std::uint32_t outside[]={0x10fe10,0x10fe12,0x10fe14,0x10fe16,0x10fe18,0x10fe1a,0x10fe1c,0x10fe1e,BIOS_RETURN,BIOS_CARD};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i)fail(ram,base_state(outside[i]),RET,"unsupported animation machine PC");
  // The C consumers c87e / c916 refuse an Unknown C.
  {State s=base_state(0xc87e);s.carry=ms5::AnimationCarryUnknown;fail(ram,s,RET,"controller c2 caller requires known carry");s.pc=0xc916;fail(ram,s,RET,"controller c2 caller requires known carry");}

@@ -2232,3 +2232,31 @@
   - demo (i) 모드의 자식 `e66aa`가 미연결이다.
   - 다음 단위 후보: B2c `3a60a..3abde`, 남은 큰 사슬(`3d526`, `cc8b4`, `78776` 그룹), 입력·스테이지 진행 관측 기반(`remaining-work-plan.md` §3).
   - 전체 Goal 범위·완료 기준은 바꾸지 않았다.
+
+## 2026-10-16 — 독립 리뷰 후속·B영역 단위 B2c-a/B2d/B2e/B3a/B3b (작업 브랜치 `claude/next-work-cycle`)
+
+- 상세: `docs/reviews/0265-review-and-b-units-cycle.md`. 독립 리뷰 `0264-ten-unit-batch-independent-review.md`, 후속 `0264-review-followup.md`, macOS 회귀 `0264-legacy-regression-mac.md`.
+- [F] 독립 리뷰 결과 실행부 결함은 없었다. 검증 체계 지적은 모두 처리했다.
+  - M-1: 예전 검증기 기대값 정렬
+  - M-2: `--seed-dir`
+  - M-3: 탐침 약 500개를 work RAM으로 이전
+  - L-1: 실패 PC 확인
+  - L-2: 예외 frame을 실패로 집계
+  - L-3: Makefile 중복 제거
+  - L-4: U06 fixture 복원
+  - 이 Mac에서 표준 회귀 35개와 frame 검증기 4개가 통과했다(`e5bfb73` 기준).
+- [F] 병합 단위 969 block:
+  - B2d 220, B2c-a 218, B2e 109(demo 랭킹 자식 `e66aa` 포함), B3a 216, B3b 206
+  - N28 범위 밖 사슬 `2ba50`은 `2db06` 자식 값만 남기고 연결됐다.
+  - demo 모드 frame 일치: 31,128 → 45,680/45,684.
+- [F] 최종 병합 트리(`de0e5be`, 역사 seed):
+  - `make -j4 all test` 종료 0, 경고 0
+  - D1·controller(game)·IRQ 각 54,400/54,400, IRQ 108,528회
+  - V1 spec 18개 전부 통과
+- [U] 남은 것:
+  - legacy 정렬의 미추적 귀속(`buffer_cue`·`frame_helpers`의 external read 경로)
+  - demo seed 108·109 frame 22 불일치(B2e 이전부터 있음)
+  - B3c(약 71 block)
+  - `0258` manifest 갱신
+- 운영 변경(사용자 지시): 단위를 Opus/Sonnet 하위 작업으로 나눠 서브에이전트를 한 번에 하나씩 실행한다. Opus는 계약·실행부, Sonnet은 검증 실행·정렬·문서를 맡는다.
+- 다음: 위 남은 B 항목, 이어서 `remaining-work-plan.md` §3 입력·스테이지 진행 관측 기반. 전체 Goal 범위·완료 기준은 바꾸지 않았다.

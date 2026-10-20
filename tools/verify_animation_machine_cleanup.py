@@ -290,8 +290,12 @@ def negatives(exe, records, resources, program):
            'program bus write requires RAM mirror units')
     reject('coordinate_LONG_clears_before_bad_live_RTS', {'pc': 0x43dda, 'a0': 0x102000},
            'unsupported animation frame head h8 PC', memory=((base['initial_a7'], 4, 0xdeac),))
+    # Former expectation 'unsupported animation machine PC': 3dce publishes A0=3dcc over the live return, RTS then enters 3dcc. 3dcc is routed by the
+    # F6a IRQ shell (animation_machine_irq_f6a.cpp case 0x3dcc) [I: the new error is attributed to that execution, not separately traced]; the run ends with the checked odd-PC error. Work-RAM PCs are the unrouted controls.
     reject('sound_callback_publication_overwrites_live_return', {'pc': 0x3dce, 'a5': 0x108000, 'a7': 0x100006},
-           'unsupported animation machine PC')
+           'unaligned animation machine PC')
+    for pc in (0x10fe00, 0x10fefe):
+        reject('unrouted_work_ram_control_%06x' % pc, {'pc': pc}, 'unsupported animation machine PC')
     reject('post_map_sequence_unsupported', {'pc': 0xc00468}, 'unsupported animation machine PC')
     whole = next(fx for _, fx, _ in records if fx['entry_pc'] == 0x47fe4)
     # Legacy synthetic cleanup lists are not initialized binding bucket lists.

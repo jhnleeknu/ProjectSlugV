@@ -580,7 +580,8 @@ void interior(){
  assert(rejected==329&&bundled==24); // 389 even PCs minus 60 block starts
  // Neighbours and data: e8a0c..e8a1c (table) and e8a3a..e8a48 are not routed (e8a1c..e8a3a is the stage entry cue
  // install, e8a1c a block start there); the range ends are not routed (4b82e is objects N03 since F4 N03: RAM probe 10fe50).
- const std::uint32_t outside[]={0x4aa86,0x4abc0,0x4b782,0x10fe50,0xe8a0c,0xe8a1a,0xe8a3a,0xe8a46,0xe8b5a,0x2984};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder; this test has no in_ranges() helper).
+ const std::uint32_t outside[]={0x10fe00,0x10fe02,0x10fe04,0x10fe50,0x10fe06,0x10fe08,0x10fe0a,0x10fe0c,0x10fe0e,0x10fe10};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  {Bytes ram;State s;generic(0x4aa89,ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}
 }

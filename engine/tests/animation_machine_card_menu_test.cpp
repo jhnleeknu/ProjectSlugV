@@ -191,7 +191,8 @@ void errors(){
  for(unsigned int i=0;i<sizeof(bundled)/sizeof(bundled[0]);++i){s=state(bundled[i]);reject(menu_ram(),s,STOP,"unsupported animation card menu PC",&p);}
  // Boundaries without an executor and neighbours outside the routed ranges.
  // 10fe20 replaces e84d6 (now the objects U03 glyph writer).
- const std::uint32_t outside[]={TRAP_F,0x9ee6,TRAP_N,TRAP_L,0xc00468,0xa09e,0xa1e2,0xa29a,0x10fe20,0x386c,0x3900,0xc2a6,0xc2fa};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder; this test has no in_ranges() helper).
+ const std::uint32_t outside[]={TRAP_F,0x10fe00,TRAP_N,TRAP_L,0xc00468,0x10fe02,0x10fe04,0x10fe06,0x10fe20,0x10fe08,0x10fe0a,0x10fe0c,0x10fe0e};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){s=state(outside[i]);reject(menu_ram(),s,STOP,"unsupported animation machine PC",&p);}
  s=state(0xa0a1);reject(menu_ram(),s,STOP,"unaligned animation machine PC",&p);
 }

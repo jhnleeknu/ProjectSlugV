@@ -655,10 +655,19 @@ def negatives(exe, base, a698_starts, close_instructions, resources):
         reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, expected=expected)
         SUPERSEDED_RECORDS.append(dict(label='boundary_direct_entry_%06x' % pc, former_expected_API_error=UNSUPPORTED_MACHINE,
                                        observed_error=expected, entry_executor=('scene core' if pc == 0x1a73c else 'objects U03'), all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
-    outside = (0x9ee6, 0xc2fa, 0xc2fc)
+    # Former outside probes 0xc2fa/0xc2fc (expected UNSUPPORTED_MACHINE) lie in the C2 controller range c2fa..c364 (documented routing, controller C2
+    # unit). 0xc2fa still ends in the machine error (BSR.W bbd4 -> out-of-range bcaa, unchanged expectation, now reached through the C2 block);
+    # 0xc2fc is the interior of the 4-byte BSR.W at c2fa, so the exact error is now the C2 interior error. Former values are recorded; the work-RAM
+    # PCs 10fe00/10fefe (code never executes in RAM) are the unrouted controls.
+    outside = (0x9ee6, 0xc2fa, 0x10fe00, 0x10fefe)
     for pc in outside:
-        assert expected_pc_error(close_instructions, pc) == UNSUPPORTED_MACHINE
+        if pc < 0x100000:
+            assert expected_pc_error(close_instructions, pc) == UNSUPPORTED_MACHINE
         reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, expected=UNSUPPORTED_MACHINE)
+    reject('outside_range_entry_%06x' % 0xc2fc, base, {'pc': 0xc2fc}, expected='unsupported animation controller c2 PC')
+    SUPERSEDED_RECORDS.append(dict(label='outside_range_entry_00c2fc', former_expected_API_error=UNSUPPORTED_MACHINE,
+                                   observed_error='unsupported animation controller c2 PC', entry_executor='controller C2 (c2fa..c364 interior)',
+                                   all_API_outputs_preserved=True, native_exception_rollback_equivalence_claimed=False))
     # a698 reached from the native nested rows' step start with any other stop: full rollback; positive control with stop a698.
     assert a698_starts
     for label, step, start in a698_starts:

@@ -35,6 +35,12 @@ ENTRY = 0x480bc
 A5V = 0x108000
 B1A73C, B49B0C, B4AA88, BE8A48, T4939C = 0x1a73c, 0x49b0c, 0x4aa88, 0xe8a48, 0x4939c
 BOUNDARY_PCS = (B1A73C, B49B0C, B4AA88, BE8A48, T4939C)
+SUPERSEDED_BOUNDARY = (B1A73C, B49B0C, B4AA88, BE8A48)
+EXTERNAL_QUEUE_EMPTY = 'animation machine external read queue empty'
+SUPERSEDED_RUNS = {'natural_480bc_with_stop_ff000': EXTERNAL_QUEUE_EMPTY, 'natural_480bc_with_stop_4939c': EXTERNAL_QUEUE_EMPTY}
+# outside probes whose run now ends in the external-read queue error (former UNSUPPORTED_MACHINE). 47672 is the sound-unit entry 'JSR ca70' (animation_machine_sound.cpp,
+# hud.cpp); the continuation behind it was extended by the ten-unit batch (F5 external-read queue, E7 Z80 reply device 320000 in animation_machine.cpp) [U: exact superseding unit not traced].
+SUPERSEDED_OUTSIDE = {0x47672: EXTERNAL_QUEUE_EMPTY, 0x2efdc: EXTERNAL_QUEUE_EMPTY, 0x493bc: EXTERNAL_QUEUE_EMPTY}
 CONSUMERS = {0x4765c: (0x47670, 0x47660), 0xb4a38: (0xb4a5e, 0xb4a3c), 0xb4a6c: (0xb4a92, 0xb4a70)}
 NEW_RANGES = ((0x480bc, 0x480f2), (0x47642, 0x47672), (0x6f1c2, 0x6f1c4), (0x2efa6, 0x2efdc), (0x3c44, 0x3c7c),
               (0xb4a2a, 0xb4ab0), (0x49392, 0x4939c), (0x4939e, 0x493bc), (0x1c028, 0x1c052), (0x4d9d6, 0x4da08),
@@ -541,13 +547,36 @@ def negatives(exe, base, starts, instructions, block_starts, resources, neg_erro
     interior = interior_pcs(instructions, block_starts)
     for pc in interior:
         reject('interior_direct_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_FRAME)
+    # Former expectation UNSUPPORTED_MACHINE for every BOUNDARY_PCS direct entry. 1a73c / 49b0c / 4aa88 / e8a48 are executed by later units (scene core U2, U3..U7;
+    # see the header and superseded_negatives); from the frozen base state the direct entry now ends with a BYTE/WORD read of a non-physical address, which takes the
+    # F5 external-read queue path (empty in this harness): 'external read queue empty'. This is not evidence of device behaviour. 4939c (TRAP #f) stays a stop boundary.
+    # Work-RAM PCs 10fe00/10fefe are the unrouted controls.
+    stale = []
     for pc in BOUNDARY_PCS:
-        reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
+        expected = EXTERNAL_QUEUE_EMPTY if pc in SUPERSEDED_BOUNDARY else UNSUPPORTED_MACHINE
+        try:
+            reject('boundary_direct_entry_%06x' % pc, base, {'pc': pc}, error_expected=expected)
+        except AssertionError as error:      # collected: every stale probe is reported together
+            stale.append(error.args)
+            continue
+        if pc in SUPERSEDED_BOUNDARY:
+            out[-1].update(former_expected_API_error=UNSUPPORTED_MACHINE, superseded_by='later units U2..U7 (direct entry executes)', API_only_control=True)
+    assert not stale, stale
+    for pc in (0x10fe00, 0x10fefe):
+        reject('unrouted_work_ram_control_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
+    outside_stale = []
     for pc in (0x480f2, 0x47672, 0x6f1c4, 0x2efdc, 0x3c7c, 0xb4ab0, 0x493bc, 0x1c052, 0x4da08, 0xb4850, 0x4706c, 0x480ba):
         # U09 contract's 4706c..470e6 range supersedes this one outside probe.
         # Keep the old address/label and pin the full-run API error, including rollback.
-        expected = EVEN if pc == 0x4706c else UNSUPPORTED_MACHINE
-        reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=expected)
+        expected = EVEN if pc == 0x4706c else SUPERSEDED_OUTSIDE.get(pc, UNSUPPORTED_MACHINE)
+        try:
+            reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=expected)
+        except AssertionError as error:      # collected: every stale probe is reported together
+            outside_stale.append(error.args)
+            continue
+        if pc in SUPERSEDED_OUTSIDE:
+            out[-1].update(former_expected_API_error=UNSUPPORTED_MACHINE, superseded_by='ten-unit batch continuation behind JSR ca70 [U: not traced]', API_only_control=True)
+    assert not outside_stale, outside_stale
     # unknown carry at the three BCC consumers
     for pc in sorted(CONSUMERS):
         r, s, p, b = base
@@ -560,8 +589,19 @@ def negatives(exe, base, starts, instructions, block_starts, resources, neg_erro
             assert result['external_reads'] == 0x12345678 and result['status'] == 1
             out.append(dict(label='unknown_carry_consumer_%06x' % pc, error=error.strip(), all_API_outputs_preserved=True,
                             native_exception_rollback_equivalence_claimed=False))
-    # non-boundary stops: full rollback
-    reject('natural_480bc_with_stop_ff000', starts['natural-seed0-bank2'], error_expected=UNSUPPORTED_MACHINE)
+    # non-boundary stops: full rollback. Former expectation UNSUPPORTED_MACHINE for each run below; those in SUPERSEDED_RUNS now end in the external-read queue error
+    # (a non-physical read behind the routed continuation of the ten-unit batch; empty queue in this harness; not device evidence) [U: superseding unit not traced].
+    run_stale = []
+
+    def soft(call, label):
+        try:
+            call()
+        except AssertionError as error:      # collected: every stale run is reported together
+            run_stale.append(error.args)
+            return
+        if label in SUPERSEDED_RUNS:
+            out[-1].update(former_expected_API_error=UNSUPPORTED_MACHINE, API_only_control=True, superseded_by='ten-unit batch continuation [U: not traced]')
+    soft(lambda: reject('natural_480bc_with_stop_ff000', starts['natural-seed0-bank2'], error_expected=SUPERSEDED_RUNS.get('natural_480bc_with_stop_ff000', UNSUPPORTED_MACHINE)), 'natural_480bc_with_stop_ff000')
     # superseded negatives: 49b0c / 4aa88 are executable now (U3..U7). natural 480bc with these stops runs through the post-1a73c shell and stops there without error
     for label, stop in (('natural_480bc_with_stop_49b0c', B49B0C), ('natural_480bc_with_stop_4aa88', B4AA88)):
         r, s, p, b = starts['natural-seed0-bank2']
@@ -569,10 +609,11 @@ def negatives(exe, base, starts, instructions, block_starts, resources, neg_erro
         assert result['ok'] and not error.strip() and result['pc'] == stop and result['status'] == 0, (label, error.strip())
         SUPERSEDED_RECORDS.append(dict(label=label, former_expected_API_error=UNSUPPORTED_MACHINE, observed_final_state=dict(
             ok=True, pc=hex(result['pc']), a7=hex(result['a7']), error='', RAM_changed=outgoing != r), native_exception_rollback_equivalence_claimed=False))
-    reject('natural_480bc_with_stop_4939c', starts['natural-seed0-bank2'], stop=T4939C, error_expected=UNSUPPORTED_MACHINE)
-    reject('direct_6f1c2_with_stop_ff000', starts[SIX_F1C2_LABEL], error_expected=UNSUPPORTED_MACHINE)
-    reject('a5_not_108000_49392_with_stop_ff000', starts['boundary-a5-not-108000-direct-49392'], error_expected=UNSUPPORTED_MACHINE)
-    reject('a5_not_108000_via_b4a2a_with_stop_ff000', starts['boundary-a5-not-108000-via-b4a2a'], error_expected=UNSUPPORTED_MACHINE)
+    soft(lambda: reject('natural_480bc_with_stop_4939c', starts['natural-seed0-bank2'], stop=T4939C, error_expected=SUPERSEDED_RUNS.get('natural_480bc_with_stop_4939c', UNSUPPORTED_MACHINE)), 'natural_480bc_with_stop_4939c')
+    soft(lambda: reject('direct_6f1c2_with_stop_ff000', starts[SIX_F1C2_LABEL], error_expected=SUPERSEDED_RUNS.get('direct_6f1c2_with_stop_ff000', UNSUPPORTED_MACHINE)), 'direct_6f1c2_with_stop_ff000')
+    soft(lambda: reject('a5_not_108000_49392_with_stop_ff000', starts['boundary-a5-not-108000-direct-49392'], error_expected=SUPERSEDED_RUNS.get('a5_not_108000_49392_with_stop_ff000', UNSUPPORTED_MACHINE)), 'a5_not_108000_49392_with_stop_ff000')
+    soft(lambda: reject('a5_not_108000_via_b4a2a_with_stop_ff000', starts['boundary-a5-not-108000-via-b4a2a'], error_expected=SUPERSEDED_RUNS.get('a5_not_108000_via_b4a2a_with_stop_ff000', UNSUPPORTED_MACHINE)), 'a5_not_108000_via_b4a2a_with_stop_ff000')
+    assert not run_stale, run_stale
     # API-only positive controls: the post-1a73c shell reaches 49b0c, 4aa88 and e8a48 with matching stops (stop checked at the loop head, nothing executed there by these controls)
     controls = []
     for entry_pc, stop in ((0x480c6, B49B0C), (0x480cc, B4AA88), (0x480e4, BE8A48), (0x480d2, 0xb4a2a), (0x480ea, 0x2efa6)):

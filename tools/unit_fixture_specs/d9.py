@@ -6,7 +6,8 @@ runs to the dispatcher return 2ac2 (the first 2ac2 reached; no callee reaches 2a
              frames 1 and 2 of three seeds, and with D0 high WORD overrides 0001 07ff 0800 ffff (c530 sets only D0.W).
   8b64       entered directly (declared PC override; RTS of 8b98 returns to 2ac2) with D0.W 0001 0400 07ff ffff: the LSL.L #5 / LEA (A0,D0.W) sign extension.
   c560       declared host writes LONG 1008e4 := c560, WORD 107dea in {0001, 2000, 8000, ffff} (the wait callback returns), and 107dea = 0 to the C3b boundary c56e
-             (stop c56e: match; stop 2ac2: the C++ checked error 'unsupported animation machine PC', native not run).
+             (stop c56e: match; stop 2ac2: since C2/C3b the C++ run continues through the C3b blocks c56e..c598 and fails at the BIOS entry
+             c00444 (JMP c00444 of c598) with the checked error 'unsupported animation machine PC', native not run; the failing PC is asserted, review 0264 L-1).
 Expected checked errors: interior PC c532 / 8b6a, odd PC c52b.  Negative checks: flipped WORD 107dea byte, flipped node byte +82, wrong stop.
 """
 import verify_animation_machine_unit_fixtures as U
@@ -47,7 +48,8 @@ def build():
                              external_status=status))
     opened = U.with_host_writes(st, [(0x1008e4, 4, 0xc560), (0x107dea, 2, 0)], pc=0xc560)
     out.append(U.Fixture('c560-107dea-0000-to-c56e', opened, [], 0xc56e, external_status=status))
-    out.append(U.Fixture('error-c560-open-c3b-boundary', opened, [], DISPATCH, ('error', 'unsupported animation machine PC'), external_status=status))
+    # Purpose changed with C2/C3b: it was the C3b boundary c56e (unrouted then); c56e..c598 are routed now and the run fails at the BIOS entry c00444 (fail_pc, evidence: stop c00444 succeeds).
+    out.append(U.Fixture('error-c560-open-bios-c00444', opened, [], DISPATCH, ('error', 'unsupported animation machine PC'), external_status=status, fail_pc=0xc00444))
     for pc in (0xc532, 0x8b6a):
         out.append(U.Fixture('error-interior-%x' % pc, U.with_host_writes(st, pc=pc), [], DISPATCH, ('error', 'unsupported animation controller c3 PC')))
     out.append(U.Fixture('error-odd-c52b', U.with_host_writes(st, pc=0xc52b), [], DISPATCH, ('error', 'unaligned animation machine PC')))

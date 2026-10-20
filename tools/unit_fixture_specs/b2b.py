@@ -1,7 +1,8 @@
 """V1 fixture spec of the animation-machine unit B2b (engine/src/animation_machine_objects_b2b.cpp, 209 block starts).
 
 Blocks: the orphan chains 3383c, 3a4a4 / 3a4be / 3a4da / 3a5be, 3b424 / 3b446, 4bfc0, 38d56, 39f9c / 3a0dc (with the 27-slot BRA.W table 3a0f4), 3acd6, 4c390 / 4c3a2 / 4c3cc,
-the slot helpers 4d418 / 4d4b4 and the 38 blocks of the shared leaf helpers 4c2fa 4d6b4 4d734 4d98a 4d9ba 4eea2 (+4f08a) 4ff96 d3d7c.  4db18, 3b5a6, 4b6f4 and 4c3ba stay unrouted.
+the slot helpers 4d418 / 4d4b4 and the 38 blocks of the shared leaf helpers 4c2fa 4d6b4 4d734 4d98a 4d9ba 4eea2 (+4f08a) 4ff96 d3d7c.  4b6f4 and 4c3ba stay unrouted
+(3b5a6 and the 82(A6) chain 3a60a are routed by B2c; their former unrouted probes are work-RAM PCs 10fe00..10fe04).
 
 Fixture families (everything is native Unicorn on the original ROM versus the C++ run, V1 comparison of RAM, D0-D7/A0-A7, PC, bank, PVC, ordered ports, waits, reads):
   block     every block start is entered directly.  The world is a natural N-pass node state of the D1 seeds 116/117 (frame 2: N31 38c36, N33 3b166, N28 2b99c, N30a 331d8, N29 30de4,
@@ -12,8 +13,8 @@ Fixture families (everything is native Unicorn on the original ROM versus the C+
   chain     producer helpers with a REAL consumer return LONG (4d418 -> 31a04 33212 38c5e 3a384 3d358; 3a4da -> 39128 39c30; 3b424 / 3b446 -> 3902c 3a202; 4c390 -> 2c7a0) and the
             call chains whose C is produced by a routed callee and consumed inside the unit (289e -> 4d438, 4d6b4 -> 3a4ec, 288c -> 3ad26, 49fc6 -> 3ad3c, 28ae -> 38d70, 3b334 -> 38dbe):
             native branches on the real flags, the C++ branches on the known C.  Stop: the first PC outside the unit and the consumer block.
-  error     every even non-start PC of the unit ranges, the unrouted neighbours (4c3ba 4c3c2 3a4d6 3a4d8 3b5a6 4db18 4b6f4 3a048), an odd PC, Unknown C at the six consumers, a
-            JSR (A0) target outside the routing (3a60a), an odd JSR (A0) target, an odd LONG write, 38d56 -> 3b5a6 (boundary stop without stop PC): checked error, state preserved.
+  error     every even non-start PC of the unit ranges, the PCs without an executor (work RAM 10fe04 10fe08 10fe0a..10fe16), an odd PC, Unknown C at the six consumers, a
+            JSR (A0) target outside the routing (work-RAM 10fe00), an odd JSR (A0) target, an odd LONG write, a work-RAM rollback probe 10fe02: checked error, state preserved.
   negative  C++ input differs from the native input in one RAM bit / one register / the queue: the comparison must report it.
 """
 import random
@@ -46,7 +47,9 @@ STARTS = [int(x, 16) for x in (
     '4c2fa 4c2fe 4c308 4c30a 4c32a 4d6b4 4d6c0 4d6c6 4d6cc 4d6d4 4d6d8 4d6e0 4d6ec 4d734 4d73a 4d742 4d746 4d750 4d75e 4d98a 4d990 4d998 4d99c 4d9ba 4d9c6 4d9ca '
     '4eea2 4eeac 4eeb6 4eebc 4eeea 4f08a 4f0a8 4f0b8 4ff96 4ffb0 d3d7c d3d92').split()]
 CONSUMERS = (0x4d438, 0x3a4ec, 0x3ad26, 0x3ad3c, 0x38d70, 0x38dbe)
-UNROUTED_NEIGHBOURS = (0x4c3ba, 0x4c3c2, 0x3a4d6, 0x3a4d8, 0x3b5a6, 0x4db18, 0x4b6f4, 0x3a048, 0x3a0d2)
+# work-RAM PCs without an executor (review 0264 M-3; the ROM neighbours 4c3ba 4c3c2 3a4d6 3a4d8 4b6f4 3a048 3a0d2 are 10fe0a..10fe16 in this order);
+# the exact range ends are asserted against the routing in build().
+UNROUTED_NEIGHBOURS = (0x10fe0a, 0x10fe0c, 0x10fe0e, 0x10fe10, 0x10fe04, 0x10fe08, 0x10fe12, 0x10fe14, 0x10fe16)
 TABLE = 0x3a0f4
 # entries whose RTS pops stack data first: offset of the return LONG from A7 at the entry
 RET_AT = {0x33948: 2, 0x3a4c6: 2, 0x4c32a: 4, 0x4ffb0: 4, 0x4eeea: 8, 0x4d4c2: 8}
@@ -320,8 +323,10 @@ def build():
     STARTS_SET = set(STARTS)
     require(len(STARTS) == 209 and len(STARTS_SET) == 209, ('starts', len(STARTS), len(STARTS_SET)))
     require(unit_of(SENTINEL) is None and not mine(SENTINEL), 'sentinel must be unrouted')
-    for pc in UNROUTED_NEIGHBOURS + (0x4c3c2,):
-        require(unit_of(pc) is None, ('neighbour is routed', hex(pc)))
+    for pc in UNROUTED_NEIGHBOURS:
+        require(unit_of(pc) is None, ('probe is routed', hex(pc)))
+    for lo, hi in RANGES:
+        require(unit_of(hi) != 'animation_objects_b2b_block' and unit_of(lo - 2) != 'animation_objects_b2b_block', ('range end routed to b2b', hex(lo), hex(hi)))
     for s in STARTS:
         require(unit_of(s) == 'animation_objects_b2b_block', ('start is not routed to b2b', hex(s), unit_of(s)))
     rng = random.Random(0xB2B)
@@ -632,14 +637,14 @@ def error_fixtures(bases, add):
         add(U.Fixture('error-unknown-carry-%05x' % pc, U.with_host_writes(st, pc=pc), [], SENTINEL, ('error', 'objects b2b caller requires known carry')))
     # JSR (A0) of 3a5be: unrouted target, odd target, routed target 3a5d2 (match below in the chain)
     node = st['regs']['a6']
-    add(U.Fixture('error-3a5be-unrouted-3a60a', U.with_host_writes(st, regs=dict(a0=0x3a60a), pc=0x3a5be), [], SENTINEL, ('error', 'unsupported animation machine PC')))
-    add(U.Fixture('error-3a5be-odd-target', U.with_host_writes(st, regs=dict(a0=0x3a5d3), pc=0x3a5be), [], SENTINEL, ('error', 'unaligned animation machine PC')))
+    add(U.Fixture('error-3a5be-unrouted-10fe00', U.with_host_writes(st, regs=dict(a0=0x10fe00), pc=0x3a5be), [], SENTINEL, ('error', 'unsupported animation machine PC'), fail_pc=0x10fe00))
+    add(U.Fixture('error-3a5be-odd-target', U.with_host_writes(st, regs=dict(a0=0x3a5d3), pc=0x3a5be), [], SENTINEL, ('error', 'unaligned animation machine PC'), fail_pc=0x3a5d3))
     # odd LONG write (4c390 stores A0 at 5c8e(A5): A5 odd) and an odd WORD write (4d454 stores D2 at 2(A4))
     add(U.Fixture('error-4c390-odd-store', U.with_host_writes(st, regs=dict(a5=st['regs']['a5'] + 1), pc=0x4c390), [], SENTINEL, ('error', 'invalid animation machine write size/alignment')))
     add(U.Fixture('error-4d454-odd-store', U.with_host_writes(st, regs=dict(a4=st['regs']['a5'] + 0x5cbb), pc=0x4d454), [], SENTINEL, ('error', 'invalid animation machine write size/alignment')))
-    # boundary stop without a stop PC: 38d56 -> JSR 3b5a6 (boundary), 3a1b2 -> JSR 4db18 (boundary)
-    add(U.Fixture('error-boundary-3b5a6', U.with_host_writes(st, pc=0x38d56), [], SENTINEL, ('error', 'unsupported animation machine PC')))
-    add(U.Fixture('error-boundary-4db18', U.with_host_writes(st, pc=0x3a1b2), [], SENTINEL, ('error', 'unsupported animation machine PC')))
+    # work-RAM rollback probes 10fe02 (38d56 -> 3b5a6 is routed by B2c) and 10fe06 (3a1b2 -> 4db18 is routed by B2e)
+    add(U.Fixture('error-boundary-10fe02', U.with_host_writes(st, pc=0x10fe02), [], SENTINEL, ('error', 'unsupported animation machine PC')))
+    add(U.Fixture('error-probe-10fe06', U.with_host_writes(st, pc=0x10fe06), [], SENTINEL, ('error', 'unsupported animation machine PC')))
 
 
 def negative_fixtures(bases, out, add):

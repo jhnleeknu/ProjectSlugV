@@ -899,16 +899,20 @@ void errors(){
  // Rollback probes only in work RAM 10fe00..10fefe (code never executes in RAM; F4 unit test boundary convention).
  const std::uint32_t outside[]={0x10fe00,0x10fe40,0x10fefe};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,outside[i],2),STOP,"unsupported animation machine PC");}
- // Neighbours: 30d6c (the 2986 child value, unrouted), 3323c / 336d4 / 3395a / 33a8a (interiors of the N30 blocks 3323a / 336d2 / 33958 / 33a88).
- {Bytes ram=base_ram("");reject(ram,state_of(NULL,0x30d6c,2),STOP,"unsupported animation machine PC");}
+ // Neighbours: 3323c / 336d4 / 3395a / 33a8a (interiors of the N30 blocks 3323a / 336d2 / 33958 / 33a88).  30d6c (the 2986 child value, unrouted ROM code of a later unit)
+ // is the work-RAM PC 10fe80 since review 0264 M-3; the exact range end is asserted against the unit's own ranges.
+ assert(!in_ranges(0x30d6c));
+ {Bytes ram=base_ram("");reject(ram,state_of(NULL,0x10fe80,2),STOP,"unsupported animation machine PC");}
  const std::uint32_t n30[]={0x3323c,0x336d4,0x3395a,0x33a8a};
  for(unsigned int i=0;i<sizeof(n30)/sizeof(n30[0]);++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,n30[i],2),STOP,"unsupported animation objects n30 PC");}
  // Computed JMP blocks: no bound check (F1 decision 3): 30b78 D0.B = 28 -> 30bf4 (inside a block), D0.B = ff -> 30f80 (N29 interior);
- // 335f6 D0.W = 10 -> 33626 (inside a block), D0.W = 2000 -> 4 * 2000 = 8000 (sign-extended) -> 2b5fe (unrouted), D0.W = 7fff -> fffc = -4 -> 335fa (inside 335f6).
+ // 335f6 D0.W = 10 -> 33626 (inside a block), D0.W = 2000 -> 4 * 2000 = 8000 (sign-extended) -> 2b5fe (inside the B3a block 2b5fc; was unrouted before B3a), D0.W = 7fff -> fffc = -4 -> 335fa (inside 335f6).
  {const std::uint32_t a[8]={28,0,0,0,0,0,0,0},b[8]={0xff,0,0,0,0,0,0,0},c[8]={10,0,0,0,0,0,0,0},d[8]={0x2000,0,0,0,0,0,0,0},e[8]={0x00ff7fff,0,0,0,0,0,0,0};
   Bytes ram=base_ram("");reject(ram,state_of(a,0x30b78,0),STOP,"unsupported animation objects b1c PC");reject(ram,state_of(b,0x30b78,0),STOP,"unsupported animation objects n29 PC");
-  reject(ram,state_of(c,0x335f6,0),STOP,"unsupported animation objects b1c PC");reject(ram,state_of(d,0x335f6,0),STOP,"unsupported animation machine PC");
-  reject(ram,state_of(e,0x335f6,0),STOP,"unsupported animation objects b1c PC");}
+  reject(ram,state_of(c,0x335f6,0),STOP,"unsupported animation objects b1c PC");reject(ram,state_of(d,0x335f6,0),STOP,"unsupported animation objects b3a PC");
+  reject(ram,state_of(e,0x335f6,0),STOP,"unsupported animation objects b1c PC");
+  // The failing PC of D0.W = 2000 is 2b5fe (sign-extended 8000 from 335fe): a run with that stop PC ends exactly there.
+  {Bytes r2=base_ram("");State s=state_of(d,0x335f6,0);Out o;assert(run(r2,s,0x2b5fe,o)&&s.pc==0x2b5fe&&r2==ram);}}
  // Unknown C into a consumer (all three Unknown / Clear / Set variants are rows above).
  for(unsigned int i=0;i<CONSUMER_COUNT;++i){Bytes ram=base_ram("");reject(ram,state_of(NULL,CONSUMERS[i],0),STOP,"objects b1c caller requires known carry");}
 }

@@ -695,7 +695,7 @@ def aggregate(results):
         nat = r['kind'] == 'natural'
         comp = [x for x in rows if x['category'] == 'complete']
         nonc = [x for x in rows if x['category'] != 'complete']
-        bad_fail = [x for x in nonc if not all(c.get('ok') for c in x['checks'].values())]
+        bad_fail = [x for x in nonc if x['category'] == 'verifier-error' or not all(c.get('ok') for c in x['checks'].values())]   # a verifier exception (empty checks) is an acceptance failure (review 0264 L-2)
         for x in rows:
             cats[x['category']] += 1
             for c in x['checks'].values():
@@ -739,7 +739,9 @@ def main(argv=None):
     ap.add_argument('--video', type=lambda x: int(x, 0), default=0, help='declared video status WORD 3c0006 per IRQ (default 0)')
     ap.add_argument('--no-build', action='store_true')
     ap.add_argument('--out', default=str(OUT))
+    D.add_seed_option(ap)
     args = ap.parse_args(argv)
+    D.apply_seed_option(args)
     assert not sys.flags.optimize
     OUT = Path(args.out).absolute()
     D.OUT = OUT

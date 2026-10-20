@@ -512,8 +512,10 @@ void interior(){
  // 4683c 468e0 461ec are U08b block starts since the U08b merge.
  // 45176 47288 (and 4728a, interior) are U11 PCs since the U11 merge.
  // 46bfc 46bfe are N33 PCs since the N33 routing (RAM probes 10fe5a 10fe5c).
- const std::uint32_t outside[]={0x470e6,0x46994,0x4699e,0x10fe5a,0x10fe5c,
-  0x7670c,0x76852,0x76854,0x769fa,0x76a14,0x76a16};
+ // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder); the former ROM probe PCs only have to stay outside the unit ranges.
+ {const std::uint32_t rom_outside[]={0x470e6,0x46994,0x4699e,0x7670c,0x76852,0x76854,0x769fa,0x76a14,0x76a16};for(unsigned int i=0;i<sizeof(rom_outside)/sizeof(rom_outside[0]);++i)assert(!in_ranges(rom_outside[i]));}
+ const std::uint32_t outside[]={0x10fe00,0x10fe02,0x10fe04,0x10fe5a,0x10fe5c,
+  0x10fe06,0x10fe08,0x10fe0a,0x10fe0c,0x10fe0e,0x10fe10};
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
  const std::uint32_t odd[]={0x469a1,0x469d9,0x46bfb,0x4706d,0x470e7,0x47135,0x47287,0x7670f,0x76851,0x769fd,0x76a13};
  for(unsigned int i=0;i<sizeof(odd)/sizeof(odd[0]);++i){Bytes ram;State s;generic(odd[i],ram,s,2);reject(ram,s,STOP,"unaligned animation machine PC");}

@@ -610,15 +610,16 @@ void interior() {
  for(unsigned int r=0;r<RANGE_COUNT;++r){const std::uint32_t odd[]={RANGES[r][0]+1,RANGES[r][1]-1};
   for(unsigned int i=0;i<2;++i){Bytes ram=base_ram("");State s;s.pc=odd[i];s.a[6]=NODE;s.a[7]=SP;reject(ram,s,STOP,"unaligned animation machine PC");}}
 }
-// Boundaries have no executor here: the neighbours of the routed ranges (data, unreferenced code, the chains 3d526 / 3d982, the TRAP #f b1c90
-// reached from b1c82 when D0.W - 1 > 5) stay unrouted, so a run that reaches one without stopping there is a checked error.
+// Boundaries have no executor here: a run that reaches a PC without an executor without stopping there is a checked error.  The probes are work-RAM PCs
+// (review 0264 M-3: the ROM boundaries 3d526 3d982 ... b1c90 b1c92 b1c9c 3d234 3da6c belong to later units); the exact range ends are asserted against the unit's
+// own ranges, and the TRAP #f b1c90 reached from b1c82 when D0.W - 1 > 5 is a stop-only check.
 void boundaries() {
- const std::uint32_t neighbours[]={0x3d526,0x3d982,0x3dd42,0x3def2,0x3df1a,0x3e0aa,0x3e302,0xb1c90,0xb1c92,0xb1c9c,0x3d234,0x3da6c};
- for(unsigned int i=0;i<sizeof(neighbours)/sizeof(neighbours[0]);++i){assert(!in_ranges(neighbours[i]));
-  Bytes ram=base_ram("");State s;s.pc=neighbours[i];s.a[6]=NODE;s.a[7]=SP;reject(ram,s,0x10fe40,"unsupported animation machine PC");}
+ const std::uint32_t ends[]={0x3d526,0x3d982,0x3dd42,0x3def2,0x3df1a,0x3e0aa,0x3e302,0xb1c90,0xb1c92,0xb1c9c,0x3d234,0x3da6c};
+ for(unsigned int i=0;i<sizeof(ends)/sizeof(ends[0]);++i)assert(!in_ranges(ends[i]));
+ for(unsigned int i=0;i<12;++i){Bytes ram=base_ram("");State s;s.pc=0x10fe00+2*i;s.a[6]=NODE;s.a[7]=SP;reject(ram,s,0x10fe40,"unsupported animation machine PC");}
  const std::uint32_t w78[]={0,7,0x100,0xffff};
- for(unsigned int i=0;i<4;++i){Bytes ram=base_ram("");put(ram,NODE+0x78,2,w78[i]);State s;s.pc=0xb1c82;s.a[6]=NODE;s.a[7]=SP;
-  reject(ram,s,0x10fe40,"unsupported animation machine PC");}
+ for(unsigned int i=0;i<4;++i){Bytes ram=base_ram("");put(ram,NODE+0x78,2,w78[i]);State s;Out o;s.pc=0xb1c82;s.a[6]=NODE;s.a[7]=SP;
+  assert(run(ram,s,0xb1c90,o)&&s.pc==0xb1c90);}
  // Stop PCs at the boundaries: reached and stopped (no error) with the exact state of the native run (covered by the fixtures); rollback
  // through them uses the RAM probe 10fe90 as the return LONG of runs that end in a unit RTS.
  const std::uint32_t rts[]={0x3dbb8,0x3dcea,0x3dd2e,0x3def0,0x3e0a6,0x3e0a8,0x3e2f0,0xb16d4,0xb1cf6};

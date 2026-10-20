@@ -149,5 +149,10 @@ bool animation_controller_c1_block(AnimationMachineContext& c);
 bool animation_objects_b2a_block(AnimationMachineContext& c);
 bool animation_objects_b1a_block(AnimationMachineContext& c);
 bool animation_controller_c2_block(AnimationMachineContext& c);
+bool animation_objects_b2d_block(AnimationMachineContext& c);
+bool animation_objects_b2c_block(AnimationMachineContext& c);
+bool animation_objects_b2e_block(AnimationMachineContext& c);
+bool animation_objects_b3a_block(AnimationMachineContext& c);
+bool animation_objects_b3b_block(AnimationMachineContext& c);
 }
 #endif
