@@ -2260,3 +2260,26 @@
   - `0258` manifest 갱신
 - 운영 변경(사용자 지시): 단위를 Opus/Sonnet 하위 작업으로 나눠 서브에이전트를 한 번에 하나씩 실행한다. Opus는 계약·실행부, Sonnet은 검증 실행·정렬·문서를 맡는다.
 - 다음: 위 남은 B 항목, 이어서 `remaining-work-plan.md` §3 입력·스테이지 진행 관측 기반. 전체 Goal 범위·완료 기준은 바꾸지 않았다.
+
+## 2026-10-17 — B영역 후속: external read 추적, demo seed 108·109(U06b), B3c, regression manifest 0266 (브랜치 `claude/b-followups`, PR #3 위)
+
+- [F] legacy 정렬에서 미추적이던 11건(`buffer_cue` 2, `frame_helpers` 9)을 추적했다.
+  - 11건 모두 `2ac2` 복귀 뒤 C3 `c52a` → H1 `e4a` → H3 → H1 `ea4`의 raster WORD 읽기 `eaa: move.w $3c0006.l,d0`에서 빈 queue로 끝난다.
+  - 이 경로를 연 것은 D9/C3a `ea61b36`이다. `cc88bde..e5bfb73` 41개 커밋 bisect로 확인했다.
+  - native Unicorn도 같은 읽기에 도달하고, C++ block 시작마다 레지스터가 같다. 기록은 `0264-legacy-regression-mac.md`에 있다.
+- [F] demo seed 108·109의 frame 22·60 불일치 원인은 U06 경계 callee `e7562`(→ 공용 leaf `48250`, BYTE `5681(A5)` := 1)가 미연결이었기 때문이다.
+  - 새 단위 U06b(3 block)로 연결했다. demo 모드는 45,680에서 45,684/45,684로, 불일치가 0이 됐다.
+  - 근거: `animation-machine-demo-seed108-frame22.md`, `animation-machine-objects-u06b-contract.md`.
+- [F] B3c 71 block: `2d7be` `2d916` `2db06` 자식, callee `1c114` + 꼬리 `2291a`.
+  - 실제 ROM 7,500건 불일치 0, 변이 38/38, V1 625/625.
+  - D1·controller game·IRQ 54,400/54,400, demo 45,684/45,684.
+  - `2986` caller-X 경로는 의도된 checked 오류로 유지했다.
+- [F] `docs/reviews/0266-regression-manifest.json`: macOS arm64에서 `d66442f` + pin 갱신 기준으로 검증기 59개가 모두 PASS했다.
+  - 표준 35, frame 5종(head, driver, controller game/demo, IRQ), V1 spec 19개.
+  - stage_event pin은 `1e7625c7…`/`874fceb1…`로 갱신했다. `make -j4 all test` 종료 0, Python 310 OK.
+- 다음 후보:
+  - B3c 자식 표 `227fc`의 child callback 8개(`22ad4` `22b04` `22d94` `22dbc` `2308e` `23058` `235ca` `23a3e`)
+  - U06 옆 script handler `e74f8`(표 `e7504`)
+  - 남은 legacy [I] 귀속 5건
+  - 이어서 `remaining-work-plan.md` §3 입력·스테이지 진행 관측 기반
+- 전체 Goal 범위·완료 기준은 바꾸지 않았다. ROM·추출 데이터는 Git에 넣지 않았다.

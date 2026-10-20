@@ -71,8 +71,9 @@ bool ou6_pvc(AnimationMachineContext& c,std::uint32_t address,std::uint32_t valu
 // callback e7426 and the script handlers e74b6/e74da/e74f2/e7546 reached through e74ac JSR (A0,D0.W), the selection object
 // callbacks e7792/e77ac, e77e4/e780a/e7830/e7850, e788c/e78a8 and e78d8/e78f4, and the bank list object callback eb7b6 with its
 // installed callback eb81e and the list length eba3e. e742c consumes the C returned by the input executor 4836e, e7916 the C
-// returned by the interpreter 49fc6; U06 produces no known C. The callees 3ed2, e7562, eb9ba, eb9e4 and 101c have no executor;
-// e74ac dispatches the live A0+D0.W through the routing (e74f8/e7562 have no executor). eba3e selects the bank (80(A6) AND 7)+2:
+// returned by the interpreter 49fc6; U06 produces no known C. The callees 3ed2, eb9ba, eb9e4 and 101c have no executor; e7562 (BSR from
+// e7462/e7478/e7486 and the e74ac JSR target of the script end) is the U06b callee with its leaf 48250.
+// e74ac dispatches the live A0+D0.W through the routing (e74f8 has no executor; e7562 is U06b). eba3e selects the bank (80(A6) AND 7)+2:
 // every PVC bank word write goes through the shared PVC model (any bank the equation produces), then the bank window
 // LONG 200004+D2.W and its LONG list are read through the live bus with the new bank_base; a read past the 8 MiB image is
 // the shared program bus error. The eb7bc/eba78 list walks and the
@@ -103,12 +104,12 @@ bool animation_objects_u06_block(AnimationMachineContext& c) {
     case 0xe744e:ou6_bit(r,1,0xe7456,0xe745a);return true; // BTST #1,D0; BEQ e745a.
     case 0xe7456:if(!ou6_get(c,r.a[5],0xccb1,1,value))return false;am_byte(r.d[7],r.d[7]|value);r.pc=0xe745a;return true; // OR.B -334f(A5),D7.
     case 0xe745a:am_byte(r.d[7],r.d[7]&0x30U);r.pc=(r.d[7]&255U)?0xe7462:0xe7466;return true; // ANDI.B #30,D7; BEQ e7466.
-    case 0xe7462:return am_call(c,0xe7562,0xe7466);     // BSR e7562 (boundary).
+    case 0xe7462:return am_call(c,0xe7562,0xe7466);     // BSR e7562 (U06b callee).
     case 0xe7466:if(!ou6_get(c,r.a[5],0x7d82,1,value))return false;r.pc=value?0xe748a:0xe746e;return true; // TST.B 7d82(A5); BNE e748a.
     case 0xe746e:if(!ou6_get(c,r.a[5],0x7db6,1,value))return false;r.pc=value==1?0xe7478:0xe747c;return true; // CMPI.B #1,7db6(A5); BNE e747c.
-    case 0xe7478:return am_call(c,0xe7562,0xe747c);     // BSR e7562 (boundary).
+    case 0xe7478:return am_call(c,0xe7562,0xe747c);     // BSR e7562 (U06b callee).
     case 0xe747c:if(!ou6_get(c,r.a[5],0x7db7,1,value))return false;r.pc=value==1?0xe7486:0xe748a;return true; // CMPI.B #1,7db7(A5); BNE e748a.
-    case 0xe7486:return am_call(c,0xe7562,0xe748a);     // BSR e7562 (boundary).
+    case 0xe7486:return am_call(c,0xe7562,0xe748a);     // BSR e7562 (U06b callee).
     case 0xe748a:if(!ou6_get(c,r.a[6],0x7a,2,value))return false;r.pc=value?0xe7492:0xe74a2;return true; // TST.W 7a(A6); BEQ e74a2.
     case 0xe7492:if(!ou6_get(c,r.a[6],0x7a,2,value))return false;r.pc=value==0xffffU?0xe74a0:0xe749c;return true; // CMPI.W #ffff,7a(A6); BEQ e74a0.
     case 0xe749c:if(!ou6_step(c,0x7a,false))return false;r.pc=0xe74a0;return true; // SUBQ.W #1,7a(A6).

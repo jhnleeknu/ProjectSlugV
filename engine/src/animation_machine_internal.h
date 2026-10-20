@@ -80,6 +80,7 @@ bool animation_objects_u03_block(AnimationMachineContext& c);
 bool animation_objects_u05_block(AnimationMachineContext& c);
 bool animation_objects_u04_block(AnimationMachineContext& c);
 bool animation_objects_u06_block(AnimationMachineContext& c);
+bool animation_objects_u06b_block(AnimationMachineContext& c);
 bool animation_objects_u07_block(AnimationMachineContext& c);
 bool animation_objects_u08_block(AnimationMachineContext& c);
 bool animation_objects_u09_block(AnimationMachineContext& c);
@@ -154,5 +155,6 @@ bool animation_objects_b2c_block(AnimationMachineContext& c);
 bool animation_objects_b2e_block(AnimationMachineContext& c);
 bool animation_objects_b3a_block(AnimationMachineContext& c);
 bool animation_objects_b3b_block(AnimationMachineContext& c);
+bool animation_objects_b3c_block(AnimationMachineContext& c);
 }
 #endif
