@@ -250,7 +250,15 @@ def first_unrouted(extra=()):
     """Stop at the sentinel, at 2a00 (object removal), at an extra PC, or at the first unrouted PC that is not the straight-line successor of the previous
     instruction (a PC inside a block of another executor is not a block entry)."""
     ex = set(extra) | {SENTINEL, 0x2a00}
-    return lambda pc, prev, size: pc in ex or (unit_of(pc) is None and pc != prev + size)
+    # The size Unicorn reports to the code hook is not the M68000 instruction length (287e MOVEA.L 8(A6),A0 -> 2882 was taken for a jump), so the length is decoded.
+    def outside(pc, prev, size):
+        if pc in ex:
+            return True
+        if unit_of(pc) is not None:
+            return False
+        ins = decode(prev)
+        return pc != prev + (ins.size if ins is not None else size)
+    return outside
 
 
 # ---------------------------------------------------------------------------------------------------------------------

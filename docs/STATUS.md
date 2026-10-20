@@ -2283,3 +2283,28 @@
   - 남은 legacy [I] 귀속 5건
   - 이어서 `remaining-work-plan.md` §3 입력·스테이지 진행 관측 기반
 - 전체 Goal 범위·완료 기준은 바꾸지 않았다. ROM·추출 데이터는 Git에 넣지 않았다.
+
+## 2026-10-18 — B영역 마무리: B4a·B4b, legacy [I] 추적, spec 정리, manifest 0267 (브랜치 `claude/b-final`, PR #4 위)
+
+- [F] B4a 218 block: 자식 표 `227fc` `2280c` `2281c`의 child callback 7개와 공유 helper `1c9b8` `22a10` `22a4c` `22a62`, leaf `4bb52`.
+  - 실제 ROM 7,500건 불일치 0, 변이 64/65(1 동등), V1 1,830/1,830.
+  - `deferred-b4-contract.md`.
+- [F] B4b 198 block: `23a3e`, U06 옆 script handler `e74f8`(표 `e7504`)·자식 `2b7be` `e7996`·형제 `2b7b8`, child callback `22f7a` `23774` `2334c` `d206a` `281ea`.
+  - 실제 ROM 7,500건 불일치 0, 변이 127/129(2 동등), V1 1,723/1,723.
+  - `deferred-b4b-contract.md`.
+- [F] frame 비교는 B4a·B4b 모두 변화가 없다: D1·controller game·IRQ 54,400/54,400, demo 45,684/45,684.
+- [F] legacy [I] 5계열을 추적해 [F]로 바꿨다(`0264-legacy-regression-mac.md`). native는 C++ block 시작마다 레지스터가 같다.
+  - card_menu_save `bbd4`, card_menu_open `a75a`: C2 `50dda0f`.
+  - cleanup `3dcc`: F6a `365769e`.
+  - scheduler: D9/C3a `ea61b36`. 예전의 F6a 귀속은 틀렸다.
+  - motion_walk: F6c `ee8d01a`. 계산 점프가 F6c 내부 PC에 떨어지는 4건은 원본이 그대로 실행하는데, C++는 F6c 계약(48행)의 선언 한계에 따라 checked 오류로 끝난다. 이 실행을 넓힐지는 [U]이며 별도 결정이다.
+- [F] V1 spec 5개(b2d b2e b3a b3b b3c)의 `first_unrouted`를 Unicorn hook 크기 대신 capstone 명령 길이로 계산하도록 고쳤다.
+  - b2d는 fall-through 정지 fixture 4개가 빠져 1,485개가 됐다(의도된 변화). 나머지 spec은 결과가 같다.
+- [F] `docs/reviews/0267-regression-manifest.json`: `062bfd7` + pin 갱신 기준으로 검증기 61개가 모두 PASS다(표준 35, frame 5종, V1 spec 21).
+  - stage_event pin은 `8ce8eb93…`/`74d9c9ab…`로 갱신했다.
+- 이번 B영역 후보(STATUS 2026-10-15·16·17에 적은 것)는 이것으로 모두 끝났다. 남은 [U]는 다음과 같다.
+  - F6c 내부 PC 실행 범위
+  - `2986` caller-X 일반화(의도된 checked 오류로 유지)
+  - 하드웨어 실제 값
+- 다음 주 단위: `remaining-work-plan.md` §3 입력·스테이지 진행 관측 기반.
+- 전체 Goal 범위·완료 기준은 바꾸지 않았다. ROM·추출 데이터는 Git에 넣지 않았다.
