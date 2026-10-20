@@ -940,8 +940,9 @@ void rules(){
   check(run(ram,s,0x5a414,o)&&s.d[0]==0x123456ffU&&s.d[1]==0x9abcdeffU,"5a402 SNE / AND.B");}
  // The data PCs next to the ranges are not routed (dispatcher error). b345e (former entry, the RTS before b3460) is a block start of the frontier unit
  // FR2a (b33d8 object): the work-RAM PC 10fe5e replaces it; b336a (the 28ae child value of b319e) is a block start of FR2b: 10fe6a replaces it
- // (F4 unit test boundary convention; both former expectations were "unsupported animation machine PC").
- const std::uint32_t data[]={0x5a374,0x5a460,0x5a5ba,0xb30b8,0x10fe6a,0x10fe5e,0xb3484,0xb9822,0xddfda,0xde00c,0xde022,0xde260,0xde31e,0xde374,0xde3e6,0xe9148};
+ // (F4 unit test boundary convention; both former expectations were "unsupported animation machine PC"). e9148 (the PC after the range e9112..e9148)
+ // is a block start of the frontier unit FR6 (helper e9148): the work-RAM PC 10fe78 replaces it (former expectation "unsupported animation machine PC").
+ const std::uint32_t data[]={0x5a374,0x5a460,0x5a5ba,0xb30b8,0x10fe6a,0x10fe5e,0xb3484,0xb9822,0xddfda,0xde00c,0xde022,0xde260,0xde31e,0xde374,0xde3e6,0x10fe78};
  for(unsigned int i=0;i<sizeof(data)/sizeof(data[0]);++i){Bytes ram=base_ram("");State s;s.pc=data[i];s.a[6]=NODE;s.a[7]=SP;
   check(!in_ranges(data[i]),"data PC outside the routed ranges",data[i]);reject(ram,s,STOP,"unsupported animation machine PC");}
 }

@@ -871,6 +871,9 @@ def negatives(exe, base, st, resources):
                             native_exception_rollback_equivalence_claimed=False))
             continue
         reject(exe, 'outside_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, out, resources)
+    # work-RAM controls (replace the rejection that 49c38 no longer gives): every even PC in 10fe00..10fefe is rejected with the exact string, state preserved
+    for pc in WORK_RAM_REJECT_PCS:
+        reject(exe, 'work_ram_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, out, resources)
     # odd PCs (alignment is checked before routing)
     for pc in (0x49b0d, 0x49ab5, 0x4d7a7, 0x1d8cd, 0x49e35, 0x1d665, 0x4836f):
         reject(exe, 'odd_pc_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNALIGNED_PC, out, resources)
@@ -938,7 +941,10 @@ def boundary_zero_step(exe, base, resources):
 # U06 contract scope and the 49be0/e73f8 block tables supersede the input contract's closure-only exclusion.
 # 49be0: TST.B D0, select A5+5726/572c and RTS. e73f8: LEA e6ed2,A0; JSR 8da2, then its declared callback chain.
 # These are API-only controls to ff000, not a native suffix equivalence claim.
-SUPERSEDED_OUTSIDE = {0x4d81c: 'F1c2', 0x1bee4: 'F1b', 0x49be0: 'F4 U06', 0xe73f8: 'F4 U06'}
+# 49c38: former expectation = outside the input closure, 'unsupported animation machine PC'; FR6 routes the 49c38 helper (TST.L 00000001 ... RTS), so the same
+# API-only control now succeeds. Only the superseding outcome is accepted (never both); the rejection control moved to even work-RAM PCs (below).
+SUPERSEDED_OUTSIDE = {0x4d81c: 'F1c2', 0x1bee4: 'F1b', 0x49be0: 'F4 U06', 0xe73f8: 'F4 U06', 0x49c38: 'FR6'}
+WORK_RAM_REJECT_PCS = (0x10fe00, 0x10fe02, 0x10fefe)    # code never executes in work RAM: routing always gives 'unsupported animation machine PC'
 
 
 def older_verifier_49b0c_negatives():

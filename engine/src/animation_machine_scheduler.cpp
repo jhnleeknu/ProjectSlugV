@@ -45,6 +45,10 @@ bool animation_scheduler_block(AnimationMachineContext& c) {
         r.a[0]=SC_FADE_ROWS;
         if(!am_read(c,r.a[6]+0x7aU,2,value))return false;
         am_word(r.d[1],value+3U);r.pc=sc_signed_less(r.d[1],0x28)?0x4fcfe:0x4fcee;return true;
+    // 4fce0 (tail of 4fcda, entered by BRA.W from 4fcc4 with A0 = 50030): MOVE.W 7a(A6),D1; ADDQ.W #3,D1; CMPI.W #28,D1; BLT.W 4fcfe (signed).
+    case 0x4fce0:
+        if(!am_read(c,r.a[6]+0x7aU,2,value))return false;
+        am_word(r.d[1],value+3U);r.pc=sc_signed_less(r.d[1],0x28)?0x4fcfe:0x4fcee;return true;
     // MOVEA.L c(A6),A0; MOVE.B #1,62(A0); JMP 2a00 (parent completion flag, then self delete).
     case 0x4fcee:
         if(!am_read(c,r.a[6]+0xcU,4,value))return false;r.a[0]=value;
