@@ -714,7 +714,10 @@ def spawn_fixtures(add, record):
                         continue
                     a7 = cst['regs']['a7'] & 0xffff
                     ret = int.from_bytes(cst['ram'][a7:a7 + 4], 'big')
-                    tr = trace(cst, lambda pc, ret=ret: unit_of(pc) is None or pc == ret, cap=20000)
+                    # FR1a routed 4b6f4: the former stop (4b6f4 was unrouted, so `unit_of(pc) is None` ended the native run there) is declared explicitly.  Without it the
+                    # native run continued through 4b6f4 into the interior PC 8e4c (cleanup block 8e4a), which C++ cannot stop at, and C++ ran on to an external read the
+                    # fixture never declares (queue empty).  4b6f4 is a stop-only boundary here (review-0264 convention).
+                    tr = trace(cst, lambda pc, ret=ret: unit_of(pc) is None or pc == ret or pc == 0x4b6f4, cap=20000)
                     if tr is None:
                         continue
                     record(tr['pcs'] + [tr['stop']])

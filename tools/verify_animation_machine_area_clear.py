@@ -59,8 +59,12 @@ END_STOP = 0x477ee
 FRAME_RTS = 0x480f0
 WAIT_PCS = (0xcda4, 0x3aea)
 # Neighbour probes superseded by later F4 units (label -> classification) and their observed new error.
-SUPERSEDED_NEIGHBOURS = {'unrouted_neighbour_01c5ea': 'superseded_by_F4_later_unit_routes_1c5ea'}
-SUPERSEDED_NEIGHBOUR_ERRORS = {'unrouted_neighbour_01c5ea': 'program bus write requires RAM mirror units'}  # align2 run: observed at HEAD a32885b
+SUPERSEDED_NEIGHBOURS = {'unrouted_neighbour_01c5ea': 'superseded_by_F4_later_unit_routes_1c5ea',
+                         'unrouted_neighbour_04b6f4': 'superseded_by_FR1_routes_4b6f4'}
+SUPERSEDED_NEIGHBOUR_ERRORS = {'unrouted_neighbour_01c5ea': 'program bus write requires RAM mirror units',  # align2 run: observed at HEAD a32885b
+                               # FR1a routes 4b6f4 (contract animation-machine-frontier-fr1-contract.md, decision 9; former expectation
+                               # 'unsupported animation machine PC'): observed with this verifier's one-shot harness on base 5c30b72 + FR1a
+                               'unrouted_neighbour_04b6f4': 'program bus write requires RAM mirror units'}
 F1B_RANGES = ((0x47da4, 0x47eac), (0x4b6e4, 0x4b6f4), (0x1c5b0, 0x1c5ea), (0x1bee4, 0x1bef8), (0xca48, 0xca50), (0x9056, 0x9060))
 CONSUMERS = (0x1c5bc, 0x1c5d8, 0x47e0a)
 CALLBACKS = (0x47de4, 0x47e22, 0x47e62, 0x47e70, 0x47e92)

@@ -520,10 +520,13 @@ void interior(){
 // rows of the fixture table, and below with the success inputs). e7562 stopped here before U06b: the three rows that used to roll back at
 // e7562 (e742c-clear-key1, e7462, script-end) now run e7562 -> 48250 -> e756c (U06b) to the return LONG and are checked by native digests.
 void boundaries(){
- const char* names[]={"e742c-clear-busy","eb818-up","eb81e-next"};
- const std::uint32_t pcs[]={0x3ed2,0xeb9ba,0xeb9e4};
+ const char* names[]={"e742c-clear-busy"};
+ const std::uint32_t pcs[]={0x3ed2};
  for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);assert(final_of(names[i]).s.pc==pcs[i]);
   Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);reject(ram,s,STOP,"unsupported animation machine PC");}
+ // eb9ba / eb9e4 are routed by FR1a (eb9ba..eba3e): the rows eb818-up / eb81e-next only stop there (stop-only, the stop PC is checked first); their
+ // former rollback expectation at eb9ba / eb9e4 was removed (FR1 contract, decision 8).
+ assert(final_of("eb818-up").s.pc==0xeb9ba&&final_of("eb81e-next").s.pc==0xeb9e4);
  // e74f8 is routed by B4b (script handler e74f8..e7546): the script-jump row only stops there (stop-only, the stop PC is checked first); its
  // former rollback expectation at e74f8 was removed (B4b contract, decision 6). The error row error-script-boundary (formerly the jump script e7598,
  // rolled back at e74f8) now uses a RAM script 10fd00 whose handler offset 013c gives the RAM probe 10fe40 (F4 boundary convention).
