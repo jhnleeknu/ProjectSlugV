@@ -76,7 +76,11 @@ SUPERSEDED_GUARDS = {'guard-bad-stop-1a7a8-on-19844-seed': UNSUPPORTED_MACHINE, 
 SUPERSEDED_RECORDS = []
 SUPERSEDED_NEGATIVES = []
 OUTSIDE_EXECUTED_NOW = (0x19830, 0x19850, 0x1a40e, 0x1a7a8, 0x199d4, 0x19b50, 0x19b94, 0x19dee, 0x1a3c8, 0x1a5a4,
-                        0x199d6, 0x1a440, 0x1a73a)    # beyond the first four, F1a executes them (stage controller scene / init blocks); the last three end in the stage entry executor's checked error (OUTSIDE_STAGE_ENTRY)
+                        0x199d6, 0x1a440, 0x1a73a, 0x19a3e)    # beyond the first four, F1a executes them (stage controller scene / init blocks); the last three end in the stage entry executor's checked error (OUTSIDE_STAGE_ENTRY)
+# 19a3e: former expectation = outside every range, 'unsupported animation machine PC'; FR6 routes it (the RTS of the 19a00 helper), so the entry now runs
+# to the stop without error. Only the superseding outcome is accepted (never both); the rejection control moved to even work-RAM PCs (see the loop below).
+SUPERSEDED_BY_UNIT = {0x19a3e: 'FR6'}
+WORK_RAM_REJECT_PCS = (0x10fe00, 0x10fe02, 0x10fefe)
 OUTSIDE_STAGE_ENTRY = (0x199d6, 0x1a440, 0x1a73a)      # observed final-state error 'unsupported animation stage entry PC' (F1a stage entry executor)
 OUTSIDE_NEW_ERRORS = {0x19820: 'unsupported animation motion walk PC', 0x198ec: 'unsupported animation motion walk PC', 0x19920: 'unsupported animation motion walk PC'}
 VERIFIED_ARTIFACTS = set()
@@ -817,6 +821,7 @@ def negatives(exe, base, starts_by_label, st, resources):
             return
         assert result['ok'] and not error.strip() and result['pc'] == stop and result['status'] == 0, (label, error.strip())
         SUPERSEDED_NEGATIVES.append(dict(label=label, former_expected_API_error=former, observed_final_state=dict(ok=True, pc=hex(result['pc'])),
+                                         superseded_by=SUPERSEDED_BY_UNIT.get(changes_pc),
                                          native_exception_rollback_equivalence_claimed=False, API_only_control=True, native_execution_equivalence_claimed=False))
 
     for pc in BOUNDARY_PCS:
@@ -830,6 +835,8 @@ def negatives(exe, base, starts_by_label, st, resources):
             else:
                 # 19820/198ec/19920 are routed to the motion walk executor now (checked error with that executor's message)
                 reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=OUTSIDE_NEW_ERRORS.get(pc, UNSUPPORTED_MACHINE))
+    for pc in WORK_RAM_REJECT_PCS:
+        reject('work_ram_entry_%06x' % pc, base, {'pc': pc}, error_expected=UNSUPPORTED_MACHINE)
     # unknown carry at the eight consumers (stop at the clear branch target: the error comes first)
     for pc in sorted(CONSUMERS_U2):
         r, s, p, b = base

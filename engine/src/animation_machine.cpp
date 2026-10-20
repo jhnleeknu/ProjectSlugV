@@ -1161,6 +1161,16 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // Objects FR4 blocks: the 7 consumers 73124 (BCC, C returned by the N15 test 7054c), 73468 (BCC, 1ab80), 878ec (BCC, 28ae), 87a9e (BCC, 1ab02)
     // and cc60c cc638 cc67c (BCS, 497a6). No FR4 block sets a C and no FR4 RTS passes one; every other FR4 block stays Unknown.
     case 0x73124:case 0x73468:case 0x878ec:case 0x87a9e:case 0xcc60c:case 0xcc638:case 0xcc67c:
+    // Objects FR5 blocks: the 6 consumers 5abd6 (BCS, C returned by 4945e), 5acac (BCS, 4b6f4 through the RTS 4b700), 5ad60 5ae02 (BCS, 1ab80),
+    // 5ad80 (BCC, 28ae) and 5adf2 (BCS, 49fc6). 5ad8e (ORI) sets C without a reader (JMP 2a00); no FR5 RTS passes a C; every other FR5 block
+    // stays Unknown.
+    case 0x5abd6:case 0x5acac:case 0x5ad60:case 0x5ad80:case 0x5adf2:case 0x5ae02:
+    // Objects FR6 blocks: the 12 consumers 362cc (BCC, C returned by 482aa), 4858e (BCC, 289e), 48598 (BCS, 1aa66), 50d0e (BCS, 4945e), 50f62
+    // (SCC.B, 28ae; its MOVE.W then clears C), 51054 (BCS, the Clear of 51044 AND.B / the Set of 51050 ORI), 729ee (BCC, 49fc6), d77da (SCS.B -(A7),
+    // 49fc6), d7802 (SCS.B D0, 49fca) and d7698 d76b8 d770e (BCS / BCC / BCS, 4855c). 1aa72 485a2 49c4a (ANDI; RTS) / 1aa78 4859c 49c50 (ORI; RTS)
+    // set their C in their own block; no FR6 RTS passes a C; every other FR6 block stays Unknown.
+    case 0x362cc:case 0x4858e:case 0x48598:case 0x50d0e:case 0x50f62:case 0x51054:case 0x729ee:case 0xd77da:case 0xd7802:case 0xd7698:
+    case 0xd76b8:case 0xd770e:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1738,6 +1748,15 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x87a3e && next.pc<0x87a8c) || (next.pc>=0x87a94 && next.pc<0x87aaa) || (next.pc>=0xbc7d6 && next.pc<0xbc844) ||
                 (next.pc>=0xbca2c && next.pc<0xbcaa0) || (next.pc>=0xcc600 && next.pc<0xcc696) || (next.pc>=0xcc778 && next.pc<0xcc7ac) ||
                 (next.pc>=0xcc818 && next.pc<0xcc82e) || (next.pc>=0xcca76 && next.pc<0xccade) || (next.pc>=0xcdc1c && next.pc<0xcdc24))ok=animation_objects_fr4_block(c);
+            else if ((next.pc>=0x4464a && next.pc<0x44666) || (next.pc>=0x5ab82 && next.pc<0x5ae0e) || (next.pc>=0x5ae10 && next.pc<0x5ae3e) ||
+                (next.pc>=0x5ae54 && next.pc<0x5ae98) || (next.pc>=0x5aebe && next.pc<0x5b220))ok=animation_objects_fr5_block(c);
+            else if ((next.pc>=0x19a00 && next.pc<0x19a40) || (next.pc>=0x1a988 && next.pc<0x1a996) || (next.pc>=0x1aa66 && next.pc<0x1aa7e) ||
+                (next.pc>=0x36292 && next.pc<0x362e0) || (next.pc>=0x48210 && next.pc<0x48226) || (next.pc>=0x4855c && next.pc<0x485a8) ||
+                (next.pc>=0x491fe && next.pc<0x49214) || (next.pc>=0x49c38 && next.pc<0x49c56) || (next.pc>=0x4fcb8 && next.pc<0x4fcce) ||
+                (next.pc>=0x50cf6 && next.pc<0x50d2c) || (next.pc>=0x50dae && next.pc<0x50e80) || (next.pc>=0x50e94 && next.pc<0x510d0) ||
+                (next.pc>=0x51178 && next.pc<0x511ae) || (next.pc>=0x51574 && next.pc<0x515e0) || (next.pc>=0x51608 && next.pc<0x5160e) ||
+                (next.pc>=0x703f6 && next.pc<0x70418) || (next.pc>=0x72978 && next.pc<0x72a10) || (next.pc>=0xd764a && next.pc<0xd7828) ||
+                (next.pc>=0xe625e && next.pc<0xe62a8) || (next.pc>=0xe9148 && next.pc<0xe9150))ok=animation_objects_fr6_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

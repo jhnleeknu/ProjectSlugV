@@ -14,6 +14,11 @@ decision 2): one C++ run = one whole frame pass, PC 2ac2, A6 1008e4, A7 SPd = 1f
   * typed fixtures (18 native + extra ones of this verifier), negatives (interior / odd / unrouted neighbours / wrong stops), zero-step at every start x 3 carries, carry as block classification
     (single-block probes: FLOW_ONLY 271a and 4fda4), 4fcce path coverage through split chains ordered by the independent native trace.
 Native SR is never read: C is a block classification.
+
+Second entry 4fce0 (FR6, scheduler second entry): the original F2 verification fixed 17 block starts.  The F2 native observation (artifacts/animation_machine_scheduler_native) is a frozen,
+pinned input that cannot be regenerated identically and predates the entry 4fce0 (the tail of block 4fcda: MOVE.W 7a(A6),D1; ADDQ.W #3,D1; CMPI.W #28,D1; BLT.W 4fcfe, entered by the BRA.W
+at 4fcc4 of the FR6 objects).  The pinned artifact is therefore left unchanged; the entry 4fce0 is compared with an in-process native run (fresh Unicorn CPU, the observer's replay_node, the same
+comparison semantics as variants_4fcda: RAM, 16R, PC, bank, ordered ports) in fixture_entry_4fce0, recorded in the report as entry_4fce0_in_process_native.
 """
 import collections
 import concurrent.futures
@@ -46,7 +51,7 @@ NATIVE_SHA = 'c330e597f9585c2595006239be49ab0bcb029f4b5fed5c70ebf872fe91a2b4ff'
 NATIVE_TOOL_SHA = '62bb23ff6d2f61a5e47af71b8e1308d50c99b85d95f3278b8d825b7ee327c01c'
 CONTRACT = ROOT / 'docs/analysis/animation-machine-scheduler-shell-f2-contract.md'
 CONTRACT_SHA = '6584431718e82293372350b9fa736b2c949e6947e4f989b85aa60079d52f1c1b'
-CPP_PINS = {'engine/src/animation_machine_scheduler.cpp': '1deb3bcc13ed13b061d0d1d0e5980653f5a0c271f14a54d002fb07ef2e87b587'}
+CPP_PINS = {'engine/src/animation_machine_scheduler.cpp': 'a46070d9fbd07ff17f3632ab966594666d3f4902ea50b428b9c47b7355c81889'}  # FR6 verification refresh: was 1deb3bcc13ed13b061d0d1d0e5980653f5a0c271f14a54d002fb07ef2e87b587 (case 0x4fce0 added: second entry of the 4fcda tail, BRA.W from the FR6 install 4fcc4)
 ROM_SHA = '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f'
 MARKER = cc.MARKER
 sha = cc.sha
@@ -64,7 +69,13 @@ LOOP_PC = 0x2ab8
 BOOT_PC = 0x2aac
 HEAD_STOPS = (0xe4a, 0xe74)
 REG16 = tuple('d%d' % i for i in range(8)) + tuple('a%d' % i for i in range(8))
-STARTS = (0x2aac, 0x270e, 0x2716, 0x271a, 0x4fcce, 0x4fcda, 0x4fcee, 0x4fcfe, 0x4fd58, 0x4fd5e, 0x4fd6a, 0x4fd72, 0x4fd7c, 0x4fd84, 0x4fd8c, 0x4fd9e, 0x4fda4)
+# Former expectation (F2 verification, until the FR6 verification refresh): STARTS was the fixed list of 17 block starts and the C++ scheduler case labels had to equal it.  Superseded by FR6 /
+# scheduler second entry 4fce0 (BRA.W 4fce0 at 4fcc4): STARTS now has 18 entries.  4fce0 is an ENTRY_ONLY start: a case label and a routing target, but NOT a fall-through block leader
+# (the block 4fcda still runs 4fcda..4fcee without stopping at 4fce0), so the 17 fall-through leaders LEADERS keep the F2 block partition, the native chains and the natural coverage.
+STARTS = (0x2aac, 0x270e, 0x2716, 0x271a, 0x4fcce, 0x4fcda, 0x4fce0, 0x4fcee, 0x4fcfe, 0x4fd58, 0x4fd5e, 0x4fd6a, 0x4fd72, 0x4fd7c, 0x4fd84, 0x4fd8c, 0x4fd9e, 0x4fda4)
+ENTRY_ONLY = (0x4fce0,)
+LEADERS = tuple(pc for pc in STARTS if pc not in ENTRY_ONLY)
+ENTRY_4FCE0_TAIL = ('move', 'addq', 'cmpi', 'blt')
 RANGES = ((0x2aac, 0x2ab8), (0x270e, 0x271c), (0x4fcce, 0x4fd0a), (0x4fd58, 0x4fda6))
 BUNDLED = (0x2712, 0x4fcea, 0x4fd5a, 0x4fd78, 0x4fd80, 0x4fd88)
 FLOW_BLOCKS = (0x271a, 0x4fda4)
@@ -405,7 +416,7 @@ def audit_static(program):
             pc += item['size']
         assert pc == high
     names = lambda pc: insts[pc]['mnemonic'].split('.')[0]
-    start_set = set(STARTS)
+    start_set = set(LEADERS)
     blocks = collections.OrderedDict()
     for low, high in RANGES:
         pc, cur = low, None
@@ -415,7 +426,16 @@ def audit_static(program):
                 blocks[cur] = []
             blocks[cur].append(pc)
             pc += insts[pc]['size']
-    assert sorted(blocks) == sorted(STARTS) and len(insts) == sum(len(v) for v in blocks.values())
+    assert sorted(blocks) == sorted(LEADERS) and len(insts) == sum(len(v) for v in blocks.values())
+    # ENTRY_ONLY starts: an instruction boundary inside a leader block, entered by a branch from outside the F2 ranges; the tail from there to the block end is checked from the ROM decode
+    tails = {}
+    for entry in ENTRY_ONLY:
+        owner = [lead for lead, b in blocks.items() if entry in b[1:]]
+        assert len(owner) == 1, (hex(entry), owner)
+        tail = blocks[owner[0]][blocks[owner[0]].index(entry):]
+        assert tuple(names(pc) for pc in tail) == ENTRY_4FCE0_TAIL, [insts[pc]['mnemonic'] for pc in tail]
+        assert program[entry:entry + 2].hex() == '322e' and program[entry:entry + 4].hex() == '322e007a', program[entry:entry + 4].hex()
+        tails[entry] = dict(owner=owner[0], tail=list(tail), tail_mnemonics=[insts[pc]['mnemonic'] for pc in tail])
     branches = ('beq', 'bne', 'bcc', 'bcs', 'bmi', 'bpl', 'bvc', 'bvs', 'bhi', 'bls', 'bge', 'blt', 'bgt', 'ble')
     bundled = sorted(pc for b in blocks.values() for pc in b[1:] if names(pc) in branches)
     assert bundled == sorted(BUNDLED), [hex(p) for p in bundled]
@@ -425,8 +445,8 @@ def audit_static(program):
     assert insts[0x4fda4]['mnemonic'].startswith('rts') and insts[0x271a]['mnemonic'].startswith('rts')
     even = [pc for low, high in RANGES for pc in range(low, high, 2)]
     odd = [pc for low, high in RANGES for pc in range(low + 1, high, 2)]
-    interior = [pc for pc in even if pc not in start_set]
-    return dict(insts=insts, blocks=blocks, bundled=bundled, flow=flow, even=even, odd=odd, interior=interior)
+    interior = [pc for pc in even if pc not in set(STARTS)]       # an ENTRY_ONLY start is routed (a case label), no longer an interior PC
+    return dict(insts=insts, blocks=blocks, bundled=bundled, flow=flow, even=even, odd=odd, interior=interior, entry_tails=tails)
 
 
 def cpp_static():
@@ -931,6 +951,7 @@ def natural_seed(case):
                 raise AssertionError((case, k, 'pass start digest differs from the recorded start'))
             totals['pass_start_digest_equal_recorded'] += 1
             native_complete = prec['stop'] == 'frame-head'
+            totals['recorded_nodes_cb_4fcb8_4fcc4'] += sum(1 for n in prec['nodes'] if n['cb'] in (0x4fcb8, 0x4fcc4))
             stop = host_stop(st)
             waits = []
             result, end, ports, error = run_wait(ctx, tag + '_whole', st, stop, waits)
@@ -1018,7 +1039,10 @@ def check_preserved(actual, st, expected_error=None):
 
 
 # label -> (former expected error, observed exact error, superseding unit); filled from the first full run of each stale probe.
-SUPERSEDED_PROBES = {'unrouted_after_002ab8': (UNSUPPORTED_MACHINE, 'animation machine external read queue empty', 'F6a IRQ shell 20c..2d8 [I: error attributed to the routed continuation, not separately traced]')}
+SUPERSEDED_PROBES = {'unrouted_after_002ab8': (UNSUPPORTED_MACHINE, 'animation machine external read queue empty', 'F6a IRQ shell 20c..2d8 [I: error attributed to the routed continuation, not separately traced]'),
+                     # 4fccc is the interior of the FR6 block 4fcc4 (MOVEA.L #50030,A0; BRA.W 4fce0; the FR6 range 4fcb8..4fcce abuts the F2 range 4fcce..4fd0a): routed since FR6, the
+                     # former `unsupported animation machine PC` became the FR6 interior-PC error [F: observed exact string]
+                     'unrouted_before_04fccc': (UNSUPPORTED_MACHINE, 'unsupported animation objects fr6 PC', 'FR6 objects 4fcb8..4fcce (interior PC 4fccc of block 4fcc4)')}
 
 
 def reject_one(args):
@@ -1063,7 +1087,7 @@ def negatives(ctx, base, stinfo):
     assert o is None and e == 'invalid animation machine RAM/PVC/stop PC'
     out.append(dict(label='odd_stop_pc', error=e, all_API_outputs_preserved=True))
     for label, changes, expected in (('270e_odd_A6_WORD_read', {'pc': 0x270e, 'a6': 0x1009a9}, EVEN), ('2716_odd_counter_address', {'pc': 0x2716, 'a5': A5V + 1}, EVEN),
-                                     ('4fcee_odd_parent_pointer', {'pc': 0x4fcee, 'a6': 0x1009a9}, EVEN), ('4fcda_odd_7a_read', {'pc': 0x4fcda, 'a6': 0x1009a9}, EVEN),
+                                     ('4fcee_odd_parent_pointer', {'pc': 0x4fcee, 'a6': 0x1009a9}, EVEN), ('4fcda_odd_7a_read', {'pc': 0x4fcda, 'a6': 0x1009a9}, EVEN), ('4fce0_odd_7a_read', {'pc': 0x4fce0, 'a6': 0x1009a9}, EVEN),
                                      ('4fd72_odd_rows_pointer', {'pc': 0x4fd72, 'a0': 0x50075}, EVEN), ('4fd8c_odd_video_pointer', {'pc': 0x4fd8c, 'a4': 0x100001}, None)):
         r = reject_one((ctx, label, base, changes, 0xff000, expected))
         out.append(dict(label=label, error=r['error'], expected=expected, all_API_outputs_preserved=True))
@@ -1125,6 +1149,89 @@ def fixture_stack_outside(ctx):
     r, out, ports, error = run(ctx, 'fx_boot_a7_outside_ram', st, 0xe4a)
     assert out is None and error
     return dict(name='boot-2aac-A7-outside-RAM', group='extra-boot', result='A7 = 400000 (no RAM): the 104ca4 store is fine but the JSR push is a checked error, outputs preserved', cpp_error=error)
+
+
+ENTRY_A6 = 0x10e000          # declared node address of the 4fce0 fixtures (work RAM; WORD 7a and LONG c are declared host writes)
+ENTRY_PARENT = 0x10e400      # declared LONG c(A6) of the 4fcee path (the completion flag BYTE 62(parent) is written)
+ENTRY_A0 = 0x50030           # A0 as left by the entry 4fcc4 (MOVEA.L #50030,A0; BRA.W 4fce0); 4fce0 does not touch it
+
+
+def expected_branch_4fce0(value):
+    """Independent model of the 4fce0 tail (contract text, not the C++): D1.W = value + 3 (WORD wrap), CMPI.W #28 then BLT.W (signed): 4fcfe if (signed D1.W) < 0x28, else 4fcee."""
+    d1 = (value + 3) & 0xffff
+    signed = d1 - 0x10000 if d1 & 0x8000 else d1
+    return 0x4fcfe if signed < 0x28 else 0x4fcee
+
+
+def entry_state_4fce0(base, value, a6=ENTRY_A6):
+    st = St(base.ram, dict(base.state, pc=0x4fce0, a6=a6, a0=ENTRY_A0, a7=SPD - 4, carry=0), base.pvc, base.bank)
+    st = st.put(SPD - 4, 4, PASS_PC).put(BASE_LONG, 4, SPD)
+    return st.put(a6 + 0x7a, 2, value).put(a6 + 0xc, 4, ENTRY_PARENT)
+
+
+def native_state_equal(out, native_state):
+    return (out.ram == native_state['ram'] and {k: out.state[k] for k in REG16} == {k: native_state['regs'][k] for k in REG16} and out.state['pc'] == native_state['pc']
+            and out.bank == native_state['bank'][0])
+
+
+def fixture_entry_4fce0(ctx, acc):
+    """The second entry 4fce0 postdates the frozen F2 native artifact (pinned, not regenerated): it is compared with an in-process native run (a fresh Unicorn CPU from the observer's replay_node,
+    the observer module itself unchanged).  Per WORD 7a(A6) value (VARIANT_7A: both BLT outcomes, the signed tie 0x24 -> 4fcfe / 0x25 -> 4fcee, WORD wrap, signed negatives, 0x7ffc.. / 0x8000..):
+    (a) one block 4fce0 -> BLT target, carry 0 / 1 / 2 on entry (result carry Unknown), native stop address and full state equal to the C++ stop; the target equals the independent model;
+    (b) the whole node tail to the callback end (2ac2 for the 4fcfe path, the self delete entry 2a00 for the 4fcee path): native replay vs a C++ continuous run, ordered ports (MOVEM pair
+    convention) and a split chain 4fce0 -> target -> end resuming from the actual C++ output.  Guard: odd A6 -> native odd-address guard, C++ checked error with every output preserved."""
+    import observe_animation_machine_scheduler as sched
+    base = NAT['fx_base']
+    rows = []
+    both = set()
+    for value in VARIANT_7A:
+        target = expected_branch_4fce0(value)
+        both.add(target)
+        entry = entry_state_4fce0(base, value)
+        tag = 'e4fce0_%04x' % value
+        # (a) one block against the native boundary
+        nb = sched.replay_node(sched.G['program'], sched.G['fixed'], snap_of(entry, 0x4fce0), stop_extra=(0x4fcfe, 0x4fcee))
+        assert nb['status'] == 'trap-boundary' and nb['reason']['pc'] == target and not nb['ports'], (hex(value), nb['status'], nb['reason'])
+        for carry in (0, 1, 2):
+            sc = St(entry.ram, dict(entry.state, carry=carry), entry.pvc, entry.bank)
+            r1, one, p1, e1 = run(ctx, '%s_b%d' % (tag, carry), sc, target)
+            assert one is not None and not e1 and r1['pc'] == target and r1['status'] == 0 and not p1 and r1['external_reads'] == 0, (hex(value), carry, e1)
+            assert native_state_equal(one, nb['state']), (hex(value), carry, 'one block differs from the native boundary')
+            assert r1['carry'] == 0, (hex(value), carry, r1['carry'])
+            slot = acc['probes'].setdefault(0x4fce0, {0: True, 1: True, 2: True})
+            slot[carry] = slot[carry] and r1['carry'] == carry
+            acc['single_blocks'] += 1
+        # (b) the node tail to the end of the callback
+        nn = sched.replay_node(sched.G['program'], sched.G['fixed'], snap_of(entry, 0x4fce0), stop_extra=(0x2a00,))
+        end_pc = 0x2ac2 if nn['status'] == '2ac2' else 0x2a00
+        assert nn['status'] in ('2ac2', 'trap-boundary') and nn['state']['pc'] == end_pc, (hex(value), nn['status'], nn['reason'])
+        assert end_pc == (0x2ac2 if target == 0x4fcfe else 0x2a00), (hex(value), hex(end_pc), hex(target))
+        r2, whole, ports, e2 = run(ctx, tag + '_w', entry, end_pc)
+        assert whole is not None and not e2 and r2['pc'] == end_pc and r2['status'] == 0, (hex(value), e2)
+        assert native_state_equal(whole, nn['state']), (hex(value), 'node tail differs from the native replay')
+        assert events_digest(native_events(ports, True)) == events_digest([tuple(x) for x in nn['ports']]), (hex(value), 'ordered ports differ from the native replay')
+        # split chain at the BLT target, resuming from the actual C++ output
+        s1, mid, p_a, e_a = run(ctx, tag + '_s1', entry, target)
+        s2, last, p_b, e_b = run(ctx, tag + '_s2', mid, end_pc)
+        assert mid is not None and last is not None and not e_a and not e_b and p_a + p_b == ports and same_machine(last, whole) and last.state == whole.state, (hex(value), 'split chain differs from the continuous run')
+        acc['chain_phases'] += 2
+        acc['chains'] += 1
+        acc['paths'][(0x4fce0, target)] += 1
+        rows.append(dict(value_7a=hex(value), d1_word=hex((value + 3) & 0xffff), blt_target=hex(target), end=hex(end_pc), ports=len(native_events(ports, True)),
+                         cpp='equal to the in-process native run (one block x 3 carries, node tail, split chain)', self_delete_path=target == 0x4fcee))
+    assert both == {0x4fcfe, 0x4fcee}, both
+    acc['starts_seen'].add(0x4fce0)
+    # guard: odd A6 (WORD 7a(A6) read at an odd address)
+    odd = entry_state_4fce0(base, 0, a6=ENTRY_A6 + 1)
+    ng = sched.replay_node(sched.G['program'], sched.G['fixed'], snap_of(odd, 0x4fce0), stop_extra=(0x4fcfe, 0x4fcee, 0x2a00))
+    assert ng['status'] == 'guard' and ng['reason']['odd'] is not None, (ng['status'], ng['reason'])
+    rg, og, pg, eg = run(ctx, 'e4fce0_odd', odd, 0xff000)
+    assert og is None and eg == EVEN, eg
+    guard = dict(name='4fce0-odd-A6', native_status=ng['status'], native_reason=dict(odd_access=repr(ng['reason']['odd'])), cpp_error=eg, all_API_outputs_preserved=True)
+    return dict(name='entry-4fce0', group='second-entry', scope='in-process native (fresh Unicorn CPU, observer replay_node); the pinned F2 artifact is unchanged and predates 4fce0', values=rows,
+                value_count=len(rows), blt_taken_4fcfe=sum(1 for r in rows if r['blt_target'] == '0x4fcfe'), blt_not_taken_4fcee=sum(1 for r in rows if r['blt_target'] == '0x4fcee'),
+                signed_tie={'0x24': hex(expected_branch_4fce0(0x24)), '0x25': hex(expected_branch_4fce0(0x25))}, guard=guard,
+                declared_inputs=dict(A6=hex(ENTRY_A6), A0=hex(ENTRY_A0), A7=hex(SPD - 4), long_at_A7=hex(PASS_PC), LONG_104ca4=hex(SPD), LONG_c_A6=hex(ENTRY_PARENT), WORD_7a_A6='per row'))
 
 
 # ----------------------------------------------------------------------------------------------------------------- main
@@ -1201,6 +1308,7 @@ def run_all(report_path):
     report = audit_report(program, source)
     stinfo = audit_static(program)
     cases, cpp_carry, cpp_ranges = cpp_static()
+    # former expectation: cases == the 17 F2 starts; superseded by the FR6 second entry 4fce0 (18 case labels)
     assert cases == sorted(STARTS), sorted(hex(p) for p in set(cases) ^ set(STARTS))
     assert cpp_ranges == sorted(RANGES), cpp_ranges
     assert cpp_carry == sorted(FLOW_BLOCKS), [hex(p) for p in cpp_carry]
@@ -1238,6 +1346,10 @@ def run_all(report_path):
             frows.append(dict(name=row['name'], group=row['group'], result='not run here: an F3b stop-boundary / guard fixture of the stage event node (e9362 child thread, the F3b unit verifies it); native status %s' % row['status'], native_status=row['status']))
     frows.append(fixture_idle_ring_budget(ctx))
     frows.append(fixture_stack_outside(ctx))
+    # ---- the second entry 4fce0 (postdates the pinned native artifact): in-process native comparison
+    eacc = new_probe_acc()
+    entry_row = fixture_entry_4fce0(ctx, eacc)
+    frows.append(entry_row)
     # ---- API-only checks
     negative = negatives(ctx, NAT['fx_base'], stinfo)
     zero = run_parallel(zero_step_one, [(ctx, NAT['fx_base'], pc, carry) for pc in STARTS for carry in (0, 1, 2)])
@@ -1270,6 +1382,17 @@ def run_all(report_path):
     if not NATURAL_CASES and not NO_NATURAL:
         assert len(results) == 142 and sorted(r['case'] for r in results) == sorted(NAT['rows'])
     if not (NATURAL_CASES or NO_NATURAL):
+        # natural seeds + the F2 typed fixtures reach every fall-through leader (the former 17); the ENTRY_ONLY start 4fce0 is not a leader and no natural pass enters it
+        # (it is entered by BRA.W from 4fcc4 only; recorded callbacks 4fcb8 / 4fcc4 in the natural passes: see natural_actual_CPP.recorded_nodes_cb_4fcb8_4fcc4), so it is
+        # covered by the in-process native fixture only.
+        assert starts_seen >= set(LEADERS), sorted(hex(p) for p in set(LEADERS) - starts_seen)
+        assert 0x4fce0 not in starts_seen and totals['recorded_nodes_cb_4fcb8_4fcc4'] == 0, (sorted(hex(p) for p in starts_seen), totals['recorded_nodes_cb_4fcb8_4fcc4'])
+    starts_seen |= set(eacc['starts_seen'])
+    for pc, slots in eacc['probes'].items():
+        slot = probes.setdefault(pc, {0: True, 1: True, 2: True})
+        for k in (0, 1, 2):
+            slot[k] = slot[k] and slots[k]
+    if not (NATURAL_CASES or NO_NATURAL):
         assert starts_seen >= set(STARTS), sorted(hex(p) for p in set(STARTS) - starts_seen)
         observed_preserving = sorted(pc for pc, slots in probes.items() if slots[1] and slots[2])
         assert observed_preserving == sorted(FLOW_BLOCKS), [hex(p) for p in observed_preserving]
@@ -1286,7 +1409,9 @@ def run_all(report_path):
                            node_visits=report['totals']['node_visits'], fixtures=len(report['fixtures']), blobs=len(blob_names)),
         native_blobs_hash_checked=len(blob_names), native_blobs_read_for_comparison=len(VERIFIED_BLOBS),
         block_start_count=len(STARTS), block_starts=[hex(p) for p in STARTS], bundled_branches=[hex(p) for p in stinfo['bundled']], carry_preserving_blocks=[hex(p) for p in stinfo['flow']],
-        interior_PC_count=len(stinfo['interior']), odd_PC_count=len(stinfo['odd']), cpp_case_labels_equal_17_starts=True, cpp_routing_ranges=[[hex(a), hex(b)] for a, b in cpp_ranges],
+        interior_PC_count=len(stinfo['interior']), odd_PC_count=len(stinfo['odd']), cpp_case_labels_equal_starts=True, former_expectation='17 block starts (F2 verification, cpp_case_labels_equal_17_starts)', superseded_by='FR6 / scheduler second entry 4fce0 (18 starts)',
+        entry_only_starts=[hex(p) for p in ENTRY_ONLY], fall_through_leader_count=len(LEADERS), entry_tails={hex(k): dict(owner=hex(v['owner']), tail=[hex(x) for x in v['tail']], mnemonics=v['tail_mnemonics']) for k, v in stinfo['entry_tails'].items()},
+        entry_4fce0_in_process_native=entry_row, cpp_routing_ranges=[[hex(a), hex(b)] for a, b in cpp_ranges],
         native_counts_scope='historical_original_observation',
         effective_native_counts=dict(passes=sum(r['native_passes'] for r in results), complete_passes=sum(r['native_frames_complete'] for r in results), pvc_replacement_cases=[58, 59]),
         natural_actual_CPP=dict(sorted(totals.items())), natural_seeds=seed_rows,

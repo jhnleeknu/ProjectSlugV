@@ -44,6 +44,28 @@ GitHub 이전 이후 공유 소스·규격·분석·리뷰 기록의 기준은 G
 
 과거 근거 보존본의 실제 위치와 SHA는 `docs/reviews/0260-cleanup-github-migration.md`에 있다. 보존본은 GitHub에 올라가지 않으므로 해당 worktree나 디스크를 지우기 전에 압축 파일과 companion manifest를 함께 별도 저장소로 옮기고 해시를 대조한다. 일상적인 코딩에는 과거 근거 전체가 매번 필요하지 않지만, 과거 인수 판단을 감사하려면 보존본 또는 원래 공유 입력이 필요하다.
 
+## 다른 컴퓨터로 이어 작업하기(데이터 아카이브)
+
+GitHub 클론에는 ROM과 검증기가 읽는 `artifacts/` 관측이 없어 검증기를 돌릴 수 없다. 이 둘을 최소 크기로 묶은 아카이브를 별도로 옮긴다.
+
+- 위치(작업 컴퓨터): `/Users/start/Workspce/ms5-transfer/`. 기준 커밋 `4ee4b9c`(브랜치 `claude/frontier-units-4`). 파일:
+  - `ms5-data-4ee4b9c.tar.zst`(377,518,819 바이트, SHA-256 `319758f8…`)
+  - `MANIFEST.json`, `MANIFEST.files.tsv.zst`(파일별 크기·SHA-256), `AUDIT_reads_per_verifier.json`(검증기별 실제 읽은 데이터)
+  - `RESTORE.md`, `requirements.txt`, `restore_data.py`, `verify_archive.py`
+- 복사: 폴더 전체(약 390 MB)를 USB·scp/rsync·AirDrop 등으로 옮긴다.
+- 내용: `mslug5.zip`(원본 ROM)과 현재 검증기가 읽는 `artifacts/` 파일 1,967,083개(해제 64 GB, 고유 내용 13 GB, 나머지는 하드링크). ROM에서 결정적으로 재생성되는 `extracted/`, `build/`, `.venv`, 읽히지 않는 옛 근거는 넣지 않았다.
+- **아카이브는 ROM을 포함하므로 Git에 커밋하지 않고 GitHub·공개 클라우드·공유 링크에 올리지 않는다.**
+- 복원 순서(명령 전체와 확인 방법은 아카이브 폴더의 `RESTORE.md`):
+  1. `git clone https://github.com/jhnleeknu/ProjectSlugV.git` 후 `git switch --track origin/claude/frontier-units-4`(병합됐다면 `main`).
+  2. 저장소 루트에 추출: `zstd -dc --long=31 ms5-data-4ee4b9c.tar.zst | tar -xf - -C <루트>`. 하드링크 한도가 있는 파일 시스템이면 `restore_data.py --root <루트>`를 쓴다. `verify_archive.py tree`로 전체를 대조한다.
+  3. `python3.14 -m venv .venv` 후 `.venv/bin/pip install -r requirements.txt`(capstone 5.0.6, unicorn 2.1.4).
+  4. `extracted/`를 ROM에서 재생성: `tools/assemble_regions.py`, `tools/extract_program.py`, `tools/pack_physical_program.py`(선택 `tools/extract_media.py`). 결과 SHA는 `verify_archive.py regen`으로 대조한다.
+  5. ROM 확인: `mslug5.zip` SHA-256 `2bae48b9…`, 복호화 프로그램 `extracted/program/maincpu.decrypted.be.bin` SHA-256 `29112a94…`. 그 뒤 `verify_archive.py rom-mtime`으로 두 파일의 역사적 `mtime_ns`를 되돌린다(`scheduler_rng_f4` 검증기가 네이티브 관측의 mtime 핀을 `assert`한다).
+  6. `make -j3 all test`.
+  7. 검증기는 `MS5_SEED_DIR=artifacts/stage_entry_body`(역사적 macOS seed)로 실행한다.
+- 검증(작업 컴퓨터): 새 clone에 복원해 파일 1,967,083개 대조 0 bad, 재생성 SHA 일치, `make -j3 all test` 종료 코드 0, 검증기 76개 작업 중 66개 통과·10개(장시간) 300초 부분 실행 무오류. 상세는 `RESTORE.md`의 검증 기록에 있다.
+- 아카이브는 기준 커밋의 도구가 읽는 입력만 담는다. 새 도구·검증기가 새 입력을 요구하면 아카이브를 다시 만들고 이 절의 커밋과 SHA를 고친다.
+
 ## 작업 종료·인수인계·충돌 처리
 
 1. 변경 범위에 맞는 빌드·재생성·원본 비교·회귀 검증을 실행한다. 실패·미확인은 해결하거나 명시한다. 메인 리뷰에서 발견한 문제를 수정하고 필요한 검증을 다시 수행한다.
