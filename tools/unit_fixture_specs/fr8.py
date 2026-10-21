@@ -757,7 +757,7 @@ def hint_worlds(entry, world=None):
     if entry in (0xcdc2c, 0xcdc4e, 0xcdcce):
         h += word(0x8a, (0, 0xffff, 0x163))
     if entry in (0xcdd10, 0xcdd16):
-        h += [dict(regs=dict(d0=0x12345678, a0=a)) for a in (0xcdf56, 0xcdf7e)]
+        h += [dict(regs=dict(d0=0x12345678, a0=a)) for a in (0xcdf56, 0xcdf7e, 0xcdf3a, 0xcdf3e)]  # cdf3a/cdf3e: inside the synthetic cdf3a table, WORD (A0) != WORD 2(A0) (mutant cdd10-2; Qwen draft, main checked)
     # ---- d3500 / d3554 / d3802 / d383c
     if entry == 0xd3500:
         h += [dict(regs=dict(up), grec=[(0, 1, a), (1, 1, b), (2, 2, c)]) for a, b, c in ((0, 1, 8), (1, 0xff, 0), (0x80, 0, 0xffff))]
