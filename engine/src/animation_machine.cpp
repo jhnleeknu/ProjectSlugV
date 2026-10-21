@@ -1179,6 +1179,9 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // 497a6) and d3814 d3a4c (BCC, 28ae). d3822 / d3a5a (ORI.B #1,CCR) set their C in their own block without a reader; no FR8 RTS passes a C;
     // every other FR8 block stays Unknown.
     case 0x38fb4:case 0xae936:case 0xaea22:case 0xcdd0c:case 0xd3814:case 0xd3a4c:
+    // Objects FR9 blocks: the 5 consumers afd90 aff3c b0048 (BCC, C returned by 49fc6), afe6a (BCC, b0468) and b0556 (MOVEM.W (A7)+,D0-D6; BCC, 2986).
+    // b0578 (ORI.B #1,CCR) sets its C in its own block; the RTS b057c passes no C to a reader; every other FR9 block stays Unknown.
+    case 0xafd90:case 0xaff3c:case 0xb0048:case 0xafe6a:case 0xb0556:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1775,6 +1778,9 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xcdc24 && next.pc<0xcdd2e) || (next.pc>=0xd3500 && next.pc<0xd354c) || (next.pc>=0xd354e && next.pc<0xd3580) ||
                 (next.pc>=0xd3802 && next.pc<0xd38e2) || (next.pc>=0xd39f6 && next.pc<0xd39fe) ||
                 (next.pc>=0xd3a2e && next.pc<0xd3a70))ok=animation_objects_fr8_block(c);
+            else if ((next.pc>=0xaf8cc && next.pc<0xaf92c) || (next.pc>=0xaf990 && next.pc<0xafb3c) || (next.pc>=0xafb3e && next.pc<0xafc16) ||
+                (next.pc>=0xafcf2 && next.pc<0xafed8) || (next.pc>=0xaff00 && next.pc<0xb005e) ||
+                (next.pc>=0xb051a && next.pc<0xb057e))ok=animation_objects_fr9_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
