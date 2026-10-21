@@ -555,8 +555,8 @@ void errors(){
  {Bytes ram(65536,0);direct_buffer(ram);put(ram,0x10f001,1,0x80);State s=base_state(0x4aa88,U-1,2);reject(ram,s,0x480d2,"even WORD/LONG");}
  // Ring cursor in fixed ROM (readable through the physical row): the LSR.W store is not a supported write device.
  {Bytes ram(65536,0);direct_buffer(ram);put(ram,0x10dc88,4,TABLE);reject(ram,base_state(0x4aa88,U,2),0x480d2,"unsupported animation machine write device");}
- // Unreached stop: the run leaves through the return LONG into an unrouted PC.
- {Bytes ram(65536,0);direct_cue(ram);put(ram,U,4,0x4abc0);reject(ram,base_state(0xe8a48,U,2),0x480ea,"unsupported animation machine PC");}
+ // Unreached stop: the run leaves through the return LONG into an unrouted PC (work RAM 10fea0; the former ROM probe 4abc0 is objects FR7 since FR7).
+ {Bytes ram(65536,0);direct_cue(ram);put(ram,U,4,0x10fea0);reject(ram,base_state(0xe8a48,U,2),0x480ea,"unsupported animation machine PC");}
 }
 
 // Block starts (60) and the rejected interior PCs of the four routed ranges (the 24 bundled branch PCs included).
