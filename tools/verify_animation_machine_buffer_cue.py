@@ -72,7 +72,13 @@ EXTERNAL_QUEUE_EMPTY = 'animation machine external read queue empty'
 # e5bfb73 (0264-legacy): e8a1c (F1a stage_entry range e8a1c..e8a3a) and 4b82e (N03 4b82e..4b8a2) now run on into blocks routed by the ten-unit batch and end with a
 # BYTE read of a non-physical address, which takes the F5 external-read queue path (empty in this harness): the checked error is 'external read queue empty'. Former
 # expectation UNSUPPORTED_MACHINE; the superseding unit of the continuation is not traced [U]. This is not evidence of device behaviour.
-SUPERSEDED_OUTSIDE = {0x4b830: 'unsupported animation objects n03 PC', 0xe8a1c: EXTERNAL_QUEUE_EMPTY, 0x4b82e: EXTERNAL_QUEUE_EMPTY}
+# FR7: 4abc0 (the PC after the U7 range 4aa88..4abc0) and 4abc2 are objects FR7 since FR7 (contract animation-machine-frontier-fr7-contract.md decision 5).
+# Former expectation UNSUPPORTED_MACHINE for both.  4abc0 is an FR7 block start: with this base A0 = 0, so it runs 4ad6a RTS to the base return LONG and
+# the routed continuation ends with the same external-read queue error as e8a1c / 4b82e (the continuation unit is not traced [U]); 4abc2 is an FR7
+# interior PC ('unsupported animation objects fr7 PC').  Only the superseding outcome is accepted; the unrouted controls are the work-RAM PCs below.
+SUPERSEDED_OUTSIDE = {0x4b830: 'unsupported animation objects n03 PC', 0xe8a1c: EXTERNAL_QUEUE_EMPTY, 0x4b82e: EXTERNAL_QUEUE_EMPTY,
+                      0x4abc0: EXTERNAL_QUEUE_EMPTY, 0x4abc2: 'unsupported animation objects fr7 PC'}
+SUPERSEDED_CLASS = {0x4b830: 'superseded_by_F4_N03', 0x4abc0: 'superseded_by_FR7_start_then_routed_continuation_unit_not_traced', 0x4abc2: 'superseded_by_FR7_interior'}
 DEBUG_ROWS = int(os.environ.get('BUFCUE_DEBUG_ROWS', '0'))     # development switch only: the reported run is always the full set
 
 
@@ -837,7 +843,7 @@ def negatives(exe, base, st, resources, entry_buffer, entry_cue, wrapper_fail, w
             outside_mismatches.append((hex(pc), error.args))
             continue
         if pc in SUPERSEDED_OUTSIDE:
-            out[-1].update(former_expected_API_error=UNSUPPORTED_MACHINE, classification='superseded_by_F4_N03' if pc == 0x4b830 else 'superseded_by_routed_continuation_unit_not_traced', API_only_control=True)
+            out[-1].update(former_expected_API_error=UNSUPPORTED_MACHINE, classification=SUPERSEDED_CLASS.get(pc, 'superseded_by_routed_continuation_unit_not_traced'), API_only_control=True)
     assert not outside_mismatches, outside_mismatches
     # Unrouted controls that no F4 unit can route: even work-RAM PCs.
     for pc in (0x10fe00, 0x10fefe):

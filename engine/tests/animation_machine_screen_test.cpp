@@ -66,7 +66,7 @@ void errors(){Bytes ram(65536,0);put(ram,SP,4,STOP);ms5::AnimationMachineState s
  s=state(0x47fd0);s.a[6]=0xffffe;reject(ram,s,STOP,"unsupported animation machine write device");
  s=state(0x47fdc);s.a[6]=0x102001;reject(ram,s,STOP,"even WORD/LONG");
  s=state(0x47fe0);reject(ram,s,STOP,"unsupported animation machine PC"); // BNE needs unrepresented incoming Z.
- s=state(0x4abc0);reject(ram,s,STOP,"unsupported animation machine PC"); // 4abc0 follows the U7 4aa88 range (no executor).
+ s=state(0x10fea2);reject(ram,s,STOP,"unsupported animation machine PC"); // work RAM probe (the former 4abc0, after the U7 4aa88 range, is objects FR7).
 }
 }
 int main(){preserving();reset();clear_screen();live_a4();upper();errors();std::cout<<"animation_machine_screen_test PASS "<<calls<<" API invocations\n";}
