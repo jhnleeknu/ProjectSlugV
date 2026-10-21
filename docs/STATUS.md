@@ -2464,3 +2464,15 @@
   - 남은 D 실행 PC는 262에서 124가 됐다(모두 C 뒤).
   - 계약: `animation-machine-frontier-fr7-contract.md`.
 - 다음: FR8~FR9(남은 C 뒤 D 124 PC, `42d9c`·`af990` 계열 계산 점프 포함), 그 뒤 C(플레이어 `4e68e`·`1d1f4`).
+
+## 2026-10-22 — FR8(C 뒤 영역 D, 229 block)
+
+- [F] FR8(229 block): 객체 `42d9c`/`42e68`(9항목 계산 점프 표 `42f9a`), `aea38`/상태 기계 `ae930`, `38e92`, `d3500`, `cdc24`, FR4 표 항목 `cc7b4`.
+  - 계산 점프가 다른 block의 중간에 착지하면 checked PC error로 끝난다(FR4 결정 2와 같은 규칙).
+  - 실제 ROM 7,500건 불일치 0. 처음 3건은 harness 분류 누락이었고 harness를 고쳤다.
+  - 변이: 274개 중 269개 검출. 5개는 동등이고 메인이 코드로 확인했다. 빈틈 `cdd10-2`는 Qwen hint 초안으로 메웠다.
+  - V1 fr8 1,933/1,933(두 번 실행 결과 같음). 회귀 spec 31개 통과. legacy 검증기 10개 통과.
+  - frame 비교 변화 없음. IO 165,714 불일치 0(C 뒤 코드라 일치 수는 그대로).
+  - 남은 D 실행 PC는 124에서 51이 됐다(모두 C 뒤).
+  - 계약: `animation-machine-frontier-fr8-contract.md`.
+- 다음: FR9(`af990` 계열, 남은 51 PC).

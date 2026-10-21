@@ -253,3 +253,22 @@ FR9 block 목록(`starts_fr9.txt`):
 - **`afcf2..afed8`(47)**: `afcf2 afcfc afd00 afd16 afd1c afd2a afd38 afd42 afd48 afd5a afd68 afd76 afd7c afd8a afd90 afd94 afda2 afda6 afdbc afdc2 afdd2 afdd8 afdde afdf0 afdfe afe0a afe20 afe30 afe40 afe4e afe54 afe66 afe6a afe6e afe74 afe7a afe80 afe84 afe8e afe94 afe98 afea2 afea6 afebc afec4 afece afed4`
 - **`aff00..b005e`(38)**: `aff00 aff0a aff0e aff24 aff2a aff30 aff36 aff3c aff40 aff4e aff52 aff56 aff5c aff6a aff78 aff82 aff86 aff8a aff90 aff9a affa0 affb2 affc0 affc6 affdc affe0 afff6 afffc b000a b0014 b001a b0024 b0032 b003c b0042 b0048 b004c b005a`
 - **`b051a..b057e`(6)**: `b051a b0524 b0556 b055e b0578 b057c`
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j3 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. FR8 시험 `942 fixtures (726 single-block, 156 path, 30 producer chain, 12 declared C, 18 checked error (6 with a later failing PC), 44 kept C), 229 blocks, 4927 calls, 233983 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 274, 첫 실행 killed 268, hint 후 killed 269, equivalent 5(Qwen 판정을 메인이 코드로 확인).
+  - `split16-long`: 크기 변경은 상위 bit만 바꾸고 결과는 이후 `&0xf`로 masking된다.
+  - `43008-lsl-long`, `43008-lsl-byte`, `43008-asr`: 표 index 계산에서 low WORD만 사용되고 `D0`는 block 종료 전에 덮어써진다.
+  - `d3570-word`: 해당 연산은 모든 입력에서 WORD 결과와 flag가 같다.
+  - fixed gap:
+    - `cdd10-2`(`MOVE.W (A0)` 대 `MOVE.W 2(A0)`): synthetic `cdf3a..cdf56` window 안의 hint `A0 = cdf3a/cdf3e`를 `tools/unit_fixture_specs/fr8.py`에 추가해 두 WORD가 다른 입력을 제공했고 killed.
+- [F] real-ROM: batches `s1`, `s2`, `s3`, `f4`, `f5` 각 1500 cases, mismatches `0,0,0,0,0`; covered starts `229`, `228`, `229`, `229`, `229`(합집합 229/229). 계산 점프 `42f9a`가 다른 block의 non-start PC에 착지하는 경우는 checked PC error로 분류된다(FR4 결정 2, FR1 결정 3; `s3` 8건).
+  - harness 수정: 분류 조건을 `objects` 계열에서 모든 `unsupported animation ... PC`로 넓혔고, 계산 점프 PC 검사를 마지막 40 PC가 아닌 전체 native trace 기준으로 바꿨다(이전 `s2` 1건, `s3` 2건은 이 분류 누락).
+- [F] V1: FR8 fixtures 1933, failed 0, runs 2, identical true(digest `0415c8b66aa498e9`); regression specs 31, 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` verdict는 FR7과 같다(execution-equal 4689, checked-boundary 54, native-step-limit 8, invalid-declared-flag-precondition 1).
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, 0; `irq` 54400/54400, 0; `demo` 45684/45684, 0.
+- [F] IO: matched_total 165714, baseline 165714, delta 0, mismatches 0, cpp_errors 0, runs 2, identical true; per_config `P0` 81600, `P1` 75304, `P1b` 7424, `boot-demo-0` 381, `boot-title-idle` 600, `boot-title-start` 122, `fx-*` 283; frontier `4e68e` `C` 15, `1d1f4` `C` 1. FR8 코드는 첫 `C` stop 이후에만 실행되므로 IO matched frames는 변하지 않는다.
+- [F] area-D remaining PCs: before 124, after 51, 모두 `C`-gated.
+- 검증 방법: deterministic runner `ms5-scratch/tools/verify_unit.py`(LLM 없음). 전체 실행은 `aabf96e`와 같은 내용의 작업 tree에서, hint 추가 후 make·ubsan·real-ROM·V1을 다시 실행했다. mutant 분석과 이 기록 초안에 local Qwen을 사용했고 메인이 검토·수정했다.
