@@ -2476,3 +2476,15 @@
   - 남은 D 실행 PC는 124에서 51이 됐다(모두 C 뒤).
   - 계약: `animation-machine-frontier-fr8-contract.md`.
 - 다음: FR9(`af990` 계열, 남은 51 PC).
+
+## 2026-10-22 — FR9(C 뒤 영역 D 마지막, 220 block): 영역 D routing 완료
+
+- [F] FR9(220 block): 피격 반응 `af990` 계열. 설치 값 `af8cc`·`af990`·`afbbe`와 반응 `afcf2`·`afe98`·`aff00`(무기 `aff52`/`aff86`, 착지 `b001a`), 공통 `b051a`. 계산 점프 7개의 표는 원본에서 옮겨 적었다.
+  - 실제 ROM 7,500건 불일치 0(시작 PC 합집합 220/220).
+  - 변이: 252개 모두 검출.
+  - V1 fr9 1,415/1,415(두 번 실행 결과 같음). 회귀 spec 32개 통과. legacy 검증기 10개 통과.
+  - frame 비교 변화 없음. IO 165,714 불일치 0.
+  - 남은 D 실행 PC는 51에서 0이 됐다.
+  - 계약: `animation-machine-frontier-fr9-contract.md`.
+- 영역 D: IO 관찰 집합에서 실행된 D 경로는 모두 routing됐다(FR3~FR9, 첫 정지 D 0, 불일치 0). [U] FR7~FR9 경로의 IO 확인은 C·E 연결 뒤에 한다.
+- 다음: C(플레이어 `4e68e` 15회, `1d1f4` 1회), 그 뒤 보류한 FR4b/FR4c.

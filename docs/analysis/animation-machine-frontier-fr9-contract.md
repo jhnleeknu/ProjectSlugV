@@ -190,3 +190,18 @@ FR2..FR8 계약의 같은 절을 그대로 따른다. 다른 점만 적는다.
 - **`afcf2..afed8`(47)**: `afcf2 afcfc afd00 afd16 afd1c afd2a afd38 afd42 afd48 afd5a afd68 afd76 afd7c afd8a afd90 afd94 afda2 afda6 afdbc afdc2 afdd2 afdd8 afdde afdf0 afdfe afe0a afe20 afe30 afe40 afe4e afe54 afe66 afe6a afe6e afe74 afe7a afe80 afe84 afe8e afe94 afe98 afea2 afea6 afebc afec4 afece afed4`
 - **`aff00..b005e`(38)**: `aff00 aff0a aff0e aff24 aff2a aff30 aff36 aff3c aff40 aff4e aff52 aff56 aff5c aff6a aff78 aff82 aff86 aff8a aff90 aff9a affa0 affb2 affc0 affc6 affdc affe0 afff6 afffc b000a b0014 b001a b0024 b0032 b003c b0042 b0048 b004c b005a`
 - **`b051a..b057e`(6)**: `b051a b0524 b0556 b055e b0578 b057c`
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j3 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. FR9 시험 `animation machine objects fr9: 683 fixtures (547 single-block, 106 path, 0 producer chain, 10 declared C, 20 checked error (9 with a later failing PC), 11 kept C), 220 blocks, 4079 calls, 19910 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 252, killed 252, equivalent 0, surviving 0.
+- [F] real-ROM: batches `s1`, `s2`, `s3`, `f4`, `f5` 종료 0, mismatches `0,0,0,0,0`; covered starts `219`, `218`, `220`, `220`, `220`(합집합 220/220).
+  - `computed table jump lands on a non-start PC -> checked PC error (FR4 decision 2)`: `s1` 14, `s2` 12, `s3` 14, `f4` 12, `f5` 9.
+  - `2986 cue-wrapper failure path needs the caller X (documented difference)`: `s1` 284, `s2` 290, `s3` 280, `f4` 105, `f5` 105.
+- [F] V1: FR9 fixtures 1415, failed 0, runs 2, identical true(digest `5261803f11c636d7`); regression specs 32, 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` verdict는 FR8과 같다(execution-equal 4689, checked-boundary 54, native-step-limit 8, invalid-declared-flag-precondition 1).
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, 0; `irq` 54400/54400, 0; `demo` 45684/45684, 0.
+- [F] IO: matched_total 165714, baseline 165714, delta 0, mismatches 0, cpp_errors 0, runs 2, identical true; per_config `P0` 81600, `P1` 75304, `P1b` 7424, `boot-demo-0` 381, `boot-title-idle` 600, `boot-title-start` 122, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273; frontier `1d1f4` `C` 1, `4e68e` `C` 15. FR9 코드는 첫 `C` stop 이후에만 실행되므로 IO matched frames는 변하지 않는다.
+- [F] area-D remaining PCs: before 51, after 0. IO 관찰 집합에서 실행된 영역 D PC는 모두 routing된다(첫 정지 D 0, 불일치 0). FR7~FR9 경로의 IO 확인은 C·E 연결 뒤에 한다.
+- 검증 방법: deterministic runner(LLM 없음)로 검증했다. mutant 분석과 이 기록 초안에 local Qwen을 사용했고 메인이 검토·수정했다.
