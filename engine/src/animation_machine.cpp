@@ -1175,6 +1175,10 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // BCS, 49fc6) and cde9c (BCS, 497a6). 4c1b6 (ANDI; RTS) / 4c1d6 (ORI; RTS) set their C in their own block without a reader; no FR7 RTS passes a
     // C; every other FR7 block stays Unknown.
     case 0x3ae78:case 0x4c128:case 0x4c182:case 0xcdd3c:case 0xcde9c:case 0xcdede:case 0xd3080:case 0xd308e:
+    // Objects FR8 blocks: the 6 consumers 38fb4 (MOVEM.L (A7)+,D0; BCS, C returned by 3a4da), ae936 (BCC, 4b54e), aea22 (BCC, 1ab02), cdd0c (BCS,
+    // 497a6) and d3814 d3a4c (BCC, 28ae). d3822 / d3a5a (ORI.B #1,CCR) set their C in their own block without a reader; no FR8 RTS passes a C;
+    // every other FR8 block stays Unknown.
+    case 0x38fb4:case 0xae936:case 0xaea22:case 0xcdd0c:case 0xd3814:case 0xd3a4c:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1766,6 +1770,11 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xcc958 && next.pc<0xcca44) || (next.pc>=0xcdd2e && next.pc<0xcdd86) || (next.pc>=0xcde42 && next.pc<0xcde6e) ||
                 (next.pc>=0xcde96 && next.pc<0xcdeea) || (next.pc>=0xd2776 && next.pc<0xd27a6) || (next.pc>=0xd2f90 && next.pc<0xd309a) ||
                 (next.pc>=0xe8b7e && next.pc<0xe8c0e))ok=animation_objects_fr7_block(c);
+            else if ((next.pc>=0x38e92 && next.pc<0x38f0c) || (next.pc>=0x38f14 && next.pc<0x38ff4) || (next.pc>=0x42d9c && next.pc<0x4309a) ||
+                (next.pc>=0x430ba && next.pc<0x430e6) || (next.pc>=0xae930 && next.pc<0xaeb4c) || (next.pc>=0xcc7b4 && next.pc<0xcc7b8) ||
+                (next.pc>=0xcdc24 && next.pc<0xcdd2e) || (next.pc>=0xd3500 && next.pc<0xd354c) || (next.pc>=0xd354e && next.pc<0xd3580) ||
+                (next.pc>=0xd3802 && next.pc<0xd38e2) || (next.pc>=0xd39f6 && next.pc<0xd39fe) ||
+                (next.pc>=0xd3a2e && next.pc<0xd3a70))ok=animation_objects_fr8_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
