@@ -407,6 +407,29 @@ void bios_segments(){
  {Seg x=segment(frame_ram(0xe74,""),0xc364,0x2ac2,0x2ac2,ms5::AnimationFrameController,card);
   assert(x.ok&&x.waits.size()==1&&x.s.pc==0x2ac2&&x.s.a[7]==0x10f004&&x.s.a[6]==CONTROLLER);++checks;}
 }
+// The external-read queue belongs to H only (E1 contract decision 2): C and N see an empty queue; the entries left by H stay queued.
+// 2634 (E1, MOVE.B 300000.l,D0; ANDI.B #70; BNE 2648) reads the input BYTE; value 70 goes straight to 2648.
+void held_queue(){
+ std::vector<ms5::AnimationMachineExternalRead> one;one.push_back(ext(0x300000,1,0x70));
+ const ms5::AnimationFrameSegment segs[3]={ms5::AnimationFrameHead,ms5::AnimationFrameNodes,ms5::AnimationFrameController};
+ for(unsigned int i=0;i<3;++i){
+  Bytes ram=frame_ram(0xe74,"");State s;s.pc=0x2634;s.a[5]=0x108000;s.a[6]=CONTROLLER;s.a[7]=0x10f000;Device d=device_with(one);
+  const ms5::ProgramBusState bus=bus_of();std::vector<ms5::FixedDataResource> w;ms5::AnimationFrameOptions o;
+  Ports ports;std::vector<ms5::AnimationFrameWait> waits;std::uint32_t reads=0;std::string error;
+  const bool ok=ms5::run_animation_frame_segment(ram,w,bus,s,d,0,o,0x2648,segs[i],ports,waits,reads,error);
+  if(i==0)assert(ok&&s.pc==0x2648&&(s.d[0]&255U)==0x70&&reads==1&&d.reads.empty());
+  else assert(!ok&&error=="animation machine external read queue empty"&&reads==0&&same_reads(d,device_with(one)));
+  ++checks;}
+ // Frame, controller LONG 2634: H consumes its seven declared reads; the eighth entry is not served to C (checked, everything preserved).
+ // Skip mode never enters 2634 and leaves the entry queued.
+ {std::vector<ms5::AnimationMachineExternalRead> q=frame_reads();q.push_back(ext(0x300000,1,0x70));const Device d=device_with(q);
+  const Bytes ram=frame_ram(0xe74,"1008e4:00002634");
+  reject(ms5::step_animation_machine_frame,ram,head_state(ram),d,"animation machine external read queue empty",false,true);
+  const Run k=drive(true,ram,head_state(ram),d);assert(k.r.controller_pc==0x2634&&k.d.reads.size()==1&&k.d.reads[0].address==0x300000);++checks;}
+ // Pass, node callback 2634 (static node 2): N is not served the queued entry either.
+ {const Bytes ram=frame_ram(0xe74,"1009a8:00002634");
+  reject(ms5::run_animation_machine_pass,ram,pass_state(),device_with(one),"animation machine external read queue empty");}
+}
 // ---- IRQ execution (F6-D, options.irq_execution; scope decisions E1-E4, E7, E10)
 // Declared vectors (only vector 64 = 20c is used) and the P2-style IRQ prep of the frame fixture: 10fd80 bit 7 (game mode), raster
 // callback 3dcc, empty task queue, 10001b bit 7 = 0 (the IRQ runs the service, credit and sound/Z80 parts, not the render part).
@@ -508,7 +531,7 @@ void irq_execution(){
  {Bytes ram=bc_ram();apply(ram,IRQ_PREP);irq_rejected(false,ram,pass_state(),device_with(frame_reads()),irq_options(),"animation irq wait not released");}
 }
 int main(){
- pass_and_frames();card();errors();controller_execute();bios_segments();irq_execution();
+ pass_and_frames();card();errors();controller_execute();bios_segments();held_queue();irq_execution();
  std::cout<<"animation machine frame: "<<checks<<" checks\n";
  return 0;
 }
