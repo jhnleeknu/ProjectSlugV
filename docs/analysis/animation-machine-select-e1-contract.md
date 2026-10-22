@@ -216,3 +216,22 @@ player C1·FR2..FR9 계약의 같은 절을 따른다. 다른 점만 적는다.
 - **`deba4..dedb4`(46)**: `deba4 debce debde debee dec10 dec16 dec1e dec26 dec2c dec30 dec38 dec46 dec56 dec5c dec66 dec6c dec6e dec76 dec78 dec8c dec9c deca4 decac decb2 decbc decc4 deccc decd2 decda decee decfe ded00 ded06 ded0e ded1e ded28 ded50 ded72 ded88 ded94 ded98 ded9c ded9e deda4 dedae dedb4`
 - **`dedb6..defda`(41)**: `dedb6 dedc8 dedd6 dedf4 dee22 dee28 dee2e dee34 dee36 dee48 dee5e dee70 dee86 dee8a dee92 deea8 deeac deeb4 deeca deece deed6 deeec deef0 def20 def2a def32 def40 def4a def50 def56 def58 def80 def8c def92 def98 defa0 defba defc0 defce defd4 defda`
 - **`defdc..df2ce`(67)**: `defdc defee df00e df01c df02a df038 df052 df06c df076 df07e df086 df08c df096 df09e df0a6 df0ac df0b0 df0be df0d2 df0ea df0f0 df0f2 df0fc df116 df11e df122 df126 df128 df132 df14c df154 df158 df15c df15e df16e df176 df17e df18c df192 df19c df1a4 df1ac df1ba df1c0 df1cc df1d6 df1de df1f6 df1fa df202 df21a df224 df22a df22e df230 df248 df254 df25c df264 df26c df270 df272 df292 df2aa df2be df2c0 df2ce`
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j4 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. E1 시험 `animation machine select se1: 813 fixtures (691 single-block, 96 path, 11 with the 2634 queue BYTE, 26 checked error (6 with a later failing PC)), 222 blocks, 4924 calls, 36210 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 297, killed 295, equivalent 2, surviving 0.
+  - `1838a-cmp`: 같은 값일 때 새 D7.W가 0이라 `ADD.W D7,D2`가 아무것도 더하지 않는다.
+  - `deaba-d2-word`: 뒤따르는 `MOVE.L (A0,D2.W),D2`가 D2 전체를 덮어쓴다.
+  - 이 실행 전에 메운 시험 빈틈 7개: clip 비교의 같은 값 5개, 음수 index `fffc`의 `script-noext`, D1 = `1ffff`의 `df096-long`.
+- [F] real-ROM: batches `f4`, `f5`, `s1`, `s2`, `s3` 종료 0, mismatches `0,0,0,0,0`; covered `222`, `222`, `221`, `222`, `222`(합집합 222/222). 무작위 세계가 Z 판독 block `de938`에 계약이 거부하는 출처로 바로 들어가면 checked flag-source 오류다(계약 결정 3): `f4` 1건, 나머지 0. 이 분류는 harness에 나중에 더했다.
+- [F] V1: E1 fixtures 2102, failed 0, runs 2, identical true(digest `36d4e5633ab7e52b`); regression specs 34개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` verdict는 C1과 같다(execution-equal 4689, checked-boundary 54, native-step-limit 8, invalid-declared-flag-precondition 1).
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, mismatches 0; `irq` 54400/54400, mismatches 0; `demo` 45684/45684, mismatches 0.
+- [F] IO: matched_total 166744, baseline 165759, delta 985, mismatches 0, cpp_errors 0; per_config `P0` 81600, `P1` 76128, `P1b` 7560, `boot-demo-0` 381, `boot-title-idle` 600, `boot-title-start` 192, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273. 수락 항목은 chain 무분리, 전체 실행, guard가 frontier와 일치하거나 뒤처짐, 음성 항목 통과, 다른 첫 실패 없음, 예상 밖 C++ 오류 없음, verifier 오류 없음, mismatch 0이 모두 true이고, frontier 확인만 false다.
+  - frontier 확인이 false인 이유는 15 runs(P1 68-71 94 95 100 101 106 107 110 111, P1b 68 94, boot-title-start)가 C1 block 4e8e0의 직선 연속인 4e8e6에서 멈추고, 그 정지가 관측의 TB 안에 숨어 검증기가 확인할 수 없기 때문이며, C4가 routing한다.
+  - 첫 IO 실행에서 `fx-c-input-read`와 `fx-n-input-read`가 guard-bad였다(C++가 segment C/N에서 queue의 guarded 300000 read를 소비했다). frame driver를 바꿔 C/N segment에 선언된 외부 읽기를 주지 않도록 고쳤고, 이후 두 항목은 guard-ok이고 나머지 실행은 동일하다.
+  - 계획 예측 169144에 못 미친 이유는 계획이 다음 정지를 C2/C3로 가정했지만 실제 정지 4e8e6이 TB 안에 숨어 있었기 때문이다.
+- [F] 남은 실행 PC: C 757(변화 없음), E 218 → 12(12개는 C6 helper b0c e6496). 일치 frame 165,759 → 166,744(실측 166,744).
+- 검증 방법: deterministic runner(LLM 없음). 회귀 spec과 legacy 검증기는 frame driver 수정 전 실행이다(수정은 frame driver만 바꾸고 block 실행부는 그대로다). make·ubsan·real-ROM·V1·frames는 수정 뒤 다시 실행했고, IO는 수정 뒤 전체 실행(`--workers 2`) 값이다. 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
