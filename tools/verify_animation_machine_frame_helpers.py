@@ -41,6 +41,10 @@ SUPERSEDED_RUNS = {'natural_480bc_with_stop_ff000': EXTERNAL_QUEUE_EMPTY, 'natur
 # outside probes whose run now ends in the external-read queue error (former UNSUPPORTED_MACHINE). 47672 is the sound-unit entry 'JSR ca70' (animation_machine_sound.cpp,
 # hud.cpp); the continuation behind it was extended by the ten-unit batch (F5 external-read queue, E7 Z80 reply device 320000 in animation_machine.cpp) [U: exact superseding unit not traced].
 SUPERSEDED_OUTSIDE = {0x47672: EXTERNAL_QUEUE_EMPTY, 0x2efdc: EXTERNAL_QUEUE_EMPTY, 0x493bc: EXTERNAL_QUEUE_EMPTY}
+# Player C4 (docs/analysis/animation-machine-player-c4-contract.md) routes the former outside probes 1c052 / 4da08 (C4 block starts: JSR 4da08 / LEA
+# 5cba(A5),A4): from the base state the run executes C4, returns through the base stack and ends in the external-read queue error (former expectation
+# UNSUPPORTED_MACHINE; observed in a scratch clone root, API-only control) [U: the continuation behind the RTS is not traced].
+SUPERSEDED_OUTSIDE_C4 = {0x1c052: EXTERNAL_QUEUE_EMPTY, 0x4da08: EXTERNAL_QUEUE_EMPTY}
 CONSUMERS = {0x4765c: (0x47670, 0x47660), 0xb4a38: (0xb4a5e, 0xb4a3c), 0xb4a6c: (0xb4a92, 0xb4a70)}
 NEW_RANGES = ((0x480bc, 0x480f2), (0x47642, 0x47672), (0x6f1c2, 0x6f1c4), (0x2efa6, 0x2efdc), (0x3c44, 0x3c7c),
               (0xb4a2a, 0xb4ab0), (0x49392, 0x4939c), (0x4939e, 0x493bc), (0x1c028, 0x1c052), (0x4d9d6, 0x4da08),
@@ -573,7 +577,7 @@ def negatives(exe, base, starts, instructions, block_starts, resources, neg_erro
     for pc in (0x480f2, 0x47672, 0x6f1c4, 0x2efdc, 0x3c7c, 0x10fe46, 0x493bc, 0x1c052, 0x4da08, 0xb4850, 0x4706c, 0x480ba):
         # U09 contract's 4706c..470e6 range supersedes this one outside probe.
         # Keep the old address/label and pin the full-run API error, including rollback.
-        expected = EVEN if pc == 0x4706c else SUPERSEDED_OUTSIDE.get(pc, UNSUPPORTED_MACHINE)
+        expected = EVEN if pc == 0x4706c else SUPERSEDED_OUTSIDE_C4.get(pc, SUPERSEDED_OUTSIDE.get(pc, UNSUPPORTED_MACHINE))
         try:
             reject('outside_range_entry_%06x' % pc, base, {'pc': pc}, error_expected=expected)
         except AssertionError as error:      # collected: every stale probe is reported together
@@ -581,6 +585,9 @@ def negatives(exe, base, starts, instructions, block_starts, resources, neg_erro
             continue
         if pc in SUPERSEDED_OUTSIDE:
             out[-1].update(former_expected_API_error=UNSUPPORTED_MACHINE, superseded_by='ten-unit batch continuation behind JSR ca70 [U: not traced]', API_only_control=True)
+        if pc in SUPERSEDED_OUTSIDE_C4:
+            out[-1].update(former_expected_API_error=UNSUPPORTED_MACHINE, superseded_by='area C C4 (player_c4) block start; continuation behind the RTS [U: not traced]',
+                           API_only_control=True)
     assert not outside_stale, outside_stale
     # unknown carry at the three BCC consumers
     for pc in sorted(CONSUMERS):
