@@ -978,9 +978,13 @@ void rules(){
    const std::uint32_t want=((0x10U+(idx[i]>>4))<<8)|(0xa0U+(idx[i]&15U));
    check(ok&&s.pc==0x3af8&&(s.d[0]&0xffffU)==want&&(s.d[0]>>16)==(d0s[i]>>16)&&s.a[0]==0x22d82U+0U,"22e62 index keeps all eight bits",idx[i],s.d[0]);}}
  const std::uint32_t data[]={0x22c8c,0x22a02,0x22a0e,0x22a8a,0x22a9e,0x22d64,0x22d82,0x22d92,0x22fe0,0x23056,0x2355c,0x235b6,0x235c2,0x235c8,
-  0x4411e,0x1c9ec,0x1c9b6};
+  0x4411e,0x1c9b6};
  for(unsigned int i=0;i<sizeof(data)/sizeof(data[0]);++i){Bytes ram=base_ram("");State s;s.pc=data[i];s.a[6]=NODE;s.a[7]=SP;
   check(!in_ranges(data[i]),"data PC outside the routed ranges",data[i]);reject(ram,s,STOP,"unsupported animation machine PC");}
+ // 1c9ec (the end of the shared helper range 1c9b8..1c9ec) is a block start of player C7 (contract animation-machine-player-c7-contract.md; previous
+ // expectation: 'unsupported animation machine PC' as a data PC of this list): outside the B4 ranges and stop-only here.
+ {Bytes ram=base_ram("");State s;s.pc=0x1c9ec;s.a[6]=NODE;s.a[7]=SP;Out o;
+  check(!in_ranges(0x1c9ec)&&run(ram,s,0x1c9ec,o)&&s.pc==0x1c9ec,"player C7 start 1c9ec: stop-only",0x1c9ec);}
  // The child values 22f7a 2334c 23774 are block starts of B4b (contract B4b decision 6): outside the B4 ranges and stop-only here.
  const std::uint32_t children[]={0x22f7a,0x2334c,0x23774};
  for(unsigned int i=0;i<sizeof(children)/sizeof(children[0]);++i){Bytes ram=base_ram("");State s;s.pc=children[i];s.a[6]=NODE;s.a[7]=SP;Out o;
