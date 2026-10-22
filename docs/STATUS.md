@@ -2488,3 +2488,17 @@
   - 계약: `animation-machine-frontier-fr9-contract.md`.
 - 영역 D: IO 관찰 집합에서 실행된 D 경로는 모두 routing됐다(FR3~FR9, 첫 정지 D 0, 불일치 0). [U] FR7~FR9 경로의 IO 확인은 C·E 연결 뒤에 한다.
 - 다음: C(플레이어 `4e68e` 15회, `1d1f4` 1회), 그 뒤 보류한 FR4b/FR4c.
+
+## 2026-10-22 — 영역 C·E 계획, 플레이어 C1(139 block)
+
+- 영역 C·E 완료 계획: `docs/analysis/area-c-completion-plan.md`.
+  - [F] 역사 IO 관측은 플레이어 코드 일부를 기록하지 않았다. 단일 PC routing 원자 `1dc84` `1dc8a` `210ae` `210b4`의 closure(`1d222..2156a`)를 routing된 것으로 셌기 때문이다.
+  - C·E run 18개를 정확한 routing으로 다시 관측했다(scratch `ms5-scratch/c1/reobs/`). native 기록은 18 run 모두 원래와 같다(메인 재확인). 공유 `artifacts/`는 바꾸지 않았다.
+  - 보정 기준: 실행된 routing 밖 PC C 835 / E 220. 단위 C1~C8 + E1(1,746 block)로 native frame 173,966 전부에 닿는다(예측). C9~C13(981 block)은 관측에서 실행되지 않아 뒤로 미룬다.
+- [F] 플레이어 C1(139 block): 슬롯 관리자 `4e68e` 계열 진입 `ca50` `4e0f6` `4e4da` `4e58a` `4e68e` `4f2e0` `1d1f4` `4e8f0` `b7a28`.
+  - `ca50` 뒤 Z는 RAM BYTE `-7699(A5)`에서 다시 계산한다(RAM이 아니면 checked error, 계약 결정 3).
+  - 실제 ROM 7,500건 불일치 0. 변이 235개 모두 검출. V1 1,264(두 번 같음). 회귀 spec 33개, legacy 검증기 10개 통과. frame 비교 변화 없음.
+  - IO 165,714 → 165,759(+45, 예측과 같음), 불일치 0. 첫 정지는 E `deba4` 15 run과 `48350` 1 run.
+  - 남은 실행 PC: C 835 → 757, E 220 → 218.
+  - 계약: `animation-machine-player-c1-contract.md`.
+- 다음: E1(캐릭터 선택), C2, C3(C2는 C3와 함께여야 IO에 닿는다).
