@@ -322,3 +322,14 @@ worktree(`/Users/start/Workspce/metalslug-c1`)에서 `.venv/bin/python /Users/st
 - [I] 경계가 맞닿은 범위: `engine/tests/animation_machine_input_test.cpp` RANGES `49ab4..49bca`, `animation_machine_controller_c1_test.cpp`·`unit_fixture_specs/c1.py`의 `ca32..ca3a`, `animation_machine_area_clear_test.cpp` RANGES `ca48..ca50`. 이웃 PC를 "routing 밖"으로 확인하는 행이 있으면 바뀐다. `make test`가 찾는다.
 - [I] `4e68e`·`1d1f4` 값을 RAM에 쓰기만 하는 시험(`animation_machine_controller_c2_test.cpp`의 `2a28` 설치, `animation_machine_stage_area_test.cpp`)은 그 callback을 실행하지 않는 한 바뀌지 않는다.
 - [F] IO 비교 기준: 첫 실패 전 일치 165,714 → 예측 165,759. frontier에서 `4e68e`가 사라지고 E `de8ca` 계열이 나와야 한다.
+
+## 9. 완료 판정(2026-10-23, 메인)
+
+- [F] C1~C8과 E1을 연결한 뒤 IO 비교: native 완료 frame 173,966 전부 일치, 불일치 0, 예상 밖 C++ 오류 0, 두 번 실행 동일, 수용 키 모두 true(`frontiers_confirmed` 포함). 첫 정지 run 0.
+- [F] 보정 관측 기준 실행된 routing 밖 PC: C 0 / E 0 / D 0. 따라서 §1의 C 완료(이 관측 집합)와 D 계획 §5의 [U](C 뒤 D의 IO 확인)를 함께 닫는다.
+- [F] 단위별 IO(예측 = 실측): C1 165,759 · E1 166,744 · C2 166,744 · C3 166,744 · C4 170,691 · C5 172,297 · C6 173,820 · C7 173,877 · C8 173,966.
+  - E1~C3의 실측이 §4.2 예측보다 작았던 이유: 보정 관측도 TB의 첫 routing 밖 PC만 기록해 직선 연속 PC(`4e8e6` 등)가 숨었다. C3·C4가 숨은 block 6개를 넣었고, C4부터는 단위마다 정확한 bitmap으로 다시 관측해 예측했다.
+- 남은 일(이 관측 집합 밖):
+  - C9~C13(981 block)과 선언 정지로 둔 `1dccc` `1dc8e` `1e67a` `e695a` `1e918` `23c56` `1f3e8` `21e48`: 입력(점프·사격·폭탄 등)을 늘린 관측이 있어야 실행 근거가 생긴다.
+  - 보정 관측을 `artifacts/`에 둘지와 observer의 정확 bitmap 방식 도입은 사용자 승인 뒤에 정한다.
+  - FR4b/FR4c.

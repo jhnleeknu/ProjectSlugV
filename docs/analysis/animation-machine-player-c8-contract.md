@@ -208,3 +208,22 @@ FR2..FR9, C1~C7 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 - [F] 실제 ROM 차분(scratch `realrom/`: `build.sh` `run_all.sh`(5 × 1,500: s1 s2 s3, f4 f5 `FOLLOW_ANIM=1`, 메인 runner용), `real_pc8.py`(C7 harness에 C8 world(`pc8_world`)·소비자·선언 정지·목록 handler 정지; C8 `JMP (A1)`의 착지를 trace 전체에서 대조하는 분류 `JUMPTGT8` 추가; `native_safe` 기본 유지)): 작업자 300건 seed 1 `mismatches 0`(`covered starts 99 of 99`; 문서화된 분류 C3 jump-target 42건(무작위 slot-84 LONG의 `201a6`), C8 jump-target 2건(선언 Set으로 들어간 `21e72` → `21e76`의 무작위 A1); 정지하지 않은 native 39건 건너뜀; native oracle abort 0, `trial_logs/real_n300_s1.log`). 앞선 50건 seed 11 시험도 `mismatches 0`(`trial_logs/real_t50.log`).
 - [F] `dleft.py`: 이전(routing `1f4599a2…`) C 93 / E 0, 예측 173,877, 첫 정지 C 1(`trial_logs/dleft_before.log`; 재관측 `obs_c7`로도 같음). 이후(routing `2622b7a2…`) C **0** / E **0** / D 0, 예측 **173,966**, 첫 정지 없음(`dleft_after.log`; 재관측 `obs_c8a`로도 같음).
 - [F] 기존 검증기 새 기대값은 scratch에서 확인했다: C4~C7·scene update 시험은 `make test`로, scene update 검증기의 `7ffe` guard는 scene update 시험의 경로 opcode 행을 `7ffe` / `7ffc` → `unsupported animation player c8 PC`로 바꾼 scratch 사본을 빌드해 통과함을 확인했다(`work/probe_scene_update/`, `trial_logs/probe_scene_update_7ffe.log`; 검증기 자체는 돌리지 않음). CPP_PINS는 작업 트리와 scratch clone root(`roots/probe`, `work/mkroot.py`: 작업 트리 clone + 변경 파일 복사 + 공유 자료 symlink; 확인 뒤 symlink를 따라가지 않고 삭제)에서 파일 SHA와 같음을 확인했다(4 / 9 pin, 불일치 0, `trial_logs/pincheck_tree.log` `pincheck_root.log`).
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j3 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. C8 시험 `animation machine player pc8: 683 fixtures (438 single-block, 162 path, 24 producer chain, 10 declared C, 49 checked error (14 with a later failing PC), 37 kept C), 99 blocks, 2847 calls, 158942 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 409, killed 398, equivalent 11.
+  - 이 실행 전에 메운 시험 빈틈 1개.
+  - 메모: `4d0cc` 크기 변이(`22(A4)`를 BYTE로 읽는 것과 WORD로 읽는 것)가 새 규칙으로 메워졌다.
+- [F] real-ROM: batches `f4`, `f5`, `s1`, `s2`, `s3` covered `99`, `99`, `99`, `99`, `99`; mismatches `0,0,0,0,0`(합집합 99/99).
+  - 오라클: `native_safe` 켬.
+- [F] V1: A/B 각각 fixtures 986, failed 0, runs 2, identical true(digest `9620fd676d9e3800`); regression specs 41개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, mismatches 0; `irq` 54400/54400, mismatches 0; `demo` 45684/45684, mismatches 0.
+- [F] IO: matched_total 173966, baseline 173877, delta 89, mismatches 0, cpp_errors 0, runs 2, identical true; per_config `P0` 81600, `P1` 81600, `P1b` 8400, `boot-demo-0` 577, `boot-title-idle` 600, `boot-title-start` 906, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 예측 확인: 정확한 비트맵 재관측은 173966을 예측했고, 실측도 173966이다.
+  - 수락 항목은 모두 true이고, 네이티브 프레임 173966개는 모두 일치했으며 프런티어는 없다.
+  - 범위: 99블록은 재측정 98블록에 `1fcd4`(C6 `1dbca`가 쓴 콜백으로, C8 블록 `1fcce` 안의 직선형)를 더한 값이고, 숨은 직선형 블록은 없다.
+- [F] 남은 실행 PC: C 93 → 0, E 0, D 0.
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
