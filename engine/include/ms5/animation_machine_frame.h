@@ -13,6 +13,9 @@ namespace ms5 {
 //      A5 = 108000 and LONG (100820) unchanged from the C start and e4a / e74, else "animation frame controller boundary mismatch".
 //   N: the existing F2 node pass from 2ac2 until the dispatcher enters LONG (100820).
 // BIOS, IRQ and (in Skip mode) the controller are not executed. Each segment starts with C Unknown. Only the head callbacks e4a / e74 are supported.
+// External-read queue (device.reads): only H reads it. C and N have no declared external reads (IO scope 5.6, E1 contract decision 2): the
+//   entries left after H are held back during C / N and put back unchanged, so a queue-device read there fails with "animation machine
+//   external read queue empty" (the native undeclared-device-read guard). A delivered IRQ reads only the two entries it adds (below).
 // Declared wait releases (one per Waiting block, recorded in AnimationFrameWait; at most 16 waits per segment):
 //   ef2   BYTE (A5-7fea) := BYTE (A5-7fe9)   (vblank)          16bd0  WORD (A5+d34) := D0.W   (sprite flush)
 //   3aea  WORD 104d74 := ffff                (sound ring)      cda4   WORD 108d34 := D4.W     (sprite queue)
