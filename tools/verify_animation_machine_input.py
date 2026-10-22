@@ -857,7 +857,7 @@ def negatives(exe, base, st, resources):
     # 4d7f0: stop-only boundary (the TRAP #15 has no executor); the zero-step is checked in boundary_zero_step
     reject(exe, 'trap_4d7f0_direct_entry', base, {'pc': TRAP_PC}, 0xff000, UNSUPPORTED_MACHINE, out, resources)
     reject(exe, 'trap_4d7f0_direct_entry_stop_4d7f2', base, {'pc': TRAP_PC}, 0x4d7f2, UNSUPPORTED_MACHINE, out, resources)
-    # Historical outside-PC inventory: data/gaps remain rejected; four later-unit starts are explicit API-only controls.
+    # Historical outside-PC inventory: data/gaps remain rejected; the later-unit starts (SUPERSEDED_OUTSIDE) are explicit API-only controls.
     for pc in (0x49ab0, 0x49ab2, 0x49bca, 0x49be0, 0x49c1e, 0x49c38, 0x49c6c, 0x4cf64, 0x4d81c, 0x1d8ce, 0xe73f8, 0x1bee4, 0x1d5c4, 0x1d5fc, 0x1d63a, 0x1d698,
                0x1d6fa, 0x1daba, 0x48384, 0x4d7a4, 0x49d86):
         assert not in_ranges(pc, ranges)
@@ -943,7 +943,9 @@ def boundary_zero_step(exe, base, resources):
 # These are API-only controls to ff000, not a native suffix equivalence claim.
 # 49c38: former expectation = outside the input closure, 'unsupported animation machine PC'; FR6 routes the 49c38 helper (TST.L 00000001 ... RTS), so the same
 # API-only control now succeeds. Only the superseding outcome is accepted (never both); the rejection control moved to even work-RAM PCs (below).
-SUPERSEDED_OUTSIDE = {0x4d81c: 'F1c2', 0x1bee4: 'F1b', 0x49be0: 'F4 U06', 0xe73f8: 'F4 U06', 0x49c38: 'FR6'}
+# 49bca: area-C unit C1 (player_c1 block start, contract animation-machine-player-c1-contract.md); former expectation 'unsupported animation machine PC',
+# from the frozen base state it now completes at ff000 (observed with this verifier's harness, scratch c1/work/ip_probe.py)
+SUPERSEDED_OUTSIDE = {0x4d81c: 'F1c2', 0x1bee4: 'F1b', 0x49be0: 'F4 U06', 0xe73f8: 'F4 U06', 0x49c38: 'FR6', 0x49bca: 'area C C1 (player_c1)'}
 WORK_RAM_REJECT_PCS = (0x10fe00, 0x10fe02, 0x10fefe)    # code never executes in work RAM: routing always gives 'unsupported animation machine PC'
 
 
