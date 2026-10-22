@@ -636,6 +636,7 @@ void interior(){
  assert(even==472&&inside==291);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
  // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder); the former ROM probe PCs only have to stay outside the unit ranges.
+ // (player C2: 1aa38 is now an interior PC of the C2 block 1aa2c; it is still outside the U08 ranges.)
  {const std::uint32_t rom_outside[]={0x1aa38,0x1aa40,0x447bc,0x3c83e};for(unsigned int i=0;i<sizeof(rom_outside)/sizeof(rom_outside[0]);++i)assert(!in_ranges(rom_outside[i]));}
  const std::uint32_t outside[]={0x10fe40,0x10fe1c,0x10fe1e,0x10fe00,0x10fe02,0x10fe04,0x10fe14,0x10fe42,0x10fe06}; // 47288 is U11, 492c8 is U12, 4929e is U17, 18be6 is F6a now
  for(unsigned int i=0;i<sizeof(outside)/sizeof(outside[0]);++i){Bytes ram;State s;generic(outside[i],ram,s,2);reject(ram,s,STOP,"unsupported animation machine PC");}
