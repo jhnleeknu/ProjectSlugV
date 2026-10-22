@@ -175,5 +175,6 @@ bool animation_select_e1_block(AnimationMachineContext& c);
 bool animation_player_c2_block(AnimationMachineContext& c);
 bool animation_player_c3_block(AnimationMachineContext& c);
 bool animation_player_c4_block(AnimationMachineContext& c);
+bool animation_player_c5_block(AnimationMachineContext& c);
 }
 #endif

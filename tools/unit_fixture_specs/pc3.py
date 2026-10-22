@@ -101,8 +101,9 @@ EXIT_STOPS = (0x1cb44, 0x1fa68, 0x201bc, 0x20240, 0x20268, 0x202ac, 0x20544, 0x2
               # the later-unit stops of the C2 blocks that the C3 runs pass through (pc2 EXIT_STOPS that are still unrouted; the straight-line ones
               # 1ce98 1ceb0 1d398 are not interiors of a routed block; 1cde0 1cdf0 are C3 starts now, contract decision 10)
               0x1cb1a, 0x1cb38, 0x1ce98, 0x1cfde, 0x1ceb0, 0x1cec2, 0x1d398, 0x1ebbe, 0x1eeea, 0x1f2a4, 0x1fafc, 0x1de3c, 0x1e21c, 0x1e8de)
-# later-unit stops routed since (player C4: 21c72 1ceb0 1cec2 1eeea): still declared stops of the C3 runs
-ROUTED_LATER = (0x21c72, 0x1ceb0, 0x1cec2, 0x1eeea)
+# later-unit stops routed since (player C4: 21c72 1ceb0 1cec2 1eeea; player C5: 1cb44 20240 20268 202ac 20544 21c12 21f4c 21f78 1cb1a 1cb38): still
+# declared stops of the C3 runs
+ROUTED_LATER = (0x21c72, 0x1ceb0, 0x1cec2, 0x1eeea, 0x1cb44, 0x20240, 0x20268, 0x202ac, 0x20544, 0x21c12, 0x21f4c, 0x21f78, 0x1cb1a, 0x1cb38)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1edf6, 0x1ee04), (0x1ed22, 0x1ed26), (0x1ee12, 0x1ee16), (0x1ee1a, 0x1ee26), (0x1ee2a, 0x1ee32), (0x1ee36, 0x1ee3c), (0x1ee74, 0x1ee7a),
           (0x1ee7e, 0x1ee86), (0x1ee98, 0x1eea4), (0x1eeb6, 0x1eec2), (0x1f1c4, 0x1f1ca), (0x201ae, 0x201b8), (0x201da, 0x201e4), (0x202d0, 0x202da),
@@ -1132,8 +1133,10 @@ def error_fixtures(bases, add):
     #   21610 (BYTE 9c = 3) -> 215e6 on the ROM list 21622 -> Set, A1 = 21e48 -> 2161c -> JMP (A1): listed, unrouted (player C4 routes 21d60 since:
     #   was BYTE 9c = 2 -> 21d60, error-21610-then-21d60)
     err('21610-then-21e48', U.with_host_writes(st, [((a6 + 0x9c) & 0xffff, 1, 3)], pc=0x21610), unrouted, 0x21e48)
-    # the Z source of 1ee56 (contract decision 3): the WORD (A0 + 2 x BYTE 9f) not 0 (a C5 return path) / outside fixed ROM and work RAM
-    err('1ee56-word', U.with_host_writes(st, [((a6 + 0x9f) & 0xffff, 1, 0)], regs=dict(a0=0x1b5f2), pc=0x1ee56), ERROR_FLAG, 0x1ee56)
+    # the Z source of 1ee56 (contract decision 3, widened by player C5): a source outside fixed ROM and work RAM.  A WORD (A0 + 2 x BYTE 9f) that is not
+    # 0 is the C5 path 1cb1a since player C5 (the row '1ee56-word', A0 = 1b5f2 with BYTE 9f = 0, expected the flag-source error before); its first
+    # source A0 + sext(W) = 1f9000 + 7000 = 200000 is the error now.
+    err('1ee56-path-bank', U.with_host_writes(st, [((a6 + 0x9f) & 0xffff, 1, 0), (0x9000, 2, 0x7000)], regs=dict(a0=0x1f9000), pc=0x1ee56), ERROR_FLAG, 0x1ee56)
     err('1ee56-bank', U.with_host_writes(st, [((a6 + 0x9f) & 0xffff, 1, 0)], regs=dict(a0=0x200000), pc=0x1ee56), ERROR_FLAG, 0x1ee56)
     err('1ee56-io', U.with_host_writes(st, [((a6 + 0x9f) & 0xffff, 1, 1)], regs=dict(a0=0x3c0004), pc=0x1ee56), ERROR_FLAG, 0x1ee56)
     # odd node / stack / A4 / A0

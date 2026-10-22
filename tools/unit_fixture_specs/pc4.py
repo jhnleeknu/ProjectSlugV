@@ -103,6 +103,8 @@ EXIT_STOPS = (0x1ef4c, 0x1efa4, 0x1f2a4, 0x21d9e, 0x21f4c, 0x4e572,
               0x20240, 0x20268, 0x202ac, 0x20544, 0x206cc, 0x21662, 0x21c12, 0x21ca4, 0x21d0e, 0x21f78, 0x21fa6, 0x4838c, 0x4d0cc, 0x4e69a, 0x4e8f8,
               0x4eb58)
 UNIT_EXITS = EXIT_STOPS[:13]            # the C4 later-unit stops and deferred leaders
+# later-unit stops routed since (player C5: 21f4c 1cb1a 1cb38 1cb44 20240 20268 202ac 20544 21c12 21f78): still declared stops of the C4 runs
+ROUTED_LATER = (0x21f4c, 0x1cb1a, 0x1cb38, 0x1cb44, 0x20240, 0x20268, 0x202ac, 0x20544, 0x21c12, 0x21f78)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1be4a, 0x1be50), (0x1bf94, 0x1bf9a), (0x1c052, 0x1c058), (0x1ef9a, 0x1efb4), (0x21d68, 0x21d6c), (0x21d70, 0x21d74), (0x21d92, 0x21d9a),
           (0x21dc4, 0x21dc8), (0x4f13c, 0x4f144), (0x4e758, 0x4e75e), (0x4e962, 0x4e96c), (0x4e770, 0x4e77a))
@@ -496,7 +498,7 @@ def build():
     require(len(STARTS) == 232 and len(STARTS_SET) == 232, ('starts', len(STARTS), len(STARTS_SET)))
     require(unit_of(SENTINEL) is None and not mine(SENTINEL), 'sentinel must be unrouted')
     for t in TRAPS + EXIT_STOPS:
-        require(unit_of(t) is None and not mine(t), ('later-unit stop must stay unrouted', hex(t)))
+        require((unit_of(t) is None or t in ROUTED_LATER) and not mine(t), ('later-unit stop must stay unrouted', hex(t)))
     require(unit_of(0x3650) == 'animation_card_menu_open_block' and unit_of(0x21602) == 'animation_player_c3_block', 'routed computed-jump targets')
     for t in LIST_21AEE:
         require(unit_of(t) in (None, 'animation_player_c3_block', 'animation_player_c4_block'), ('computed-jump target routed by another unit', hex(t)))

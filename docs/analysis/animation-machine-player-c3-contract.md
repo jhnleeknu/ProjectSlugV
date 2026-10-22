@@ -122,6 +122,7 @@ FR2..FR9, C1, C2 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 
 - [F] 소비자 22개·통과 4개·생산자는 위 명세와 같다. dispatcher는 `carry_preserving_pc`에 없는 PC로 갈 때 C를 Unknown으로 만든다. 따라서 이 단위의 C 의미는 (1) 소비자가 known C를 읽고 그대로 둔다, (2) 통과 block이 들어온 C를 그대로 둔다, (3) 생산자가 자기 block에서 C를 정한다, (4) 나머지 block 뒤 C는 Unknown이다.
 - [F] **`1ee56 BNE.W 1eee0`의 Z**(결정 3): 유일한 선행은 `1ee4e LEA 1b5f2(PC),A0; BSR 1cb08`이다. `1cb08`은 `MOVEQ #0,D7; MOVE.B 9f(A6),D7; ADD.W D7,D7; MOVE.W (A0,D7.W),D7; BNE 1cb1a`이고 `1cb18 RTS`로 돌아올 때 Z = 1(옮긴 WORD = 0)이다. `1cb08`·`1cb18`은 A0와 BYTE `9f`를 바꾸지 않는다.
+  - **player C5에서 넓힘**(C5 계약 결정 3): 이전 규칙은 위와 같이 WORD ≠ 0이면 checked flag-source 오류였다. C5가 `1cb1a`를 routing한 뒤에는 WORD W ≠ 0이면 C5 경로의 Z를 다시 계산한다: WORD W2 = (A0 + sext(W)), LONG L = (LONG `22(A6)` + sext((4 × W2) & ffff)); L = 0이면 `1cb30 RTS`(Z = 1) → `1ee5a`, 아니면 `1cb32 ORI.B #1,CCR; RTS`(Z = 0) → `1eee0`. 세 출처 주소 중 하나라도 24 bit로 `200000` 이상이면 checked flag-source 오류다. 실행부·시험·생성기·pc3 오류 fixture의 이전 / 새 기대값은 C5 계약 "영향받는" 절에 있다.
 
 ## 경계·routing 밖 출구
 
@@ -159,6 +160,7 @@ FR2..FR9, C1, C2 계약의 같은 절을 그대로 따른다. 다른 점만 적�
    - `21620 JMP (A1)`: 허용 = 목록 `21622`의 handler 10개. `221de JMP (A1)`: 허용 = 목록 `216c8`의 `21602`. 그 밖은 checked jump-target 오류.
    - [I] 68000은 주소 bit 24..31을 버리지만 C++는 32 bit로 비교하므로 상위 byte가 0이 아닌 값은 원본과 달리 checked 오류다(ROM 자료로는 생기지 않음). 실행 전체가 rollback된다.
 3. **RTS를 넘는 Z(`1ee56`, C1 결정 3의 규약).** `1ee56`은 Z를 메모리에서 다시 계산한다: WORD (A0 + sext(2 × BYTE `9f(A6)`))(`1cb08`이 읽은 것과 같은 주소; A0와 BYTE `9f`는 `1cb08`/`1cb18`이 바꾸지 않음). 그 WORD가 0이면 Z = 1이고 `1ee5a`로 간다(routing된 유일한 복귀 경로 `1cb18`과 같음). 다음은 checked `unsupported animation player c3 flag source`(rollback): (a) 24-bit 주소가 `200000` 이상(고정 ROM `<100000`과 work RAM `100000..1fffff` 밖; bank·장치를 다시 읽으면 원본에 없는 두 번째 읽기), (b) WORD ≠ 0(그 Z는 C5 `1cb1a` 경로가 만든 것이고 C3는 그 경로를 모름). [I] C5가 `1cb1a`를 routing하면 `1cb30 RTS`(Z = 1, C Clear)와 `1cb32 ORI.B #1,CCR; RTS`(Z = 0, C Set)가 생기므로 C5가 (b)를 넓혀야 한다(그 두 경로에서는 Z = (C = Clear)이다).
+   - (player C5, 2026-10-22) (b)를 넓혔다: W ≠ 0이면 오류 대신 C5 `1cb1a`의 `TST.L` 출처를 다시 읽어 Z를 정한다(위 "carry와 Z"의 넓힘 항목, C5 계약 결정 3). 출처가 `200000` 이상일 때만 checked 오류다.
 4. **carry 보존 목록.** 소비자 22개와 통과 4개(`1ee00` `1ed32` `215f6` `21c1a`)만 넣는다. 생산자는 자기 block에서 C를 정하므로 넣지 않는다(FR 관례). `215ec`은 `CMPA.W #0,A1`의 Clear를 정하고 `215f6`(통과)이 그것을 돌려준다. `1ee56`은 C를 읽지 않으므로 넣지 않는다.
 5. **표 읽기.** 고정 ROM 표·목록은 live bus로 읽고 상한을 검사하지 않는다(원본과 같음; 목록 조회는 원본대로 LONG 0까지 반복). 단위 시험은 합성 byte만 선언하므로 그 밖 색인은 `missing or ambiguous physical program bus ROM byte`로 확인하고, 원본 값은 V1·실제 ROM 차분이 비교한다.
 6. **뒤 단위 정지.** C3 block이 직선·분기·호출·복귀로 닿는 뒤 단위 시작 15곳과 미룬 입구 8곳, 그리고 C3 run이 지나가는 C2 block의 남은 정지 15곳을 V1 `first_unrouted`와 실제 ROM 차분의 선언 정지로 둔다.
@@ -172,7 +174,7 @@ FR2..FR9, C1, C2 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 - [U] node field·전역 값의 의미(`84` 칸 상태, `9c` 목록 key, `9d` `a0` `a1` `a3` `a4` `a9` `aa` `ab` `ac`, `5683` `568e` `5684` `5682` `5c8d`, `5cba/5ce6`, `5d12/5d18`, `5e26`, 목록 `21622` `21aee` `21b26` `216c8`의 handler). 이름은 동작에서 붙인 [I]이다.
 - [U] IO 관측에서 실행되지 않은 이 단위의 block 100개(`1f126..1f1d4` 대부분, `201e8`~, `2051e`~, `20648`~, `21baa`~ 일부, `21f30..21f70`, `21ffc..22236` 대부분, `3622c` 계열, `4dea8`~ 등)는 closure로 들어왔다(V1 선언 상태·실제 ROM 차분으로만 확인).
 - [U] `22ba6` `23aac` `23b18`이 쓰는 LONG `84`가 플레이어 node의 칸이 아니라는 것(결정 2의 허용 목록 근거)은 callback 계열에서 본 추론이다 [I]. 플레이어 node에 그 값이 들어가면 checked 오류가 알린다.
-- [U] 결정 3(b)의 범위는 C5 연결 때 다시 정한다.
+- [U] 결정 3(b)의 범위는 C5 연결 때 다시 정한다. → C5 계약 결정 3에서 정했다(W ≠ 0이면 C5 경로의 Z를 다시 계산).
 - [U] 같은 frame 안의 실행 순서(IO 첫 정지 PC). 예측은 C4 `371e`/`3786` 계열(13 run)과 C6 `1d398` 계열(demo)이다.
 - [U] 재설치 world와 IO pack 자연 node 상태의 레지스터(선언)는 실제 dispatcher 진입 레지스터와 다를 수 있다(C1·C2와 같음).
 
