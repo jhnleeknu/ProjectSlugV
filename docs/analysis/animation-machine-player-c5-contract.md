@@ -223,3 +223,22 @@ FR2..FR9, C1~C4 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 - **`21c12..21fa6`(12)**: `21c12 21f4c 21f54 21f78 21f7c 21f7e 21f82 21f8a 21f92 21f96 21f9c 21fa4`
 - **`4d106..4de9c`(22)**: `4d106 4d10e 4d116 4d11a 4d628 4d62e 4d636 4d63a 4d640 4d65c 4d668 4d670 4d676 4d67a 4d682 4d68e 4d692 4d69c 4d6a8 4de7a 4de86 4de8a`
 - **`cddee..cde16`(5)**: `cddee cddfe cde02 cde10 cde14`
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j4 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. C5 시험 `animation machine player pc5: 1184 fixtures (633 single-block, 10 Z reader, 419 path, 36 producer chain, 14 declared C, 72 checked error (21 with a later failing PC), 120 kept C), 203 blocks, 4833 calls, 162967 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 689, killed 662, equivalent 27.
+  - 이 실행 전에 메운 시험 빈틈 19개.
+  - 메모: 인덱스 폭, ROM 창 음수 인덱스, LONG 비교, BYTE 쓰기, MULU 인덱스 폭. 규칙 두 개는 테이블 인덱스가 단위 자체 코드 바이트에 닿는 곳에 합성 바이트 하나를 추가한다.
+- [F] real-ROM: batches `f4`, `f5`, `s1`, `s2`, `s3` covered `203`, `203`, `203`, `201`, `203`; mismatches `0,0,0,0,0`(합집합 203/203).
+  - 문서화한 오류 클래스: C5 점프 대상(지점별 키), C3 점프 대상, 기존 2986 caller-X 클래스.
+- [F] V1: A/B 각각 fixtures 1755, failed 0, runs 2, identical true(digest `e65212ecffb8cdb2`); regression specs 38개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, mismatches 0; `irq` 54400/54400, mismatches 0; `demo` 45684/45684, mismatches 0.
+- [F] IO: matched_total 172297, baseline 170691, delta 1606, mismatches 0, cpp_errors 0, runs 2, identical true; per_config `P0` 81600, `P1` 80456, `P1b` 8400, `boot-demo-0` 381, `boot-title-idle` 600, `boot-title-start` 577, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 예측 확인: 정확한 비트맵 재관측은 172297을 예측했고, 실측도 172297이다.
+  - 수락 항목 중 실패한 항목은 `frontiers_confirmed`다. 실행이 TB 안에 숨은 다음 PC(C6 `21564`, demo C6 `1d398`)에서 멈추므로 검증기가 이를 확인할 수 없다.
+  - 범위: 숨은 직선형 연속 경로는 없다. `20f04`는 `21050`/`210fa`가 `20efc` 중간으로 BSR하므로 시작점으로 추가했다. C3 `1ee56` Z 규칙은 C5 `1cb1a` TST.L 경로로 확장했다.
+- [F] 남은 실행 PC: C 361 → 261, E 12.
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.

@@ -204,3 +204,22 @@ FR2..FR9, C1~C6 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 ## 메인 결정(2026-10-23)
 
 - 실행되지 않은 자식 `23c56`, 다른 미실행 표 자식, 쓰기만 하는 callback `1f3e8`은 선언 정지로 두고 나머지 단위 C9~C13을 다시 잴 때 넣는다(C6 메인 결정과 같다).
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j3 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. C7 시험 `animation machine player pc7: 1270 fixtures (831 single-block, 342 path, 24 producer chain, 20 declared C, 53 checked error (17 with a later failing PC), 108 kept C), 214 blocks, 5593 calls, 198167 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 868, killed 841, equivalent 27.
+  - 이 실행 전에 메운 시험 빈틈 9개.
+  - 메모: 테이블이 256 바이트를 넘거나 음수 인덱스로 읽히는 경우, 상위 RAM 미러 `1fec00`과 ROM 창 `1d082`가 부호 확장 누락을 드러낸다. 결과를 바꾸는 DIVU/MULS 경계 변이는 제거된다.
+- [F] real-ROM: batches `f4`, `f5`, `s1`, `s2`, `s3` covered `213`, `214`, `214`, `214`, `213`; mismatches `0,0,0,0,0`(합집합 214/214).
+  - 오라클: `native_safe` 켬.
+- [F] V1: A/B 각각 fixtures 2077, failed 0, runs 2, identical true(digest `d794d500fa4d4857`); regression specs 40개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, mismatches 0; `irq` 54400/54400, mismatches 0; `demo` 45684/45684, mismatches 0.
+- [F] IO: matched_total 173877, baseline 173820, delta 57, mismatches 0, cpp_errors 0, runs 2, identical true; per_config `P0` 81600, `P1` 81600, `P1b` 8400, `boot-demo-0` 488, `boot-title-idle` 600, `boot-title-start` 906, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 예측 확인: 정확한 비트맵 재관측은 173877을 예측했고, 실측도 173877이다.
+  - 수락 항목 중 실패한 항목은 `frontiers_confirmed`다. `boot-demo-0`만 여전히 frame 488에서 TB 안에 숨은 C8 `1f756`에서 일찍 멈추므로 검증기가 이를 확인할 수 없다.
+  - 범위: 214블록은 계획 217에서 `1cde0`, `1cdf0`, `1cdfa`(C3이 담당)를 뺀 값이고, 숨은 직선형 블록은 없다.
+- [F] 남은 실행 PC: C 194 → 93, E 0.
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.

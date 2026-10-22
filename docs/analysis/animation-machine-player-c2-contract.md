@@ -202,3 +202,28 @@ FR2..FR9, C1 계약의 같은 절을 그대로 따른다. 다른 점만 적는�
 - **`1f1d8..1f2a4`(21)**: `1f1d8 1f1e8 1f1f4 1f1f8 1f1fc 1f224 1f228 1f230 1f23a 1f244 1f254 1f25a 1f268 1f26e 1f278 1f280 1f286 1f290 1f296 1f29a 1f2a0`
 - **`1f7a4..1f810`(11)**: `1f7a4 1f7ac 1f7da 1f7de 1f7e2 1f7ec 1f7f2 1f7fc 1f802 1f806 1f80c`
 - **`1fa3c..1fafc`(18)**: `1fa3c 1fa44 1fa48 1fa50 1fa58 1fa90 1fa94 1faa0 1faaa 1fab0 1faba 1fac0 1fac4 1fac8 1face 1fad2 1fae0 1fae8`
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j4 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. C2 시험 `animation machine player pc2: 999 fixtures (715 single-block, 219 path, 18 producer chain, 16 declared C, 31 checked error (11 with a later failing PC), 99 kept C), 196 blocks, 4870 calls, 177322 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 631, killed 593, equivalent 38, surviving 0.
+  - `MOVEQ #0`가 `MOVE.B` 바로 앞: 16개.
+  - index 또는 값이 `ff` 또는 `1fe`보다 크지 않고 음수가 아님: 7개.
+  - byte 쓰기가 이미 마스킹됨: 2개.
+  - low WORD에 OR: 4개.
+  - 뒤따르는 `MOVE.L`이 D7를 덮어씀: 2개.
+  - 중복 reset 쓰기: 2개.
+  - `1e006` tie: 두 경로 모두 D1 = 0: 2개.
+  - `1f244` 상수가 `SUB.L`에 의해 덮어써짐: 1개.
+  - bit number가 mod 8로 두 번 마스킹됨: 2개.
+  - 이 실행 전에 메운 시험 빈틈: `1cad4-noext`와 `1cad4-index-noext` — 64 KiB work-RAM 미러가 부호 확장이 빠진 것을 숨겼고, 합성 ROM 테이블에 음수 index를 쓰는 규칙 두 개.
+- [F] real-ROM: batches `f4`, `f5`, `s1`, `s2`, `s3` 종료 0, mismatches `0,0,0,0,0`; covered `196`, `194`, `193`, `195`, `195`(합집합 196/196).
+- [F] V1: A/B 각각 fixtures 1743, failed 0, runs 2, identical true(digest `b379327ca53f2194`); regression specs 35개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, mismatches 0; `irq` 54400/54400, mismatches 0; `demo` 45684/45684, mismatches 0.
+- [F] IO: matched_total 166744, baseline 166744, delta 0, mismatches 0, cpp_errors 0, runs 2, identical true; per_config `P0` 81600, `P1` 76128, `P1b` 7560, `boot-demo-0` 381, `boot-title-idle` 600, `boot-title-start` 192, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 수락 항목 중 실패한 항목은 `frontiers_confirmed`다. 15개 C/E 실행이 TB 안에 숨은 4e8e6(C4)에서 멈추므로 frontier를 확인할 수 없고, C2 코드는 48350(C3)과 4e8e6(C4) 이후에만 실행되므로 계획이 말한 대로 C2만으로는 IO 이득이 없다.
+  - 첫 전체 실행은 frame driver 수정 전 E1 base에서 했고, 두 입력 fixture에서 guard-bad였다. E1 수정을 병합한 뒤 IO를 재실행했다.
+- [F] 남은 실행 PC: C 757 → 659, E 12, 예상 frame 변화 없음. 일치 frame 166,744.
+- 검증 방법: deterministic runner(LLM 없음). IO는 E1 frame driver 수정 병합 후 재실행 값이다. 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
