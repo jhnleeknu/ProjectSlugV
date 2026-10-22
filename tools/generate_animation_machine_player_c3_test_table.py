@@ -705,7 +705,9 @@ def gen_errors():
     err('2030a-a0-ff', 0x2030a, jump, 0x20318, puts=((NODE + 0xa0, 1, 0xff), (NODE + 0x9f, 1, 0)))
     # the synthetic list 21622: key 1 -> 21d60 (player C4 since) -> BYTE 9d = 1: BGT.W 21dd0 (C12, unrouted) (was: unrouted at 21d60, puts 9c only)
     err('21610-key-1', 0x21610, unrouted, 0x21dd0, puts=((NODE + 0x9c, 1, 1), (NODE + 0x9d, 1, 1)))
-    err('21610-key-3', 0x21610, unrouted, 0x21662, puts=((NODE + 0x9c, 1, 3),))    # the key WORD 0103 does not match BYTE 3: C Clear -> 21662 (C6)
+    # the key WORD 0103 does not match BYTE 3: C Clear -> 21662 (the RTS of player C6 since; was: unrouted at 21662, puts 9c only) -> the RAM return
+    # LONG 10fe40 (unrouted)
+    err('21610-key-3-then-10fe40', 0x21610, unrouted, 0x10fe40, puts=((NODE + 0x9c, 1, 3), (SP, 4, 0x10fe40)))
     # the Z source of 1ee56 (contract decision 3, widened by player C5: a WORD that is not 0 is the C5 path 1cb1a; before C5 the rows z-word-1b5f2 /
     # z-word-ram expected the flag-source error for any WORD not 0)
     err('z-path-rom', ZREAD, rom, ZREAD, a0=0x1b5f2, puts=((NODE + 0x9f, 1, 1), (NODE + 0x22, 4, 0x2000)))   # W 6 -> W2 0 -> LONG 2000 (ROM, not declared)

@@ -1216,6 +1216,12 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // every other C5 block stays Unknown (the Z reader 1c3e2 recomputes the Z of 1c51c from fixed ROM).
     case 0x1c374:case 0x1c3ca:case 0x20288:case 0x20e56:case 0x214b2:case 0x21f78:case 0xcddfe:
     case 0x1cb30:
+    // Player C6 blocks: the 8 consumers 1d644 1d6a2 (BCS, C returned by 49c38), 1d934 (BCC, 1d510), 1dc36 (BCC, 4836e), 1dc62 1ebba (BCC, 1cb08), 1ec66
+    // (BCC, 49fc6), 4ed8c (BCC, 28ae), and the RTS 1d51c / 1d580 that pass the C of 1d514 (CMPI.W #14,D1 borrow) / 1d54c (MOVE.L: Clear) back to the
+    // callers of 1d510 (C6 1d934, later 1d70e 1d8fa).  1d546 sets Clear, 1d574 4838c Set in their own block; every other C6 block stays Unknown (the Z
+    // reader 4ee30 recomputes the Z of 4a974 from memory).
+    case 0x1d644:case 0x1d6a2:case 0x1d934:case 0x1dc36:case 0x1dc62:case 0x1ebba:case 0x1ec66:case 0x4ed8c:
+    case 0x1d51c:case 0x1d580:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1864,6 +1870,15 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x21c12 && next.pc<0x21c1a) || (next.pc>=0x21f4c && next.pc<0x21f58) || (next.pc>=0x21f78 && next.pc<0x21fa6) ||
                 (next.pc>=0x4d106 && next.pc<0x4d126) || (next.pc>=0x4d628 && next.pc<0x4d6b4) || (next.pc>=0x4de7a && next.pc<0x4de9c) ||
                 (next.pc>=0xcddee && next.pc<0xcde16))ok=animation_player_c5_block(c);
+            else if ((next.pc>=0xb0c && next.pc<0xb58) || (next.pc>=0x1d398 && next.pc<0x1d3e0) || (next.pc>=0x1d510 && next.pc<0x1d582) ||
+                (next.pc>=0x1d63a && next.pc<0x1d664) || (next.pc>=0x1d698 && next.pc<0x1d6c2) || (next.pc>=0x1d90a && next.pc<0x1d940) ||
+                (next.pc>=0x1daba && next.pc<0x1db0a) || (next.pc>=0x1dbc6 && next.pc<0x1dbd8) || (next.pc>=0x1dc1a && next.pc<0x1dc84) ||
+                (next.pc>=0x1dcd0 && next.pc<0x1ddd0) || (next.pc>=0x1e60a && next.pc<0x1e638) || (next.pc>=0x1e65c && next.pc<0x1e67a) ||
+                (next.pc>=0x1e824 && next.pc<0x1e8de) || (next.pc>=0x1eba0 && next.pc<0x1ec74) || (next.pc>=0x1efa4 && next.pc<0x1efb0) ||
+                (next.pc>=0x206cc && next.pc<0x206d2) || (next.pc>=0x21564 && next.pc<0x2156a) || (next.pc>=0x21662 && next.pc<0x21664) ||
+                (next.pc>=0x481b2 && next.pc<0x481de) || (next.pc>=0x4838c && next.pc<0x48392) || (next.pc>=0x4e572 && next.pc<0x4e57a) ||
+                (next.pc>=0x4e5b0 && next.pc<0x4e5c2) || (next.pc>=0x4e8f8 && next.pc<0x4e8fc) || (next.pc>=0x4eb58 && next.pc<0x4eb6a) ||
+                (next.pc>=0x4ed3c && next.pc<0x4ee7a) || (next.pc>=0xe6496 && next.pc<0xe6516))ok=animation_player_c6_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
