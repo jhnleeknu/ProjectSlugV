@@ -2549,3 +2549,13 @@
   - IO 166,744 → 170,691(+3,947), 불일치 0. 수용 키는 `frontiers_confirmed`만 false다(다음 숨은 정지 C5 `20240`, demo C6 `1d398`).
   - 남은 실행 PC: C 529 → 361.
   - 계약: `animation-machine-player-c4-contract.md`.
+
+## 2026-10-23 — 플레이어 C5(203 block)
+
+- [F] C5(203 block): `20738` `214d6` `2143c` 계열과 helper `1c356` `211e6` `cddee` `4d106` 등.
+  - 범위: 숨은 직선 연속은 없었다(정확한 bitmap 재관측 두 번). `21050`/`210fa`가 `20efc` 중간으로 BSR하므로 `20f04`를 시작으로 넣었다.
+  - 표 `20792` `2094e` `209d6`과 `JMP (A1)` `21f7c`은 ROM 근거가 있는 목표만 허용한다. C3 `1ee56`의 Z 규칙을 C5 `1cb1a` TST.L 경로까지 넓혔다(메인이 ROM 바이트로 확인).
+  - 실제 ROM 7,500건 불일치 0. 변이 689개 중 662개 검출, 27개 동등. V1 1,755(두 번 같음). 회귀 spec 38개, legacy 검증기 10개 통과. frame 비교 변화 없음.
+  - IO 170,691 → 172,297(+1,606, 재관측 예측과 같음), 불일치 0. 수용 키는 `frontiers_confirmed`만 false다(다음 숨은 정지 C6 `21564`, demo `1d398`).
+  - 남은 실행 PC: C 361 → 261.
+  - 계약: `animation-machine-player-c5-contract.md`.
