@@ -219,3 +219,22 @@ FR2..FR9, C1~C3 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 - **`4e4e2..4e7a2`(23)**: `4e4e2 4e4fe 4e51a 4e538 4e546 4e54e 4e552 4e564 4e57a 4e57e 4e758 4e75e 4e768 4e770 4e77a 4e77e 4e786 4e78a 4e792 4e796 4e79a 4e79e`, `4e8e6`
 - **`4e962..4eb50`(50)**: `4e962 4e96c 4e976 4e97a 4e986 4e98e 4e998 4e99c 4e9a4 4e9ac 4e9b0 4e9bc 4e9c0 4e9ca 4e9d8 4e9ee 4e9f8 4e9fc 4ea04 4ea08 4ea14 4ea18 4ea24 4ea38 4ea40 4ea54 4ea5c 4ea6c 4ea76 4ea8a 4ea92 4ea9c 4eaa0 4eaa4 4eaae 4eab6 4eabe 4eace 4ead2 4eadc 4eae6 4eaf0 4eaf8 4eafc 4eb18 4eb22 4eb2a 4eb44 4eb48 4eb4c`
 - **`4ee7a..4f2ba`(44)**: `4ee7a 4eef4 4eefe 4ef06 4f118 4f126 4f130 4f13c 4f144 4f148 4f150 4f152 4f158 4f160 4f166 4f16e 4f174 4f1ac 4f1c2 4f1c4 4f1d8 4f1e0 4f1f2 4f1f4 4f20c 4f210 4f220 4f22c 4f23a 4f240 4f24a 4f24c 4f254 4f25c 4f25e 4f26c 4f278 4f280 4f28c 4f294 4f2a0 4f2a4 4f2ac 4f2b8`
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j4 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. C4 시험 `animation machine player pc4: 1372 fixtures (782 single-block, 12 Z reader, 423 path, 66 producer chain, 22 declared C, 67 checked error (12 with a later failing PC), 128 kept C, 108 with video ports), 232 blocks, 5520 calls, 135877 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 640, killed 624, equivalent 16.
+  - 이 실행 전에 메운 시험 빈틈 21개.
+  - 메모: RAM 미러의 부호 확장은 ROM 음수 인덱스(`377a+ff92` → `370c`, `4e4a2`/`4e43e+8000`, `370c-1`/`-2`)와 미러 규칙으로 덮었다. DIVU 경계 변형(오버플로, 0, 나머지)은 모두 죽었다.
+- [F] real-ROM: batches `f4`, `f5`, `s1`, `s2`, `s3` covered `232`, `232`, `232`, `231`, `232`; mismatches `0,0,0,0,0`(합집합 232/232).
+  - 문서화한 오류 클래스: C4 점프 대상과 flag source 오류는 지점 또는 진입점으로 구분하고, 0 나누기 클래스는 DIVU 지점으로 구분한다(네이티브 0 나누기 예외).
+- [F] V1: A/B 각각 fixtures 1873, failed 0, runs 2, identical true(digest `588a0c08b7a73afe`); regression specs 37개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, mismatches 0; `irq` 54400/54400, mismatches 0; `demo` 45684/45684, mismatches 0.
+- [F] IO: matched_total 170691, baseline 166744, delta 3947, mismatches 0, cpp_errors 0, runs 2, identical true; per_config `P0` 81600, `P1` 78996, `P1b` 8400, `boot-demo-0` 381, `boot-title-idle` 600, `boot-title-start` 431, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 예측 확인: C4 라우팅에서의 정확한 비트맵 재관측은 170691을 예측했고, 실측도 170691이다.
+  - 수락 항목 중 실패한 항목은 `frontiers_confirmed`다. 실행이 TB 안에 숨은 다음 PC(C5 `20240`, demo C6 `1d398`)에서 멈추므로 검증기가 이를 확인할 수 없다.
+  - 범위: C4는 TB 안에 숨은 직선형 연속 경로 `4e57e`, `4e8e6`를 추가했다(계약 결정 1); `4e8e6`은 C1-C3 이후 frame 72/288/192에서 실제 정지 지점이었다.
+- [F] 남은 실행 PC: C 529 → 361, E 12.
+- 검증 방법: deterministic runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.

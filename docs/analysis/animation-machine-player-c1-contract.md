@@ -181,3 +181,21 @@ FR2..FR9 계약의 같은 절을 그대로 따른다. 다른 점만 적는다.
 - **`4e8f0..4eb58`(12)**: `4e8f0 4e8fc 4e904 4e90e 4e918 4e928 4e940 4e94e 4e958 4e95a 4e97e 4eb50`
 - **`4f2e0..4f4ba`(47)**: `4f2e0 4f304 4f322 4f328 4f32e 4f33c 4f342 4f34a 4f356 4f358 4f366 4f374 4f382 4f390 4f396 4f3a4 4f3aa 4f3b2 4f3be 4f3d4 4f3e2 4f3ea 4f3f4 4f3fc 4f400 4f406 4f414 4f41c 4f426 4f42e 4f432 4f438 4f446 4f44e 4f458 4f460 4f464 4f46a 4f478 4f480 4f48a 4f492 4f496 4f49c 4f4a2 4f4b2 4f4b8`
 - **`b7a28`(1)**: `b7a28`
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j3 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. C1 시험 `animation machine player pc1: 713 fixtures (504 single-block, 161 path, 15 producer chain, 6 declared C, 27 checked error (8 with a later failing PC), 19 kept C), 139 blocks, 3390 calls, 33920 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 235, killed 235, equivalent 0, surviving 0.
+  - 작업자 첫 실행의 생존 4개는 모두 시험 빈틈이었고, 규칙을 더해 이 실행 전에 메웠다.
+    - `flag-guard-24bit`: A5 = `ff108000`에서도 RAM BYTE를 읽어야 한다(24-bit bus).
+    - `49bda-long`: `CLR.W`는 다음 WORD를 건드리지 않는다.
+    - `4e58a-mask-7f`: `ANDI.W #ff`는 index bit 7을 남긴다(index `83`).
+    - `4e69c-byte`: D0 = `100`에서 `TST.W`와 `TST.B`가 다르다.
+- [F] real-ROM: batches `f4`, `f5`, `s1`, `s2`, `s3` 각 1500 cases, 종료 0, mismatches `0,0,0,0,0`; covered `139`, `139`, `139`, `139`, `139`(합집합 139/139).
+- [F] V1: C1 fixtures 1264, failed 0, runs 2, identical true(digest `83575d114e8278c4`); regression specs 33, 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` verdict는 FR9과 같다(execution-equal 4689, checked-boundary 54, native-step-limit 8, invalid-declared-flag-precondition 1).
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, mismatches 0; `irq` 54400/54400, mismatches 0; `demo` 45684/45684, mismatches 0.
+- [F] IO: matched_total 165759, baseline 165714, delta 45, mismatches 0, cpp_errors 0, runs 2, identical true; per_config `P0` 81600, `P1` 75340, `P1b` 7430, `boot-demo-0` 381, `boot-title-idle` 600, `boot-title-start` 125, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273; frontier `48350` `D` 1, `deba4` `E` 15. 일치 frame이 45 늘었다(계획 예측과 같음). 첫 정지 `deba4`는 E1 진입이고, `48350`은 주소 분류기로는 D지만 계획에서는 C helper(C3)다.
+- [F] 남은 실행 PC(보정 관측 `MS5_REOBS`): C 835 → 757, E 220 → 218. 예측 일치 frame 165,714 → 165,759(실측 165,759).
+- 검증 방법: deterministic runner(LLM 없음)로 검증했다. 이 기록 초안은 local Qwen이 작성했고 메인이 검토·수정했다.

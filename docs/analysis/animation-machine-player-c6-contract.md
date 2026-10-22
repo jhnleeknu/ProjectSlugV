@@ -219,3 +219,22 @@ FR2..FR9, C1~C5 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 
 - `1dc84`의 인계 목표 `1dccc`/`1dc8e`, `28ae` 자식 `1e67a` `e695a`, callback `1e918`은 이 관측 집합에서 실행되지 않는다(보정 관측에서 실행 PC 0). 지금은 선언 정지로 두고, 나머지 단위 C9~C13을 다시 잴 때 그 단위들에 넣는다.
 - real-ROM harness의 `native_safe`(native 사례를 fork한 자식에서 실행, Unicorn 코드 생성기 abort를 그 사례만 건너뜀)를 이후 단위의 기본으로 쓴다.
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j4 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. C6 시험 `animation machine player pc6: 1248 fixtures (786 single-block, 8 Z reader, 350 path, 42 producer chain, 16 declared C, 46 checked error (12 with a later failing PC), 85 kept C), 212 blocks, 5319 calls, 180401 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 653, killed 642, equivalent 11.
+  - 이 실행 전에 메운 시험 빈틈 24개.
+  - 메모: 상위 RAM 미러와 ROM 창 음수 인덱스.
+- [F] real-ROM: batches `f4`, `f5`, `s1`, `s2`, `s3` covered `212`, `211`, `212`, `211`, `212`; mismatches `0,0,0,0,0`(합집합 212/212).
+  - 오라클: `native_safe`는 각 네이티브 케이스를 포크된 자식 프로세스에서 실행하며, Unicorn TCG abort가 발생하면 해당 케이스만 건너뛴다.
+- [F] V1: A/B 각각 fixtures 1856, failed 0, runs 2, identical true(digest `9860d816609ecb5d`); regression specs 39개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, mismatches 0; `irq` 54400/54400, mismatches 0; `demo` 45684/45684, mismatches 0.
+- [F] IO: matched_total 173820, baseline 172297, delta 1523, mismatches 0, cpp_errors 0, runs 2, identical true; per_config `P0` 81600, `P1` 81600, `P1b` 8400, `boot-demo-0` 431, `boot-title-idle` 600, `boot-title-start` 906, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 예측 확인: 정확한 비트맵 재관측은 173820을 예측했고, 실측도 173820이다.
+  - 수락 항목 중 실패한 항목은 `frontiers_confirmed`다. `boot-demo-0`만 여전히 프레임 431에서 TB 안에 숨은 C7 `1f2a4`에서 조기에 멈추므로 검증기가 이를 확인할 수 없다.
+  - 범위: 숨은 직선형 블록은 없다. `4e57e`와 `4e8e6`은 이미 C4가 담당했고, E 헬퍼 `b0c` `e6496`이 라우팅되어 라우팅되지 않은 E 실행 PC는 0에 도달한다.
+- [F] 남은 실행 PC: C 261 → 194, E 12 → 0.
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
