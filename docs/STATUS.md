@@ -2559,3 +2559,13 @@
   - IO 170,691 → 172,297(+1,606, 재관측 예측과 같음), 불일치 0. 수용 키는 `frontiers_confirmed`만 false다(다음 숨은 정지 C6 `21564`, demo `1d398`).
   - 남은 실행 PC: C 361 → 261.
   - 계약: `animation-machine-player-c5-contract.md`.
+
+## 2026-10-23 — 플레이어 C6(212 block): 영역 E 완료
+
+- [F] C6(212 block): `1ebf6` `4ee04` `4ebe2` `1eb50` `1d63a` `1daee` `1d8cc` `21622` 계열과 E helper `b0c` `e6496`.
+  - 범위: 숨은 직선 연속 없음. 계획의 `4e57e` `4e8e6`은 C4가 이미 가졌다.
+  - 실행되지 않는 인계 목표 `1dccc`/`1dc8e`, `28ae` 자식 `1e67a` `e695a`, callback `1e918`은 선언 정지로 두고 나머지 단위 C9~C13에서 다룬다(메인 결정).
+  - 실제 ROM 7,500건 불일치 0(native 사례를 fork한 자식에서 실행, Unicorn 코드 생성기 abort는 그 사례만 건너뜀). 변이 653개 중 642개 검출, 11개 동등. V1 1,856(두 번 같음). 회귀 spec 39개, legacy 검증기 10개 통과. frame 비교 변화 없음.
+  - IO 172,297 → 173,820(+1,523, 예측과 같음), 불일치 0. P1 81,600 전부 일치. 남은 이른 정지는 boot-demo-0 frame 431(C7 `1f2a4`)뿐이다.
+  - 남은 실행 PC: C 261 → 194, **E 12 → 0**.
+  - 계약: `animation-machine-player-c6-contract.md`.
