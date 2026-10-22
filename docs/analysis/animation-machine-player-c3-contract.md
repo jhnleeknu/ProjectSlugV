@@ -204,3 +204,22 @@ FR2..FR9, C1, C2 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 - **`48350..484d2`(6)**: `48350 4835a 48362 48384 48392 484ca`
 - **`4d0a4..4dee2`(15)**: `4d0a4 4d0ac 4d0b4 4d0b8 4d0be 4d100 4de9c 4dea8 4deac 4deb4 4deba 4debc 4dec2 4deca 4ded4`
 - **`e8b5a..e8b7e`(2)**: `e8b5a e8b6e`
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j4 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. C3 시험 `animation machine player pc3: 1282 fixtures (730 single-block, 39 Z reader, 289 path, 93 producer chain, 44 declared C, 87 checked error (23 with a later failing PC), 244 kept C), 230 blocks, 5415 calls, 114879 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 735, killed 715, equivalent 20, surviving 0.
+  - 이 실행 전에 메운 시험 빈틈 16개.
+  - 메모: RAM 미러의 부호 확장은 합성 ROM 테이블의 음수 index 규칙과 `1ee56` 경계 규칙(`1ffffe`/`200000`)으로 덮었다.
+- [F] real-ROM: batches `f4`, `f5`, `s1`, `s2`, `s3` covered `230`, `230`, `229`, `230`, `229`; mismatches `0,0,0,0,0`(합집합 230/230).
+  - Unicorn abort: `f4`(seed 4, `FOLLOW_ANIM`)에서 Unicorn 2.1.4 자체 TCG 코드 생성기(`tcg_out_st`, SIGABRT)가 native reference try 618을 만드는 동안 먼저 abort했다. 해당 try는 `SKIP_TRIES=618`(case 생성은 그대로)로 건너뛰었고, 배치 재실행: 1500 cases, mismatches 0, 230/230 covered.
+- [F] V1: A/B 각각 fixtures 1831, failed 0, runs 2, identical true(digest `63e58390fcb4e6f0`); regression specs 36개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, mismatches 0; `irq` 54400/54400, mismatches 0; `demo` 45684/45684, mismatches 0.
+- [F] IO: matched_total 166744, baseline 166744, delta 0, mismatches 0, cpp_errors 0, runs 2, identical true; per_config `P0` 81600, `P1` 76128, `P1b` 7560, `boot-demo-0` 381, `boot-title-idle` 600, `boot-title-start` 192, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 수락 항목 중 실패한 항목은 `frontiers_confirmed`다. 실행이 TB 안에 숨은 PC(`4e8e6`, C4가 라우팅; demo `1d398`, C6)에서 멈추므로 검증기가 이를 확인할 수 없고, frontier PC 목록은 비어 있다(`48350`은 이제 C3가 라우팅한다).
+  - 첫 전체 실행은 E1 frame driver 수정 이전 base에서 했고, IO는 C2(E1 frame driver 수정 포함) 병합 후 재실행했다.
+  - 범위: C3는 TB 안에 숨은 직선형 continuation `1cde0`, `1cdf0`, `1cdfa`, `202a0`를 추가했다(계약 결정 10).
+- [F] 남은 실행 PC: C 659 → 529, E 12. 재관측 예상 frame은 166744이고, 계획 값 169482는 숨은 stop `4e8e6`이 없다고 가정했다. 일치 frame 166744.
+- 검증 방법: deterministic runner(LLM 없음). IO는 C2(E1 frame driver 수정 포함) 병합 후 재실행 값이다. 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
