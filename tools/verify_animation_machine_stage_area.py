@@ -1113,7 +1113,7 @@ def negatives(ctx, base, st):
         pc = int(row['label'].removeprefix('unrouted_neighbour_'), 16) if row['label'].startswith('unrouted_neighbour_') else None
         if pc in SUPERSEDED_NEIGHBOUR_ERRORS:
             row.update(pc=hex(pc), former_expected_error=UNSUPPORTED_MACHINE, API_only=True,
-                       superseded_by='F3b routing: block start executes; interior PCs use the ops executor error')
+                       superseded_by=SUPERSEDED_NOTES.get(pc, 'F3b routing: block start executes; interior PCs use the ops executor error'))
     for pc in CONSUMERS:
         s0 = dict(state, pc=pc, carry=0)
         actual = inv(ctx, 'unknown_carry_%06x' % pc, ram, s0, pvc, bank, 0xff000, 0)
@@ -1134,7 +1134,16 @@ def negatives(ctx, base, st):
 
 # Historical outside-PC inventory is retained; exactly three expectations changed when F3b routed 49a84..49a8e.
 SUPERSEDED_NEIGHBOUR_ERRORS = {0x49a84: RNG_ERROR, 0x49a86: 'unsupported animation stage event ops PC',
-                               0x49a8c: 'unsupported animation stage event ops PC'}
+                               0x49a8c: 'unsupported animation stage event ops PC',
+                               # area-C unit C1 (player_c1, contract animation-machine-player-c1-contract.md): b7a28 is a C1 block start (TST.B D0; BNE.W
+                               # b7a48); from the base state D0.B = 0 runs on through b7a2e into the input read without a declared queue entry.
+                               # b7a2a / b7a2c are interior PCs of that block.  Each was 'unsupported animation machine PC' before C1.
+                               0xb7a28: 'animation machine external read queue empty', 0xb7a2a: 'unsupported animation player c1 PC',
+                               0xb7a2c: 'unsupported animation player c1 PC'}
+SUPERSEDED_NOTES = {0xb7a28: 'C1 routing: block start executes (b7a2e, then the undeclared input read)',
+                    0xb7a2a: 'C1 routing: interior PC of b7a28 (player c1 executor error)', 0xb7a2c: 'C1 routing: interior PC of b7a28 (player c1 executor error)'}
+# 4e68e is also a C1 block start since C1; its expectation text is unchanged: from the base state WORD 76(A6) >= 2, so the block runs and the next
+# dispatch fails at the TRAP #15 site 4e69a (outside the routing) with the same 'unsupported animation machine PC' (no longer at 4e68e itself).
 UNROUTED_NEIGHBOURS = (0x47a54, 0x47a56, 0x47a5c, 0x47a62, 0x49a84, 0x49a86, 0x49a8c, 0xb7a28, 0xb7a2a, 0xb7a2c, 0x4d84e, 0x4ddde, 0x4e68e, 0xb481e, 0xb4a2a, 0x46f52, 0x1bdde, 0x2eff4, 0x4aa86)
 
 

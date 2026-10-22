@@ -509,6 +509,8 @@ void interior(){
  assert(even==675&&inside==540);
  for(unsigned int i=0;i<BLOCK_COUNT;++i)assert(in_ranges(BLOCKS[i].pc));
  // Rollback probes in work RAM 10fe00..10fefe (review 0264 M-3 remainder); the former ROM probe PCs only have to stay outside the unit ranges.
+ // (49bca / 49bde are a block start and an interior PC of the area-C unit C1 (player_c1) since C1; the assertion is about the U06 ranges only and
+ // holds unchanged.)
  {const std::uint32_t rom_outside[]={0x3ed2,0xe7562,0xeb9ba,0xeb9e4,0xe74f8,0xe7504,0xe750c,0xe7534,0x49bca,0x49bde,0x49bf2,0x49c00,0xe7544,0xe7570,0xe7790,0xe7946,0xeba3c,0xeba9e,0xebaa0};for(unsigned int i=0;i<sizeof(rom_outside)/sizeof(rom_outside[0]);++i)assert(!in_ranges(rom_outside[i]));}
  const std::uint32_t outside[]={0x10fe00,0x10fe02,0x10fe04,0x10fe06,0x10fe30,0x10fe08,0x10fe0a,0x10fe0c,0x10fe0e,0x10fe10,0x10fe12,0x10fe14,0x10fe16,
   0x10fe18,0x10fe1a,0x10fe1c,0x10fe1e,0x10fe24,0x10fe20,0x10fe22,0x10fe26};

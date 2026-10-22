@@ -902,9 +902,11 @@ void errors(){
  {Bytes ram;State s;generic(0x49b1c,ram,s);s.carry=ms5::AnimationCarryUnknown;Out o;assert(run(ram,s,0x49b2c,o)&&s.carry==ms5::AnimationCarrySet&&quiet(o));}
  // JSR (A1) computed PC: the whole LONG becomes the PC (no 24-bit fold), odd -> unaligned, no executor -> unsupported,
  // an interior/bundled U6 PC -> unsupported input PC. Everything rolls back (the first player's stores included).
+ // The no-executor probe was 49bca until the area-C unit C1 routed it (player_c1 block start, contract animation-machine-player-c1-contract.md);
+ // it is now the slot table data PC 4e4d2 (never code, never routed).
  struct Target {std::uint32_t pc;const char*message;};
  const Target targets[]={{0x01049e34,"unsupported animation machine PC"},{0xff049e34,"unsupported animation machine PC"},
-  {0x00049e35,"unaligned animation machine PC"},{0x0010e000,"unsupported animation machine PC"},{0x00049bca,"unsupported animation machine PC"},
+  {0x00049e35,"unaligned animation machine PC"},{0x0010e000,"unsupported animation machine PC"},{0x0004e4d2,"unsupported animation machine PC"},
   {0x0004d7f0,"unsupported animation machine PC"},{0x00049e36,"unsupported animation input PC"},{0x00049f4a,"unsupported animation input PC"},
   {0x00049dd4,"unsupported animation input PC"},{0x00049e8a,"unsupported animation input PC"}};
  for(unsigned int i=0;i<sizeof(targets)/sizeof(targets[0]);++i){
