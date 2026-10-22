@@ -220,3 +220,5 @@
 - FR7(메인, 2026-10-21): F4 범위 U38(`4b8e4..4c38c`)은 FR7이 연결한 `4c0f0..4c1de`를 빼야 한다. FR7은 C 뒤 D 205 block을 연결해 남은 D 실행 PC가 262에서 124가 된다(모두 C 뒤).
 
 - FR8(메인, 2026-10-21): F4 범위 U27은 `cc7b4`, U44는 `38e92..38f0c`·`38f14..38ff4`를 빼야 한다. FR4 표 항목 중 `cc7b4`만 연결했고, 나머지 53개는 FR4b 선언 정지로 남긴다. FR9(`af990` 계열, 220 block)가 R09 범위와 겹치므로 R09는 FR9 범위를 빼야 한다.
+
+- FR9(작업자, 2026-10-22): FR9(`af990` 계열, 220 block)는 `af8cc..af92c` `af990..afb3c` `afb3e..afc16` `afcf2..afed8` `aff00..b005e` `b051a..b057e`를 연결한다. F4 범위 R09(`af3fe..b05bc`)는 이 6 범위를 빼야 한다. FR9 뒤 D 남은 실행 PC는 0이다(`animation-machine-frontier-fr9-contract.md`).
