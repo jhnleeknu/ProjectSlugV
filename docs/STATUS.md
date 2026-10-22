@@ -2502,3 +2502,19 @@
   - 남은 실행 PC: C 835 → 757, E 220 → 218.
   - 계약: `animation-machine-player-c1-contract.md`.
 - 다음: E1(캐릭터 선택), C2, C3(C2는 C3와 함께여야 IO에 닿는다).
+
+## 2026-10-22 — 캐릭터 선택 E1(222 block)과 frame driver 입력 queue 수정
+
+- [F] E1(222 block): 캐릭터 선택 `de8bc`..`df2c0` 31 root, `18364`(map clip), 입력 읽기 `2634`.
+  - Z는 RAM에서 다시 계산한다. `ca50` 뒤는 BYTE `-7699(A5)`, `4a974` 뒤는 BYTE `(A0)`이고 A0는 `10fdb0` `10fdb1` `100004` `100005` 중 하나여야 한다(계약 결정 3). carry 소비자는 없다.
+  - 실제 ROM 7,500건 불일치 0. 변이 297개 중 295개 검출, 2개는 동등(메인 확인). V1 2,102(두 번 같음). 회귀 spec 34개, legacy 검증기 10개 통과. frame 비교 변화 없음.
+- [F] frame driver 수정: 첫 IO 실행에서 fixture `fx-c-input-read` `fx-n-input-read`가 guard-bad였다.
+  - 원인: guard frame의 queue에는 guard 읽기 자체의 값이 들어 있고, C++는 queue 하나를 H·C·N에 같이 줬다. 그래서 E1이 routing한 `2634`가 그 값을 소비하고 frame을 끝냈다.
+  - 수정: queue는 H(입력 sampler)만 읽는다. C·N은 H가 남긴 항목을 치워 둔 채 실행하고 끝나면 되돌린다. 원래 관측 규칙(C·N의 직접 입력 port 읽기는 미선언 읽기)과 같다.
+  - 수정 뒤 두 fixture는 guard-ok이고 다른 IO run은 모두 같다.
+- [F] IO 165,759 → 166,744(+985), 불일치 0, C++ 오류 0. 수용 키는 `frontiers_confirmed`만 false다.
+  - 이유: 15 run이 `4e8e6`(C1 block `4e8e0`의 직선 연속)에서 멈추는데, 관측이 이 PC를 TB 안에 숨겨 검증기가 확인하지 못한다. C4가 `4e8e6`을 routing한다.
+  - 계획 예측 169,144보다 작은 이유도 같다. 계획은 다음 정지를 C2·C3로 봤다.
+- [I] 관측 보정의 한계: 보정 관측도 TB의 첫 routing 밖 PC만 기록한다. 그래서 C3·C4는 직선 연속 block을 범위에 더했고(C3 4개, C4 2개), 단위마다 정확한 bitmap으로 다시 관측해 예측한다.
+- 남은 실행 PC: E 218 → 12(C6 helper `b0c` `e6496`), C 757.
+- 계약: `animation-machine-select-e1-contract.md`.
