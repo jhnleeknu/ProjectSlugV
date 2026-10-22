@@ -90,7 +90,8 @@ EXIT_STOPS = (0x1eb98, 0x1f756, 0x1fa68,
               0x208fa, 0x2210c, 0x1ef4c, 0x21d9e, 0x1efd6, 0x1f070, 0x21dd0, 0x223a0, 0x223d6, 0x4ef08, 0x1ce98, 0x1cfde, 0x1de3c, 0x1e21c, 0x1e8de,
               0x1fafc, 0x1fc96, 0x1fd50, 0x201bc, 0x21ca4, 0x21d0e, 0x21fa6, 0x4d0cc, 0x4e69a)
 UNIT_EXITS = EXIT_STOPS[:3]             # the C7 later-unit stops
-ROUTED_LATER = ()
+# later-unit stops routed since (player C8: 1eb98 1f756 1fa68 ea626 1ef4c 21d9e 1ce98 1cfde 1fafc 201bc 4d0cc): still declared stops of the C7 runs
+ROUTED_LATER = (0x1eb98, 0x1f756, 0x1fa68, 0xea626, 0x1ef4c, 0x21d9e, 0x1ce98, 0x1cfde, 0x1fafc, 0x201bc, 0x4d0cc)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1ca0a, 0x1ca0e), (0x1f32a, 0x1f330), (0x1f5be, 0x1f5c4), (0x1f74c, 0x1f752), (0x1f640, 0x1f644), (0x1f76e, 0x1f776), (0x22670, 0x22674),
           (0x226f0, 0x22704), (0x2513a, 0x25140), (0x2544e, 0x25454))
@@ -1142,10 +1143,12 @@ def error_fixtures(bases, add):
     err('22726-odd-a0', U.with_host_writes(st, regs=dict(a0=a6 + 1), pc=0x22726), odd_write, 0x22726, stop=0x2291a)
     err('253de-odd-a0', U.with_host_writes(st, regs=dict(a0=a6 + 1), pc=0x253de), odd_write, 0x253de, stop=0x49214)
     # failures after executed blocks:
-    #   1f2fc (D0.W & c) -> 1fa68 (C8, unrouted); 1f596 (D0 bit 1 clear) -> 1eb98 (C8, unrouted); 1f752 (C Set) -> 1f756 (C8, unrouted)
-    err('1f2fc-then-1fa68', U.with_host_writes(st, regs=dict(d0=4), pc=0x1f2fc), unrouted, 0x1fa68)
-    err('1f596-then-1eb98', U.with_host_writes(st, regs=dict(d0=0), pc=0x1f596), unrouted, 0x1eb98)
-    err('1f71a-then-1eb98', U.with_host_writes(st, regs=dict(d0=0), pc=0x1f71a), unrouted, 0x1eb98)
+    #   1f2fc (D0.W & c) -> 1fa68 (C8); 1f596 (D0 bit 1 clear) -> 1eb98 (C8) -> 1ebbe (C6); 1f752 (C Set) -> 1f756 (C8)
+    #   (1fa68 / 1eb98 are player C8 starts since C8; previous expectation 'unsupported animation machine PC' at 1fa68 / 1eb98: the BSR.W 1cb08 of 1fa68
+    #   at an odd A7 fails at 1fa68; 1eb98 (LEA; BRA.W 1ebbe) has no access, the BSR.W 1cab6 of C6 1ebbe at an odd A7 fails at 1ebbe)
+    err('1f2fc-then-1fa68', U.with_host_writes(st, regs=dict(d0=4, a7=a7 + 1), pc=0x1f2fc), odd_word, 0x1fa68)
+    err('1f596-then-1eb98', U.with_host_writes(st, regs=dict(d0=0, a7=a7 + 1), pc=0x1f596), odd_word, 0x1ebbe)
+    err('1f71a-then-1eb98', U.with_host_writes(st, regs=dict(d0=0, a7=a7 + 1), pc=0x1f71a), odd_word, 0x1ebbe)
     #   RTS at an odd A7 after executed blocks: 1ca5c (BYTE 2 >= BYTE 3) -> 1ca68; 2512c ... ; 25172 bounds -> 25486 needs 2519a, keep the simple RTS blocks
     rec = SCR
     err('1ca4c-then-1ca68', U.with_host_writes(st, [((rec + 2) & 0xffff, 1, 4), ((rec + 3) & 0xffff, 1, 3)], regs=dict(a7=a7 + 1, a4=rec), pc=0x1ca4c),

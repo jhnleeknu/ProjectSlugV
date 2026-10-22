@@ -104,9 +104,9 @@ EXIT_STOPS = (0x1ef4c, 0x1efa4, 0x1f2a4, 0x21d9e, 0x21f4c, 0x4e572,
               0x4eb58)
 UNIT_EXITS = EXIT_STOPS[:13]            # the C4 later-unit stops and deferred leaders
 # later-unit stops routed since (player C5: 21f4c 1cb1a 1cb38 1cb44 20240 20268 202ac 20544 21c12 21f78; player C6: 1efa4 4e572 1d398 1ebbe 206cc
-# 21662 4838c 4e8f8 4eb58; player C7: 1f2a4): still declared stops of the C4 runs
-ROUTED_LATER = (0x21f4c, 0x1cb1a, 0x1cb38, 0x1cb44, 0x20240, 0x20268, 0x202ac, 0x20544, 0x21c12, 0x21f78,
-                0x1efa4, 0x4e572, 0x1d398, 0x1ebbe, 0x206cc, 0x21662, 0x4838c, 0x4e8f8, 0x4eb58, 0x1f2a4)
+# 21662 4838c 4e8f8 4eb58; player C7: 1f2a4; player C8: 1ef4c 21d9e 1ce98 1cfde 1fa68 1fafc 201bc 4d0cc): still declared stops of the C4 runs
+ROUTED_LATER = (0x21f4c, 0x1cb1a, 0x1cb38, 0x1cb44, 0x20240, 0x20268, 0x202ac, 0x20544, 0x21c12, 0x21f78, 0x1efa4, 0x4e572, 0x1d398, 0x1ebbe,
+                0x206cc, 0x21662, 0x4838c, 0x4e8f8, 0x4eb58, 0x1f2a4, 0x1ef4c, 0x21d9e, 0x1ce98, 0x1cfde, 0x1fa68, 0x1fafc, 0x201bc, 0x4d0cc)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1be4a, 0x1be50), (0x1bf94, 0x1bf9a), (0x1c052, 0x1c058), (0x1ef9a, 0x1efb4), (0x21d68, 0x21d6c), (0x21d70, 0x21d74), (0x21d92, 0x21d9a),
           (0x21dc4, 0x21dc8), (0x4f13c, 0x4f144), (0x4e758, 0x4e75e), (0x4e962, 0x4e96c), (0x4e770, 0x4e77a))
@@ -502,9 +502,12 @@ def build():
     for t in TRAPS + EXIT_STOPS:
         require((unit_of(t) is None or t in ROUTED_LATER) and not mine(t), ('later-unit stop must stay unrouted', hex(t)))
     require(unit_of(0x3650) == 'animation_card_menu_open_block' and unit_of(0x21602) == 'animation_player_c3_block', 'routed computed-jump targets')
+    # player C8 routes the listed target 21e3a since: it stays a declared stop of the C4 runs (not in JUMP_ROUTED, as ROUTED_LATER)
     for t in LIST_21AEE:
-        require(unit_of(t) in (None, 'animation_player_c3_block', 'animation_player_c4_block'), ('computed-jump target routed by another unit', hex(t)))
-    require(set(t for t in LIST_21AEE if unit_of(t) is not None) | {0x3650} == set(JUMP_ROUTED), 'JUMP_ROUTED = the routed allowed targets')
+        require(unit_of(t) in (None, 'animation_player_c3_block', 'animation_player_c4_block', 'animation_player_c8_block'),
+                ('computed-jump target routed by another unit', hex(t)))
+    require(set(t for t in LIST_21AEE if unit_of(t) not in (None, 'animation_player_c8_block')) | {0x3650} == set(JUMP_ROUTED),
+            'JUMP_ROUTED = the routed allowed targets (C8 21e3a excluded)')
     for s in STARTS:
         require(unit_of(s) == 'animation_player_c4_block', ('start is not routed to player c4', hex(s), unit_of(s)))
     rng = random.Random(0xC4A4)
@@ -1122,8 +1125,10 @@ def error_fixtures(bases, add):
         err('37ca-a1-%x' % v, U.with_host_writes(st, regs=dict(a1=v, d2=1), pc=0x37ca), ERROR_JUMP, 0x37ca)
     for v in (0x21622, 0x21c22, 0x1021602, 0, 0x21d61, 0x21610):
         err('21c72-a1-%x' % v, U.with_host_writes(st, regs=dict(a1=v), pc=0x21c72), ERROR_JUMP, 0x21c72)
-    for v in (0x21e48, 0x21e3a):
-        err('21c72-a1-listed-%x' % v, U.with_host_writes(st, regs=dict(a1=v), pc=0x21c72), unrouted, v)
+    err('21c72-a1-listed-21e48', U.with_host_writes(st, regs=dict(a1=0x21e48), pc=0x21c72), unrouted, 0x21e48)
+    # 21e3a is a player C8 start since C8 (previous expectation 'unsupported animation machine PC' at 21e3a): its MOVE.B #1,aa(A6) with A6 = 0 writes
+    # fixed ROM and keeps the failing PC 21e3a
+    err('21c72-a1-listed-21e3a', U.with_host_writes(st, regs=dict(a1=0x21e3a, a6=0), pc=0x21c72), 'unsupported animation machine write device', 0x21e3a)
     #   C3 21c66 (BYTE 9c = 3) -> 215e6 on the ROM list 21aee -> Set, A1 = 21e48 -> 21c6e -> 21c72 JMP (A1): listed, unrouted
     err('21c66-then-21e48', U.with_host_writes(st, [((a6 + 0x9c) & 0xffff, 1, 3)], pc=0x21c66), unrouted, 0x21e48)
     #   3774 (D4.W = 1 -> 0) -> RTS 3778 at an odd A7

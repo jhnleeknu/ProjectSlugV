@@ -648,8 +648,10 @@ def gen_errors():
     # 1f2a4 is a player C7 start since C7 (previous row: 'unsupported animation machine PC' at 1f2a4); the BSR.W 1cab6 of 1f2a4 at an odd A7 keeps
     # the failing PC 1f2a4
     err('1ec2c-then-1f2a4', 0x1ec2c, odd, 0x1f2a4, d0=2, a7=SP + 1)
-    err('1ec1e-then-1fa68', 0x1ec1e, unrouted, 0x1fa68, d0=0xc)
-    err('1dad8-then-ea626', 0x1dad8, unrouted, 0xea626)
+    # 1fa68 / ea626 are player C8 starts since C8 (previous rows: 'unsupported animation machine PC' at 1fa68 / ea626); the BSR.W 1cb08 of 1fa68 at an
+    # odd A7 and the MOVE.B #ff,5e50(A5) of ea626 with A5 = 0 (fixed ROM) keep the failing PCs 1fa68 / ea626
+    err('1ec1e-then-1fa68', 0x1ec1e, odd, 0x1fa68, d0=0xc, a7=SP + 1)
+    err('1dad8-then-ea626', 0x1dad8, 'unsupported animation machine write device', 0xea626, a5=0)
     err('b0c-then-b56', 0xb0c, odd, 0xb56, a7=SP + 1)
     err('1e60a-then-1e630', 0x1e60a, odd, 0x1e630, a7=SP + 1, d0=1)
     err('1d514-then-1d51c', 0x1d514, odd, 0x1d51c, a7=SP + 1, d1=0x14)

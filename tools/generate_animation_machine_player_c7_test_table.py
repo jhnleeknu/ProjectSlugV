@@ -640,10 +640,13 @@ def gen_errors():
     err('odd-a0-253de', 0x253de, wodd, 0x253de, stop=0x49214, a0=REC + 1)
     err('odd-a0-25122', 0x25122, odd, 0x25122, stop=0x4ae4a, a0=0x25083)
     # failures after executed blocks (rollback; the failing PC differs from the entry):
-    err('1f2fc-then-1fa68', 0x1f2fc, unrouted, 0x1fa68, d0=4)
-    err('1f596-then-1eb98', 0x1f596, unrouted, 0x1eb98)
-    err('1f71a-then-1eb98', 0x1f71a, unrouted, 0x1eb98)
-    err('1f752-then-1f756', 0x1f752, unrouted, 0x1f756, carry=2)
+    # 1fa68 / 1eb98 / 1f756 are player C8 starts since C8 (previous rows: 'unsupported animation machine PC' at 1fa68 / 1eb98 / 1f756): the BSR.W
+    # 1cb08 of 1fa68 at an odd A7 and the MOVE.L #1f3d8,(A6) of 1f756 at an odd A6 keep the failing PCs; 1eb98 (LEA; BRA.W 1ebbe) has no access, the
+    # run now fails at the BSR.W 1cab6 of C6 1ebbe (odd A7)
+    err('1f2fc-then-1fa68', 0x1f2fc, odd, 0x1fa68, d0=4, a7=SP + 1)
+    err('1f596-then-1eb98', 0x1f596, odd, 0x1ebbe, a7=SP + 1)
+    err('1f71a-then-1eb98', 0x1f71a, odd, 0x1ebbe, a7=SP + 1)
+    err('1f752-then-1f756', 0x1f752, wodd, 0x1f756, carry=2, a6=NODE + 1)
     err('1ca4c-then-1ca68', 0x1ca4c, odd, 0x1ca68, a7=SP + 1, puts=((REC + 2, 1, 4), (REC + 3, 1, 3)))
     err('1c9fc-then-1ca04', 0x1c9fc, odd, 0x1ca04, a7=SP + 1, d1=4, puts=((REC + 4, 1, 3),))
     err('224b8-then-224c0', 0x224b8, odd, 0x224c0, a7=SP + 1)
