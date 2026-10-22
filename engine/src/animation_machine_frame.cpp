@@ -126,10 +126,9 @@ bool deliver_irq(std::vector<std::uint8_t>& ram, const std::vector<FixedDataReso
     irqs.push_back(rec);
     return true;
 }
-}
 // One segment: run_animation_machine to stop_pc, applying the declared release (or, with irq_execution, one delivered IRQ) at every
 // Waiting block and the declared BIOS boundaries.
-bool run_animation_frame_segment(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, const ProgramBusState& resources,
+bool run_segment(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, const ProgramBusState& resources,
     AnimationMachineState& state, AnimationMachineDevice& device, AnimationMachinePaletteRam* palette, std::uint8_t external_status,
     const AnimationFrameOptions& options, std::uint32_t stop_pc, AnimationFrameSegment segment, std::vector<VideoPortWrite>& ports,
     std::vector<AnimationFrameWait>& waits, std::vector<VideoPortWrite>& irq_ports, std::vector<AnimationFrameIrq>& irqs,
@@ -196,6 +195,25 @@ bool run_animation_frame_segment(std::vector<std::uint8_t>& ram, const std::vect
         ++count;
         if (!release_wait(ram,state,segment,waits,error)) return false;
     }
+}
+}
+// The declared external-read queue belongs to H (the input / raster sampler) only. C and N have no declared external reads (IO scope 5.6:
+// a direct input / raster port read in N or C is the native guard undeclared-device-read; E1 contract decision 2): the entries left by H
+// are held back for the segment, so a C / N read of a queue device fails with "animation machine external read queue empty"; a delivered
+// IRQ still reads the two entries it puts at the front. The held entries are put back unchanged afterwards (success or failure).
+bool run_animation_frame_segment(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, const ProgramBusState& resources,
+    AnimationMachineState& state, AnimationMachineDevice& device, AnimationMachinePaletteRam* palette, std::uint8_t external_status,
+    const AnimationFrameOptions& options, std::uint32_t stop_pc, AnimationFrameSegment segment, std::vector<VideoPortWrite>& ports,
+    std::vector<AnimationFrameWait>& waits, std::vector<VideoPortWrite>& irq_ports, std::vector<AnimationFrameIrq>& irqs,
+    std::uint32_t& external_reads, std::string& error) {
+    if (segment==AnimationFrameHead)
+        return run_segment(ram,windows,resources,state,device,palette,external_status,options,stop_pc,segment,ports,waits,irq_ports,irqs,external_reads,error);
+    std::vector<AnimationMachineExternalRead> held;
+    held.swap(device.reads);
+    const bool ok=run_segment(ram,windows,resources,state,device,palette,external_status,options,stop_pc,segment,ports,waits,irq_ports,irqs,
+        external_reads,error);
+    device.reads.insert(device.reads.end(),held.begin(),held.end());
+    return ok;
 }
 bool run_animation_frame_segment(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResource>& windows, const ProgramBusState& resources,
     AnimationMachineState& state, AnimationMachineDevice& device, std::uint8_t external_status,
