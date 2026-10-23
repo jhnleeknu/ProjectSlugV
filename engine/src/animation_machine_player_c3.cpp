@@ -78,8 +78,8 @@ bool pc3_listed(const std::uint32_t* list,unsigned int count,std::uint32_t targe
 // the C helpers 48350 (the Set side of the C1 block 48346) 48384 484ca 4d0a4 4de9c, the record helper e8b5a and the straight-line continuations 1cde0 /
 // 1cdf0 / 1cdfa (after C2 1cdd8 / 1cdea) and 202a0 (after 20290) that the IO runs execute inside the same TB (contract decision 10).  C: the 22 consumers read a known C or
 // fail; 1ee00 (BSR) and the RTS 1ed32 215f6 21c1a keep the incoming C (dispatcher carry list); 215ec (CMPA) 21bc0 21be0 21bfa 21c1c 48392 4d100
-// 4debc 4ded4 leave Clear, 215fc 21bda 48362 4deca Set, 1ed30 21bb2 21c06 the compare borrow.  Z: 1ee56 BNE recomputes the Z of the 1cb08 MOVE.W from
-// memory (contract decision 3).
+// 4debc 4ded4 leave Clear, 215fc 21bda 48362 4deca Set, 1ed30 21bb2 21c06 the compare borrow.  Z: 1ee56 BNE recomputes the Z of the 1cb08 MOVE.W and,
+// for a WORD that is not 0, of the C5 1cb1a TST.L from memory (contract decision 3, widened by player C5).
 bool animation_player_c3_block(AnimationMachineContext& c) {
     AnimationMachineState& r=c.s;std::uint32_t value=0;bool old=false;
     switch(r.pc) {
@@ -111,16 +111,25 @@ bool animation_player_c3_block(AnimationMachineContext& c) {
     // AND.B 60(A6),D0; BEQ.W 1ee5a (D0 bits 8..31 kept).
     case 0x1ee46:if(!pc3_get(c,r.a[6],0x60,1,value))return false;am_byte(r.d[0],r.d[0]&value);r.pc=(r.d[0]&0xffU)==0U?0x1ee5a:0x1ee4e;return true;
     case 0x1ee4e:r.a[0]=0x1b5f2;return am_call(c,0x1cb08,0x1ee56);                                        // LEA 1b5f2(PC),A0; BSR.W 1cb08.
-    // BNE.W 1eee0 on the Z that 1cb08 leaves at its RTS 1cb18 (contract decision 3): the Z of MOVE.W (A0,D7.W),D7 with D7.W = 2 x BYTE 9f.  A0 and
-    // BYTE 9f are unchanged by 1cb08 / 1cb18, so the WORD is read again: 0 (the only routed return path 1cb18, Z = 1) -> 1ee5a.  A WORD that is not 0
-    // means the return came through the C5 path 1cb1a, and a source outside fixed ROM / work RAM would be a second device read: checked errors.
+    // BNE.W 1eee0 on the Z that 1cb08 leaves at its return (contract decision 3, widened by player C5 decision 3): A0, BYTE 9f and LONG 22(A6) are
+    // unchanged by 1cb08 / 1cb18 and by the C5 path 1cb1a / 1cb30 / 1cb32, so the sources are read again.  The WORD W = (A0 + sext(2 x BYTE 9f)) (the
+    // Z of the 1cb08 MOVE.W): 0 is the return 1cb18 (Z = 1) -> 1ee5a.  W not 0 is the C5 path 1cb1a, whose Z is the TST.L of LONG (LONG 22(A6) +
+    // sext(4 x WORD (A0 + sext(W)))): 0 returns through 1cb30 (Z = 1) -> 1ee5a, else through 1cb32 (ORI keeps Z = 0) -> 1eee0.  A source outside fixed
+    // ROM / work RAM (a second device read) is the checked flag-source error.  (Before C5: W not 0 was that error too.)
     case 0x1ee56: {
         if(!pc3_get(c,r.a[6],0x9f,1,value))return false;
-        const std::uint32_t at=am_index(r.a[0],(value+value)&0xffffU);
+        std::uint32_t at=am_index(r.a[0],(value+value)&0xffffU);
         if((at&0xffffffU)>=0x200000U)return am_error(c,"unsupported animation player c3 flag source");
         if(!am_read(c,at,2,value))return false;
-        if(value!=0U)return am_error(c,"unsupported animation player c3 flag source");
-        r.pc=0x1ee5a;return true;
+        if(value==0U){r.pc=0x1ee5a;return true;}
+        at=am_index(r.a[0],value);
+        if((at&0xffffffU)>=0x200000U)return am_error(c,"unsupported animation player c3 flag source");
+        if(!am_read(c,at,2,value))return false;
+        std::uint32_t base=0;if(!pc3_get(c,r.a[6],0x22,4,base))return false;
+        at=am_index(base,(value<<2)&0xffffU);
+        if((at&0xffffffU)>=0x200000U)return am_error(c,"unsupported animation player c3 flag source");
+        if(!am_read(c,at,4,value))return false;
+        r.pc=value==0U?0x1ee5a:0x1eee0;return true;
     }
     case 0x1ee5a:return pc3_byte_is(c,r.a[6],0x6e,2,0x1ee64,0x1ee8a);                                    // CMPI.B #2,6e(A6); BNE.W 1ee8a.
     // MOVE.W #10,D0; BTST.B #0,15(A6); BEQ.W 1ee74 / NEG.W D0.

@@ -1,0 +1,244 @@
+# 영역 C 단위 C5(플레이어 상태 `20738`과 표 점프, 착지 상태 `212ce`/`213da`/`20e18` → `2143c`/`214c0`/`214d6`/`21556`, 기록 helper `1c356`/`4d628`, C2·C3 꼬리, 203 block) 구현 계약
+
+**구현 전 계약 — 작업자(Claude Opus 5.5 / high) 초안.** 범위·block·출구는 `area-c-completion-plan.md` §4.2의 C5 행과 아래 "C5 상세 명세"(계획 §8과 같은 꼴, 이 계약에서 새로 씀)를 기준으로 삼고, 구조·공통 규칙은 C4 계약(`animation-machine-player-c4-contract.md`)·C3 계약·C2 계약·C1 계약을 따르며 다른 점만 적는다. 단위 이름은 C5, 파일 접두어는 `player_c5`(C++) / `pc5`(V1 spec)다(계획 메인 결정 7). 결정 항목은 작업자 권고안으로 구현했으며 메인이 바꾸면 그에 맞춰 고친다.
+
+## 기준 입력
+
+- [F] ROM: `extracted/program/maincpu.decrypted.be.bin`, SHA256 `29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f`, 8 MiB. 이 단위의 코드·고정 자료는 모두 `<100000`이라 CPU 주소 = 파일 오프셋이다. bank 창 읽기와 장치 쓰기는 없다(C2/C3 `1cb08`·`1cb44`가 LONG `22(A6)`로 읽는 표가 bank 창이면 그 읽기는 CPU 주소다). ROM·추출 데이터는 수정하지 않았고 저장소에 넣지 않는다.
+- [F] 저장소 기준 `4748c9f`(branch `claude/c5-core`; C1 `ff2e284`, E1 `6308f75`·`1c17a3e`, C2 `5d686ac`, C3 `d31d04e`, C4 `749643e` routing). routing 기준 `engine/src/animation_machine.cpp` SHA256 `9747100c960fa54879c998635c250ae06e790155df4ae1c5a5a4e2ec2c03915d`, `animation_machine_internal.h` `6f22404a6c4422178f812a7ad193ee9e8a1b36bfde4f0da1c7740d2875923c0d`.
+- [F] 관측 입력: native IO 관측 `artifacts/animation_machine_io_native`(읽기 전용; state pack `states/P1/068.pack.gz` `094.pack.gz` `106.pack.gz`, `boot-title-start/boot.pack.gz`)와 계획의 보정 관측 `ms5-scratch/c1/reobs/`(실행 집합 측정용, 계획 메인 결정 1; 읽기만), 그리고 이 단위의 정확 bitmap 재관측 두 벌(scratch `reobs_c5/obs_c4`, `reobs_c5/obs_c5a`; 결정 1).
+- [F] 시작 목록: 계획 scratch `ms5-scratch/c5/starts_C5.txt`(203개, SHA256 `88a6dbefd0665d5f9363ef67bc17b5313f7a82001e1c02227248a04bebb3d75a`, 계획 §6 표의 `88a6dbefd0665d5f`와 같음)에서 C3가 가져간 `202a0`을 빼고(C3 결정 10) 결정 1의 `20f04`를 더한 **`ms5-scratch/c5/starts_C5_final.txt`(203개, SHA256 `5bdaf6ce7dfb356bfaddba95459063699efd7e6b214b92f8ec47e9b9533523fc`)**. 실행부의 `case` label 203개, V1 spec `STARTS`, 시험 생성기의 `STARTS`와 집합이 같다(작업자 확인).
+- 작업자 scratch(저장소 밖, 재현용): `/Users/start/Workspce/ms5-scratch/c5/`
+  - `remeasure/`(재측정: `remeasure2.py` → `r5.json` `r5_C5.txt`), `plan/udetail_C5.txt` `plan/C5.dis.txt`(계획 범위·출구·역어셈블), `work/C5_final.dis.txt`(최종 범위 역어셈블, `>` = block 시작), `work/c5ranges_final.txt`(범위), `work/c5io.py`(IO run·frame), `work/callers_c5.py` `work/callers_c5.out`(진입 호출자), `work/writers_c5.py`(field 쓰기 명령 검색), `work/intargets.py`(범위 안으로 들어오는 직접 분기 대상 검사), `work/natsig5.py`(IO 자연 frame 선택), `work/zpath_io.py`(IO frame의 C3 `1ee56` 도달 검사), `work/hexsearch5.py` `work/hexsearch5.out`(기존 파일의 C5 범위 상수 검색), `work/pincheck.py`(CPP_PINS 대조), `work/mkroot.py` `work/mw_probe.cpp`(검증기 새 기대값 관측), `work/ubsan.sh`(UBSan), `work/v1_regs.sh`(V1 회귀), `reobs_c5/obs_c4` `reobs_c5/obs_c5a`(정확 bitmap 재관측), `mut/`(변이), `realrom/`(실제 ROM 차분), `trial_logs/`(작업자 시험 실행 로그).
+- 표기: [F] 원본 바이트·현재 소스·관측 기록에서 확인한 사실, [I] 추론, [U] 미확인.
+
+## 재확인과 범위
+
+- [F] **재측정 전**(`MS5_REOBS=…/c1/reobs dleft.py`, routing `9747100c…` = C1+E1+C2+C3+C4): 실행된 routing 밖 PC C **361** / E **12** / D 0, 예측 일치 frame **170,691**, 첫 정지 영역 C 14(`dleft_before.log`). C4 계약의 C4 뒤 값과 같다.
+- [F] **closure 재측정(C1~C4 routing 상태)**: C3·C4 작업자 방식 그대로 계획 spec `plan/plan_final.json`과 계획 당시 key(`remeasure/keys_old.json`)로 현재 routing에서 `cplan3`을 돌렸다(`remeasure/remeasure2.py`, `trial_logs/remeasure_r5.log`). **C5 = 201 block, 487 명령, 1,984 byte**(시작 목록 SHA `e444432fd280d72f…`, `remeasure/r5_C5.txt`), 예측 172,297(+1,606), 남은 C 261 / E 12, 첫 정지 C 10. C4 계약이 C4 재측정 때 본 C5 값(`e444432f…`, 201)과 같다.
+  - [F] 계획 목록(203)과의 차이는 `202a0` `202ac` 둘이다. `202a0`은 C3가 결정 10으로 가져갔다. `202ac`(`MOVE.W 78(A6),D0; MOVEQ #0,D1; JSR 1c356(PC)`)는 C3 `202a0`의 fall-through이고 IO 관측에서 실행되지 않았다. C3 block이 routing되어 closure가 `202a0`을 지나지 않으므로 재측정에서 빠졌다. [I] 계획 §4.1("block 시작은 전체 closure 기준으로 한 번만 정한다")과 C3 계약(뒤 단위 정지 `202ac`, C5 소속)대로 `202ac`를 C5 시작으로 둔다(C4의 `1ef08`과 같은 처리).
+- [F] **범위 밖에서 범위 안으로 들어오는 직접 분기**(`work/intargets.py`: ROM `<100000` 전체의 `JSR/JMP abs.l`, `BSR/BRA/Bcc`, `JSR/JMP d16(PC)`, `DBcc` 대상 중 C5 범위 안이면서 시작이 아닌 것): 진짜 명령은 `21050 BSR.W 20f04`와 `210fa BSR.W 20f04` 둘이다(나머지 셋 `19a42` `1cc0a` `1cc8c`는 자료나 명령 중간을 명령으로 읽은 것: 홀수 대상, 표 `1cc04` 안, `1cc88 MOVEA.L #365fc` 안). `20f04`는 `20efc MOVE.L #a9800,3a(A6)`(8 byte) 다음 명령이다. `21050` `210fa`는 계획의 전체 closure에도 없다(`2094e` 표의 전사하지 않은 칸 handler 쪽). 결정 1로 `20f04`를 시작으로 더했다.
+- [F] **정적 범위(최종)**: **28 범위, 1,994 byte**(이어 붙인 SHA256 `f8b3a652fa74a0cebb23f39079ed176227b300d222b5dda7e23f43a63ca71913`), 짝수 PC 997(내부 794), 시작 203. 계획 범위(203 block, 2,006 byte, 이어 붙인 SHA256 `17f5f5926651ed232209b9874bc6f3513a3f231aed2f47340c1ceee5075c685f`)와의 차이는 `202a0..202ac`(C3)뿐이다. 범위 안에 기존 routing된 PC는 없다(`make test`의 내부 PC 794개 검사가 모두 C5 오류로 거부됨).
+- [F] **정확 bitmap 재관측**(결정 1; scratch `tools/reobs.py`, 관측기 수정 없음; C·E run 18개):
+  - C4 routing(`9747100c…`) 그대로: `reobs_c5/obs_c4`(`observation.json` compared_sha256 `caf6f8edee8ad15f…`), `reobs_check.py`: 18 run 모두 native 기록이 원래와 같다. `dleft.py` → C 361 / E 12, 예측 **170,691**, 첫 정지 C 14(P1 94 계열 8 run frame 311·P1 68 계열 4 run frame 527·title frame 431에서 C5 `20240`, demo frame 381에서 C6 `1d398`). C4 계약의 `reobs_c4/obs2`와 같다.
+  - C5 범위를 가상 routing(`EXTRA_ROUTED`)에 넣은 bitmap: `reobs_c5/obs_c5a`(compared_sha256 `a1740a0bcbe568f8…`, native 기록 18 run 모두 같음). `dleft.py` → C **261** / E 12, 예측 **172,297**, 첫 정지 C 10. 예측 첫 정지(`work/firststops.py`)는 P1 94 계열 8 run frame **457**·title frame **577**에서 C6 `21564`(`214d6`/`2155a`의 `SUBQ.B` 빌림 쪽), demo frame **381**에서 C6 `1d398` … 다. P1 68 계열 4 run은 600 frame 끝까지 정지 없음.
+  - [F] 두 관측 사이에 새로 보인 routing 밖 PC(TB 안에 가려진 직선 연속)는 **없다**: C5 연결로 사라진 실행 PC는 정확히 C5 시작 100개이고, 남은 첫 정지는 모두 뒤 단위(C6)다. 그래서 C3 결정 10·C4 결정 1과 같은 숨은 직선 block 추가는 필요 없다.
+- [F] **측정 결과**(`dleft.py`, 최종 routing `beff46d6…`): `MS5_REOBS=…/c1/reobs` → C 361 → **261**(−100: 실행된 C5 PC 100개, 모두 block 시작), E 12, 예측 일치 frame **172,297**(+1,606 = A 8 run × 146 + B 4 run × 73 + title 146; demo 0), 첫 정지 C 10(`dleft_after.log`). `MS5_REOBS=…/reobs_c5/obs_c5a`로도 같다(`dleft_after_obs_c5a.log`). 계획 표의 남은 C 265와의 차이(−4)는 앞 단위의 범위 보정이다: C4 뒤 남은 C가 계획 366이 아니라 361(C3 결정 10·C4 결정 1의 실행 PC 5개)이고, 이 단위의 실행 PC가 계획 101이 아니라 100(`202a0`은 C3)이다(`remeasure/r5.json` C5 `execpcs` 100, 계획 `units.out.json` 101).
+
+## C5 상세 명세(계획 §8과 같은 꼴)
+
+### 범위
+
+- [F] **계획 203 block, 493 명령, 2,006 byte, 28 범위**(시작 목록 SHA256 `88a6dbef…`, 범위 이어 붙인 SHA256 `17f5f592…`) − `202a0`(C3) + `20f04`(결정 1) = **203 block, 1,994 byte, 28 범위**(시작 목록 SHA256 `5bdaf6ce7dfb356bfaddba95459063699efd7e6b214b92f8ec47e9b9533523fc`, 범위 이어 붙인 SHA256 `f8b3a652fa74a0cebb23f39079ed176227b300d222b5dda7e23f43a63ca71913`). 아래 표는 구현 범위다.
+
+| 범위(CPU = 파일 오프셋) | byte | SHA256(앞 16자) | 시작 | 내용 [I] |
+| --- | --- | --- | --- | --- |
+| `1c356..1c4b0` | 346 | `e1bd6cc0c1439dd5` | 32 | 기록 helper `1c356`(D1.B 기록 종류 < 13): 플레이어 node `A5−7348/−7258`의 `289e` 판정, 10-byte 기록 `1c298 + 10 × D1.W`(MULU), `4d7a6`·`4d628`·`1c51c`·`1c1f4`, WORD `c(A4)` 3e7 포화, 자식 `1c4b0`(`28ae`), C를 돌려줌 |
+| `1c51c..1c52c` | 16 | `3ebb54e094e1e816` | 1 | `BTST.L D1,D7`(D7 = LONG 표 `1c52c + 4 × BYTE 9e(A0)`), Z를 돌려줌 |
+| `1cb1a..1cb40` | 38 | `e8985b790192b11c` | 4 | C2 `1cb08`의 Set 쪽: `TST.L (LONG 22(A6) + 4 × WORD)`, C를 돌려줌; `1cb38 LEA 26(A6),A1` |
+| `1cb44..1cb6a` | 38 | `0b9fea074a47d157` | 3 | 기록 WORD → LONG `22(A6)` 표 → `JMP 49f96`(A0/A1 교환) |
+| `1cc1a..1cce8` | 206 | `d499151719e62727` | 14 | BYTE 표 `1cbb2 + 9 × a0 + 9f`(MULU) → `2986`(LONG 표 `1cc04`), BYTE 표 `1cc10`, `365fc`(`2986`), `491b6`, WORD 쌍 `1cce8` |
+| `1cd00..1cd12` | 18 | `7d6588464740bef9` | 3 | BYTE `15` bit 0 → `NEG.W D0`, `JMP 49214` |
+| `1d182..1d198` | 22 | `7c4d9b2924a37d6d` | 3 | `4d106`·`4de7a` 호출 |
+| `20240..2024a` | 10 | `3faaf376aa30c519` | 1 | C3 `20238`의 fall-through: `BCLR #2,a7`, C3 `20264`로 |
+| `20268..20290` | 40 | `728124ff20a70076` | 5 | C3 `20234 BEQ`: BYTE `a8` bit 0, BYTE `10f000` bit 7, `49c38`의 C, C3 `202a0`/`20290`으로 |
+| `202ac..202b6` | 10 | `e0b880a6dae51d3e` | 1 | C3 `202a0`의 fall-through: `JSR 1c356`(C3 `202b6`로 돌아감) |
+| `20544..20578` | 52 | `86d1bd3abcb07727` | 6 | C3 `2053c`의 fall-through: callback `20738`(쓰기만) / `1ff6c`(쓰기만), C3 `20626`으로 |
+| `206ec..20700` | 20 | `813e72e818a94ea3` | 1 | WORD 표 `20710 + 2 × WORD 76` → `JMP 3af8` |
+| `20738..2079a` | 98 | `bf0283bf7e366899` | 9 | node callback `20738`: BYTE `15`/`61`/`a7` bit, `1c356`·`1cc1a`·`1c1e2`·`1d15a`·`206ec`, 표 점프 `20792`(4칸, 실행 칸 `20796`) |
+| `208d2..208fa` | 40 | `f4b6fb792db8015d` | 7 | BYTE `9e` ≠ 0 반복(`1c1f4`·`1cc1a`·`1c1e2`), `1d15a`, BYTE `5e` 부호 |
+| `2092c..20952` | 38 | `0c4d1c4a11bb95ed` | 4 | `1aa3a` D0 bit 3, BYTE `5e` < 1b 표 점프 `2094e`(28칸) |
+| `2095a..2095e` | 4 | `7000769e8228773b` | 1 | 표 `20952`의 실행 칸 2: `BRA.W 212ce` |
+| `209c2..209da` | 24 | `a579b6d028734fd4` | 2 | BYTE `5e` < 1b 표 점프 `209d6`(28칸, 실행 칸 없음) |
+| `20de6..20e64` | 126 | `5f3a1965e62e493f` | 14 | LONG `36`/`3a` 접근(`SUB.L`/`ASR.L #5`/`ADD.L`), 착지 `20e18`(`1cb38` 기록 `1bc82`, 칸 `84` 초기화, callback `20e3e`) |
+| `20efc..20f22` | 38 | `8c5e7c1d5426cea5` | 5 | LONG `3a`/`36` 초기값(BYTE `5f` 부호), 결정 1의 `20f04` |
+| `212ce..21336` | 104 | `f72d2dc7f427eeb1` | 8 | 표 칸 `2095a`의 착지: `8ff4`, 소리 `8ebe`(WORD 표 `1b128`), `cddee`, 기록 `1bc52`/`1bc4c`, 칸 `84` 초기화 |
+| `213da..21564` | 394 | `149c5444f35430a1` | 40 | 착지 `213da`(`20efc`), callback `2143c`/`214c0`/`214d6`/`21556`, WORD `2c` 접근(`ASR.W #4`), `49fc6`의 C, 화면 범위 `21520` |
+| `21c12..21c1a` | 8 | `0e81dcd3ac367956` | 1 | C3 `21c06`의 Set 쪽: `LEA 1b7ba; BSR 1cb08`(C3 `21c1a`로) |
+| `21f4c..21f58` | 12 | `9e9b1e3335e13467` | 2 | C3 `21c9c`/C4 `21dc8`의 Set 쪽: `1cabe`, BYTE `a3` 지우기(C3 `21f58`로) |
+| `21f78..21fa6` | 46 | `6ea203707d952ef1` | 9 | C3 `21f70 BSR 215e6`의 복귀: `JMP (A1)` `21f7c`(목록 `21b26`), `1cd98` bit, `2156a` |
+| `4d106..4d126` | 32 | `97ad7aa606a48f72` | 4 | WORD `5cba/5ce6(A5)` 지우기, BYTE `22` := 2 |
+| `4d628..4d6b4` | 140 | `5ba148d6e8dd3daa` | 15 | C helper: 16-byte 기록 `4cf64 + 16 × BYTE 27`(MULU) `BTST.L D2`, WORD `20` 3e7 포화, C를 돌려줌 |
+| `4de7a..4de9c` | 34 | `0ec301b99bbff369` | 3 | `5d12/5d18(A5)` 초기화 |
+| `cddee..cde16` | 40 | `29a0fb95007623e7` | 5 | 자식 `cde42`(`28ae`, FR7), `28ae`의 C, `4970a` |
+| 합계 C5 | 1994 | 이어 붙인 바이트 `f8b3a652…` | **203** | 짝수 PC 997(내부 794) |
+
+- [F] **진입(실행된 PC를 줄인 closure 진입, `udetail.py C5`)**: `20240` `20268` `1cb1a` `21c12` `21f4c` `21f78` `20544` `1cb38` `1d182` `20796` `2095a`. 보정 관측(C4 routing 재관측 `obs_c4`)에서 실행된 C5 PC는 100개이고 모두 block 시작이다(`work/c5io.py`). 실행되지 않은 시작 103개.
+- [F] **호출자**(ROM 전체 직접 분기 검색, `work/callers_c5.out`): `1c356` ← `202b2`(C5 `202ac`) `20764`(C5 `2074c`)와 뒤 단위 `1d96a` `1eb86` `1ff80` `20512` `b4506`(모두 다음 명령이 C를 읽지 않음); `1c51c` ← `1c3de`(C5), `20504`(뒤 단위, 다음 명령 `BNE`); `1cb1a` ← C2 `1cb14 BNE`만; `1cb38` ← C5 `20e1c` `21310` `2140e`, C2 `1f1f8`, 뒤 단위 25곳; `1cb44` ← `1cb3c BRA`, C3 `1cb40`의 fall-through; `1cc1a` ← C5 `20768` `208e4`, 뒤 단위 `1ff84` `204e4`; `1cd00` ← `1cc66` `1ccc0` `1cccc` `1cce2`; `1d182` ← C5 `21520` `21556`, 뒤 단위 11곳; `20268` ← C3 `20234 BEQ`; `206ec` ← `20774`; `20738` ← 뒤 단위 `1fdb6` `1fdcc BNE`(그리고 C3 `2066a`·C5 `20554`/`2055e`의 callback 쓰기); `20de6` ← C5 `20e3e` `21502`, 뒤 단위 `20ed4`; `20e18` ← `209ca BCC`와 표 `209da`의 칸 27개; `20efc` ← C5 `213da`, 뒤 단위 `211d6` `213cc`; `20f04` ← 뒤 단위 `21050` `210fa`(결정 1); `212ce` ← `2095a`; `213da` ← `20942 BCC`와 표 `20952`의 칸 22개; `21f4c` ← C3 `21c9c`, C4 `21dc8`(BCS); `4d106` ← `1d186`, 뒤 단위 `1fc86`; `4d628` ← `1c3c4`; `4de7a` ← `1d190`, 뒤 단위 `1fd22`; `cddee` ← `212ec`, 뒤 단위 `20616`. `20240` `202ac` `20544` `21c12` `21f78`은 C3 block의 fall-through·복귀 PC다.
+- [F] **설치 값**(`MOVE.L #v,(A6)`): 곧바로 들어감 `20e3e`(`20e20`), `2143c`(`21430`), `214d6`(`214c0`), `21556`(`21542`). **쓰기만**: `20738`(`20554`/`2055e`), `1ff6c`(`2056e`, C11), `214c0`(`20e5a` `214b6`). 둘째 callback 칸 `84(A6)` := `21602`(`20e20` `21314` `21412` `21f9c`; C3 허용 목록 34개 안).
+- [F] **IO run의 node**(`work/natsig5.py`): 플레이어 node `100cb8`의 callback이 frame 311~389(P1 94; P1 68 527~563, title 431~509)에 C4 `1ef0e`이고 같은 callback 안에서 C3 `20238`을 거쳐 C5 `20240`/`20268`/`20544`(→ `20738` 설치)을 실행한다. frame 392(title 512)에 callback `20738`, 393~426(513~546)에 `2143c`, 427(547)에 `214c0`, 428~457(548~577)에 `214d6`이고, frame 457(577)의 `214d6`이 `BYTE 88` 빌림으로 C6 `21564`에 닿는다.
+
+### 계산 점프와 표(결정 2)
+
+- [F] **`20792 JMP 20796(PC,D0.W)`**(block `20778`; D0 = 4 × BYTE `9e`, `MOVEQ #0` + `MOVE.B` + `ADD.W` 둘). 표 `20796..207a6`(파일 오프셋 = CPU 주소): BRA.W 4칸 `20796`→`208d2`, `2079a`→`207a6`, `2079e`→`208d2`, `207a2`→`208d2`. [F] 플레이어 node의 BYTE `9e`를 쓰는 ROM 명령은 `1bd3a`(0)와 C2 `1c1ec`(표 `1c1d8`: `00 00 01 01 02 02 03 03 00`, 색인 BYTE `a0`)다(`work/writers_c5.py 9e`; `4eb2a`는 슬롯 node의 BYTE). 그래서 색인은 0..3이고 4칸 모두 닿을 수 있다. IO 관측에서 실행된 칸은 `20796`뿐이다.
+  - 결정(계획 결정 4, FR4 방식): **실행된 칸 `20796`만 전사한다**(block `20796 BRA.W 208d2`). 실행부는 D0.W 변위가 `c` 이하일 때만 PC := `20796` + 변위로 옮기고(4칸 = 허용 대상; `20796`은 C5 시작, 나머지 3칸은 다음 dispatch의 `unsupported animation machine PC` 선언 정지), 변위가 `c`를 넘으면 `unsupported animation player c5 jump target`(checked, rollback)이다.
+- [F] **`2094e JMP 20952(PC,D0.W)`**(block `20946`; `2093a MOVE.B 5e(A6),D0; CMPI.B #1b,D0; BCC.W 213da` 뒤 `ANDI.W #ff,D0` + `ADD.W` 둘). 표 `20952..209c2` BRA.W 28칸(대상 종류: `213da` 22칸, `212ce` `21370` `2116c` `210bc` `2126c` `21336` `20d72` 각 1칸). 실행 칸은 색인 2 `2095a` → `212ce`. [F] BYTE `5e(A6)`를 쓰는 ROM 명령은 상수(`0` `6` `ff` `7` `19` `18`)와 레지스터·다른 field 값(`1fd94 MOVE.B D1` 등)이 섞여 있어 쓰기만으로는 범위가 정해지지 않는다. 범위는 같은 경로의 `CMPI.B #1b` / `BCC` guard가 정한다: `20946`은 `2093a`의 fall-through로만 들어오고 그때 D0.B < 1b다.
+  - 결정: **실행된 칸 `2095a`만 전사한다**. 허용 변위 0..`68`(색인 0..1a, 27칸: guard가 받는 범위; 28번째 칸 `209be`는 guard 때문에 닿지 않는다). 그 안이면 PC := `20952` + 변위(`2095a`는 C5 시작, 나머지 26칸은 선언 정지), 밖이면 checked jump-target 오류(직접 진입한 `20946`의 D0.B ≥ 1b).
+- [F] **`209d6 JMP 209da(PC,D0.W)`**(block `209ce`; `209c2`의 같은 guard `CMPI.B #1b; BCC.W 20e18`). 표 `209da..20a4a` BRA.W 28칸(`20e18` 27칸, `209fa`→`20e64` 1칸). IO 관측에서 실행된 칸은 없다. 결정: 칸을 전사하지 않는다. 허용 변위 0..`68`(27칸 모두 선언 정지), 밖이면 checked jump-target 오류.
+- [F] **`21f7c JMP (A1)`**(block `21f7c`, `21f78 BCC 21f7e`의 Set 쪽): A1 = C3 `215e6`이 목록 `21b26`(C3 `21f70 LEA 21b26(PC),A0`)에서 key WORD = BYTE `9c`로 찾은 handler LONG. 목록 `21b26..21b3c`([F] ROM 바이트): (`21602`, 0) (`21e48`, 3) (`21e3a`, 4), LONG 0.
+  - 허용 대상 = 이 3개 handler(C3 결정 2의 목록과 같음). routing된 것은 `21602`(C3)이고 `21e48` `21e3a`는 뒤 단위 정지(다음 dispatch의 `unsupported animation machine PC`). 그 밖의 A1(0, 홀수, bit 24 이상이 선 값, 다른 routing된 PC 포함)은 `unsupported animation player c5 jump target`. [I] 68000은 주소 bit 24..31을 버리지만 C++는 32 bit로 비교한다(C3·C4 결정 2와 같음).
+- [F] **읽는 고정 ROM 자료**(live bus, 상한 검사 없음; C3 결정 5와 같은 규칙):
+  - 10-byte 기록 `1c298 + sext(10 × D1.W 하위 WORD)`(`1c378`; ROM `1c298..1c356` = 19 기록, 경로상 D1.B < 13 guard(`1c356`), 직접 진입은 D1.W 아무 값) — BYTE 0(종류: `1c51c`의 bit 번호), BYTE 1(`4d628`의 D2), BYTE 2, WORD 4 / 6 / 8. `1c3e6`은 `1c298 + 1 + 10 × BYTE 4(A4)`를 읽는다.
+  - LONG 표 `1c52c + sext(4 × BYTE 9e(A0))`(`1c51c`, `1c3e2`; [F] ROM 4칸 모두 `0007ffff`, 그 뒤는 코드).
+  - BYTE 표 `1cbb2 + sext(9 × BYTE a0 + BYTE 9f)`(`1cc1a`; ROM 82 byte, 값 0..2), LONG 표 `1cc04 + 4 × BYTE`(`1cc38`; ROM `0 3643e 363c6 0`), BYTE 표 `1cc10 + sext(D0.W)`(`1cc6a` `1cc7c`; ROM 9 byte `0 0 0 0 0 1 1 0 0`; `1cc7c`는 D0 bits 8..15를 그대로 둔 색인).
+  - WORD 쌍 `1cce8 + sext(4 × BYTE 7c)`(`1ccd0`; ROM 6쌍), WORD 표 `20710 + sext(2 × WORD 76)`(`206ec`; ROM `1a6f 1a58 1a71 1a8a 18d1 …`), WORD 표 `1b128 + sext(2 × WORD 76)`(`212d4` `213e4`; ROM `0376 0377 …`).
+  - 16-byte 기록 `4cf64 + 16 × BYTE 27(A4)`의 LONG `+4`(`4d640`; [F] ROM 기록 0~4는 0, 기록 5는 `107d`, 기록 11은 `7d`; 12 이후는 코드 바이트).
+  - 기록 WORD(A0) `1bc4a` `1bc4c` `1bc52` `1bc82`(`1cb44`), `1b7ba`(C2 `1cb08` / `1cabe`로 넘김), 그리고 LONG `22(A6)`가 가리키는 표(`1cb1a` `1cb44`; RAM·ROM·bank 창 어느 것이든 원본 그대로 읽음).
+  - 넘기기만 하는 포인터: 자식 `1c4b0` `365fc` `cde42`(A0, `28ae`/`2986`), `100bf4`(A1, `2986`).
+
+### MULU·MOVEM·ASR(결정 4)
+
+- [F] **MULU 4곳**: `1c382 MULU.W #a,D7`(block `1c378`), `1c3f4 MULU.W #a,D1`(block `1c3e6`), `1cc20 MULU.W #9,D0`(block `1cc1a`), `4d648 MULU.W #10,D7`(block `4d640`). 68000 의미: Dn 하위 WORD × 즉시값 WORD(무부호 16 × 16 → 32 bit)를 LONG Dn에 넣는다. `pc5_mulu`가 그대로 구현한다(하위 WORD만 읽음, 결과 LONG). [F] `1c378`은 `MOVE.W D1,D7`(D7 상위 유지) 뒤라 상위 WORD가 곱에 들어가지 않는 것이 결과 LONG D7에 드러나고, `1c3e6` `1cc1a`는 `MOVEQ #0` + `MOVE.B` 뒤, `4d640`은 `ANDI.W #ff` 뒤 곧바로 `MOVE.L`로 덮인다. 곱의 하위 WORD는 부호 확장 색인이다(`LEA (A3,D7.W)`, `MOVE.B 1(A2,D1.W)`, `ADDA.W D7,A2`). [F] `D1.W = d00`이면 곱 WORD `8200`이 음수 색인이 되어 `1c298 − 7e00 = 14498`을 읽는다(직접 진입만; 경로상 D1.B < 13이고 D1.W 상위 BYTE는 호출자가 정함). MULU의 flag는 읽는 block이 없다.
+- [F] **MOVEM 4곳**(block `1c462` `1c480` `1c494`): `MOVEM.W D0,-(A7)`(WORD 하나 넣기), `MOVEM.L D1,-(A7)`, `MOVEM.L (A7)+,D1`, `MOVEM.W (A7)+,D0`. **`MOVEM.W`로 레지스터에 꺼내면 WORD를 부호 확장해 LONG 전체에 넣는다**(MC68000 사용자 설명서): `1c494`의 D0 := sext(WORD).
+- [F] **ASR**: `ASR.L #5,D2/D3`(`20dfc` `20e10` `2145c` `21470`, 산술 LONG shift; 앞의 `BMI` / `ADDI.L #1f`가 0 쪽 반올림), `ASR.W #4,D0`(`21494`, 산술 WORD shift). `NEG.W`(`1cd0a` `4d692`), `SUB.B D2,D6`(`1c3a4`, BYTE 결과의 Z), `SUBQ.B #1,88(A6)` + `BCS`(빌림 = 이전 BYTE 0), `EXG A0,A1`(`1cb5c`).
+
+### 출구와 경계
+
+- [F] **routing된 출구**(callee·분기 출구, 모두 다른 실행부의 block 시작): `289e` `28ae` `2986` `3af8` `8ebe` `8ff4` `ce02` `1aa3a` `1c1f4` `491b6` `49214` `4970a` `49c38` `49f96` `49fc6` `4be82` `4bfc0` `4d7a6`, 앞 단위 `1c1e2` `1cabe` `1cb08` `1cd98` `1d15a`(C2) `20264` `20290` `202a0` `20626` `2156a` `21f58` `21ffc` `21602`(C3). 복귀 PC로만 닿는 C3 `202b6` `21c1a`.
+- [F] **뒤 단위 정지**(실행되거나 닿지만 뒤 단위가 가짐, routing 밖; V1·실제 ROM 차분의 선언 정지 `EXIT_STOPS`):
+  - C6: `21564`(`214d6`/`2155a` `BCS`). 미룬 입구(나머지 단위): `208fa`(`208f6 BPL`의 fall-through, C12) `2210c`(`21f8e BNE`, C12).
+  - 계산 점프의 routing 밖 허용 대상: 표 `20796`의 `2079a` `2079e` `207a2`, 표 `20952`의 26칸, 표 `209da`의 27칸, 목록 `21b26`의 `21e48` `21e3a`.
+  - C5 run이 지나가는 C1~C4 block의 남은 정지(pc4 `EXIT_STOPS` 가운데 아직 routing 밖인 33개; C1 TRAP `4e69a` 포함)도 pc5 `EXIT_STOPS`에 넣었다.
+  - [I] fall-through(직선 다음 PC)는 `208fa` 하나이고, 조건 분기의 fall-through라 TB 시작으로 기록되므로 가려지지 않는다(재관측 `obs_c5a`로 확인).
+- [F] TRAP 없음. ROM·RAM 실행 없음. 장치 쓰기 없음.
+
+### block 경계를 넘는 flag(결정 3·5)
+
+scratch `cscan.py starts_C5_final.txt`, 호출자 검색과 실행부 검토로 정했다. block 경계 너머의 Z를 읽는 block은 `1c3e2` 하나다(다른 `BEQ`/`BNE`/`BPL`/`BMI`는 같은 block의 `BTST`/`BSET`/`BCLR`/`TST`/`CMPI`/`MOVE`/`SUB`/`SUBQ` 뒤). X를 읽는 명령은 없다.
+
+- [F] **C 소비 block 7개**(Clear 쪽 / Set 쪽; Unknown C면 `player c5 caller requires known carry`): `1c374 BCC 1c4aa`(`289e`), `1c3ca BCC 1c3dc`(`4d628`; 두 `MOVEA.L (A7)+` 뒤), `20288 BCS 20290`(`49c38`), `20e56 BCC 20e60`·`214b2 BCC 214bc`(`49fc6`), `21f78 BCC 21f7e`(C3 `215e6`), `cddfe BCC cde14`(`28ae`).
+- [F] **C 통과 block 1개**(`carry_preserving_pc`에 넣음): `1cb30 RTS`(`1cb1a`의 `TST.L` Clear를 C2 `1cb08`의 호출자에게 돌려줌: C2 `1ed80` `1fa44`, C3 `1ed26` `1ee32` `1ee86`, C3 `21c1a`를 거쳐 C3 `21c9c`·C4 `21dc8`).
+- [F] **C 생산 block**: Clear `1cb1a`(`TST.L`) `1c4aa` `4d6a8`(`ANDI.B #fe,CCR; RTS`), Set `1cb32` `1c494` `4d69c`(`ORI.B #1,CCR; RTS`) `cde10`(`ORI.B #1,CCR`; 다음 시작 `cde14 RTS`로 이어짐).
+- [F] **돌려주지만 읽는 쪽이 없는 C**: `1c356`의 C(`1c4aa`/`1c494`)는 호출자 `202b6` `20768`(C5)·뒤 단위 호출자 모두 다음 명령이 C를 읽지 않는다. `cddee`의 C(`cde10`/`cde14`)는 `212f2`가 읽지 않는다. `cde14`는 통과 목록에 넣지 않는다(돌아간 뒤 Unknown; FR9 `b057c`와 같은 처리).
+- [F] **`1c3e2 BEQ.W 1c4aa`의 Z**(결정 3): 유일한 선행은 `1c3dc MOVE.B (A3),D1; BSR.W 1c51c`이다. `1c51c`는 `MOVEQ #0,D7; MOVE.B 9e(A0),D7; LSL.W #2,D7; MOVE.L 1c52c(PC,D7.W),D7; BTST.L D1,D7; RTS`이고, `1c51c`·RTS는 A0, BYTE `9e(A0)`, D1, D7을 바꾸지 않는다(다른 호출자 `20504`는 뒤 단위).
+- [F] **C3 `1ee56`(앞 단위의 Z 소비자)**: C3 결정 3이 "C5가 `1cb1a`를 routing하면 넓혀야 한다"고 적은 곳이다. `1ee4e LEA 1b5f2(PC),A0; BSR.W 1cb08` 뒤 `1ee56 BNE.W 1eee0`이 `1cb08`의 복귀 Z를 읽는다. `1cb08`의 WORD W가 0이 아니면 C5 `1cb1a`로 가고 `1cb30 RTS`(Z = 1, `TST.L` 결과 0) 또는 `1cb32 ORI.B #1,CCR; RTS`(Z = 0; ORI는 Z를 바꾸지 않음)로 돌아온다. [F] IO 자연 frame(P1 94 190..460, title 310..580)의 node `100cb8` 추적에서는 `1ee56`에 닿지 않았다(`work/zpath_io.py`; `1ee4e` 경로를 타지 않음). 그래도 C5가 `1cb1a`를 routing했으므로 C3 규칙을 넓힌다(결정 3).
+
+### IO 실행 run과 frame
+
+- [F] 보정 관측(C4 routing 재관측 `obs_c4`로 셈, `work/c5io.py`): C5 PC를 실행하는 run 14개(P1 12, boot-title-start, boot-demo-0), 실행된 C5 PC 100개(모두 시작), 실행 21,360회.
+  - P1 94 95 100 101 106 107 110 111: 처음 실행 frame **311, 312, 346, 391, 392, 393, 426, 427, 428**(각 2,040회, PC 100개). P1 68~71: **527, 528, 562**(각 632회, PC 18개). boot-title-start: **431, 432, 466, 511, 512, 513, 546, 547, 548**(2,040회). boot-demo-0: **410, 500, 501, 515**(472회, PC 10개; demo는 frame 381의 C6 정지가 앞이라 IO에 영향 없음).
+  - [I] frame 311(527, 431): node `100cb8`의 C4 callback `1ef0e` → … → C3 `201a2` 꼬리의 `20238 SUBQ.W #1,90(A6)`이 0 → C5 `20240` → C3 `20264`. 이어지는 frame에 C3 `20234 BEQ` → C5 `20268`(`49c38`), C3 `2053c` → C5 `20544`(`20738` 설치). frame 392(512): callback `20738`(`1c356` → `289e` …, `1cc1a`, `206ec` → `3af8`, 표 `20796` → `208d2`, `2092c` → `1aa3a`, 표 `2094e`의 칸 `2095a` → `212ce` → `cddee` → `1cb38` → 칸 `84` 초기화 → `21430` → callback `2143c` 설치·진입). frame 393~426: `2143c`(`20de6` 꼴 접근, `4be82`, `49fc6`의 C → `214c0` 설치). frame 427: `214c0` → `214d6`. frame 428~457: `214d6`이 BYTE `88`을 1e에서 세어 내려 457에 빌림 → C6 `21564`.
+- [F] **IO 예측(C1~C5 연결)**: 170,691 → **172,297**(+1,606 = A 8 run × 146 + B 4 run × 73 + title 146; demo 0). 예측 첫 정지: P1 94 계열 frame **457**, boot-title-start frame **577**(모두 C6 `21564`), boot-demo-0 frame **381**(C6 `1d398` …), P1 68 계열 정지 없음(600 frame 끝). [I] 같은 frame 안의 실행 순서는 IO 비교가 확정한다(계획 §7 [U]).
+- [F] D1 자연 seed 137개와 P0 run은 C5 코드를 실행하지 않는다.
+
+## 공통 규칙·native 검증 계획
+
+FR2..FR9, C1~C4 계약의 같은 절을 그대로 따른다. 다른 점만 적는다.
+
+- **실행부·이름.** `engine/src/animation_machine_player_c5.cpp`, 함수 `animation_player_c5_block`. 오류 문자열은 `unsupported animation player c5 PC`(범위 안 내부 PC 직접 진입), `player c5 caller requires known carry`(C 소비 block에 Unknown C; 소비자 7개), `unsupported animation player c5 flag source`(결정 3의 Z 출처 guard), `unsupported animation player c5 jump target`(결정 2의 계산 점프 guard) 네 개다. 그 밖의 오류는 공용 bus/스택/dispatcher 오류다.
+- **공유 파일 최소 수정.** dispatch 사슬 마지막 `else return am_error(...)` 앞에 `else if` 하나(28 범위, C4 줄 뒤), `carry_preserving_pc`의 C4 묶음 뒤에 주석 달린 case 묶음 하나(소비자 7 + 통과 1), `animation_machine_internal.h` 끝에 선언 하나, `Makefile`(`ANIMATION_MACHINE_SOURCES` 한 줄에 추가, 시험 target, test 목록 실행 줄; SOURCES·HEADERS 줄은 각각 하나 유지), `tools/verify_animation_machine.py` `SOURCES`, stage_event / stage_event_ops `CPP_PINS`(옛 값은 주석). 결정 3의 C3 `1ee56` 규칙 변경과 그 밖의 기존 시험·검증기 수정은 "영향받는" 절에 모았다.
+- **설치 값.** `20e20`(`MOVE.L #20e3e,(A6)`) `21430`(`#2143c`) `214c0`(`#214d6`) `21542`(`#21556`)은 쓰고 곧바로 그 값으로 들어간다. `20554`/`2055e`(`#20738`) `2056e`(`#1ff6c`) `20e5a`/`214b6`(`#214c0`)은 쓰기만 한다.
+- **자료 읽기**(live bus): node field(A6: BYTE `15` `5e` `5f` `61` `81` `82` `88` `9c` `9e` `9f` `a0` `a3` `a7` `a8` `a9` `aa` `7c`, WORD `1e` `2c` `42` `46` `68` `76` `78` `7a` `88`, LONG `22` `36` `3a` `56` `64` `84` `b2`), 플레이어 node `A5−7348/−7258`(LONG (A0) `289e`, LONG `8c`, BYTE `9e`, WORD `78`, BYTE `a1`), A4 기록(BYTE `2` `3` `4` `5`, WORD `c`), A5 기준 `5cba`/`5ce6`(WORD 0, BYTE `22` `27` `2a` `2b`, WORD `20`)·`5d12`/`5d18`(BYTE 0 `1`, WORD 4), 절대 RAM BYTE `10f000`, 스택(`1c390`/`1c3c0`의 LONG 둘, `1c454`의 LONG, `1c462`의 WORD, `1c480`의 LONG), 고정 ROM 표(위 "계산 점프와 표"). 단위 시험은 고정 ROM 자료 자리에 합성 physical byte만 둔다(원본 자료 아님, 모두 원본과 다름): 기록 `1c298..1c356`(기록 k = k, 3k+1, 5k+2, 0, WORD 37k, WORD 3e0+k(k가 3의 배수) / 101k, WORD 8000|k)과 음수 색인 자리 `14498`(기록 c), LONG 표 `1c52c` = `00012345 80000001 ffffffff 0000a5a5`, 표 `1cbb2..1cc1a`(BYTE `1cbb2 + i` = 7i mod 5, LONG `1cc04` = `10e7c0 10e700 10e740`, BYTE `1cc10` = `00 00 00 01 01 00 01 00 00 01`), WORD 쌍 `1cce8` = `1 2 3 8000 fff0 10 7fff 0 5 6 1234 fedc`, WORD 표 `20710` = `1111 2222 3333 4444 8000 ffff 7fff 0`과 `18710` = `6a6a`, `1b128` = `1234 8001 fffe 0300`과 `13128` = `5a5a`, 기록 `4cf64`(+4 LONG = `1` `80000000` `ffff` `aaaaaaaa`), 기록 WORD `1bc4a` = `1 2 0 3 4000`, `1bc82` = `2`, 목록 `21b26` = (`21e3a`,1) (`21602`,3) (`21e48`,`104`) 0. V1·실제 ROM 차분은 원본 ROM을 읽는다.
+- **정수 연산.** WORD/BYTE 대상은 하위만 바꾼다(`MOVE.W/.B`, `ADD.W`, `SUB.W`, `SUB.B`, `SUBI.W`, `ANDI.W`, `ASR.W`, `NEG.W`, `LSL.W`, `CLR.W`, `CLR.B`, `MOVE.B #imm`). `MOVEQ`·`MOVE.L`·`MOVEA`·`LEA`·`CLR.L`·`ADDI.L`·`ADD.L`·`SUB.L`·`ASR.L`·`MULU`(결과)·`EXG`·`MOVEM.W`(꺼낼 때 부호 확장)는 LONG 전체. 색인 `(d,PC,Dn.W)`·`(An,Dn.W)`·`ADDA.W`는 부호 확장 WORD. 비교: `CMPI.B #13,D1` + `BCC`(무부호 BYTE), `CMPI.B #1b,D0` + `BCC`(무부호 BYTE), `CMPI.W #3e7`/`#3e8` + `BCC`/`BCS`(무부호 WORD), `CMPI.W #140`/`#200` + `BCC`(무부호 WORD), `CMP.B 1(A3)`/`4(A4)`/`2a(A4)` + `BEQ`(BYTE), `CMPI.B #k,d(A6)`(BYTE), `CMPI.L #0,b2(A6)`(LONG), `TST.B 5e`/`5f` + `BPL`/`BMI`(BYTE 부호), `TST.W 20(A4)` 꼴 `MOVE.W` + `BMI`(WORD 부호), `SUB.L` + `BMI`(LONG 결과 부호), `TST.W D5`/`D7`, `TST.W (A4)`, `TST.W 78(A6)`, `TST.L (A1,D7.W)`, `MOVE.L` + `BNE`(LONG). bit: `BTST/BSET/BCLR #n,d(An)`(memory BYTE, n mod 8), `BTST.B #n,10f000.l`(BYTE), `BTST #n,D0`(LONG bit n), `BTST.L Dn,Dm`(bit Dn mod 32).
+- **스택.** `1c390`/`1c3c0`이 LONG A3, LONG A0을 넣고(A0이 낮은 주소) JSR, `1c39a`/`1c3ca`가 A0, A3 순서로 꺼낸다. `1c454`가 LONG A3을 넣고 `1c45c`가 꺼낸다. `1c462`가 WORD D0을, `1c480`이 LONG D1을 넣고 `1c494`가 LONG D1, WORD D0 순서로 꺼낸다.
+
+## carry와 Z(결정 3·5)
+
+- [F] 소비자 7개·통과 1개·생산자는 위 명세와 같다. dispatcher는 `carry_preserving_pc`에 없는 PC로 갈 때 C를 Unknown으로 만든다. 따라서 이 단위의 C 의미는 (1) 소비자 7개가 known C를 읽고 그대로 둔다, (2) 통과 block `1cb30`이 들어온 C를 그대로 둔다, (3) 생산자가 자기 block에서 C를 정한다, (4) 나머지 block 뒤 C는 Unknown이다.
+- [F] **`1c3e2`의 Z**(결정 3): BYTE `9e(A0)`(RAM; 그 주소가 24 bit로 `200000` 이상이면 checked `unsupported animation player c5 flag source`)를 다시 읽고, 고정 ROM LONG `1c52c + sext((BYTE << 2) & ffff)`를 다시 읽는다. 그 LONG이 D7과 다르면 checked flag-source 오류다(`1c51c`를 거쳐 오지 않은 진입). 같으면 bit (D1 mod 32)가 0일 때 Z = 1이고 `1c4aa`, 아니면 `1c3e6`.
+- [F] **C3 `1ee56`의 Z(넓힘, 결정 3)**: 이전 규칙(C3 결정 3): WORD W = (A0 + sext(2 × BYTE `9f`))를 다시 읽어 0이면 `1ee5a`, **0이 아니면 checked flag-source 오류**(C5 경로를 모름). 새 규칙: W = 0이면 `1ee5a`(`1cb18`, Z = 1). W ≠ 0이면 C5 경로 `1cb1a`의 Z를 다시 계산한다: WORD W2 = (A0 + sext(W)), LONG L = (LONG `22(A6)` + sext((4 × W2) & ffff)). L = 0이면 `1cb30`(Z = 1) → `1ee5a`, 아니면 `1cb32`(Z = 0) → `1eee0`. A0, BYTE `9f`, LONG `22(A6)`와 읽는 RAM / ROM은 `1cb08`·`1cb1a`·`1cb30`/`1cb32`가 바꾸지 않는다. 세 출처 주소 중 하나라도 24 bit로 `200000` 이상이면 checked `unsupported animation player c3 flag source`(bank·장치를 다시 읽으면 원본에 없는 두 번째 읽기).
+
+## 경계·routing 밖 출구
+
+- [F] 이 단위의 간접 분기는 `20792 JMP (PC,D0.W)`, `2094e JMP (PC,D0.W)`, `209d6 JMP (PC,D0.W)`, `21f7c JMP (A1)` 네 곳이다(결정 2). `RTS`로 끝나는 block 14개.
+- [F] **native 정지 규칙**(V1): C4 spec의 `first_unrouted`에 C5 뒤 단위·미룬 입구 3곳과 C1~C4의 남은 정지 33곳(`EXIT_STOPS`)을 선언 정지로 더한다. 계산 점프 네 곳(`JUMP_PCS`) 직후 PC가 C5 시작도 routing된 허용 대상(`21602`)도 아니면 그 PC에서 멈춘다(표의 routing 밖 칸·목록의 `21e48` `21e3a`: C++는 다음 dispatch에서 정지/오류이므로 같은 stop에서 양쪽이 멈춘다). C5 run이 닿는 C3·C4의 계산 점프(`2031c` `201a6` `21620` `221de` `21c72`, `OTHER_JUMP_PCS`)의 routing 밖 대상도 직선 다음 PC일 때조차 정지로 둔다(C3 표 `2031c`의 칸 0 `20320`은 `JMP`의 직선 다음 PC다). 실제 ROM 차분은 같은 정지를 `UNR`로 두고, C5 계산 점프 착지를 trace 전체에서 추적해 분류한다.
+
+## seed·fixture
+
+- 자연 부모 seed 116/117(N28 객체 `2b99c`, FR1..FR9·C1~C4 spec과 같은 `BASE_CALLBACKS`). V1 기반 world: 그 node(A6)에 선언 편집. ROM 쓰기 명령·guard가 범위를 정한 값은 그 범위 안으로 둔다(결정 2): BYTE `9e(A6)` 0..3(표 `20796`; 항상), BYTE `5e` 대부분 0..1a(guard 경계 1b·음수도 일부), 직접 들어가는 `20946`/`209ce`의 D0.B 0..1a, 직접 들어가는 `21f7c`의 A1 := 목록 `21b26`의 handler, LONG `84(A6)` := C3 목록의 routing된 칸 값, BYTE `a0` 0..8 / `a9` 0..5 / `9f` 0..8 / `7c` 0..5, WORD `76`/`78` 대부분 0/1. `1c356`이 읽는 플레이어 node `100cb8`/`100da8`에 callback LONG(`270e`: `289e` Clear), LONG `8c`(기록), BYTE `9e`, WORD `78`을 둔다. BYTE `10fd82` := 0.
+- **IO pack 자연 node 상태(family `natural`)**: P1 94 frame 311 312 346 392 393 426 427 428 457, P1 68 frame 527 562, P1 106 frame 311 393 427, boot-title-start frame 431 466 512 547 577의 node pool에서 callback LONG이 C4 `1ef0e` 또는 C5 `20738` `2143c` `214c0` `214d6` `21556` `20e3e`인 node, 레지스터만 선언(A5 := `108000`, A6 := node, A7 := `10ef00`(복귀 LONG = sentinel), PC := callback). 19개.
+- **재설치 world(family `reinstall`, 14개)**: 플레이어 node `100cb8`에 callback `20738` + BYTE `9e` = 1 / 3 / (title) 2, BYTE `5f` = 80, BYTE `5e` = 1b / 0 / 80 / (P1 68) 1a; `2143c` + BYTE `15` = 80; `214d6` + BYTE `88` = 0, WORD `42` = 200, WORD `46` = 10; `21556` + BYTE `88` = 3; `20e3e`. [I] 이미 진행된 node를 다시 시작하는 world이며 native와 C++가 같은 상태를 받으므로 V1 비교는 유효하다. (`20738`은 `1c1e2`가 BYTE `9e`를 BYTE `a0` 표로 다시 쓰므로 BYTE `9e` 편집은 표 점프 전에 덮인다.)
+- 사슬(chain) fixture: 소비자를 실제 생산자로 들어간다(`CHAINS` 7개 + Z 사슬 `1c3dc` → `1c51c` → `1c3e2`): `1c36e`(`289e`), `1c3c0`(`4d628`), `2027e`(`49c38`), `20e50`/`214ac`(`49fc6`), C3 `21f70`(`215e6`), `cddee`(`28ae`).
+- node fixture: `20738` `2143c` `214c0` `214d6` `21556` `20e3e`를 dispatcher 복귀나 첫 routing 밖 PC까지 실행한다. callee fixture: `1c356` `1c51c` `1cb1a` `1cb38` `1cb44` `1cc1a` `1cd00` `1d182` `202ac` `206ec` `20de6` `20efc` `20f04` `21520` `21494` `21c12` `21f4c` `20240` `20268` `20544` `4d106` `4d628` `4de7a` `cddee`를 subroutine으로 들어간다.
+- 단위 시험(Unicorn 생성기, C4 꼴; 장치 port 없음을 확인): 시작 203개(소비자 7개 제외; `1c3e2`는 native SR Z를 다시 계산한 Z와 같게 두는 행 `single 5`) × 들어오는 C 3가지, zero-step, 내부 PC 794개 정확한 오류, 경계 stop(출구·뒤 단위 정지·표 칸·목록 대상 전부; 표 칸마다 행 하나), rollback 탐침 `10fe00..10fefe`, 오류 fixture마다 실패 PC. 생성기는 native의 계산 점프 착지가 계약의 허용 대상 밖이면 그 행을 버린다(C++ checked 오류 행이 덮음). 손으로 계산한 규칙(`rules_a`..`rules_e`): MULU 하위 WORD(D7 상위가 곱에 안 들어감, 음수 곱 WORD `8200` → `14498`), MOVEM.W 부호 확장(`8000` → `ffff8000`), `SUB.B` / `ADD.W` / `CMPI.W #3e7` 경계와 wrap, `1c3e2` Z 출처(bit 0/1/1f/1e, D1 = 20 = bit 0, D7 불일치, `200000` 경계, 24 bit 출처), `1cb1a`/`1cb44`의 ROM 창 음수 색인(D7.W `8000` → `f8004`, 4 × `fffe` → −8, 4 × `4000` → 0), `206ec`/`212d4`의 음수 색인(`18710` `13128`), `1cc7c`의 D0 bits 8..15 색인, `20de6`/`21446` `ASR.L #5`와 0 쪽 반올림, `21494` `ASR.W #4`, `SUBQ.B` 빌림, 표 점프 경계(9e 3 / 4, D0.B 1a / 1b, `ANDI.W #ff`의 상위 유지), `21f7c` 목록, ff node(쓴 field와 이웃 BYTE 유지).
+
+## 영향받는 기존 시험·검증기(이전 기대값 → 새 기대값, 이유)
+
+- [F] `tools/verify_animation_machine_stage_event.py` / `_stage_event_ops.py` `CPP_PINS`: `animation_machine.cpp` `9747100c960fa54879c998635c250ae06e790155df4ae1c5a5a4e2ec2c03915d` → `beff46d62a342129120d107dba0848ca937dddf9301c16902d19a521d8da2f21`, `animation_machine_internal.h` `6f22404a6c4422178f812a7ad193ee9e8a1b36bfde4f0da1c7740d2875923c0d` → `0dc447022c1b885d2fb7e112329823cb8373ee6369949b6811ae678a635939bd`(이 단위의 공유 수정; 옛 값은 `# player C5 refresh:` 주석). 마지막 편집 뒤의 파일 SHA이고, 두 검증기의 pin 4 / 9개가 모두 파일 SHA와 같음을 작업 트리와 scratch clone root에서 확인했다(`work/pincheck.py`; `player_c3.cpp`는 pin 대상이 아님).
+- [F] **C3 실행부 `engine/src/animation_machine_player_c3.cpp` `1ee56`**(결정 3): 이전 = W ≠ 0이면 `unsupported animation player c3 flag source`. 새 = C5 경로의 Z를 다시 계산(위 "carry와 Z"). 이유: C3 결정 3의 예고대로 C5가 `1cb1a`를 routing했고, 원본에서 그 경로의 Z는 RAM / ROM에서 다시 셀 수 있다.
+- [F] **C3 시험 `engine/tests/animation_machine_player_c3_test.cpp`**:
+  - 손 규칙(`1ee56`): 이전 `9f = 1, A0 = 1b5f2 → reject flag source`를 지우고, C5 경로 규칙 10개를 더했다(`1b5f2` 색인 1 → `1eee0`; RAM LONG 0 / 1; ROM 창 4 × `fffe` / `4000`; W `8000` → `f8004` ROM 오류; 출처 `1f9000 + 7000`·`1ffff0 + 10`·`3bfffc + 4` → flag source; `1fffec + 10` = `1ffffc` RAM).
+  - 생성 구역(`tools/generate_animation_machine_player_c3_test_table.py`): `single 5` 행에 C5 경로 8개(`zpath_rows`, 따로 둔 RNG `C5C5`; 4개는 `1eee0`으로 감)를 더하고, 오류 행 `z-word-1b5f2` `z-word-ram`(flag source)을 `z-path-rom` `z-path-ram`(이제 W2 = 0, LONG `22(A6)` = `2000`의 ROM byte 오류) `z-path-w2-bank` `z-path-long-bank` `z-path-long-io`(flag source)로 바꿨다. 기존 Z 행 39개와 다른 모든 행은 바이트 단위로 같다(따로 둔 RNG 덕분; 이름만 `1ee56-k`가 +8 밀림). C3 시험 줄: 1,282 → **1,293** fixtures(Z reader 39 → 47, checked error 87 → 90), 115,899 checks.
+- [F] C3 계약 `docs/analysis/animation-machine-player-c3-contract.md`: "carry와 Z"의 `1ee56` 항목·결정 3·미확인 (b)에 넓힌 규칙을 덧붙였다(이전 문장은 그대로 둠).
+- [F] `tools/unit_fixture_specs/pc2.py`: `EXIT_STOPS`의 `1cb1a` `1cb38`(C5 시작) → `ROUTED_LATER`에 더함(선언 정지로 그대로 둠, C3·C4가 쓴 방식).
+- [F] `tools/unit_fixture_specs/pc3.py`: `EXIT_STOPS`의 `1cb44` `20240` `20268` `202ac` `20544` `21c12` `21f4c` `21f78` `1cb1a` `1cb38` → `ROUTED_LATER`에 더함. 오류 fixture `1ee56-word`(A0 = `1b5f2`, BYTE `9f` = 0: 이전 flag source; 이제 C5 경로를 계산하므로 오류가 아님) → `1ee56-path-bank`(A0 = `1f9000`, WORD `109000` = `7000`: A0 + sext(W) = `200000` → flag source).
+- [F] `tools/unit_fixture_specs/pc4.py`: `EXIT_STOPS`의 `21f4c` `1cb1a` `1cb38` `1cb44` `20240` `20268` `202ac` `20544` `21c12` `21f78` → 새 `ROUTED_LATER`(pc4에는 없었음), `build()`의 검사를 pc1~pc3과 같은 꼴(`unit_of(t) is None or t in ROUTED_LATER`)로 바꿈. `LATER_GATED`(`1efb4`→`1f126`, `21dc8`→`21f4c`)는 그대로다: 사슬이 선언 정지 `1cb1a`·`21c12`에서 멈추므로 Set 쪽은 여전히 pc4 사슬에서 보이지 않는다(pc3의 `LATER_GATED`도 같은 이유로 그대로).
+- [F] `tools/verify_animation_machine_motion_walk.py`: U3 `18efa`의 범위 밖 type `7ffe`가 계산한 PC `20f00`(`20efc`의 8-byte `MOVE.L` 안)이 C5 내부 PC가 되었다. 이전 기대값 `expected_pc_error(20f00)` = `unsupported animation machine PC`. 새 `SUPERSEDED_GUARD_ERRORS['guard-oor-18efa-type7ffe']`와 `SUPERSEDED_COMPUTED['oor-18efa-type7ffe']` = `unsupported animation player c5 PC`(F6c `18fd2` 행과 같은 방식; `superseded_by`를 행마다 `SUPERSEDED_BY`로 적음). 관측: scratch clone root(`roots/probe`, `work/mkroot.py`)에서 `work/mw_probe.cpp`: `20f00` → `unsupported animation player c5 PC`, `20f01`(type `7fff`, 홀수: 계산 행에서 빠짐) → `unaligned animation machine PC`(변함 없음), `20efc` `20f04` → 실행 후 정상 복귀(`trial_logs/mw_probe.log`). [I] 행 단위로 그 PC까지 가는 경로는 바뀌지 않았다(이전 기대값이 그 PC의 dispatch 오류였다). 검증기 전체 실행은 메인 runner가 한다.
+- [F] 검색(`work/hexsearch5.py`: `tools/*.py`, `tools/unit_fixture_specs/*.py`, `engine/tests/*.cpp`, `engine/src/*.cpp`의 4~6자리 16진 상수 중 C5 범위 안의 값): 위 곳 말고는 stop으로만 쓰는 값(C2·C3·C4 시험의 `1cb1a` `1cb38` `1cb44` `20240` `20268` `202ac` `21c12` `21f4c` `21f78` 행·출구 목록), 경계가 맞닿은 범위(C2 `1cb08..1cb1a` `1d15a..1d182`, C3 `20290..202ac` `21baa..21c12` `21f30..21f4c` `21f58..21f78` `4d100..4d106`), 주석, 다른 시험 자료 안의 우연한 값(`n34` 시험 레지스터 `21fa0` `212d1` `2149c` `20932`, `motion_walk` 시험의 `21414`)뿐이다. 오류 행이 C5 범위 PC에서 실패하던 기존 시험은 없다. `make -j4 all test`가 통과했다(경고 0).
+- [I] native 사슬이 이 단위의 PC를 첫 routing 밖 PC로 멈추던 V1 spec·검증기는 더 진행한다(정지는 routing에서 계산된다). pc2·pc3·pc4는 그 PC를 선언 정지로 두어 fixture 집합이 같다(V1 회귀 수는 아래 기록). 나머지는 메인 runner의 회귀·legacy 단계가 확인한다.
+
+## 결정
+
+1. **범위와 시작(scope correction): 계획 203 block에서 `202a0`(C3 결정 10)을 빼고 `20f04`를 더해 203 block, 28 범위.**
+   - [F] 재측정(201) + 계획 block `202ac`(C3 `202a0`의 fall-through, C3 계약의 C5 소속 뒤 단위 정지; 재측정은 C3 routing 때문에 닿지 않음).
+   - [F] `20f04`: 계획 전체 closure 밖의 진짜 명령 `21050`/`210fa BSR.W 20f04`가 `20efc` block 중간으로 들어온다(`work/intargets.py`). 뒤 단위(`2094e` 표 칸 handler)가 routing될 때 C5 block 내부 오류가 되지 않도록 시작으로 둔다(FR7의 `e8b80`과 같은 처리). 실행되지 않는 시작이다.
+   - [F] **숨은 직선 연속 검사**: C4 routing과 C5 routing 각각으로 C·E run 18개를 정확한 bitmap으로 다시 관측했다(`reobs_c5/obs_c4`, `reobs_c5/obs_c5a`, native 기록은 18 run 모두 원래와 같음). C5 routing 관측에서 예측 첫 정지는 모두 뒤 단위(C6 `21564` 13 run frame 457/577, C6 `1d398` demo frame 381)이고, C4 관측에 C5 범위를 가상 routing한 예측과 같다(C 261, 172,297). C3 결정 10·C4 결정 1과 달리 **더할 숨은 block이 없다**. [I] C6의 시작 목록은 C3 결정 10·C4 결정 1의 block을 빼고 다시 재야 한다(메인 판단).
+2. **계산 점프 네 곳(허용 대상은 ROM 자료 쓰기와 guard에서 정함; FR4·C2~C4 결정 2의 선례).** 실행된 표 칸만 전사한다(`20796`, `2095a`).
+   - `20792`: 변위 0..`c`(BYTE `9e` 0..3, ROM 쓰기 `1bd3a`·`1c1ec`/표 `1c1d8`), 밖은 checked jump-target 오류.
+   - `2094e` / `209d6`: 변위 0..`68`(색인 0..1a: 같은 경로의 `CMPI.B #1b` / `BCC` guard), 밖은 checked jump-target 오류.
+   - `21f7c JMP (A1)`: 허용 = 목록 `21b26`의 handler 3개(`21602` `21e48` `21e3a`). routing 밖 값은 다음 dispatch의 `unsupported animation machine PC`. 목록 밖은 checked jump-target 오류.
+3. **RTS를 넘는 Z.**
+   - `1c3e2`(C5): BYTE `9e(A0)`와 고정 ROM LONG 표 `1c52c`를 다시 읽고, 그 LONG이 D7과 같을 때만 bit (D1 mod 32)로 Z를 정한다. 출처가 `200000` 이상이거나 D7이 다르면 checked `unsupported animation player c5 flag source`(rollback).
+   - **C3 `1ee56`(넓힘)**: W ≠ 0이면 C5 `1cb1a`의 `TST.L` 출처(A0 + sext(W)의 WORD, LONG `22(A6)` + sext(4 × WORD))를 다시 읽어 Z를 정한다. 세 출처 중 하나라도 `200000` 이상이면 checked `unsupported animation player c3 flag source`. 이전·새 규칙과 시험 변경은 "영향받는" 절에 적었다. C3 계약 결정 3의 (b)와 미확인 "(b)의 범위는 C5 연결 때 다시 정한다"를 이 결정이 정한다.
+4. **MULU·MOVEM·ASR.** MULU는 하위 WORD 무부호 16 × 16 → LONG(곱 하위 WORD의 부호 확장 색인 포함). `MOVEM.W (A7)+,Dn`은 부호 확장 LONG. `ASR.L #5`·`ASR.W #4`는 산술 shift. flag는 읽는 block이 없어 모델링하지 않는다.
+5. **carry 보존 목록.** 소비자 7개와 통과 1개(`1cb30`)만 넣는다. 생산자는 자기 block에서 C를 정하므로 넣지 않는다(FR 관례). `cde10`은 Set을 정하고 `cde14 RTS`로 이어지며, `cde14`는 읽는 쪽이 없어 넣지 않는다(돌아간 뒤 Unknown).
+6. **뒤 단위 정지와 앞 단위 spec.** C5 block이 닿는 뒤 단위 시작 1곳과 미룬 입구 2곳, 표·목록의 routing 밖 대상, C1~C4의 남은 정지 33곳을 V1 `first_unrouted`와 실제 ROM 차분의 선언 정지로 둔다. pc2·pc3·pc4의 `EXIT_STOPS` 가운데 C5가 routing한 PC는 `ROUTED_LATER`로 허용하고 선언 정지로 그대로 둔다(C2~C4가 쓴 방식; pc4에는 이 목록을 새로 둠).
+7. **실행부 파일·오류 문자열.** 위 "공통 규칙". 오류 문자열 4개.
+8. **`2986` 실패 경로.** buffer_cue 결정 1(caller-X 한계는 의도된 checked 오류)을 그대로 둔다(B4 계약 결정 4와 같음). `1cc4e`·`1cc98`의 `JSR 2986`이 `28ae` 실패(WORD `104ca0` 한도·free list 끝)를 만나면 C++는 `cue wrapper failure requires known caller X`로 멈춘다. [I] 원본은 더미 node `100e98`에 쓰고 이어 간다. 실제 ROM 차분은 이 경우를 harness의 기존 문서화 분류로 센다(seed 1 8건, seed 7 3건). [F] IO 관측에서 `1cc38`·`1cc88`은 실행되지 않았다.
+9. **다음.** 계획 순서대로 C6(`1ebf6` `4ee04` `4ebe2` … `21564`, demo `1d398`). C5 연결로 IO +1,606(172,297)을 메인 runner가 확인한다. C6의 시작 목록은 C3 결정 10의 `1cde0` 계열·C4 결정 1의 `4e57e` `4e8e6`을 빼고, C5 정지 `21564`를 포함해 다시 재야 한다.
+
+## 미확인
+
+- [U] node field·전역 값의 의미(BYTE `5e` `5f` `88` `9e` `a0` `a9` `9f` `7c`, WORD `2c` `42` `46` `76` `78`, LONG `36` `3a` `56` `b2`, `5cba/5ce6` BYTE `27` `2a` `2b` WORD `20`, `5d12/5d18`, BYTE `10f000`, 기록 `1c298`·`4cf64`의 field). 이름(기록 helper, 착지 상태, 이동 접근, 화면 범위)은 동작에서 붙인 [I]이다.
+- [U] IO 관측에서 실행되지 않은 이 단위의 block 103개(`1c36a` `1c390`~`1c494` 대부분, `1cb30` `1cb56`, `1cc38`~`1cd0c`, `202ac`, `20550` `20554` `2056e`, `2074c`, `208dc`~`208ec`, `209c2` `209ce`, `20de6`~`20e60`, `20efc`~`20f20`, `2130c`, `213da`~`21412`, `2145c` `2146a`, `21502`, `21542`~`21562`, `21f7c` `21f9c`, `4d116`, `4d628`~`4d6a8`, `4de86`, `cde14`)는 closure로 들어왔다(V1 선언 상태·실제 ROM 차분으로만 확인).
+- [U] 같은 frame 안의 실행 순서(IO 첫 정지 PC). 예측은 C6 `21564`(9 run)와 C6 `1d398`(demo)이다.
+- [U] 재설치 world와 IO pack 자연 node 상태의 레지스터(선언)는 실제 dispatcher 진입 레지스터와 다를 수 있다(C1~C4와 같음).
+- [U] 결정 1의 정확 bitmap 재관측은 C·E run 18개만 했다(계획 §7과 같은 범위).
+- [U] `2986` 실패 경로(결정 8)가 IO 진행 중에 생기는지는 IO 비교가 확정한다(관측에서 `1cc38`·`1cc88`은 실행되지 않음).
+- [U] C3 `1ee56`의 C5 경로는 IO 자연 frame에서 실행되지 않았다(`work/zpath_io.py`). 넓힌 규칙은 단위 시험(C3)·V1(pc3 오류 fixture)·실제 ROM 차분(C5 harness가 `1ee56`의 출처를 native에서 다시 계산해 분류)으로만 확인한다.
+
+## 구현·검증 기록(작업자)
+
+- 파일: `engine/src/animation_machine_player_c5.cpp`(case label 203 = `starts_C5_final.txt`와 집합 일치; 공용 함수 `pc5_get` `pc5_put` `pc5_bit`(BTST/BSET/BCLR memory BYTE, 옛 bit) `pc5_byte_is` `pc5_byte_negative` `pc5_carry` `pc5_return_carry` `pc5_field_call` `pc5_mulu`(결정 4) `pc5_asr5` `pc5_install` `pc5_slot_reset` `pc5_drift_start` `pc5_drift_add` `pc5_sound_call` `pc5_table_jump`(결정 2) `pc5_count_down` `pc5_save_call` `pc5_restore`, 허용 목록 `PC5_LIST_21B26`(3)), `engine/tests/animation_machine_player_c5_test.cpp`(생성 구역 + 수작성 규칙 `rules_a`..`rules_e`), `tools/generate_animation_machine_player_c5_test_table.py`(생성기; V1 spec의 `hint_worlds`를 절대 주소로 바꿔 씀; native가 장치 port를 쓰거나 계약의 허용 대상 밖으로 계산 점프하면 그 run을 버림; 표 칸마다 행 하나(`gen_tables`); 약 90초; 다시 실행해 시험 파일 바이트 단위 같음), `tools/unit_fixture_specs/pc5.py`(V1 spec; C4 spec의 공용 부분 그대로, 단위 부분 교체, `EXIT_STOPS`(36), `PASS_SET`, `CLEAR_SET` `SET_SET`, `Z_READERS`, `JUMP_PCS` `JUMP_ROUTED` `OTHER_JUMP_PCS` `LIST_21B26` `TABLE_20796` `TABLE_20952` `TABLE_209DA`, family `reinstall`). 공유 수정은 "공통 규칙"·"영향받는" 절의 곳뿐이다.
+- [F] `make -j4 all test`(작업자, 최종 실행부): 종료 0, 경고 0, Python 310 OK(`work/make_full1.log`). C5 시험 줄(최종 `rules_f` 포함): `animation machine player pc5: 1184 fixtures (633 single-block, 10 Z reader, 419 path, 36 producer chain, 14 declared C, 72 checked error (21 with a later failing PC), 120 kept C), 203 blocks, 4833 calls, 162967 checks`. 생성기 보고: 단일 행 없는 시작 0, 후속이 빠진 분기 block 0, 실제 사슬 두 C 값 5개(`1c36e` `1c3c0` `2027e` C3 `21f70` `cddee`; `20e50`/`214ac`(`49fc6`)는 native가 선언 밖 ROM을 읽어 선언 C 행만), Z 사슬 두 결과 모두, 표 칸 행 58개, 출구 중 stop이 아닌 것 0. C3 시험 줄: 1,293 fixtures, 115,899 checks(1,282 → 1,293: C5 경로 Z 행 8, 오류 행 +3). 나머지 C1·E1·C2·C4 시험 줄은 C4 기록과 같다. 두 생성기를 다시 돌려 시험 파일이 바이트 단위로 같음을 확인했다.
+- [F] UBSan(`-fsanitize=undefined -fno-sanitize-recover=undefined`, `work/ubsan.sh`, C5·C3 시험): 빌드 경고 0, 실행 종료 0, runtime error 0.
+- [F] V1 pc5(작업자 1회, `--workers 2`, scratch `work/v1_pc5_try2`): fixture 1,755개(block 736, chain 16, node 14, natural 19, reinstall 14, callee 68, error 857, failpc 21, negative 10) failed 0, 방문 시작 203/203, 빠진 후속 0, 도달 못한 분기 결과 0, 뒤 단위 gate 0, carry oracle Unknown/Clear/Set = 758/74/56. natural·reinstall 33개 가운데 27개가 sentinel까지 가고(C5 block 최대 70개), 3개는 예정된 C6 정지 `21564`(P1 94 frame 457, title frame 577, reinstall BYTE `88` = 0), 3개는 표 칸 정지(`20952`, `209ba`)·미룬 입구 `208fa`에서 멈춘다. 처음 시도(`v1_pc5_try1`)의 실패 3개는 spec 결함이었다: 공통 hint(D0 = `12345678`)가 `20946`/`209ce`의 D0.B를 표 범위 밖으로 둔 것 2개(hint 목록에서 뺌), C3 표 `2031c`의 칸 0 `20320`이 `JMP`의 직선 다음 PC라 native가 지나간 것 1개(`OTHER_JUMP_PCS` 추가).
+- [F] V1 회귀(작업자, `work/v1_regs.sh`): pc1 1,264/1,264, pc2 1,743/1,743, pc3 1,831/1,831, pc4 1,873/1,873, se1 2,102/2,102, fr1 1,631/1,631(모두 failed 0; 수는 C4 기록과 같음). 나머지 spec은 결정적 runner가 돌린다.
+- [F] 변이(scratch `mut/run_mut.py`; `mut/mutants.py`는 `mut/make_mutants.py`가 실행부 줄마다 연산자(분기 교환, 비교 반전·경계, field +1, 크기, bit 번호·BSET/BCLR, WORD/BYTE → LONG, 복귀 PC, carry tag, mask·부호, 상수·설치 값, 표 기준 주소, 부호 확장 제거) + 손으로 고른 helper·block 변이(MULU 하위 WORD·상위 유지·부호·상수, MOVEM.W 부호 확장, ASR → LSR·채움 폭, 표 점프 경계·검사 제거·폭, `21f7c` 목록(값·개수·검사 제거·24 bit), `1c3e2` 출처 guard·D7 검사·bit 폭·색인, `SUBQ.B` 빌림, 저장 순서 등) + dispatcher carry 목록 8개·추가·범위 1개 + C3 `1ee56` 넓힌 규칙 9개(C3 시험으로 판정)를 적용해 만든 것, 689개): 1회째 `killed 643 of 689`(`mut/mut_first.log`). 생존 46개 중 19개는 시험 빈틈이었고 규칙 `rules_f`로 메웠다(`killed 19 of 19`, `mut/mut_gaps.log`): `1c462` LONG 비교(`00000100`), `1cb44` 음수 색인(ROM 창 `1c534 − 8`), `1cc38`/`1ccd0`/`4d640`의 색인 폭(`40`/`40`/`10`·`80` → 선언 밖 ROM), `1cc7c`의 D0 bits 8..15 음수 색인(`ffa3` → `1cbb3`), `214c0`의 BYTE 쓰기 폭, `4d668` 비교(`4d670` 쓰기가 건너뛰어지는 것), `1c3e6`(기록 종류 `1a`: 곱 `104`)·`1cc1a`(`9 × 1d = 105`)의 색인 폭과 MOVE.B 상위 유지. 이 둘은 색인이 단위 자신의 코드 바이트(`1c39d`, `1ccb7`)에 닿으므로 생성 표가 덮을 수 없어, C++ 전용 규칙에 합성 byte 하나를 더한 bus(`runs_to_extra`)로 확인한다. 남은 27개는 동치다(`mut/equivalents.txt`: `MOVEQ #0` 바로 뒤의 `MOVE.B` 8, 곧 덮어써지거나 하위 WORD만 쓰이는 상위 bit 5, 부호 bit에 닿지 않는 색인(`≤ 9f6` 등) 10, `ANDI.W #1` 뒤 mask 2, D7 검사 뒤의 같은 값 1, 리터럴 bit 번호 1, `am_write`의 자체 mask 1 — 사례별 이유 기록). 64 KiB RAM 거울이 부호 확장 변이를 가리는 곳은 고정 ROM 합성 자료의 음수 색인(`14498`, `18710`, `13128`, `1c534 − 8`, `1cbb3`)과 C3 `1ee56`의 `f8004`·`206e4 − 8` 규칙으로 덮었다. 규칙을 더한 뒤 전체 2회째 `killed 662 of 689`(`mut/mut_second.log`), 남은 27개가 `mut/equivalents.txt`의 동치 목록과 같다.
+- [F] 실제 ROM 차분(scratch `realrom/`: `build.sh` `run_all.sh`(5 × 1,500: s1 s2 s3, f4 f5 `FOLLOW_ANIM=1`), `real_pc5.py`(C4 harness에 C5 world·소비자·통과·Z 진입·선언 정지; C5 계산 점프의 착지를 허용 대상과 trace 전체에서 대조해 분류; C3 `1ee56`에 닿을 때 넓힌 규칙의 출처를 native 레지스터·메모리에서 다시 계산해 분류)): 작업자 300건 — seed 1 `mismatches 0`(`covered starts 196 of 203`; 문서화된 분류 C5 jump-target 3건(`20792` 2, `209d6` 1), C3 jump-target 3건, 기존 `2986` caller-X 분류 8건(`1cc38`/`1cc88`이 부르는 `2986`의 실패 경로; 앞 단위 harness와 같은 분류), C3 `1ee56` 한 번 도달·일치), seed 7 `FOLLOW_ANIM=1` `mismatches 0`(198/203; C3 jump-target 1건, `2986` caller-X 3건). 정지하지 않은 native(약 12~23%; 주로 무작위 RAM의 긴 반복·interpreter)는 건너뜀. 로그 `trial_logs/real_n300_s1.log` `real_n300_f7.log`.
+- [F] `dleft.py`: 이전(routing `9747100c…`) C 361 / E 12, 예측 170,691, 첫 정지 C 14(`dleft_before.log`). 이후(routing `beff46d6…`) C **261** / E 12, 예측 **172,297**, 첫 정지 C 10(`dleft_after.log`; 재관측 `obs_c5a`로도 같음). 예측 첫 정지 PC(`work/firststops_after.txt`): P1 94 계열 8 run frame 457·boot-title-start frame 577에서 C6 `21564`, boot-demo-0 frame 381에서 C6 `1d398` … `1d63a`, P1 68 계열 4 run은 정지 없음.
+- [F] 기존 검증기 새 기대값은 scratch clone root(`roots/probe`, `work/mkroot.py`: 작업 트리 clone + 변경 파일 복사 + 공유 자료 symlink)에서 관측했다(`work/mw_probe.cpp`, `trial_logs/mw_probe.log`). 같은 root에서 stage_event / stage_event_ops `CPP_PINS`가 파일 SHA와 같음을 확인했다(4 / 9 pin, 불일치 0).
+
+## block 목록
+
+[F] scratch `starts_C5_final.txt`(SHA256 `5bdaf6ce7dfb356bfaddba95459063699efd7e6b214b92f8ec47e9b9533523fc`) = 계획 `starts_C5.txt`(203) − `202a0`(C3) + `20f04`(결정 1).
+
+- **`1c356..1c52c`(33)**: `1c356 1c35e 1c36a 1c36e 1c374 1c378 1c390 1c39a 1c3a4 1c3b6 1c3bc 1c3c0 1c3ca 1c3d2 1c3d8 1c3dc 1c3e2 1c3e6 1c408 1c412 1c41e 1c42a 1c42e 1c432 1c43c 1c454 1c45c 1c462 1c476 1c480 1c494 1c4aa 1c51c`
+- **`1cb1a..1cd12`(24)**: `1cb1a 1cb30 1cb32 1cb38 1cb44 1cb56 1cb5c 1cc1a 1cc38 1cc54 1cc62 1cc66 1cc6a 1cc7c 1cc88 1cc9e 1ccaa 1ccb4 1ccc4 1ccd0 1cce6 1cd00 1cd0a 1cd0c`
+- **`1d182..1d198`(3)**: `1d182 1d18c 1d196`
+- **`20240..20578`(13)**: `20240 20268 20272 2027e 20288 2028c 202ac 20544 20550 20554 2055e 2056e 20574`
+- **`206ec..209da`(24)**: `206ec 20738 20746 2074c 20768 2076c 20770 20774 20778 20796 208d2 208dc 208e4 208e8 208ec 208ee 208f2 2092c 20932 2093a 20946 2095a 209c2 209ce`
+- **`20de6..20f22`(19)**: `20de6 20df6 20dfc 20e0a 20e10 20e18 20e20 20e3e 20e40 20e46 20e50 20e56 20e5a 20e60 20efc 20f04 20f0c 20f18 20f20`
+- **`212ce..21564`(48)**: `212ce 212d4 212ec 212f2 212fc 2130c 21310 21314 213da 213de 213e4 213fc 2140a 2140e 21412 21430 2143c 21446 21456 2145c 2146a 21470 2147c 21480 21494 214ac 214b2 214b6 214bc 214c0 214d6 214de 214e4 214ea 214f2 21502 21506 2150c 21516 2151c 21520 21524 21530 21540 21542 21556 2155a 21562`
+- **`21c12..21fa6`(12)**: `21c12 21f4c 21f54 21f78 21f7c 21f7e 21f82 21f8a 21f92 21f96 21f9c 21fa4`
+- **`4d106..4de9c`(22)**: `4d106 4d10e 4d116 4d11a 4d628 4d62e 4d636 4d63a 4d640 4d65c 4d668 4d670 4d676 4d67a 4d682 4d68e 4d692 4d69c 4d6a8 4de7a 4de86 4de8a`
+- **`cddee..cde16`(5)**: `cddee cddfe cde02 cde10 cde14`
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j4 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. C5 시험 `animation machine player pc5: 1184 fixtures (633 single-block, 10 Z reader, 419 path, 36 producer chain, 14 declared C, 72 checked error (21 with a later failing PC), 120 kept C), 203 blocks, 4833 calls, 162967 checks`.
+- [F] `ubsan`: build/run 종료 0, runtime errors 0.
+- [F] `mutation`: total 689, killed 662, equivalent 27.
+  - 이 실행 전에 메운 시험 빈틈 19개.
+  - 메모: 인덱스 폭, ROM 창 음수 인덱스, LONG 비교, BYTE 쓰기, MULU 인덱스 폭. 규칙 두 개는 테이블 인덱스가 단위 자체 코드 바이트에 닿는 곳에 합성 바이트 하나를 추가한다.
+- [F] real-ROM: batches `f4`, `f5`, `s1`, `s2`, `s3` covered `203`, `203`, `203`, `201`, `203`; mismatches `0,0,0,0,0`(합집합 203/203).
+  - 문서화한 오류 클래스: C5 점프 대상(지점별 키), C3 점프 대상, 기존 2986 caller-X 클래스.
+- [F] V1: A/B 각각 fixtures 1755, failed 0, runs 2, identical true(digest `e65212ecffb8cdb2`); regression specs 38개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 54400/54400, mismatches 0; `controller_game` 54400/54400, mismatches 0; `irq` 54400/54400, mismatches 0; `demo` 45684/45684, mismatches 0.
+- [F] IO: matched_total 172297, baseline 170691, delta 1606, mismatches 0, cpp_errors 0, runs 2, identical true; per_config `P0` 81600, `P1` 80456, `P1b` 8400, `boot-demo-0` 381, `boot-title-idle` 600, `boot-title-start` 577, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 예측 확인: 정확한 비트맵 재관측은 172297을 예측했고, 실측도 172297이다.
+  - 수락 항목 중 실패한 항목은 `frontiers_confirmed`다. 실행이 TB 안에 숨은 다음 PC(C6 `21564`, demo C6 `1d398`)에서 멈추므로 검증기가 이를 확인할 수 없다.
+  - 범위: 숨은 직선형 연속 경로는 없다. `20f04`는 `21050`/`210fa`가 `20efc` 중간으로 BSR하므로 시작점으로 추가했다. C3 `1ee56` Z 규칙은 C5 `1cb1a` TST.L 경로로 확장했다.
+- [F] 남은 실행 PC: C 361 → 261, E 12.
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.

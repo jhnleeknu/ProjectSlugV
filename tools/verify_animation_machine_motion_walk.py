@@ -64,6 +64,7 @@ EORI_1A2E0 = 0x1a2ec
 UNSUPPORTED_MACHINE = 'unsupported animation machine PC'
 UNSUPPORTED_WALK = 'unsupported animation motion walk PC'
 UNSUPPORTED_F6C = 'unsupported animation irq f6c PC'
+UNSUPPORTED_C5 = 'unsupported animation player c5 PC'
 UNKNOWN_CARRY = 'motion walk caller requires known carry'
 WRITE_DEVICE = 'unsupported animation machine write device'
 EVEN = 'program bus requires even WORD/LONG address'
@@ -92,7 +93,12 @@ GUARD_OOR_PCS = {'guard-oor-18c06-type0001': 0x18c0f, 'guard-oor-18caa-type0002'
 # Superseded by F6c (IRQ sprite writer family A f226..11792, ten-unit batch): the oor guard target 10fda is a Duff entry of F6c routine 6 (10cc6..1122a), so it no
 # longer is an unrouted PC. Former expectation expected_pc_error(10fda) = UNSUPPORTED_MACHINE ('unsupported animation machine PC'); observed final-state error is the
 # F6c interior error (full run on e5bfb73) [I: attributed to the F6c execution, not separately traced]. The native guard record is unchanged.
-SUPERSEDED_GUARD_ERRORS = {'guard-oor-18fd2-type8000': UNSUPPORTED_F6C}
+# Superseded by player C5 (area C, 20efc..20f22 routed; block starts 20efc / 20f04 / 20f0c / 20f18 / 20f20): the oor guard target 20f00 (U3 18efa type 7ffe)
+# is the interior PC inside the 8-byte MOVE.L #a9800,3a(A6) of 20efc. Former expectation expected_pc_error(20f00) = UNSUPPORTED_MACHINE; the dispatch of 20f00
+# is now the player C5 interior error (scratch probe in a clone root: a run that reaches 20f00 fails with 'unsupported animation player c5 PC').
+SUPERSEDED_GUARD_ERRORS = {'guard-oor-18fd2-type8000': UNSUPPORTED_F6C, 'guard-oor-18efa-type7ffe': UNSUPPORTED_C5}
+SUPERSEDED_BY = {'guard-oor-18fd2-type8000': 'F6c family A', 'guard-oor-18efa-type7ffe': 'player C5 interior 20f00',
+                 'oor-18efa-type7ffe': 'player C5 interior 20f00'}
 VERIFIED_ARTIFACTS = set()
 RUN_DIR = None
 WORKERS = 8
@@ -925,7 +931,8 @@ SUPERSEDED_GUARDS = ('guard-bad-stop-1a7a8-on-scene-0237',)
 SUPERSEDED_RECORDS = []
 SUPERSEDED_COMPUTED = {'oor-18c06-type8000': 'unsupported animation machine write device', 'oor-18caa-type8000': UNSUPPORTED_F6C,
                        'oor-18efa-type8000': 'unsupported animation machine write device', 'oor-18fd2-type8000': UNSUPPORTED_F6C,
-                       'oor-192c4-type8000': UNSUPPORTED_F6C}
+                       'oor-192c4-type8000': UNSUPPORTED_F6C,
+                       'oor-18efa-type7ffe': UNSUPPORTED_C5}     # player C5: the computed PC 20f00 is a C5 interior PC (former: UNSUPPORTED_MACHINE)
 SUPERSEDED_ERROR_RECORDS = []      # guards that still fail, with a new exact error (counted in rows, unlike SUPERSEDED_RECORDS)
 SUPERSEDED_NEGATIVES = []
 
@@ -939,7 +946,7 @@ def compare_guards(exe, guards, resources, st):
         if label in SUPERSEDED_GUARD_ERRORS:
             assert want == UNSUPPORTED_MACHINE, (label, want)
             SUPERSEDED_ERROR_RECORDS.append(dict(label=label, former_expected_API_error=want, observed_expected_API_error=SUPERSEDED_GUARD_ERRORS[label],
-                                           superseded_by='F6c family A', native_fault_rollback_equivalence_claimed=False))
+                                           superseded_by=SUPERSEDED_BY.get(label, 'F6c family A'), native_fault_rollback_equivalence_claimed=False))
             want = SUPERSEDED_GUARD_ERRORS[label]
         cases = [('phase', ram, state, pvc, bank, phase['stop_pc'])]
         if (ram, state, pvc, bank) != (step_start[0], step_start[1], step_start[2], step_start[3]):
@@ -1036,7 +1043,8 @@ def negatives(exe, base, starts_by_label, st, resources, oors, visited):
             # F6c blocks and ends in the recorded exact error [I: attributed to that execution, not separately traced].
             former, want = want, SUPERSEDED_COMPUTED[label]
             SUPERSEDED_ERROR_RECORDS.append(dict(label='computed_pc_run_on_%s' % label, computed_pc=hex(final_pc), former_expected_API_error=former,
-                                                 observed_expected_API_error=want, superseded_by='F6c family A', native_fault_rollback_equivalence_claimed=False))
+                                                 observed_expected_API_error=want, superseded_by=SUPERSEDED_BY.get(label, 'F6c family A'),
+                                                 native_fault_rollback_equivalence_claimed=False))
         try:
             reject('computed_pc_run_on_%s' % label, step_start, error_expected=want, external=external)
         except AssertionError as error:      # collected: every stale row is reported together

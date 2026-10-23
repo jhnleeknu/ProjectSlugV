@@ -20,8 +20,9 @@ hint_worlds, converted to absolute addresses; 'mirror' puts the node at 1fe000, 
             (the Set side needs a later unit) and the Z chain 1ee4e -> 1cb08 -> 1cb18 -> 1ee56 -> 1ee5a run as plain fixtures.
   single 3  a consumer entered directly with a declared known C (1 clear / 2 set): stop = its successor (native branch on the SR C bit).
   single 4  C++ only: entry state, the exact checked error, the failing PC (review 0264 L-1) and the row's run stop (right after the failing block).
-  single 5  the Z reader 1ee56 entered directly: the native SR Z is the Z of the 1cb08 MOVE.W it recomputes (WORD (A0 + 2 x BYTE 9f) = 0); worlds with a
-            WORD that is not 0 are C++ error rows (contract decision 3).
+  single 5  the Z reader 1ee56 entered directly: the native SR Z is the Z it recomputes (contract decision 3, widened by player C5): WORD W = (A0 + 2 x
+            BYTE 9f) = 0 (1cb08 / 1cb18), or for W not 0 the TST.L of LONG (LONG 22(A6) + sext(4 x WORD (A0 + sext(W)))) (C5 1cb1a / 1cb30 / 1cb32);
+            worlds whose sources are neither RAM nor declared bytes are skipped, sources at or above 200000 are C++ error rows.
 Known C is never read from the Unicorn SR after a run: consumer rows check the native branch outcome against the declared C.  The modelled C of the
 producers: 215ec (CMPA) 21bc0 21be0 21bfa 21c1c 48392 4d100 4debc 4ded4 Clear, 215fc 21bda 48362 4deca Set, 1ed30 / 21c06 (CMP.W D1,D0) and 21bb2
 (CMP.B a1(A6),D0) the borrow recomputed from the native input / output; 1ee00 1ed32 215f6 21c1a keep the incoming C.
@@ -166,6 +167,9 @@ class Ram(object):
 
     def word(self, a):
         return (self.b[a & 0xffff] << 8) | self.b[(a + 1) & 0xffff]
+
+    def long(self, a):
+        return (self.word(a) << 16) | self.word(a + 2)
 
 
 def base_ram():
@@ -424,6 +428,49 @@ def zword(r, regs):
     return syn_word(a)
 
 
+def sext16(v):
+    return v - 0x10000 if v & 0x8000 else v
+
+
+def zvalue(r, regs):
+    """The Z that 1ee56 recomputes (contract decision 3, widened by player C5): W = zword 0 -> True; else the C5 path 1cb1a: WORD W2 = (A0 + sext(W)),
+    Z = LONG (LONG 22(A6) + sext(4 x W2)) = 0.  None when a source is neither RAM nor declared synthetic bytes."""
+    w = zword(r, regs)
+    if w is None:
+        return None
+    if w == 0:
+        return True
+    a = (regs['a0'] + sext16(w)) & 0xffffffff
+    w2 = r.word(a) if 0x100000 <= a < 0x200000 else syn_word(a)
+    if w2 is None:
+        return None
+    a = (r.long((regs['a6'] + 0x22) & 0xffffffff) + sext16((w2 << 2) & 0xffff)) & 0xffffffff
+    if 0x100000 <= a and a + 4 <= 0x200000:
+        return r.long(a) == 0
+    hi, lo = syn_word(a), syn_word(a + 2)
+    if hi is None or lo is None:
+        return None
+    return (hi | lo) == 0
+
+
+def zpath_rows(fl, kept):
+    """Player C5 decision 3: the Z reader 1ee56 on the C5 path (W not 0): W = 4 / 8004 at RTAB + 2 x 9f, W2 at RTAB + sext(W), LONG 22(A6) = 10e700
+    (or 10e710 / the mirror 1fe700), the LONG at LONG 22(A6) + sext(4 x W2) zero or not.  An own RNG keeps the worlds of every other row unchanged."""
+    rng5 = random.Random(0xC5C5)
+    for i, (b, w, w2, base, lv) in enumerate(((0, 4, 3, 0x10e700, 0), (0, 4, 3, 0x10e700, 0x12345678), (1, 4, 0, 0x10e700, 0x80000000),
+                                              (2, 0x8004, 5, 0x10e700, 0), (2, 0x8004, 5, 0x10e700, 1), (3, 4, 0x3fff, 0x10e700, 0),
+                                              (3, 4, 0x3ffe, 0x1fe700, 0xff), (1, 4, 0xfffe, 0x10e710, 0))):
+        at_w2 = (RTAB + sext16(w)) & 0xffffffff
+        at_l = (base + sext16((w2 << 2) & 0xffff)) & 0xffffffff
+        hint = dict(regs=dict(a0=RTAB), a6off=[(0x9f, 1, b), (0x22, 4, base)], writes=[((RTAB + 2 * b) & 0xffff, 2, w), (at_w2 & 0xffff, 2, w2), (at_l & 0xffff, 4, lv)])
+        r, regs = world(rng5, fl, ZREAD, hint)
+        zv = zvalue(r, regs)
+        assert zv is not None and zword(r, regs) != 0, i
+        o = native(r.b, regs, ZREAD, 0, single_stop, zv)
+        assert o is not None and o['stop'] == (0x1ee5a if zv else 0x1eee0), (i, o and hex(o['stop']))
+        kept[('c5path', i)] = (r, regs, o)
+
+
 def gen_singles(rng):
     for s in STARTS:
         if s in CONS_SET:
@@ -440,7 +487,7 @@ def gen_singles(rng):
             if s == ZREAD:
                 w = zword(r, regs)
                 if w != 0:
-                    continue                             # a WORD that is not 0 (or no declared source): the error rows
+                    continue                             # a WORD that is not 0: the C5-path rows below (own RNG, the other rows keep their worlds)
                 z = True
             o = native(r.b, regs, s, 0, single_stop, z)
             if o is None:
@@ -460,6 +507,8 @@ def gen_singles(rng):
                 break
             if t >= len(hs) and t > 120 and len(kept) >= 2:
                 break
+        if s == ZREAD:
+            zpath_rows(fl, kept)
         assert kept, hex(s)
         for i, (k, (r, regs, o)) in enumerate(sorted(kept.items(), key=lambda kv: str(kv[0]))):
             data = data_carry(s, regs, r.b, o['regs'], regs['a6']) if s in DATA_SET else 0
@@ -657,9 +706,13 @@ def gen_errors():
     # the synthetic list 21622: key 1 -> 21d60 (player C4 since) -> BYTE 9d = 1: BGT.W 21dd0 (C12, unrouted) (was: unrouted at 21d60, puts 9c only)
     err('21610-key-1', 0x21610, unrouted, 0x21dd0, puts=((NODE + 0x9c, 1, 1), (NODE + 0x9d, 1, 1)))
     err('21610-key-3', 0x21610, unrouted, 0x21662, puts=((NODE + 0x9c, 1, 3),))    # the key WORD 0103 does not match BYTE 3: C Clear -> 21662 (C6)
-    # the Z source of 1ee56 (contract decision 3)
-    err('z-word-1b5f2', ZREAD, flag, ZREAD, a0=0x1b5f2, puts=((NODE + 0x9f, 1, 1),))
-    err('z-word-ram', ZREAD, flag, ZREAD, a0=RTAB, puts=((NODE + 0x9f, 1, 0x80), (RTAB + 0x100, 2, 0x8000)))
+    # the Z source of 1ee56 (contract decision 3, widened by player C5: a WORD that is not 0 is the C5 path 1cb1a; before C5 the rows z-word-1b5f2 /
+    # z-word-ram expected the flag-source error for any WORD not 0)
+    err('z-path-rom', ZREAD, rom, ZREAD, a0=0x1b5f2, puts=((NODE + 0x9f, 1, 1), (NODE + 0x22, 4, 0x2000)))   # W 6 -> W2 0 -> LONG 2000 (ROM, not declared)
+    err('z-path-ram', ZREAD, rom, ZREAD, a0=RTAB, puts=((NODE + 0x9f, 1, 0x80), (RTAB + 0x100, 2, 0x8000), (NODE + 0x22, 4, 0x2000)))  # 106800: W2 0
+    err('z-path-w2-bank', ZREAD, flag, ZREAD, a0=0x1f9000, puts=((0x109000, 2, 0x7000),))                  # A0 + sext(7000) = 200000
+    err('z-path-long-bank', ZREAD, flag, ZREAD, a0=RTAB, puts=((RTAB, 2, 2), (RTAB + 2, 2, 4), (NODE + 0x22, 4, 0x1ffff0)))   # 1ffff0 + 10
+    err('z-path-long-io', ZREAD, flag, ZREAD, a0=RTAB, puts=((RTAB, 2, 2), (RTAB + 2, 2, 1), (NODE + 0x22, 4, 0x3bfffc)))     # 3bfffc + 4
     err('z-bank', ZREAD, flag, ZREAD, a0=0x200000)
     err('z-io', ZREAD, flag, ZREAD, a0=0x3c0004, puts=((NODE + 0x9f, 1, 1),))
     err('z-mirror-top', ZREAD, flag, ZREAD, a0=0x1fff00, puts=((NODE + 0x9f, 1, 0x80),))
