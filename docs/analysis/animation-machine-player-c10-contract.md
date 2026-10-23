@@ -222,3 +222,9 @@ FR2..FR10, C1~C9 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 FR11 계약(`animation-machine-frontier-fr11-contract.md`) 결정 7에 따른 기록이다. C10 실행부·시험은 바뀌지 않았다.
 
 - [F] V1 spec `pc10.py`: `EXIT_STOPS` 가운데 FR10의 뒤 단위 정지 `70e42` `70fac` `cd7e2` `cd92e` `cd96c`가 FR11 block이 되었다. `ROUTED_LATER` `()` → 그 다섯(C10 run은 그 PC에서 계속 멈춘다), 두 번째 확인 `for t in EXIT_STOPS: require(unit_of(t) is None)` → `is None or t in ROUTED_LATER`.
+
+## 뒤 단위 변경 기록: objects FR12(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR12 계약(`animation-machine-frontier-fr12-contract.md`) 결정 6에 따른 기록이다. C10 실행부·시험은 바뀌지 않았다.
+
+- [F] V1 spec `pc10.py`: `EXIT_STOPS` 가운데 FR10의 뒤 단위 정지 `70f8e` `b6c58`가 FR12 block이 되었다. `ROUTED_LATER`에 그 둘을 더했다(C10 run은 그 PC에서 계속 멈춘다).

@@ -608,15 +608,18 @@ def gen_errors():
     # failures after executed blocks (rollback; the failing PC differs from the entry): the later-unit stops of FR12 / FR13, the TRAP boundary b3e58 and
     # the unrouted computed-jump targets
     err('b3e46-then-b3e58', 0xb3e46, unrouted, 0xb3e58, puts=((SP, 4, 0),))
-    err('b41d8-then-b41f2', 0xb41d8, unrouted, 0xb41f2, puts=((NODE + 0x8e, 2, 1),))
+    # objects FR12 routes b41f2 / b6e5e / c5612 / c0924 / b42c4 since FR12 (FR12 contract; was: b41d8-then-b41f2 / b6e5a-then-b6e5e / c560e-then-c5612 /
+    # b4030-then-c0924 / b42b0-then-b42c4 with 'unsupported animation machine PC' at the FR12 PC): the rows fail on the FR12 path or keep the failing PC
+    # with an odd node
+    err('b41d8-then-b4292-odd-stack', 0xb41d8, odd, 0xb4292, a7=SP + 1, puts=((NODE + 0x8e, 2, 1),))   # FR12 b41f2 .. b427a -> FR11 b427e -> RTS b4292
     err('b6d8c-then-b6d90', 0xb6d8c, unrouted, 0xb6d90, carry=2)
-    err('b6e5a-then-b6e5e', 0xb6e5a, unrouted, 0xb6e5e, carry=2)
-    err('c560e-then-c5612', 0xc560e, unrouted, 0xc5612, carry=2)
+    err('b6e5a-then-b6e5e', 0xb6e5a, wodd, 0xb6e5e, carry=2, a6=NODE + 1)       # FR12 b6e5e MOVE.L #b6ed8,(A6) of the odd node
+    err('c560e-then-2a00-odd-stack', 0xc560e, odd, 0x2a00, stop=0x299c, carry=2, a7=SP + 1)   # FR12 c5612 JMP 2a00: the BSR 299c push on the odd A7
     err('bfcea-then-bfcfa', 0xbfcea, unrouted, 0xbfcfa, d0=4)
     err('b4030-then-b4036', 0xb4030, unrouted, 0xb4036, puts=((NODE + 0x76, 4, 0xb4036),))
-    err('b4030-then-c0924', 0xb4030, unrouted, 0xc0924, puts=((NODE + 0x76, 4, 0xc0924),))
+    err('b4030-then-b412c-odd-stack', 0xb4030, odd, 0xb412c, a7=SP + 1, puts=((NODE + 0x76, 4, 0xc0924),))   # FR12 c0924 -> b4294 -> b429e -> FR11 b411c
     err('b42b0-then-b42bc', 0xb42b0, unrouted, 0xb42bc, d0=4)
-    err('b42b0-then-b42c4', 0xb42b0, unrouted, 0xb42c4, d0=0xc)
+    err('b42b0-then-b42ea-odd-stack', 0xb42b0, odd, 0xb42ea, stop=0x49a58, d0=0xc, a7=SP + 1)   # FR12 b42c4 BRA.W b42ea: the JSR 49a58 push
     err('c54a6-then-c54b2', 0xc54a6, unrouted, 0xc54b2, d0=0)
     err('c54a6-then-c551a', 0xc54a6, unrouted, 0xc551a, d0=0x1a)
     err('c5496-then-c54ba', 0xc5496, unrouted, 0xc54ba, puts=((NODE + 0x5e, 1, 2),))

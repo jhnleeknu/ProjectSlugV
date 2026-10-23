@@ -96,7 +96,11 @@ EXIT_STOPS = (0xb41f2, 0xb6e5e, 0xc5612, 0xb6d90, 0xbfcfa,
               0x70f8e, 0xb6c58, 0x70f60, 0x70fcc, 0x70ff8, 0x71028,
               0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a)
 UNIT_EXITS = EXIT_STOPS[:5]             # the FR11 later-unit stops (FR12 / FR13)
-ROUTED_LATER = ()
+# objects FR12 routes the FR11 later-unit stops b41f2 b6e5e c5612 and the FR10 ones 70f8e b6c58 since FR12 (declared stops of the FR11 runs, as before
+# FR12); JUMP_LATER: the targets of the FR11 computed jumps that FR12 routes (the handlers b42a2 c0924 b4294 of b4034, the b42b8 entry b42c4); the
+# FR11 runs keep stopping there (JUMP_PCS: a target that is not an FR11 block is a stop)
+ROUTED_LATER = (0xb41f2, 0xb6e5e, 0xc5612, 0x70f8e, 0xb6c58)
+JUMP_LATER = (0xb42a2, 0xc0924, 0xb4294, 0xb42c4)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0xb6874, 0xb687a), (0xb6d6e, 0xb6d74), (0xb6e54, 0xb6e5a), (0xb77fa, 0xb7800), (0xc5476, 0xc547c), (0xc5608, 0xc560e), (0xb687e, 0xb688e),
           (0xb6ca2, 0xb6cac), (0xb6d82, 0xb6d8c), (0xc5486, 0xc5492), (0xb7d5a, 0xb7d8c))
@@ -539,7 +543,8 @@ def build():
     for jmp, targets in JUMP_TARGETS.items():
         require(jmp not in STARTS_SET and mine(jmp), ('the jump instruction is inside an FR11 block', hex(jmp)))
         for t in targets:
-            require(t in STARTS_SET or unit_of(t) is None, ('computed-jump target must be an FR11 start or unrouted', hex(jmp), hex(t), unit_of(t)))
+            require(t in STARTS_SET or unit_of(t) is None or t in JUMP_LATER, ('computed-jump target must be an FR11 start or unrouted', hex(jmp), hex(t),
+                                                                               unit_of(t)))   # objects FR12: JUMP_LATER added
     require(set(t for ts in JUMP_TARGETS.values() for t in ts) & STARTS_SET == {0xb41be, 0xb403e, 0xb42b8, 0xc54ca}, 'the FR11 jump targets')
     for t in (0xcc836, 0xcc842):
         require(unit_of(t) == 'animation_objects_fr11_block', ('FR4 table entry routed to FR11', hex(t)))
@@ -1080,14 +1085,17 @@ def error_fixtures(bases, add):
     err('b3e1c-odd-stack', U.with_host_writes(st, regs=dict(a7=a7 + 1), pc=0xb3e1c), odd_word, 0xb3e1c, stop=0x8ff4)
     # failures after executed blocks: the later-unit stops (FR12 / FR13) and the TRAP boundary reached through the unit
     err('b3e46-then-b3e58', U.with_host_writes(st, [(a7 & 0xffff, 4, 0)], pc=0xb3e46), unrouted, 0xb3e58)
-    err('b41d8-then-b41f2', U.with_host_writes(st, [((a6 + 0x8e) & 0xffff, 2, 1)], pc=0xb41d8), unrouted, 0xb41f2)
+    # objects FR12 routes b41f2 / b42c4 since FR12 (FR12 contract; was: b41d8-then-b41f2 / b42b0-then-b42c4 with 'unsupported animation machine PC' at the
+    # FR12 PC): b41f2 runs on through FR12 b4212 / b4250 .. b427a to FR11 b427e and its RTS b4292 (the odd A7 fails the pop); b42c4 BRA.W b42ea, whose
+    # JSR 49a58 push on the odd A7 fails
+    err('b41d8-then-b4292-odd-stack', U.with_host_writes(st, [((a6 + 0x8e) & 0xffff, 2, 1)], regs=dict(a7=a7 + 1), pc=0xb41d8), odd_word, 0xb4292)
     err('b6d82-then-b6d90', U.with_host_writes(st, [((a6 + 0x9d) & 0xffff, 1, 0), ((a5 + 0x568e) & 0xffff, 1, 1)], pc=0xb6d82), unrouted, 0xb6d90)
     err('bfcea-then-bfcfa', U.with_host_writes(st, regs=dict(d0=4), pc=0xbfcea), unrouted, 0xbfcfa)
     err('b4030-then-b4036', U.with_host_writes(st, [((a6 + 0x76) & 0xffff, 4, 0xb4036)], pc=0xb4030), unrouted, 0xb4036)
     err('b42b0-then-b42bc', U.with_host_writes(st, regs=dict(d0=4), pc=0xb42b0), unrouted, 0xb42bc)
     err('c54a6-then-c54b2', U.with_host_writes(st, regs=dict(d0=0), pc=0xc54a6), unrouted, 0xc54b2)
     err('c5496-then-c54ba', U.with_host_writes(st, [((a6 + 0x5e) & 0xffff, 1, 2)], pc=0xc5496), unrouted, 0xc54ba)
-    err('b42b0-then-b42c4', U.with_host_writes(st, regs=dict(d0=0xc), pc=0xb42b0), unrouted, 0xb42c4)
+    err('b42b0-then-b42ea-odd-stack', U.with_host_writes(st, regs=dict(d0=0xc, a7=a7 + 1), pc=0xb42b0), odd_word, 0xb42ea)
 
 
 def negative_fixtures(out, add):

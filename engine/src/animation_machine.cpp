@@ -1252,6 +1252,11 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // (BCC, 4b54e), b7d8c (MOVEM.W (A7)+,D0-D6; BCC, 2986).  Every other FR11 block stays Unknown (b689c / b7dae ORI.B #1,CCR are followed by a
     // MOVE / MOVEQ that clears the C; no FR11 block passes a C to a reader; no Z / N crosses an FR11 block boundary).
     case 0xb687a:case 0xb6d74:case 0xb6e5a:case 0xb7800:case 0xc547c:case 0xc560e:case 0xb688e:case 0xb6cac:case 0xb6d8c:case 0xc5492:case 0xb7d8c:
+    // Objects FR12 blocks: the 8 consumers 716fa (BCC, 4d84e), 717aa (BCS, 4945e), 71f1e (BCC, 49fc6), b6e7c (BCC, 49392), c1064 (BCC, b4304),
+    // c123e c12cc c135c (MOVEM.W (A7)+,D0-D6; BCC, 2986), and the RTS 4d86c that passes the C of 4d84e (TST.W Clear) / 4d868 (ORI Set) to 716fa.
+    // b4322 (ANDI Clear) / b431c (ORI Set) set their C before their RTS (c1064); c1260 c12ee c137e (ORI Set) have no reader.  Every other FR12 block
+    // stays Unknown; no Z / N crosses an FR12 block boundary (the bundled BEQ c113a / c11ec belong to the blocks c1130 / c11e2).
+    case 0x716fa:case 0x717aa:case 0x71f1e:case 0xb6e7c:case 0xc1064:case 0xc123e:case 0xc12cc:case 0xc135c:case 0x4d86c:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1954,6 +1959,15 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xc5540 && next.pc<0xc554c) || (next.pc>=0xc5592 && next.pc<0xc5612) || (next.pc>=0xc5618 && next.pc<0xc561a) ||
                 (next.pc>=0xcc836 && next.pc<0xcc83a) || (next.pc>=0xcc842 && next.pc<0xcc846) || (next.pc>=0xcd7e2 && next.pc<0xcd7e4) ||
                 (next.pc>=0xcd92e && next.pc<0xcd93c) || (next.pc>=0xcd96c && next.pc<0xcda34))ok=animation_objects_fr11_block(c);
+            else if ((next.pc>=0x4d84e && next.pc<0x4d86e) || (next.pc>=0x70f8e && next.pc<0x70f94) || (next.pc>=0x71502 && next.pc<0x71562) ||
+                (next.pc>=0x716ca && next.pc<0x7177a) || (next.pc>=0x7177c && next.pc<0x71786) || (next.pc>=0x71788 && next.pc<0x717c2) ||
+                (next.pc>=0x717c8 && next.pc<0x717e8) || (next.pc>=0x71e8c && next.pc<0x71f2c) || (next.pc>=0x722da && next.pc<0x72390) ||
+                (next.pc>=0xb402a && next.pc<0xb4030) || (next.pc>=0xb40f8 && next.pc<0xb4104) || (next.pc>=0xb41b2 && next.pc<0xb41be) ||
+                (next.pc>=0xb41f2 && next.pc<0xb427e) || (next.pc>=0xb4294 && next.pc<0xb42b0) || (next.pc>=0xb42c4 && next.pc<0xb42c8) ||
+                (next.pc>=0xb42ea && next.pc<0xb4328) || (next.pc>=0xb518c && next.pc<0xb5198) || (next.pc>=0xb6c58 && next.pc<0xb6c66) ||
+                (next.pc>=0xb6e5e && next.pc<0xb6e8c) || (next.pc>=0xb6ed8 && next.pc<0xb6fc2) || (next.pc>=0xb6ff4 && next.pc<0xb7100) ||
+                (next.pc>=0xc0924 && next.pc<0xc0986) || (next.pc>=0xc1036 && next.pc<0xc13c0) || (next.pc>=0xc1cf2 && next.pc<0xc1d2e) ||
+                (next.pc>=0xc5612 && next.pc<0xc5618) || (next.pc>=0xcc7c0 && next.pc<0xcc7c4))ok=animation_objects_fr12_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
