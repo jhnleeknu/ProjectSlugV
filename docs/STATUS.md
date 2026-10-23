@@ -2590,3 +2590,12 @@
 - 다음(사용자 결정 필요):
   - 입력을 늘린 새 IO 관측(점프·사격·폭탄 등)을 만들고 C9~C13을 다시 잰다. 관측 결과를 `artifacts/`에 두는 것은 승인이 필요하다.
   - 보류한 FR4b/FR4c.
+
+## 2026-10-23 — 입력 확장 IO 관측과 남은 단위 계획
+
+- [F] 원래 관측에서 C9~C13이 실행되지 않은 이유: 게임 mode의 버튼 mask 표 `10f01c`/`10f020`이 seed RAM에서 0이라, A·B·C·D가 늘 "누름"으로 읽히고 "새로 눌림"이 없었다. 이 표는 기본 설정 경로(`8fa → bcb4 → bbfa → bc1e`)만 채운다. 목숨 `10fd88`도 같은 이유로 1이었다.
+- 새 도구 `tools/observe_animation_machine_io_ext.py`는 pin된 observer를 고치지 않고 import해서 입력 설정 X1~X4(걷기·사격, 점프·사격, 수류탄·방향, 혼합)를 만든다. 기본 설정의 효과는 선언 host 쓰기로 준다. 입력 script는 `docs/analysis/data/io-input-scripts-ext.json`이다.
+- 관측은 scratch에만 있다(`ms5-scratch/obs2/final/`, run 12개, 14,508 frame, 약 17 MB, 두 번 실행 결과 같음). `artifacts/`에 둘지는 사용자 결정이다.
+- 측정(현재 routing): 실행된 routing 밖 PC C 228 / D 659 / E 108. 새 관측의 IO 기준선은 14,500 중 5,095 일치, 불일치 0.
+- 남은 단위 8개(1,499 block): C9, FR10, C10, FR11, FR12, FR13, E2, FR14. 정확 bitmap 재관측 예측으로 FR14 뒤 14,500 전부 일치한다. 계획 문서 §10에 C9 상세 명세가 있다.
+- 다음: C9.
