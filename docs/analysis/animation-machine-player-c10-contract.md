@@ -216,3 +216,9 @@ FR2..FR10, C1~C9 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 - [F] **IO, 입력 확장 관측**(C10 연결 뒤, `--workers 3`): run 12, native 비교 frame 14,500 가운데 일치 **6,751**(예측 6,751, 기준선 6,230 → +521), 불일치 0(beyond 0), C++ 오류 0, chain divergence 0, 수용 키 모두 true(`negatives_ok` 포함, `P1` case 94)(`trial_logs/io_ext_c10.log`; `verification.json` SHA256 `7e8fed3f79f7be75…`, `frontier.json` `9e63b4c3b2736fec…`, scratch `io_ext_c10/`). 첫 정지(확인된 frontier): X1 68 frame 659 `b6ca2`, X1 94 439 `b67b2`, X2 68 633 `cc836`, X2 94 409 `cd96c`, X3 68 628 `b6ca2`, X3 94 432 `b6ca2`, X4 68 661 `cd92e`, X4 94 490 `cd92e` — 재관측 예측(`reobs/c10v2.stops`)과 run·frame·PC가 모두 같다. 모두 D(FR11~FR13)다.
 - [F] 원래 IO 관측·frame 비교·legacy 검증기는 작업자가 돌리지 않았다(메인 runner).
 - [F] `CPP_PINS`: 작업 트리와 scratch clone root(`work/mkroot.py`; 확인 뒤 symlink를 먼저 지우고 삭제)에서 파일 SHA와 같다(4 / 9 pin, 불일치 0, `trial_logs/pincheck_tree.log` `pincheck_root.log`).
+
+## 뒤 단위 변경 기록: objects FR11(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR11 계약(`animation-machine-frontier-fr11-contract.md`) 결정 7에 따른 기록이다. C10 실행부·시험은 바뀌지 않았다.
+
+- [F] V1 spec `pc10.py`: `EXIT_STOPS` 가운데 FR10의 뒤 단위 정지 `70e42` `70fac` `cd7e2` `cd92e` `cd96c`가 FR11 block이 되었다. `ROUTED_LATER` `()` → 그 다섯(C10 run은 그 PC에서 계속 멈춘다), 두 번째 확인 `for t in EXIT_STOPS: require(unit_of(t) is None)` → `is None or t in ROUTED_LATER`.

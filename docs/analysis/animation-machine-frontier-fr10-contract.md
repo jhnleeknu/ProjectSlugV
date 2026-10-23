@@ -208,3 +208,11 @@ FR2..FR9, C1~C9 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 - [F] **IO, 입력 확장 관측**(FR10 연결 뒤, `--workers 3`): run 12, native 비교 frame 14,500 가운데 일치 **6,230**(예측 6,230, 기준선 5,839 → +391), 불일치 0(beyond 0), C++ 오류 0, chain divergence 0, 수용 키 모두 true(`negatives_ok` 포함, `P1` case 94)(`trial_logs/io_ext_fr10.log`; `verification.json` SHA256 `73e27b2773324c6d…`, `frontier.json` `960c218ab8c451d8…`). 첫 정지(확인된 frontier): X1 68 frame 590·X1 94 384·X2 68 608·X2 94 386 `1dccc`, X3 68 591 `252b4`, X3 94 391 `22148`, X4 68 520·X4 94 360 `223fa` — 재관측 예측(`reobs/fr10v1.stops`)과 run·frame·PC가 모두 같다. 모두 C10이다.
 - [F] 원래 IO 관측·frame 비교·legacy 검증기는 작업자가 돌리지 않았다(메인 runner).
 - [F] `CPP_PINS`: 작업 트리와 scratch clone root(`work/mkroot.py`; 확인 뒤 symlink를 먼저 지우고 삭제)에서 파일 SHA와 같다(4 / 9 pin, 불일치 0, `trial_logs/pincheck_tree.log` `pincheck_root.log`).
+
+## 뒤 단위 변경 기록: objects FR11(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR11 계약(`animation-machine-frontier-fr11-contract.md`) 결정 1·7에 따른 기록이다. FR10 실행부는 바뀌지 않았다.
+
+- [F] **FR10의 뒤 단위 정지 가운데 FR11 진입**: `70e42` `70fac` `cd7e2` `cd92e` `cd96c`(위 "출구와 경계"의 FR11 다섯)가 FR11 block이 되었다. 나머지 여섯(FR12 `70f8e` `b6c58`, FR13 `70f60` `70fcc` `70ff8` `71028`)은 계속 뒤 단위 정지다.
+- [F] 생성기 `generate_animation_machine_objects_fr10_test_table.py`의 오류 행 다섯(이전: 그 FR11 PC에서 `unsupported animation machine PC`)을 실패 PC를 지키거나 경로를 따라 옮겼다: `70e2a-then-70e42` → `70e2a-then-70e4a`(FR11 `70e4a`가 선언하지 않은 bank LONG `2a1110`을 읽음), `cd7cc-then-cd7e2` → `cd7cc-then-cd7e4`(홀수 node, FR10 `cd7e4`의 LONG 쓰기), `cd8ee-then-cd92e`(홀수 node, FR11 `cd92e`의 LONG 쓰기), `cd95a-then-cd96c`(홀수 node, FR11 `cd96c`의 WORD 읽기), `70f94-then-70fac` → `70f94-then-70fcc`(BYTE 82 bit 7: FR11 `70fac` → FR10 `70fc2` → FR13 `70fcc`). 다시 생성한 시험은 그 다섯 행만 바뀌었다(fixture 1,074 그대로).
+- [F] V1 spec `fr10.py`: `ROUTED_LATER`에 FR11 진입 다섯을 더했다(FR10 run은 그 PC에서 계속 멈춘다). 오류 fixture 다섯을 같은 뜻으로 바꿨다(`70e2a-then-70e4a`는 원본 ROM에서 bank 읽기가 성공하므로 홀수 A7의 `JSR 49f8c` push로 실패시킴).

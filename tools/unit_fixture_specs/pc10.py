@@ -99,7 +99,8 @@ TRAPS = ()
 EXIT_STOPS = (0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a,
               0x70e42, 0x70fac, 0xcd7e2, 0xcd92e, 0xcd96c, 0x70f8e, 0xb6c58, 0x70f60, 0x70fcc, 0x70ff8, 0x71028)
 UNIT_EXITS = ()                         # no C10 later-unit stop
-ROUTED_LATER = ()
+# objects FR11 routes the FR10 later-unit stops 70e42 70fac cd7e2 cd92e cd96c since FR11 (declared stops of the C10 runs, as before FR11)
+ROUTED_LATER = (0x70e42, 0x70fac, 0xcd7e2, 0xcd92e, 0xcd96c)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the Z chains 1efe8 -> 1efee, 1eff2 -> 1eff6,
 # 204fa -> 20508 (C5 1c51c)
 CHAINS = ((0x21dd0, 0x21dda), (0x21dde, 0x21de2), (0x21de6, 0x21dea), (0x21e04, 0x21e0c), (0x22148, 0x22164), (0x2228e, 0x22296), (0x2236c, 0x22374),
@@ -571,7 +572,7 @@ def build():
     require(set(t for t in TABLE_203B0 if unit_of(t) is not None) == {0x203b0}, 'only the executed table entry 203b0 is routed')
     require(unit_of(0x20324) == unit_of(0x252b4) == 'animation_player_c10_block', 'the C3 / C7 table entries 20324 / 252b4 are C10 starts')
     for t in EXIT_STOPS:
-        require(unit_of(t) is None, ('later-unit stop must stay unrouted', hex(t)))
+        require(unit_of(t) is None or t in ROUTED_LATER, ('later-unit stop must stay unrouted', hex(t)))   # objects FR11: was 'is None'
     rng = random.Random(0xC10A)
     bases = []
     pointers = []
