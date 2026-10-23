@@ -98,9 +98,9 @@ EXIT_STOPS = (0x71682, 0x717c2, 0x7177a, 0x71786,
               0xb6d90, 0xbfcfa, 0x70f60, 0x70fcc, 0x70ff8, 0x71028,
               0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a)
 UNIT_EXITS = EXIT_STOPS[:4]             # the FR12 later-unit stops (FR13 / FR14)
-# objects FR13 routes the FR12 later-unit stops 71682 717c2, the FR11 ones b6d90 bfcfa and the FR10 ones 70f60 70fcc 70ff8 71028 since FR13 (declared
-# stops of the FR12 runs, as before FR13)
-ROUTED_LATER = (0x71682, 0x717c2, 0xb6d90, 0xbfcfa, 0x70f60, 0x70fcc, 0x70ff8, 0x71028)
+# objects FR13 routes the FR12 later-unit stops 71682 717c2, the FR11 ones b6d90 bfcfa and the FR10 ones 70f60 70fcc 70ff8 71028 since FR13, objects
+# FR14 routes the FR12 later-unit stops 7177a 71786 since FR14 (declared stops of the FR12 runs, as before FR13 / FR14)
+ROUTED_LATER = (0x71682, 0x717c2, 0xb6d90, 0xbfcfa, 0x70f60, 0x70fcc, 0x70ff8, 0x71028, 0x7177a, 0x71786)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x716f4, 0x716fa), (0x716ea, 0x716fa), (0x717a4, 0x717aa), (0x71f18, 0x71f1e), (0xb6e6e, 0xb6e7c), (0xc105e, 0xc1064), (0xc120c, 0xc123e),
           (0xc128a, 0xc12cc), (0xc131a, 0xc135c))
@@ -1072,8 +1072,12 @@ def error_fixtures(bases, add):
     err('b42f6-odd-stack', U.with_host_writes(st, regs=dict(a7=a7 + 1), pc=0xb42f6), odd_word, 0xb42f6)
     err('c120c-odd-stack', U.with_host_writes(st, regs=dict(a7=a7 + 1), pc=0xc120c), odd_word, 0xc120c, stop=0x2986)
     # failures after executed blocks: the later-unit stops (FR13 / FR14) and the unrouted FR11 handler b4036 reached through the unit
-    err('7176a-then-7177a', U.with_host_writes(st, [((a6 + 0x15) & 0xffff, 1, 0)], pc=0x7176a), unrouted, 0x7177a)
-    err('7177c-then-71786', U.with_host_writes(st, regs=dict(d0=0x80000000), pc=0x7177c), unrouted, 0x71786)
+    # objects FR14 routes 7177a / 71786 since FR14 (FR14 contract; was: 7176a-then-7177a / 7177c-then-71786 with 'unsupported animation machine PC'
+    # at the FR14 PC): 7177a runs on to FR12 7177c (MOVE.L D0,64 on the odd node); 71786 runs on through 71788 / 7179a to the JSR 4945e push of 717a4
+    # on the odd A7
+    err('7176a-then-7177c-odd-node', U.with_host_writes(st, [((a6 + 1 + 0x15) & 0xffff, 1, 0)], regs=dict(a6=a6 + 1), pc=0x7176a), odd_write, 0x7177c)
+    err('7177c-then-717a4-odd-stack', U.with_host_writes(st, [((a6 + 0x15) & 0xffff, 1, 0x80)], regs=dict(d0=0x80000000, a7=a7 + 1), pc=0x7177c), odd_word,
+        0x717a4)
     # objects FR13 routes 71682 / 717c2 since FR13 (FR13 contract; was: 71532-then-71682 / 717ae-then-717c2 with 'unsupported animation machine PC' at
     # the FR13 PC): 71682 reads WORD 7a of the odd node; 717c2 runs on to FR12 717c8 (the JSR 4bfa4 push on the odd A7)
     err('71532-then-71682', U.with_host_writes(st, regs=dict(a6=a6 + 1), pc=0x71532), odd_word, 0x71682)

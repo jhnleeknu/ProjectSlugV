@@ -230,3 +230,11 @@ FR13 계약(`animation-machine-frontier-fr13-contract.md`) 결정 6에 따른 �
 - [F] **FR12의 뒤 단위 정지 가운데 FR13 진입**: `71682` `717c2`가 FR13 block이 되었다(메인 결정: 계획대로 FR13). 나머지 둘(FR14 `7177a` `71786`)은 계속 뒤 단위 정지다.
 - [F] 생성기 `generate_animation_machine_objects_fr12_test_table.py`의 오류 행 둘(이전: 그 FR13 PC에서 `unsupported animation machine PC`): `71532-then-71682`(홀수 node: FR13 `71682`의 `MOVE.W 7a(A6)`, 실패 PC 그대로), `717ae-then-717c2` → `717ae-then-717c8-odd-stack`(홀수 A7: FR13 `717c2` → FR12 `717c8 JSR 4bfa4`의 push). 생성기를 다시 돌려 그 2행만 바뀜을 확인했다(fixture 1,127 그대로).
 - [F] V1 spec `fr12.py`: `ROUTED_LATER` `()` → (`71682` `717c2` `b6d90` `bfcfa` `70f60` `70fcc` `70ff8` `71028`). 오류 fixture `71532-then-71682`(홀수 node), `717ae-then-717c2` → `717ae-then-717c8-odd-stack`. FR12 run은 그 PC에서 계속 멈춘다.
+
+## 뒤 단위 변경 기록: objects FR14(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR14 계약(`animation-machine-frontier-fr14-contract.md`) 결정 5에 따른 기록이다. FR12 실행부는 바뀌지 않았다.
+
+- [F] **FR12의 남은 뒤 단위 정지 `7177a` `71786`이 FR14 block이 되었다**(`NEG.L D0` → FR12 `7177c` / `71788`). FR12의 뒤 단위 정지는 이제 없다.
+- [F] 생성기 `generate_animation_machine_objects_fr12_test_table.py`의 오류 행 둘(이전: 그 FR14 PC에서 `unsupported animation machine PC`): `7176a-then-7177a` → `7176a-then-7177c-odd-node`(홀수 node: FR12 `7177c`의 `MOVE.L D0,64(A6)`), `7177c-then-71786` → `7177c-then-717a4-odd-stack`(D0 음수, BYTE 15 = 80: `71788` / `7179a` 뒤 `717a4 JSR 4945e`의 push가 홀수 A7). 생성기를 다시 돌려 그 2행만 바뀜을 확인했다(fixture 1,127 그대로).
+- [F] V1 spec `fr12.py`: `ROUTED_LATER`에 `7177a` `71786`. 오류 fixture를 위와 같은 뜻으로 옮겼다. FR12 run은 그 PC에서 계속 멈춘다.

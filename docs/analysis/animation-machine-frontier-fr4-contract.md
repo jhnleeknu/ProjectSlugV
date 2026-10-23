@@ -243,3 +243,7 @@ FR2·FR2b·FR3 계약의 같은 절을 그대로 따른다. 다른 점만 적는
 - **`cc818..cc82e`(3)**: `cc818 cc81a cc822`
 - **`cca76..ccade`(5)**: `cca76 cca80 cca9c ccaa8 ccab6`
 - **`cdc1c..cdc24`(1)**: `cdc1c`
+
+## 뒤 단위 변경 기록: objects FR14(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+- [F] 표 1 `cc7ac`(`cc7a0`의 계산 대상)의 칸 3 `cc7b8`(`BRA.W cd0fe`)과 그 대상 `cd0fe..cd370`이 FR14 block이 되었다(확장 관측 X3 68에서 실행된 칸). FR4 실행부·시험·spec은 바뀌지 않았다(표 칸은 정지 전용 행이고, 결정 2대로 routing이 판정). 표 2 `cc82e`의 칸 3 `cc83a`(같은 대상)는 실행되지 않아 routing 밖이다. routing 밖 FR4 표 칸은 46 → 45개다.

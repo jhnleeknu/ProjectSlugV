@@ -583,8 +583,11 @@ def gen_errors():
     err('rom-write-b402a', 0xb402a, device, 0xb402a, a6=0x1000)
     # failures after executed blocks (rollback; the failing PC differs from the entry): the later-unit stops of FR13 / FR14, the unrouted FR11 handler
     # b4036 reached through c1d06 -> b4030
-    err('7176a-then-7177a', 0x7176a, unrouted, 0x7177a)
-    err('7177c-then-71786', 0x7177c, unrouted, 0x71786, d0=0x80000000)
+    # objects FR14 routes 7177a / 71786 since FR14 (FR14 contract; was: 7176a-then-7177a / 7177c-then-71786 with 'unsupported animation machine PC'
+    # at the FR14 PC): 7177a (NEG.L D0) runs on to FR12 7177c (MOVE.L D0,64 on the odd node); 71786 runs on through FR12 71788 / 7179a to the JSR
+    # 4945e push of 717a4 on the odd A7
+    err('7176a-then-7177c-odd-node', 0x7176a, wodd, 0x7177c, a6=NODE + 1)
+    err('7177c-then-717a4-odd-stack', 0x7177c, odd, 0x717a4, stop=0x4945e, d0=0x80000000, a7=SP + 1, puts=((NODE + 0x15, 1, 0x80),))
     # objects FR13 routes 71682 / 717c2 since FR13 (FR13 contract; was: 71532-then-71682 / 717ae-then-717c2 with 'unsupported animation machine PC' at
     # the FR13 PC): 71682 reads WORD 7a of the odd node; 717c2 runs on to FR12 717c8 (the JSR 4bfa4 push on the odd A7)
     err('71532-then-71682', 0x71532, odd, 0x71682, a6=NODE + 1)

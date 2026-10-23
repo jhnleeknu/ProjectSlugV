@@ -201,3 +201,9 @@ select E1, FR2..FR13, C1~C10 계약의 같은 절을 그대로 따른다. 다른
 - [F] **IO, 입력 확장 관측**(E2 연결 뒤, `--workers 3`, `MS5_SEED_DIR=artifacts/stage_entry_body`): run 12, native 비교 frame 14,500 가운데 일치 **12,586**(예측 12,586, 기준선 10,374 → +2,212), 불일치 0(beyond 0), C++ 오류 0, chain divergence 0, 수용 키 모두 true(`negatives_ok` 포함), 관측 pin `io-ext`(`trial_logs/io_ext_e2.log`; `verification.json` SHA256 `b31b0b6cd39e704d…`, `frontier.json` `7de4279cecbb892a…`, scratch `io_ext_e2/`). run별 일치: P0 1,200, P1 1,200, X1 2,552, X2 2,276, X3 2,078, X4 3,280. X1 68 / 94, X2 68, X4 68 / 94는 guard frame(system-return)까지 모두 일치한다. 첫 정지 frame: X2 94 874, X3 68 1,120, X3 94 958 — 재관측 예측(`reobs/e2v1.stops`)과 run·frame이 모두 같다. 확인된 frontier PC는 `d177e` `3643e` `7177a`(D, 각 1 run)로 모두 FR14다.
 - [F] 원래 IO 관측·frame 비교·legacy 검증기는 작업자가 돌리지 않았다(메인 runner).
 - [F] `CPP_PINS`: 작업 트리와 scratch clone root(`work/mkroot.py`; 확인 뒤 symlink를 먼저 지우고 삭제)에서 파일 SHA와 같다(4 / 9 pin, 불일치 0, `trial_logs/pincheck_tree.log` `pincheck_root.log`).
+
+## 뒤 단위 변경 기록: objects FR14(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR14 계약(`animation-machine-frontier-fr14-contract.md`) 결정 5에 따른 기록이다. E2 실행부와 E2 시험은 바뀌지 않았다.
+
+- [F] V1 spec `se2.py`의 `EXIT_STOPS` 앞 5개(`71874` `d1632` `d177e` `7177a` `71786`)가 FR14 block이 되어 `ROUTED_LATER` `()` → (`71874` `d1632` `d177e` `7177a` `71786`)로 두었다(E2 run의 선언 정지는 그대로).
