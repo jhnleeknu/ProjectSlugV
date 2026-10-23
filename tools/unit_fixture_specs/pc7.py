@@ -88,19 +88,23 @@ TRAPS = ()
 EXIT_STOPS = (0x1eb98, 0x1f756, 0x1fa68,
               0x1d3e0, 0x4eb6a, 0xea626, 0x1dc8e, 0x1dccc,
               0x208fa, 0x2210c, 0x1ef4c, 0x21d9e, 0x1efd6, 0x1f070, 0x21dd0, 0x223a0, 0x223d6, 0x4ef08, 0x1ce98, 0x1cfde, 0x1de3c, 0x1e21c, 0x1e8de,
-              0x1fafc, 0x1fc96, 0x1fd50, 0x201bc, 0x21ca4, 0x21d0e, 0x21fa6, 0x4d0cc, 0x4e69a)
+              0x1fafc, 0x1fc96, 0x1fd50, 0x201bc, 0x21ca4, 0x21d0e, 0x21fa6, 0x4d0cc, 0x4e69a,
+              # player C10 routes the entries below since C10 (declared stops of the C7 runs, as before C10)
+              0x1f082, 0x20bfe, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
 UNIT_EXITS = EXIT_STOPS[:3]             # the C7 later-unit stops
 # later-unit stops routed since (player C8: 1eb98 1f756 1fa68 ea626 1ef4c 21d9e 1ce98 1cfde 1fafc 201bc 4d0cc; player C9: 208fa 2210c 1f070 223a0
 # 223d6 21ca4 21d0e): still declared stops of the C7 runs
 ROUTED_LATER = (0x1eb98, 0x1f756, 0x1fa68, 0xea626, 0x1ef4c, 0x21d9e, 0x1ce98, 0x1cfde, 0x1fafc, 0x201bc, 0x4d0cc, 0x208fa, 0x2210c, 0x1f070, 0x223a0,
-                0x223d6, 0x21ca4, 0x21d0e)
+                0x223d6, 0x21ca4, 0x21d0e,
+                # player C10 (the C10 entries kept as declared stops)
+                0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1ca0a, 0x1ca0e), (0x1f32a, 0x1f330), (0x1f5be, 0x1f5c4), (0x1f74c, 0x1f752), (0x1f640, 0x1f644), (0x1f76e, 0x1f776), (0x22670, 0x22674),
           (0x226f0, 0x22704), (0x2513a, 0x25140), (0x2544e, 0x25454))
 PASS_CHAINS = ()
 TABLE_JUMPS = {}
 # computed jump (contract decision 2): JMP 2529c(PC,D0.W) 25298, the BRA.W table 2529c..252c0 (9 entries; CMPI.W #9,D0; BCC.W 252c0 at 2528c); only the
-# executed entry 252a4 is a block of the unit
+# executed entry 252a4 is a block of the unit (the executed entry 252b4 is a player C10 block since C10, main decision 4: a declared stop of the C7 runs)
 JUMP_PCS = (0x25298,)
 TABLE_2529C = tuple(0x2529c + 4 * k for k in range(9))
 JUMP_ROUTED = ()
@@ -550,9 +554,11 @@ def build():
         require((unit_of(t) is None or t in ROUTED_LATER) and not mine(t), ('later-unit stop must stay unrouted', hex(t)))
     for s in STARTS:
         require(unit_of(s) == 'animation_player_c7_block', ('start is not routed to player c7', hex(s), unit_of(s)))
+    # player C10 routes the executed table entry 252b4 since C10 (main decision 4; was: only 252a4 routed, by C7); the C7 runs still stop at 252b4
+    # (EXIT_STOPS, ROUTED_LATER)
     for t in TABLE_2529C:
-        require(unit_of(t) in (None, 'animation_player_c7_block'), ('table entry routed by another unit', hex(t)))
-    require(set(t for t in TABLE_2529C if unit_of(t) is not None) == {0x252a4}, 'only the executed table entry 252a4 is routed')
+        require(unit_of(t) in (None, 'animation_player_c7_block', 'animation_player_c10_block'), ('table entry routed by another unit', hex(t)))
+    require(set(t for t in TABLE_2529C if unit_of(t) is not None) == {0x252a4, 0x252b4}, 'only the executed table entries 252a4 / 252b4 are routed')
     rng = random.Random(0xC7A7)
     bases = []
     pointers = []
@@ -1130,8 +1136,11 @@ def error_fixtures(bases, add):
     # unrouted table entry fails at the next dispatch (the paired row stops at that entry)
     for v in (9, 0xa, 0x3fff, 0xffff, 0x8009, 0x12340009, 0x4009):
         err('25294-d0-%x' % v, U.with_host_writes(st, regs=dict(d0=v), pc=0x25294), ERROR_JUMP, 0x25294)
-    for v in (0, 1, 3, 4, 5, 6, 7, 8, 0x4000):
+    for v in (0, 1, 3, 4, 5, 7, 8, 0x4000):
         err('25294-d0-%x-entry' % v, U.with_host_writes(st, regs=dict(d0=v), pc=0x25294), unrouted, 0x2529c + 4 * (v & 0x3fff))
+    # D0.W 6 -> the entry 252b4: player C10 since C10 (previous row '25294-d0-6-entry': 'unsupported animation machine PC' at 252b4): 252b4 -> 252ce
+    # (BYTE 61(A2) bit 7 clear) -> 252d8 JSR 3af8.l at an odd A7 (25294 and 252b4 / 252ce do not use the stack)
+    err('25294-d0-6-then-252d8', U.with_host_writes(st, [((a6 + 0x61) & 0xffff, 1, 0)], regs=dict(d0=6, a2=a6, a7=a7 + 1), pc=0x25294), odd_word, 0x252d8)
     # odd node / stack / A0 / A4: the entry block fails (the row's stop is the PC right after the failing block)
     err('1f2ac-odd-node', U.with_host_writes(st, regs=dict(a6=a6 + 1), pc=0x1f2ac), odd_write, 0x1f2ac, stop=0x1f2d4)
     err('25172-odd-node', U.with_host_writes(st, regs=dict(a6=a6 + 1), pc=0x25172), odd_word, 0x25172, stop=0x25184)

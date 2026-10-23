@@ -225,3 +225,12 @@ FR2..FR9, C1, C2 계약의 같은 절을 그대로 따른다. 다른 점만 적�
   - 범위: C3는 TB 안에 숨은 직선형 continuation `1cde0`, `1cdf0`, `1cdfa`, `202a0`를 추가했다(계약 결정 10).
 - [F] 남은 실행 PC: C 659 → 529, E 12. 재관측 예상 frame은 166744이고, 계획 값 169482는 숨은 stop `4e8e6`이 없다고 가정했다. 일치 frame 166744.
 - 검증 방법: deterministic runner(LLM 없음). IO는 C2(E1 frame driver 수정 포함) 병합 후 재실행 값이다. 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
+
+## 뒤 단위 변경 기록: player C10(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+C10 계약(`animation-machine-player-c10-contract.md`) 결정 2·4에 따른 기록이다. C3 실행부의 동작은 바뀌지 않았다(주석만 고침).
+
+- [F] **표 `2031c`의 전사 칸**: 이전 = 전사한 칸 없음(9칸 모두 뒤 단위 정지, 위 결정 2). 새 = 실행된 칸 `20324`(→ `BRA.W 203a0`)가 C10 block이다. 칸 선택 규칙(변위 ≤ `20`이면 PC := 칸, 넘으면 checked jump-target 오류)은 그대로이고, 칸이 routing되었는지만 달라졌다. [F] 입력 확장 관측과 그 정확 bitmap 재관측(`ms5-scratch/obs2/final`, `obs2/reobs/*`, `ms5-scratch/c10/reobs/c10base` `c10v2`)에서 실행된 칸은 `20324` 하나다. 계획 §10.5 표가 적은 `20340`은 실행되지 않았다(같은 대상 `203a0`으로 가는 칸이라 함께 적힌 것으로 본다 [I]). 나머지 8칸은 계속 뒤 단위 정지다.
+- [F] 실행부 `animation_machine_player_c3.cpp`의 `20318` 주석만 고쳤다(이전 "none transcribed" → 새 "20324는 C10 block").
+- [F] 생성기 `generate_animation_machine_player_c3_test_table.py`: 오류 행 `21610-key-1`(이전: `21dd0`에서 `unsupported animation machine PC`) → `21610-key-1-then-1cac2`(C10 `21dd0` .. `21dee`가 실행된 뒤 C2 `1cac2`가 선언하지 않은 고정 ROM 기록 `1b8a2`를 읽어 `missing or ambiguous physical program bus ROM byte`). `21610`이 BYTE `aa(A6)`를 먼저 쓰므로 `21dd0`의 `BCLR`만 따로 실패시킬 수 없어서다. 표 칸·slot-84 값의 stop-only 목록 `JUMP_TARGETS`에 주석을 더했다. 다시 생성한 시험은 그 한 행만 바뀌었다(fixture 1,293 그대로).
+- [F] V1 spec `pc3.py`: `EXIT_STOPS`·`ROUTED_LATER`에 C10 진입 14개를 더했다(C3 run은 그 PC에서 계속 멈춘다). 계산 점프 대상 검사에 `animation_player_c10_block`을 허용했다(`21e04` `2228e` `22360` slot-84 값과 칸 `20324`). V1 pc3 1,829 그대로.

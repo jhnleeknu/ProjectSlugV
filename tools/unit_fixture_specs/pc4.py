@@ -101,14 +101,18 @@ EXIT_STOPS = (0x1ef4c, 0x1efa4, 0x1f2a4, 0x21d9e, 0x21f4c, 0x4e572,
               0x1efd6, 0x1f070, 0x21dd0, 0x2210c, 0x223a0, 0x223d6, 0x4ef08,
               0x1cb1a, 0x1cb38, 0x1cb44, 0x1ce98, 0x1cfde, 0x1d398, 0x1de3c, 0x1e21c, 0x1e8de, 0x1ebbe, 0x1fa68, 0x1fafc, 0x1fc96, 0x1fd50, 0x201bc,
               0x20240, 0x20268, 0x202ac, 0x20544, 0x206cc, 0x21662, 0x21c12, 0x21ca4, 0x21d0e, 0x21f78, 0x21fa6, 0x4838c, 0x4d0cc, 0x4e69a, 0x4e8f8,
-              0x4eb58)
+              0x4eb58,
+              # player C10 routes the entries below since C10 (declared stops of the C4 runs, as before C10)
+              0x1dc8e, 0x1dccc, 0x1f082, 0x20bfe, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
 UNIT_EXITS = EXIT_STOPS[:13]            # the C4 later-unit stops and deferred leaders
 # later-unit stops routed since (player C5: 21f4c 1cb1a 1cb38 1cb44 20240 20268 202ac 20544 21c12 21f78; player C6: 1efa4 4e572 1d398 1ebbe 206cc
 # 21662 4838c 4e8f8 4eb58; player C7: 1f2a4; player C8: 1ef4c 21d9e 1ce98 1cfde 1fa68 1fafc 201bc 4d0cc; player C9: 1f070 21ca4 21d0e 2210c 223a0
 # 223d6): still declared stops of the C4 runs
 ROUTED_LATER = (0x21f4c, 0x1cb1a, 0x1cb38, 0x1cb44, 0x20240, 0x20268, 0x202ac, 0x20544, 0x21c12, 0x21f78, 0x1efa4, 0x4e572, 0x1d398, 0x1ebbe,
                 0x206cc, 0x21662, 0x4838c, 0x4e8f8, 0x4eb58, 0x1f2a4, 0x1ef4c, 0x21d9e, 0x1ce98, 0x1cfde, 0x1fa68, 0x1fafc, 0x201bc, 0x4d0cc, 0x1f070,
-                0x21ca4, 0x21d0e, 0x2210c, 0x223a0, 0x223d6)
+                0x21ca4, 0x21d0e, 0x2210c, 0x223a0, 0x223d6,
+                # player C10 (the C10 entries kept as declared stops)
+                0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1be4a, 0x1be50), (0x1bf94, 0x1bf9a), (0x1c052, 0x1c058), (0x1ef9a, 0x1efb4), (0x21d68, 0x21d6c), (0x21d70, 0x21d74), (0x21d92, 0x21d9a),
           (0x21dc4, 0x21dc8), (0x4f13c, 0x4f144), (0x4e758, 0x4e75e), (0x4e962, 0x4e96c), (0x4e770, 0x4e77a))
@@ -1168,8 +1172,9 @@ def error_fixtures(bases, add):
     #   4f22c (WORD 76 = 0, WORD 10dddc = 5 = BYTE a0, BYTE 9a set) -> 4f240 -> 4f24c -> 4f254 -> 4f25c RTS at an odd A7
     err('4f22c-then-4f25c', U.with_host_writes(st, [((a6 + 0x76) & 0xffff, 2, 0), (0xdddc, 2, 5), ((a6 + 0xa0) & 0xffff, 1, 5), ((a6 + 0x9a) & 0xffff, 1, 1)],
                                                regs=dict(a7=a7 + 1), pc=0x4f22c), odd_word, 0x4f25c)
-    #   21d60 (BYTE 9d = 1) -> BGT.W 21dd0 (C12 deferred leader, unrouted)
-    err('21d60-then-21dd0', U.with_host_writes(st, [((a6 + 0x9d) & 0xffff, 1, 1)], pc=0x21d60), unrouted, 0x21dd0)
+    #   21d60 (BYTE 9d = 1) -> BGT.W 21dd0 (C12 deferred leader, unrouted).  Player C10 routes 21dd0 (previous row: 'unsupported animation machine PC'
+    #   at 21dd0): an odd A7 keeps the failing PC (21d60 does not use the stack; the 21dd0 BSR.W 21bc6 pushes)
+    err('21d60-then-21dd0', U.with_host_writes(st, [((a6 + 0x9d) & 0xffff, 1, 1)], regs=dict(a7=a7 + 1), pc=0x21d60), odd_word, 0x21dd0)
     #   4e564 (WORD 76 = 0) -> 4e572 (player C6 since; was: unrouted at 4e572, error-4e564-then-4e572) -> 4e57e -> JMP 3918 -> BSR.W 386e of 391a at
     #   an odd A7 (the native run cannot stop at a work RAM PC, so the C++ unit test's RAM return LONG 10fe40 is not used here)
     err('4e564-then-391a', U.with_host_writes(st, [((a6 + 0x76) & 0xffff, 2, 0)], regs=dict(a7=a7 + 1), pc=0x4e564), odd_word, 0x391a)

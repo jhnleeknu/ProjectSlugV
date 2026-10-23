@@ -1244,6 +1244,10 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // sets Set without a reader.  The Z reader 70ff4 and the N reader cd80a recompute their flag.
     case 0x70f8a:case 0x7145a:case 0x714ea:case 0xeab36:case 0x70fd6:case 0x70ffe:case 0x71016:case 0xb7a68:case 0xb7a78:case 0xcd940:case 0xcdd9c:
     case 0xeaa3a:case 0xeaac6:case 0xb7b40:case 0xccae6:case 0xccaf6:case 0x70f3e:
+    // Player C10 blocks: the 7 consumers 21dda 21de2 21dea (BCS, 21bc6 / 21baa / 21c1c), 21e0c 22296 22374 (BCC, 215e6), 22164 (BCC, 1cb08).  Every
+    // other C10 block stays Unknown (no C10 block produces or passes a C that a reader uses); the Z readers 1efee (BYTE 15(A6)), 1eff6 (D0 bit 5) and
+    // 20508 (D7 bit D1 of the 1c51c BTST.L) recompute their Z.
+    case 0x21dda:case 0x21de2:case 0x21dea:case 0x21e0c:case 0x22164:case 0x22296:case 0x22374:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1929,6 +1933,12 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xcd7c6 && next.pc<0xcd7e2) || (next.pc>=0xcd7e4 && next.pc<0xcd92e) || (next.pc>=0xcd93c && next.pc<0xcd96c) ||
                 (next.pc>=0xcda34 && next.pc<0xcdb08) || (next.pc>=0xcdd86 && next.pc<0xcddba) || (next.pc>=0xcde6e && next.pc<0xcde96) ||
                 (next.pc>=0xeaa00 && next.pc<0xeaa54) || (next.pc>=0xeaac0 && next.pc<0xeab42))ok=animation_objects_fr10_block(c);
+            else if ((next.pc>=0x1c4b0 && next.pc<0x1c51a) || (next.pc>=0x1dc8e && next.pc<0x1dcd0) || (next.pc>=0x1efd6 && next.pc<0x1f070) ||
+                (next.pc>=0x1f082 && next.pc<0x1f086) || (next.pc>=0x1f3e0 && next.pc<0x1f3e8) || (next.pc>=0x20324 && next.pc<0x20328) ||
+                (next.pc>=0x203a0 && next.pc<0x203b4) || (next.pc>=0x20414 && next.pc<0x20444) || (next.pc>=0x204e0 && next.pc<0x20516) ||
+                (next.pc>=0x20bfe && next.pc<0x20c00) || (next.pc>=0x21dd0 && next.pc<0x21e3a) || (next.pc>=0x22148 && next.pc<0x22174) ||
+                (next.pc>=0x22286 && next.pc<0x223a0) || (next.pc>=0x223fa && next.pc<0x22408) || (next.pc>=0x24b78 && next.pc<0x24b96) ||
+                (next.pc>=0x24ecc && next.pc<0x24f18) || (next.pc>=0x252b4 && next.pc<0x252b8) || (next.pc>=0x252ce && next.pc<0x252e6))ok=animation_player_c10_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
