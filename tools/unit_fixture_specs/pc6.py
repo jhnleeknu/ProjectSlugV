@@ -98,7 +98,8 @@ EXIT_STOPS = (0x1d3e0, 0x4eb6a, 0x1f2a4, 0x1fa68, 0xea626,
               0x208fa, 0x2210c, 0x1ef4c, 0x21d9e, 0x1efd6, 0x1f070, 0x21dd0, 0x223a0, 0x223d6, 0x4ef08, 0x1ce98, 0x1cfde, 0x1de3c, 0x1e21c, 0x1e8de,
               0x1fafc, 0x1fc96, 0x1fd50, 0x201bc, 0x21ca4, 0x21d0e, 0x21fa6, 0x4d0cc, 0x4e69a)
 UNIT_EXITS = EXIT_STOPS[:5]             # the C6 later-unit stops and deferred leaders (1dc8e / 1dccc: through the stub 1dc84 only)
-ROUTED_LATER = ()
+# later-unit stops routed since (player C7: 1f2a4): still declared stops of the C6 runs
+ROUTED_LATER = (0x1f2a4,)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the Z chain 4ee26 -> 4a974 -> 4ee30
 CHAINS = ((0x1d63a, 0x1d644), (0x1d698, 0x1d6a2), (0x1d92e, 0x1d934), (0x1dc30, 0x1dc36), (0x1dc42, 0x1dc62), (0x1ebb2, 0x1ebba), (0x1ec60, 0x1ec66),
           (0x4ed70, 0x4ed8c), (0x4ee26, 0x4ee30))
@@ -1120,7 +1121,8 @@ def error_fixtures(bases, add):
     #   4eb58 (BYTE 10fd8a = 1) -> 4e5b0 -> 4eb60 -> 4eb6a (deferred leader, unrouted)
     err('4eb58-then-4eb6a', U.with_host_writes(st, [(0xfd8a, 1, 1)], regs=dict(d0=0), pc=0x4eb58), unrouted, 0x4eb6a)
     #   1ec2c (D0 bit 1) -> 1f2a4 (C7, unrouted); 1ec3c path: 1ec1e (D0 & c) -> 1fa68 (C8, unrouted)
-    err('1ec2c-then-1f2a4', U.with_host_writes(st, regs=dict(d0=2), pc=0x1ec2c), unrouted, 0x1f2a4)
+    #   (1f2a4 is a player C7 start since C7; previous expectation 'unsupported animation machine PC' at 1f2a4: the BSR.W 1cab6 at an odd A7 fails there)
+    err('1ec2c-then-1f2a4', U.with_host_writes(st, regs=dict(d0=2, a7=a7 + 1), pc=0x1ec2c), odd_word, 0x1f2a4)
     err('1ec1e-then-1fa68', U.with_host_writes(st, regs=dict(d0=0xc), pc=0x1ec1e), unrouted, 0x1fa68)
     #   1dad8 -> JSR ea626 (C8, unrouted)
     err('1dad8-then-ea626', U.with_host_writes(st, pc=0x1dad8), unrouted, 0xea626)

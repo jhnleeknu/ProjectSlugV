@@ -96,8 +96,9 @@ EXIT_STOPS = (0x21564, 0x208fa, 0x2210c,
               0x1e21c, 0x1e8de, 0x1ebbe, 0x1fa68, 0x1fafc, 0x1fc96, 0x1fd50, 0x201bc, 0x206cc, 0x21662, 0x21ca4, 0x21d0e, 0x21fa6, 0x4838c, 0x4d0cc,
               0x4e69a, 0x4e8f8, 0x4eb58)
 UNIT_EXITS = EXIT_STOPS[:3]             # the C5 later-unit stops and deferred leaders
-# later-unit stops routed since (player C6: 21564 1efa4 4e572 1d398 1ebbe 206cc 21662 4838c 4e8f8 4eb58): still declared stops of the C5 runs
-ROUTED_LATER = (0x21564, 0x1efa4, 0x4e572, 0x1d398, 0x1ebbe, 0x206cc, 0x21662, 0x4838c, 0x4e8f8, 0x4eb58)
+# later-unit stops routed since (player C6: 21564 1efa4 4e572 1d398 1ebbe 206cc 21662 4838c 4e8f8 4eb58; player C7: 1f2a4): still declared stops of the
+# C5 runs
+ROUTED_LATER = (0x21564, 0x1efa4, 0x4e572, 0x1d398, 0x1ebbe, 0x206cc, 0x21662, 0x4838c, 0x4e8f8, 0x4eb58, 0x1f2a4)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the Z chain 1c3dc -> 1c51c -> 1c3e2
 CHAINS = ((0x1c36e, 0x1c374), (0x1c3c0, 0x1c3ca), (0x2027e, 0x20288), (0x20e50, 0x20e56), (0x214ac, 0x214b2), (0x21f70, 0x21f78), (0xcddee, 0xcddfe),
           (0x1c3dc, 0x1c3e2))

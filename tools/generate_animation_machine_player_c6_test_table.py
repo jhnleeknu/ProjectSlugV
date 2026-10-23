@@ -645,7 +645,9 @@ def gen_errors():
     # failures after executed blocks (rollback; the failing PC differs from the entry):
     err('1d398-then-1d3e0', 0x1d398, unrouted, 0x1d3e0, d7=0)
     err('4eb58-then-4eb6a', 0x4eb58, unrouted, 0x4eb6a, puts=((0x10fd8a, 1, 1),))
-    err('1ec2c-then-1f2a4', 0x1ec2c, unrouted, 0x1f2a4, d0=2)
+    # 1f2a4 is a player C7 start since C7 (previous row: 'unsupported animation machine PC' at 1f2a4); the BSR.W 1cab6 of 1f2a4 at an odd A7 keeps
+    # the failing PC 1f2a4
+    err('1ec2c-then-1f2a4', 0x1ec2c, odd, 0x1f2a4, d0=2, a7=SP + 1)
     err('1ec1e-then-1fa68', 0x1ec1e, unrouted, 0x1fa68, d0=0xc)
     err('1dad8-then-ea626', 0x1dad8, unrouted, 0xea626)
     err('b0c-then-b56', 0xb0c, odd, 0xb56, a7=SP + 1)

@@ -177,5 +177,6 @@ bool animation_player_c3_block(AnimationMachineContext& c);
 bool animation_player_c4_block(AnimationMachineContext& c);
 bool animation_player_c5_block(AnimationMachineContext& c);
 bool animation_player_c6_block(AnimationMachineContext& c);
+bool animation_player_c7_block(AnimationMachineContext& c);
 }
 #endif
