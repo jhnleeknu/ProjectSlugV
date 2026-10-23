@@ -585,8 +585,10 @@ def gen_errors():
     # b4036 reached through c1d06 -> b4030
     err('7176a-then-7177a', 0x7176a, unrouted, 0x7177a)
     err('7177c-then-71786', 0x7177c, unrouted, 0x71786, d0=0x80000000)
-    err('71532-then-71682', 0x71532, unrouted, 0x71682)
-    err('717ae-then-717c2', 0x717ae, unrouted, 0x717c2, a0=REC)
+    # objects FR13 routes 71682 / 717c2 since FR13 (FR13 contract; was: 71532-then-71682 / 717ae-then-717c2 with 'unsupported animation machine PC' at
+    # the FR13 PC): 71682 reads WORD 7a of the odd node; 717c2 runs on to FR12 717c8 (the JSR 4bfa4 push on the odd A7)
+    err('71532-then-71682', 0x71532, odd, 0x71682, a6=NODE + 1)
+    err('717ae-then-717c8-odd-stack', 0x717ae, odd, 0x717c8, stop=0x4bfa4, a0=REC, a7=SP + 1)
     err('c1d06-then-b4036', 0xc1d06, unrouted, 0xb4036, puts=((NODE + 0x76, 4, 0xb4036),))
     err('b4294-then-b41b2-odd-stack', 0xb4294, odd, 0xb41b2, stop=0x4bfa4, a7=SP + 1, puts=((NODE + 0x15, 1, 0x80),))
 

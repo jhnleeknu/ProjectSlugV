@@ -224,3 +224,11 @@ FR12 계약(`animation-machine-frontier-fr12-contract.md`) 결정 6에 따른 �
 - [F] **FR10의 뒤 단위 정지 가운데 FR12 진입**: `70f8e` `b6c58`가 FR12 block이 되었다. 나머지 넷(FR13 `70f60` `70fcc` `70ff8` `71028`)은 계속 뒤 단위 정지다.
 - [F] 생성기 `generate_animation_machine_objects_fr10_test_table.py`의 오류 행 둘(이전: 그 FR12 PC에서 `unsupported animation machine PC`): `b6c2c-then-b6c58` → `b6c2c-then-b6c72`(홀수 A7: FR12 `b6c58` → FR10 `b6c66` → `b6c72 BSR b7cfa`의 push), `70f8a-then-70f8e`(홀수 node: FR12 `70f8e`의 `MOVE.L #70c0c,(A6)`, 실패 PC 그대로). 생성기를 다시 돌려 그 2행만 바뀜을 확인했다(fixture 1,074 그대로).
 - [F] V1 spec `fr10.py`: `ROUTED_LATER`에 `70f8e` `b6c58`를 더했다(FR10 run은 그 PC에서 계속 멈춘다). 오류 fixture `b6c2c-then-b6c58` → `b6c2c-then-b6c72`(홀수 A7).
+
+## 뒤 단위 변경 기록: objects FR13(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR13 계약(`animation-machine-frontier-fr13-contract.md`) 결정 6에 따른 기록이다. FR10 실행부는 바뀌지 않았다.
+
+- [F] **FR10의 뒤 단위 정지 가운데 FR13 진입**: `70f60` `70fcc` `70ff8` `71028`가 FR13 block이 되었다. FR10의 뒤 단위 정지는 이제 모두 routing되었다(FR11 다섯, FR12 둘, FR13 넷). `70ff8 MOVE.L A0,(A6)`는 FR13이 쓰기만 하는 RAM 값 쓰기다(표 `70d72`의 LONG; 다음 dispatch가 판정).
+- [F] 생성기 `generate_animation_machine_objects_fr10_test_table.py`의 오류 행 여섯(이전: 그 FR13 PC에서 `unsupported animation machine PC`): `70f4e-then-70f60` → `70f4e-then-70f84-odd-stack`(홀수 A7: FR13 `70f60` → `70f7e` → FR10 `70f84 JSR 49fc6`의 push), `70fc2-then-70fcc`(홀수 node: FR13 `70fcc`의 `MOVE.L #71468,(A6)`, 실패 PC 그대로), `71020-then-71028` → `71020-then-72dd2-odd-stack`(FR13 `71028` → `7102e` → `72dd2 JSR 4b54e`의 push), `70ff0-then-70ff8` / `70fe4-then-70ff8`(홀수 node: FR13 `70ff8`의 `MOVE.L A0,(A6)`, 실패 PC 그대로), `70f94-then-70fcc` → `70f94-then-70fd2-odd-stack`(FR11 `70fac` → FR10 `70fc2` → FR13 `70fcc` → FR10 `70fd2 BSR 7028e`의 push). 생성기를 다시 돌려 그 6행만 바뀜을 확인했다(fixture 1,074 그대로).
+- [F] V1 spec `fr10.py`: `ROUTED_LATER`에 `70f60` `70fcc` `70ff8` `71028`를 더했다(FR10 run은 그 PC에서 계속 멈춘다). 오류 fixture 여섯을 같은 뜻으로 바꿨다.

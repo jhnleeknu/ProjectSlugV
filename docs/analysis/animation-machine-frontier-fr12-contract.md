@@ -222,3 +222,11 @@ FR2..FR11, C1~C10 계약의 같은 절을 그대로 따른다. 다른 점만 적
 - [F] **IO, 입력 확장 관측**(FR12 연결 뒤, `--workers 3`): run 12, native 비교 frame 14,500 가운데 일치 **7,977**(예측 7,977, 기준선 7,383 → +594), 불일치 0(beyond 0), C++ 오류 0, chain divergence 0, 수용 키 모두 true(`negatives_ok` 포함)(`trial_logs/io_ext_fr12.log`; `verification.json` SHA256 `c62538be908db835…`, `frontier.json` `34dbb0e4860b71a8…`, scratch `io_ext_fr12/`). 첫 정지 frame: X1 68 873 `70fcc`, X1 94 604 `c54ba`, X2 68 757 `71028`, X2 94 629 `70f60`, X3 68 760 `b44ac`, X3 94 588 `c54d6`, X4 68 773 `c554c`, X4 94 593 `71f2c` — 재관측 예측(`reobs/fr12v1.stops`)과 run·frame이 모두 같고, 확인된 frontier PC는 모두 FR13(D-4)이다.
 - [F] 원래 IO 관측·frame 비교·legacy 검증기는 작업자가 돌리지 않았다(메인 runner). stage area 검증기는 이웃 `4d84e`만 scratch clone root에서 탐침했다(위 "영향받는").
 - [F] `CPP_PINS`: 작업 트리와 scratch clone root(`work/mkroot.py`; 확인 뒤 symlink를 먼저 지우고 삭제)에서 파일 SHA와 같다(4 / 9 pin, 불일치 0, `trial_logs/pincheck_tree.log` `pincheck_root.log`).
+
+## 뒤 단위 변경 기록: objects FR13(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR13 계약(`animation-machine-frontier-fr13-contract.md`) 결정 6에 따른 기록이다. FR12 실행부는 바뀌지 않았다.
+
+- [F] **FR12의 뒤 단위 정지 가운데 FR13 진입**: `71682` `717c2`가 FR13 block이 되었다(메인 결정: 계획대로 FR13). 나머지 둘(FR14 `7177a` `71786`)은 계속 뒤 단위 정지다.
+- [F] 생성기 `generate_animation_machine_objects_fr12_test_table.py`의 오류 행 둘(이전: 그 FR13 PC에서 `unsupported animation machine PC`): `71532-then-71682`(홀수 node: FR13 `71682`의 `MOVE.W 7a(A6)`, 실패 PC 그대로), `717ae-then-717c2` → `717ae-then-717c8-odd-stack`(홀수 A7: FR13 `717c2` → FR12 `717c8 JSR 4bfa4`의 push). 생성기를 다시 돌려 그 2행만 바뀜을 확인했다(fixture 1,127 그대로).
+- [F] V1 spec `fr12.py`: `ROUTED_LATER` `()` → (`71682` `717c2` `b6d90` `bfcfa` `70f60` `70fcc` `70ff8` `71028`). 오류 fixture `71532-then-71682`(홀수 node), `717ae-then-717c2` → `717ae-then-717c8-odd-stack`. FR12 run은 그 PC에서 계속 멈춘다.

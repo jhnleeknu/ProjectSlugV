@@ -612,17 +612,20 @@ def gen_errors():
     # b4030-then-c0924 / b42b0-then-b42c4 with 'unsupported animation machine PC' at the FR12 PC): the rows fail on the FR12 path or keep the failing PC
     # with an odd node
     err('b41d8-then-b4292-odd-stack', 0xb41d8, odd, 0xb4292, a7=SP + 1, puts=((NODE + 0x8e, 2, 1),))   # FR12 b41f2 .. b427a -> FR11 b427e -> RTS b4292
-    err('b6d8c-then-b6d90', 0xb6d8c, unrouted, 0xb6d90, carry=2)
+    # objects FR13 routes b6d90 / bfcfa / c54ba / c54d6 since FR13 (FR13 contract; was: b6d8c-then-b6d90 / bfcea-then-bfcfa / c5496-then-c54ba with
+    # 'unsupported animation machine PC' at the FR13 PC): b6d90 reads WORD 42 of the odd A0, bfcfa pushes the JSR 2986 return on the odd A7, c54ba
+    # runs on to FR13 c5520 that writes LONG (A6) of the odd node
+    err('b6d8c-then-b6d90', 0xb6d8c, odd, 0xb6d90, carry=2, a0=REC + 1)
     err('b6e5a-then-b6e5e', 0xb6e5a, wodd, 0xb6e5e, carry=2, a6=NODE + 1)       # FR12 b6e5e MOVE.L #b6ed8,(A6) of the odd node
     err('c560e-then-2a00-odd-stack', 0xc560e, odd, 0x2a00, stop=0x299c, carry=2, a7=SP + 1)   # FR12 c5612 JMP 2a00: the BSR 299c push on the odd A7
-    err('bfcea-then-bfcfa', 0xbfcea, unrouted, 0xbfcfa, d0=4)
+    err('bfcea-then-bfcfa', 0xbfcea, odd, 0xbfcfa, stop=0x2986, d0=4, a7=SP + 1)
     err('b4030-then-b4036', 0xb4030, unrouted, 0xb4036, puts=((NODE + 0x76, 4, 0xb4036),))
     err('b4030-then-b412c-odd-stack', 0xb4030, odd, 0xb412c, a7=SP + 1, puts=((NODE + 0x76, 4, 0xc0924),))   # FR12 c0924 -> b4294 -> b429e -> FR11 b411c
     err('b42b0-then-b42bc', 0xb42b0, unrouted, 0xb42bc, d0=4)
     err('b42b0-then-b42ea-odd-stack', 0xb42b0, odd, 0xb42ea, stop=0x49a58, d0=0xc, a7=SP + 1)   # FR12 b42c4 BRA.W b42ea: the JSR 49a58 push
     err('c54a6-then-c54b2', 0xc54a6, unrouted, 0xc54b2, d0=0)
     err('c54a6-then-c551a', 0xc54a6, unrouted, 0xc551a, d0=0x1a)
-    err('c5496-then-c54ba', 0xc5496, unrouted, 0xc54ba, puts=((NODE + 0x5e, 1, 2),))
+    err('c5496-then-c5520', 0xc5496, wodd, 0xc5520, a6=NODE + 1, puts=((NODE + 1 + 0x5e, 1, 2),))
     err('b6e8c-then-b6e9c-odd-stack', 0xb6e8c, odd, 0xb6e9c, stop=0xb7e06, a7=SP + 1, puts=((NODE + 0x9c, 1, 1),))
     err('b403e-then-b40f0-odd-stack', 0xb403e, odd, 0xb40f0, stop=0x43ea4, a7=SP + 1, puts=((NODE + 0x8c, 2, 0),))
 
