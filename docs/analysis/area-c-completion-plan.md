@@ -333,3 +333,233 @@ worktree(`/Users/start/Workspce/metalslug-c1`)에서 `.venv/bin/python /Users/st
   - C9~C13(981 block)과 선언 정지로 둔 `1dccc` `1dc8e` `1e67a` `e695a` `1e918` `23c56` `1f3e8` `21e48`: 입력(점프·사격·폭탄 등)을 늘린 관측이 있어야 실행 근거가 생긴다.
   - 보정 관측을 `artifacts/`에 둘지와 observer의 정확 bitmap 방식 도입은 사용자 승인 뒤에 정한다.
   - FR4b/FR4c.
+
+## 10. 입력 확장 관측과 남은 단위(2026-10-23, 작업자 Claude Opus 5.5 / high)
+
+기준: `main` `b540438`(C1~C8, E1, D routing), routing `engine/src/animation_machine.cpp` SHA256 `2622b7a2374959c5…`(routing된 짝수 PC 127,936), branch `claude/io-observation-2`(커밋 안 함). 관측 결과는 scratch `ms5-scratch/obs2/`에만 두었다. 공유 `artifacts/`·ROM·`extracted/`는 읽기만 했다. 이 절은 BIOS 실행, 자연 scheduler, IRQ timing을 주장하지 않는다. 모든 입력 값과 host 쓰기는 선언이다.
+
+### 10.1 원래 관측에서 C9~C13이 실행되지 않은 이유 [F]
+
+- 플레이어 입력은 `1cd98`이 `JSR 49be0`(A0 = `5726(A5)`/`572c(A5)`)으로 읽는 WORD다. `1cdba MOVE.W (A0),D0` 뒤 bit 0(위)·1(아래)은 BYTE `61` bit 5·4로, bit 7(D)은 `ANDI.W #ff7f`로 지우고, 나머지(bit 2·3 방향, bit 4 A, bit 5 B, bit 6 C)를 상태 함수가 읽는다(C8 계약 `1f418`의 D0 bit 5 / 1 / 6 / 4).
+- 그 WORD는 `49b3a`(P1)/`49b90`(P2)가 만든다. D0 = 현재 BYTE `104caa`, D1 = 새로 눌림 BYTE `104cab`이고, A4 = 버튼 mask 표다. **game mode(BYTE `100012` = 2)에서는 A4 = `10f01c`(P2 `10f020`), 그 밖에는 ROM `49ab0`(`10 20 40 80`)**이다(`49b48`/`49b52`). `49ab4..49ad4`는 버튼마다 `D0 & mask = mask`면 "누름"(D7), 그리고 `D1 & mask`도 참이면 "새로 눌림"(D6)으로 센다. `49bb4`가 D6을 `5726`, D7을 `5728`에 쓴다.
+- stage seed와 boot RAM에서 `10f01c..10f023`은 0이다. mask가 0이면 네 버튼이 언제나 "누름"이고 "새로 눌림"은 없다. 실제로 P1 94의 frame 219부터 `5726/5728` = `0008`/`00f8`이다(오른쪽, 그리고 A·B·C·D 모두 누름). 그래서 walkfire의 A·B 입력은 사격·점프로 읽히지 않았다.
+- `10f01c`/`10f020`을 채우는 곳은 게임의 기본 설정 경로뿐이다: `8fa JSR bcb4`(USER 초기화 경로, BYTE `10fd82` = 0) → `bd16`/`bd20 BSR bbfa` → `bc0a JSR bc1e`(`49ab0`의 네 BYTE를 `10f01c`와 `10f020`에 복사). `bbfa`는 이어서 BYTE `10f027` := 2, `10f026` := 3을 쓰고(`bc0e` `bc14`), `be3a`가 `10fd82` = 0이면 그 둘을 BYTE `10fd88`/`10fd8b`로 복사한다. BIOS 없는 boot는 `10fdae` = 2/3로 시작하므로 이 경로를 실행하지 않는다.
+- 같은 이유로 목숨이 하나다. `4e8d6`이 플레이어 기록 BYTE `99` := BYTE `10fd88`이고, 0이면 1로 둔다(`4e8e0`). `10fd8b`는 game mode에서 `490cc`가 읽는다(그 밖은 3).
+- [I] boot-demo-0는 BYTE `100012` = 1이라 ROM 표 `49ab0`를 쓰고, replay 입력이 정상으로 읽힌다. C7·C8의 demo에서만 실행된 코드가 이것으로 설명된다.
+
+### 10.2 관측 설계
+
+- **observer pin 처리: (a) 별도 script.** 새 도구 `tools/observe_animation_machine_io_ext.py`가 `tools/observe_animation_machine_io.py`를 수정 없이 import한다. 바꾸는 것은 셋이다.
+  1. 입력 script·설정 파일을 `docs/analysis/data/io-input-scripts-ext.json`(같은 형식, version 1)으로 바꾼다. 기본 파일과 이름이 같은 항목(`none` `walkfire` `game-mode` `player-start-p1` `P0` `P1`)은 그대로 복사한 것이고, 도구가 실행 전에 같은지 검사한다.
+  2. TB 기록 bitmap을 정확한 현재 routing으로 바꾼다(`verify_animation_machine_unit_fixtures.pc_routed`, 짝수 PC 전부, 선택 `--extra-routed`). 관측 시점 routing(`8ce8eb93`)의 pin 검사와 단일 PC closure 근사는 쓰지 않는다. 나머지 pin(도구 9개, ROM, seed)은 observer와 같다.
+  3. 실행 조직: (설정, seed)마다 연속 run 하나이고, 모든 frame 시작 상태를 저장한다(IO 검증기가 요구). 대표 class·split run은 없다.
+  - 그 밖의 native 기구, frame 규약, 선언, guard, 기록, state pack, `observation.json`/`platform.json`은 observer 그대로다. `observation.json`의 `pins.observer`는 고치지 않은 observer의 SHA이고, 새 `pins.extension`(도구·script 파일·기본 파일 SHA, case, 설정)을 더한 뒤 `compared_sha256`을 다시 계산한다.
+  - 이유: observer 파일과 검증기를 그대로 두므로 기존 IO 비교가 바뀌지 않는다. scratch 사본(c)과 달리 저장소에서 재현할 수 있고, 같은 파일 안의 선택지(b)와 달리 pin된 파일을 건드리지 않는다. [F] 기존 IO 비교를 이 branch에서 다시 돌려 결과가 같음을 확인했다(§10.6).
+- **선언 host 쓰기 `default-settings`**(frame 1, §10.1의 근거): LONG `10f01c` := `10204080`, LONG `10f020` := `10204080`, WORD `10f026` := `0302`, BYTE `10fd88` := 3, BYTE `10fd8b` := 2. 이것은 `bbfa`/`bc1e`/`be3a`의 효과를 선언한 것이다. 원래 경로를 native로 실행했다고 주장하지 않는다. `10f008..` 문자열과 checksum `10f028`은 초기화 검사 경로(`bcf8`)만 읽으므로 넣지 않았다.
+- **입력 script**(P1 port `300000`, 낮을 때 누름. 모두 frame 20부터 주기 반복이라 플레이어 조작이 시작되는 frame과 관계없이 같은 동작이 나온다. start·select·coin bit는 없다):
+  - `walkfire`(기존): 오른쪽 계속, A 8 frame마다 4 frame, B 64 frame마다 6 frame.
+  - `jumpshoot`(주기 48): 오른쪽 계속, A 6 frame마다 2 frame, B 위상 0..3(점프), 아래 14..29(공중 아래 조준 뒤 웅크림), 위 34..43(위 조준).
+  - `grenadeturn`(주기 96): 오른쪽 0..47 / 왼쪽 48..95(방향 바꿈), C 24 frame마다 2 frame(수류탄), A 10 frame마다 2 frame, 아래 60..83, B 30..33.
+  - `mixed`(주기 160, 20 frame 창 여덟 개): A 누른 채 유지, B 유지 뒤 아래+A, 왼쪽+위+A, 입력 없음, 아래+C, 오른쪽+D+B, 위+B 뒤 A+C 동시, 왼쪽+아래+A.
+  - [I] 첫 시험에서는 창 7에 왼쪽+오른쪽+아래를 함께 눌렀다. 그때 frame 310에서 N step-limit guard(6,000,000 명령)가 났다. 실제 stick으로는 불가능한 조합이라 뺐다.
+- **설정**: `X1` = P1 입력(walkfire) + `default-settings`, `X2` = jumpshoot, `X3` = grenadeturn, `X4` = mixed(모두 game-mode + player-start-p1 + default-settings, 상한 2,000 frame). 대조군 `P0` `P1`(600 frame)도 같은 seed로 다시 관측한다. 검증기의 frontier 보고가 `P0` 기준선을 요구하고, 대조군 기록은 원래 관측과 비교하는 데 쓴다.
+- **seed**: case 94와 68. [F] 원래 관측에서 플레이어가 나오는 P1 seed는 두 묶음뿐이다. A 묶음은 94 95 100 101 106 107 110 111이고 class signature가 같다(첫 C/E frame 2). B 묶음은 68~71이다(frame 222). 모두 mission 0이다.
+- **frame 수**: X run은 모두 game over에서 끝난다. controller가 BIOS `c00444`로 가는 `system-return` guard이고, frame 1,181~1,929다. [F] 3,000 frame 시험에서는 run이 같은 frame에 끝났고 새 C PC가 없었다. 그래서 2,000을 상한으로 두었다. 합계 run 12개, 14,508 frame.
+- 넣지 않은 것: boot 계열, P2 동시 입력(P1b), 다른 mission의 seed. [I] 남은 C(§10.5 C11~C14)의 큰 부분은 `1d388` 사슬의 등장 방식 코드 D7(1, 3…f)과 `1de28`/`1de30`의 `1aa3a` bit로 갈린다. 이 값은 입력이 아니라 stage가 정하는 것으로 보인다.
+
+### 10.3 재현 명령·SHA·크기·결정성
+
+- 명령(worktree에서): `MS5_SEED_DIR=artifacts/stage_entry_body .venv/bin/python tools/observe_animation_machine_io_ext.py --cases 94,68 --workers 4 --out <새 디렉터리>`(약 150초, bitmap 계산 27초 포함).
+- [F] 결과 `ms5-scratch/obs2/final/`: `observation.json` SHA256 `9da40ac6dcbea3ebc6423319fc79755ebe87af3fc982bc7a70d596762125ffe6`, `compared_sha256` `b5d15d4fcd53555bce3f4773c8ee6113c6b79ee5aac113f6c1e59a87ddc57161`. 크기는 파일 24개 16,735,124 byte와 `observation.json` 235,696 byte다(`du` 16.6 MB, gzip run 기록과 모든 frame 상태 pack 포함).
+- pin: 도구 `52b2eea30333d34d…`, script 파일 `0367bbcf769902a2…`, observer `facf49fa29b6cc0c…`(수정 없음), 기본 script 파일 `d8971c44441bca01…`.
+- [F] **결정성**: 같은 명령을 두 번 돌렸다(`final`, `final_b`). `--compare` 결과는 `equal true, clean true`이고, `platform.json` 밖의 파일 25개가 모두 같다. 고치기 전 도구의 관측 두 벌(`obsA` `obsB`)도 서로 같았다. 그 run 기록·state pack의 SHA는 `final`과 같다.
+- [F] **대조군**: `P0`/`P1` case 94·68의 frame 기록은 원래 관측(`artifacts/animation_machine_io_native`)과 같다. 600/600 frame에서 routing 밖 PC 필드(`unr_new` `unr_n` `unr_first`)와 대표 run 전용 `tbs`를 뺀 모든 필드가 같고, `digest_chain`도 같다.
+
+| run | frame | 끝 | 플레이어 첫 frame / frame 수 | routing 밖 PC(관측) |
+| --- | --- | --- | --- | --- |
+| P0 68 / 94 | 600 / 600 | frame-limit | – | 25 / 18(덮는 원자·기준선) |
+| P1 68 / 94 | 600 / 600 | frame-limit | 288 / 312, 72 / 385 | 29 / 31(같음) |
+| X1 68 / 94 | 1,373 / 1,181 | system-return | 288 / 669, 72 / 693 | 418 / 482 |
+| X2 68 / 94 | 1,403 / 1,211 | system-return | 288 / 701, 66 / 731 | 487 / 426 |
+| X3 68 / 94 | 1,929 / 1,729 | system-return | 290 / 1,209, 70 / 1,237 | 789 / 603 |
+| X4 68 / 94 | 1,721 / 1,561 | system-return | 290 / 975, 130 / 975 | 566 / 595 |
+
+### 10.4 측정(현재 routing, scratch `ms5-scratch/obs2/tools/`)
+
+- [F] 실행된 routing 밖 PC(P0 기준선, 덮는 단일 PC 원자의 closure 622 PC, 호출자 재분류를 뺀 수):
+  - **C 228**(root 33, 실행 22,346)
+  - **D 659**(root 100, 실행 79,913, 모두 C 뒤에 실행)
+  - **E 108**(root 16, 실행 18,237)
+  - 모두 X run 8개에서만 나온다. P0·P1에는 0이다.
+  - 재분류: `3144` `e63fa` → E helper, `248de` → C helper.
+- [F] 예측 일치 frame **5,095**(native 비교 frame 14,500 가운데). P0·P1 4 × 600에 X run의 첫 정지 frame을 더한 값이다. 첫 정지는 8 run 모두 C다(§10.6 실측과 같음):
+  - `2210c` 4 run(X1 68 frame 440, X1 94 224, X2 68 438, X3 94 221)
+  - `1f3e8` X2 94 216
+  - `1f070` X3 68 436
+  - `21e48` X4 68 440, X4 94 280
+- [F] 원래 계획의 나머지 C9~C13에서 실행된 시작은 4 / 0 / 56 / 93 / 33이다(981 가운데 186). 그 밖에 C1~C8 계산 점프의 미실행 칸과 handler 42 PC가 실행된다. 예: C3 표 `2031c` 칸 `20324`/`20340` → `203a0`, C7 표 `25298` 칸 `252b4` → `252ce`, 목록 handler `21e48`.
+- [F] 선언 정지 가운데 실행되는 것: `1dccc` `1dc8e`(interpreter stub 후속), `e695a`, `1f3e8` `1f3e0`(쓰기만 하던 callback), `21e48`. 여전히 실행되지 않는 것: `1e67a` `1e918` `23c56`, 그리고 자식 `36350` `371f8`.
+- [F] C1 계획의 미룬 입구 22곳 가운데 11곳이 실행된다: `1efd6` `1f070` `1f48a` `1fb28` `208fa` `21ca4` `21d0e` `21dd0` `2210c` `223a0` `223d6`. 실행되지 않는 것은 `1d3e0` `1de3c` `1e21c` `1e8de` `1fc96` `1fd3c` `1fd50` `21ea0` `21fa6` `4eb6a` `4ef08`이다.
+- [F] 새 closure(실행된 PC 995개, 설치 값은 실행된 것만 따라감)는 시작 1,499, 명령 3,603이다. 미실행 정적 subtree 가운데 50 block 이상인 것은 없다(최대 `c120c` 25). 그래서 미룰 입구는 0이다.
+- 측정 명령: `MS5_OBS2=<관측> .venv/bin/python …/obs2/tools/dleft.py`, `runstops.py`(run별 첫 정지), `restcov.py`(원래 나머지·선언 정지 대조). `dstate.py`가 `MS5_OBS2`(이 관측의 모든 run, 덮는 원자 closure는 `covered.py`)와 `MS5_OBS2_MERGE`(아래 재관측의 첫 frame 병합)를 읽는다.
+
+### 10.5 단위 계획
+
+- 규칙(§4.1과 같음, scratch `xplan.py`):
+  - 단위 = 실행된 routing 밖 PC를 진입으로 한 FR closure다. 설치 값은 실행된 것만 따라간다. 정지는 routing, 앞 단위, 다른 단위의 실행 leader다. block 시작은 전체 closure 기준으로 한 번 정한다(설치 값과 `84(A6)` 값 포함).
+  - key = run마다 (그 PC의 첫 frame − 그 run의 첫 routing 밖 frame)의 최소값이다. 영역마다 key 순서로 220 block까지 모으고, 단위는 가장 작은 key 순서로 놓는다.
+- **정확 bitmap 재관측으로 예측을 맞췄다**(C4~C8와 같은 방식):
+  - 1차 계획(`xplan_obsA.json`)의 앞 k 단위를 `--extra-routed`로 가상 routing해 k = 1..8을 다시 관측했다. 그 결과 첫 단위만으로는 +40뿐이었다. 8 run 모두 C2 쪽 `22128`에서 멈췄는데, 이 PC는 `2210c`와 같은 TB의 직선 연속이라 X3 68 밖에서는 가려져 있었다.
+  - 재관측의 첫 frame을 병합(`MS5_OBS2_MERGE`)하고 block 시작을 전체 기준으로 고쳐 2차 계획(`xplan_v2.json`)을 만들었다. 2차 계획을 다시 k = 1..8로 재관측한 결과는 아래 표의 예측과 모두 같다. 병합 뒤 다시 계획해도 단위 시작 SHA가 바뀌지 않는다(수렴).
+  - 8 단위를 모두 routing한 재관측에서는 routing 밖 실행 PC가 0이다(숨은 PC 없음).
+  - 재관측의 native 기록(`digest_chain`)은 모두 기준 관측과 같다.
+- 단위 이름(제안, 결정 3): C 단위는 C9·C10, 영역 D 단위는 FR10~FR14, E 단위는 E2, 나머지 C는 C11~C14다.
+
+| 순서 | 단위(계획 이름) | block | 명령 | byte | 실행 PC / 실행 | 재관측 예측 일치 frame | 다음 정지(재관측) | 특이 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| (기준) | | | | | | 5,095 | C 8 run | |
+| 1 | **C9**(C-1) | 220 | 454 | 1,996 | 126 / 18,815 | **5,839** (+744) | D 6(`6f1ca` `eaac0` `252b4` `71468`), C 2(`223fa`) | 목록 `JMP (A1)` 4(`21ce4` `21d36` `2224c` `22428`), `1f3e8` `21e48` `2210c` 포함, 자식 `36350` `371f8`(미실행) `eaac0` |
+| 2 | FR10(D-1) | 214 | 516 | 2,314 | 149 / 43,952 | 6,267 (+428) | C 7(`1dccc` 4, `22148`, `223fa` 2), D 1 | MOVEM 2, 자식 `cde6e`; C7 표 칸 `252b4`→`252ce` 포함(결정 4) |
+| 3 | C10(C-2) | 127 | 233 | 1,018 | 102 / 3,762 | 6,751 (+484) | D 8 | 새 계산 점프 `203ac`(표 `203b0`, 실행 칸 `203b0` `203c4` `203cc`→`20414`), C3 표 `2031c` 칸 `20324` `20340`→`203a0`, `JMP (A1)` `21e10` `2229a` `22378`, stub 후속 `1dccc` `1dc8e`, `1f3e0` |
+| 4 | FR11(D-2) | 192 | 564 | 2,470 | 132 / 15,600 | 7,383 (+632) | D 8 | 계산 점프 `b42b4` `c54ae`, live `JMP (A0)` `b4034`, TRAP `b3e58`, MULS 4, MULU, MOVEM 3, 자식 `b3dbc` `b774a` `c5592` |
+| 5 | FR12(D-3) | 212 | 611 | 2,664 | 126 / 3,717 | 7,977 (+594) | D 8 | MULS 6, MULU 3, MOVEM 3, 자식 `b3dbc` |
+| 6 | FR13(D-4) | 207 | 478 | 2,290 | 161 / 5,004 | 10,374 (+2,397) | E 6(`3144`), D 2 | 계산 점프 `cc8da`(27칸), 자식 `bfd48` `d15c4` |
+| 7 | E2(E-1) | 128 | 302 | 1,210 | 108 / 18,237 | 12,586 (+2,212) | D 3(`d177e` `3643e` `7177a`) | `e695a` 계열 [I: 마지막 목숨 뒤 화면], TRAP `e6d92` `e6dd0`, MOVEM 2 |
+| 8 | FR14(D-5) | 199 | 445 | 2,000 | 91 / 11,664 | **14,500** (+1,914) | 없음 | MOVEM 2 |
+| – | C11(R-1) `ca5c..1deea` | 171 | 350 | | 0 | 14,500 | | 자식 `369ba` `3fe7a` `3fedc` |
+| – | C12(R-2) `1deea..1e5ec` | 171 | 367 | | 0 | | | MULS 4, MULU |
+| – | C13(R-3) `1e5ec..21ea0` | 171 | 326 | | 0 | | | 자식 `1e67a` |
+| – | C14(R-4) `21ea0..` | 170 | 422 | | 0 | | | `JMP (A1)` `21ebc` `21fd2`, ADDX 2, MULU 2, DIVU, MOVEM, 자식 `b3dfc` |
+
+- [F] 검사: IO 단위 8개의 시작 합 1,499 = 전체 closure 시작, 명령 합집합 = 전체 closure 명령, 겹침 0, 빠진 실행 PC 0. 나머지 C11~C14는 683 block으로, C1 계획 나머지 981 가운데 IO 단위가 가진 298을 뺀 것이다. 이번 관측에서 실행되지 않는다.
+- [F] 시작 목록(scratch `ms5-scratch/obs2/starts_<이름>.txt`) SHA256 앞 16자:
+  - C9 `7297354e6f1ddb88`, FR10 `9b7c558e0a7fe4c9`, C10 `ec279a89d3ba30e8`, FR11 `0b9d751960bc3cc4`
+  - FR12 `6565c7e2ab768e1d`, FR13 `e10ba8e15b814215`, E2 `3fd9ce2dd183641f`, FR14 `b885b234ad36b157`
+  - C11 `bd40d783a32884e8`, C12 `8285f2efdb51168e`, C13 `d378a4957ff0245b`, C14 `20a92a5d244195af`
+- [I] 순서 이유: D 코드는 모두 C 뒤에 실행된다. 그래서 C9를 먼저 하면 6 run의 첫 정지가 D로 바뀐다. C9와 C10을 합치면 347 block이라 한 단위에 넣을 수 없다. E2는 마지막 목숨 뒤에만 실행되므로 FR13 뒤에 둔다.
+
+### 10.6 IO 비교 기준선(새 관측, 현재 `main` routing)
+
+- 막는 것 [F]: `tools/verify_animation_machine_io.py`는 `--observation`을 받지만, 상수 `OBS_FILE_SHA_PREFIX = '66d30130d8a11a86'`과 `OBS_COMPARED_SHA = '4bb6b933…'`(1016~1023행)이 다른 관측을 거부한다.
+  - observer SHA 검사(`pins.observer`)는 통과한다. observer 파일을 고치지 않았기 때문이다.
+  - frontier 보고는 `aggregates.stage.baseline_p0_unrouted_pcs`를 쓰고, `P0`와 `P1`이 있어야 생긴다. 이 관측에는 둘 다 있다.
+  - 음성 검사는 `P1` case 0이 없어 `negatives_ok` = null이다.
+- 이번 실행: scratch `obs2/tools/verify_obs2.py`가 검증기를 수정 없이 import한다. 그리고 위 두 상수만 주어진 `observation.json`의 SHA와 저장된 `compared_sha256`으로 바꾼 뒤 `main`을 부른다. 다른 검사는 모두 그대로다.
+- [F] 결과(`obs2/io_final`, 두 관측 벌 모두 같은 결과; `frontier.json` SHA256 `a39e85f6…`):
+  - native 비교 frame 14,500 가운데 **일치 5,095**, 불일치 0(beyond 0), C++ 오류 0, chain divergence 0.
+  - 수용 키는 `negatives_ok`(null)를 빼고 모두 true다. `frontiers_confirmed`도 true다.
+  - 첫 정지는 확인된 C frontier 8 run이다: `2210c` 4, `21e48` 2, `1f3e8` 1, `1f070` 1. P0·P1 4 run은 끝까지 일치한다.
+  - 예측 5,095와 같다. 이것을 다음 단위의 기준선으로 쓴다.
+- [F] 기존 IO 비교(원래 관측, 이 branch, 검증기 기본 인자, scratch `obs2/io_historic`)는 바뀌지 않았다: 296 run, 일치 173,966 / 173,966, 불일치 0, C++ 오류 0, 수용 키 모두 true(`negatives_ok` 포함). §9와 같다.
+- 최소 변경 제안(결정 2): 검증기에 알려진 관측 pin 표를 두는 것이다(`OBS_PINS = {'historic': (66d30130…, 4bb6b933…), 'io-ext': (9da40ac6…, b5d15d4f…)}`). `--observation`의 파일 SHA와 `compared_sha256`이 표의 한 쌍과 같아야 하고, 고른 이름을 `verification.json`의 `inputs.observation.pin`에 남긴다. 상수 두 개를 표 하나로 바꾸는 10행 안팎의 변경이고, 원래 관측의 결과는 바뀌지 않는다.
+
+### 10.7 결정 요청(메인)
+
+1. **관측 보관.** 관측은 지금 scratch에만 있다(`obs2/final`). **권고:** 사용자 승인 뒤 `artifacts/animation_machine_io_ext/`로 옮긴다(17 MB). 그 전까지는 위 명령으로 다시 만들 수 있다. 결정적이고 약 150초 걸린다.
+2. **검증기 pin.** **권고:** §10.6의 pin 표. 대안은 scratch wrapper(`verify_obs2.py`)를 단위 runner에서 계속 쓰는 것이다. 다만 그러면 저장소만으로는 재현할 수 없다.
+3. **단위 이름과 순서.** **권고:** C9, FR10, C10, FR11, FR12, FR13, E2, FR14(표 순서). 그 뒤 C11~C14는 IO 근거 없이 하거나(FR7~FR9처럼 단위 검증만), 다른 mission seed 관측을 기다린다(결정 6).
+4. **주소 규칙과 실제 소유가 다른 PC.** C7 표 `25298`의 칸 `252b4` → `252ce`(root `25102`)는 주소 규칙으로 D가 되어 FR10에 들어갔다. **권고:** C10으로 옮긴다(2 block). C7 표 처리(실행 칸 `252a4`만 허용)를 고치는 일과 같은 단위에 두려는 것이다.
+5. **앞 단위 표·목록의 갱신.** C3 표 `2031c`(실행 칸 `20324` `20340`)와 C7 표 `25298`(칸 `252b4`)은 지금 "미routing 칸 = 선언 정지"다. C10(과 결정 4)이 그 칸을 허용 목록에 더해야 한다. C9의 목록 `21aee`(`21602` `21d60` `21e48` `21e3a`)와 `216c8`(`21602`)의 handler는 C9 뒤 모두 routing된다.
+6. **나머지 C11~C14(683 block).** [I] 대부분 등장 방식·탈것으로 보이는 stage 의존 경로다(`1d388` 사슬, `1de2c`/`1de34`). **권고:** 다른 mission의 stage seed(또는 stage 진행 seed)를 더한 관측을 만든 뒤 다시 잰다. 그 전에 구현하려면 C1 계획의 주소 분할을 쓴다.
+7. **선언 정지 유지.** 아직 실행되지 않는 `1e67a` `1e918` `23c56` `36350` `371f8`은 계속 선언 정지로 둔다. **권고:** 이대로.
+8. **`default-settings`의 범위.** 버튼 mask만 선언할 수도 있다. 그러면 목숨 1, 난이도 0이 되고 run이 일찍 끝난다(첫 시험 X1 94는 frame 712에서 끝남, C 110 PC). **권고:** 지금처럼 기본 설정 다섯 쓰기를 선언한다.
+
+### 10.8 C9 상세 명세(§8과 같은 꼴)
+
+다음 Opus 작업자가 C9 계약·실행부를 쓸 때의 입력이다. 수치는 scratch `obs2/plan/xplan_v2.json`과 `obs2/tools/xdetail.py obs2/plan/xplan_v2.json C-1`(출력 `obs2/plan/udetail_C9.txt`, 역어셈블 `obs2/plan/C-1.dis.txt`)이다.
+
+#### 10.8.1 범위
+
+- [F] **220 block, 454 명령, 1,996 byte, 20 범위.**
+  - 시작 목록 `ms5-scratch/obs2/starts_C9.txt` SHA256 `7297354e6f1ddb88bbc0d2aed46990b57ee563eb244bdd6452d8b182c9017759`
+  - 범위 byte를 이어 붙인 SHA256 `4b010840cf4b5a9405a971c7ff6404d69111ffc7217341c4f84807b27645fa24`
+  - 실행된 시작 126, 실행되지 않은 시작 94.
+
+| 범위(CPU = 파일 오프셋) | byte | 시작 | SHA256(앞 16자) | 내용 [I] |
+| --- | --- | --- | --- | --- |
+| `1d086..1d09e` | 24 | 4 | `62f0b738ca20a30c` | C8 `1d066` 뒤의 갈래 `1d086` `1d092` |
+| `1ec74..1ed22` | 174 | 22 | `8bfeba981a7a9e00` | 설치 값 `1ec74` `1ecb8`(상태), `1b764` 기록 |
+| `1f070..1f082` | 18 | 1 | `0bb1f2b54e1da9b6` | 미룬 입구 `1f070`(C4 `1ef0e` 상태의 갈래), `1b1ec` 기록 |
+| `1f086..1f126` | 160 | 19 | `d4fab158b5ac5258` | 설치 값 `1f0ae`, 칸 `84` := `21602` |
+| `1f3e8..1f3ec` | 4 | 1 | `921fb4b21e1a0f7b` | C7·C8가 쓰기만 하던 callback `1f3e8`: `LEA 1b26e(PC),A0` → C8 `1f3ec` |
+| `1f48a..1f538` | 174 | 21 | `5a7ba80d97d35106` | 미룬 입구 `1f48a`, 설치 값 `1f4b6`, 칸 `84` := `21602` |
+| `1fb28..1fb2e` | 6 | 1 | `a2b479890d32bf88` | 미룬 입구 `1fb28`(C8 `1fb02`의 BYTE `15` bit 7 쪽) |
+| `20720..20738` | 24 | 1 | `a26a18a7b5e556b1` | C5 `20738` 앞 block |
+| `208fa..2092c` | 50 | 8 | `36482efc41c1ea4a` | 미룬 입구 `208fa` |
+| `20a4a..20bfe` | 436 | 41 | `271bc22a1dcc5680` | 설치 값 `20aec` `20b96`, 칸 `84` := `21602` 둘 |
+| `20c00..20c30` | 48 | 7 | `cbfa73911c2cbc0d` | 설치 값 `20c30`은 쓰기만(실행 안 됨, 선언 정지) |
+| `20cd8..20d72` | 154 | 11 | `32328cdf98533237` | 설치 값 `20d36`, 칸 `84` := `21602` |
+| `21370..213da` | 106 | 6 | `1c0318ecfbfea2b1` | C5 표 `2094e`의 대상 `21370` 쪽, 칸 `84` := `21602` |
+| `21ca4..21d60` | 188 | 28 | `008db994a1b0cad7` | 미룬 입구 `21ca4` `21d0e`. 칸 `84` := `21cd8`/`21d2a`(곧 실행), 목록 `21aee`/`216c8` + `JMP (A1)` `21ce4` `21d36` |
+| `21e48..21e52` | 10 | 1 | `4babc8f180d852d0` | 목록 `21b0a`/`21aee`의 handler `21e48`: `LEA 1b9a8(PC),A0` → C8 `21e52` |
+| `2210c..22148` | 60 | 3 | `e3d1b24d085289b6` | 둘째 칸 값 `2210c`와 직선 연속 `22128`(§10.5 재관측) |
+| `22174..221ca` | 86 | 8 | `a1daf6e27bf7100c` | 기록 `22074` `220c0` `22028` |
+| `22238..22286` | 78 | 13 | `5f005148b41735d3` | 칸 `84` := `22240`(곧 실행), 목록 `216c8` + `JMP (A1)` `2224c`, 칸 `84` := `22452` |
+| `223a0..223fa` | 90 | 10 | `ccf4d235b2f650a9` | 미룬 입구 `223a0` `223d6`, 기록 `1b85e` `1b8ba` `1b8fe` `1b920` `1b964` |
+| `22408..22472` | 106 | 14 | `76b29b8ad9e7d5ef` | 칸 `84` := `2241c`, 목록 `216c8` + `JMP (A1)` `22428`, 칸 `84` := `22452`, `22452` |
+
+- [F] **진입**(실행 PC를 줄인 closure 진입): `1d092` `1f070` `1f3e8` `21e48` `2210c` `223a0` `21ca4` `22452` `1d086` `1f48a` `1fb28` `20720` `208fa` `223d6` `21d0e`.
+- [F] **설치 값**(`MOVE.L #v,(A6)`): 범위 안 `1ec74` `1ecb8` `1f0ae` `1f3e8` `1f4b6` `20aec` `20b96` `20d36`, routing된 `1ed78` `1eeea` `21542`, 쓰기만 `20c30`.
+- [F] **둘째 칸 `84(A6)` 값**: `21602`(routing, 6곳), `21cd8` `21d2a` `22240` `2241c` `22452`(범위 안, block 시작으로 강제).
+
+#### 10.8.2 출구와 경계
+
+- [F] **routing된 출구**: `28ae` `8ebe` `8ff4` `ce02` `1aa3a` `1cab6` `1cabe` `1cb08` `1cb38` `1cd98` `1cec2` `1cfbe` `1d0a4` `1eb98` `1eba0` `1eeea` `1f1d8` `1f2a4` `1f3ec` `1f538` `1f5d2` `1f5f2` `1f76e` `1f7a4` `1fa3c` `1fa68` `1fad2` `1fae8` `1fb2e` `201a2` `20738` `2092c` `20efc` `21430` `21520` `2156a` `215e6` `21602` `21baa` `21bc6` `21c1c` `21e52` `21ffc` `221ca` `43ea4` `49214` `49274` `4970a` `49fc6` `4bfc0` `ea680`.
+- [F] **뒤 단위 정지**(실행되지만 C10이 가짐): `1f082` `20bfe` `22148` `22286` `223fa`.
+- [F] **목록 `JMP (A1)` 4곳**(C3 `215e6` 목록 조회 뒤, C3·C4·C5·C8 결정과 같은 규칙):
+  - `21ce4`: 목록 `21aee`([F] ROM: (`21602`, 0) (`21d60`, 2) (`21e48`, 3) (`21e3a`, 4), LONG 0). 대상 넷은 C9 뒤 모두 routing된다.
+  - `21d36` `2224c` `22428`: 목록 `216c8`((`21602`, 0) 하나).
+  - 그 밖의 A1은 checked jump-target 오류다.
+- [F] **자식**(`MOVEA.L #v,A0` 뒤 `JSR 28ae`/`2986`): `36350` `371f8`(IO에서 실행 안 됨, 선언 정지), `eaac0`(FR10).
+- [F] TRAP·DIVU·MULU/MULS·MOVEM·계산 점프 표는 없다. 고정 ROM 기록 포인터(`LEA d(PC)`)는 26곳이고 대부분 `1b1xx..1bcxx` 상태 기록이다. 넘기기만 하는 것이 대부분이다 [I].
+- [F] **block 경계를 넘는 C**(block 첫 명령이 Bcc, scratch `cscan.py`; Z 쪽은 계약에서 확인):
+  - 소비자 14곳: `1eca0` `1ed14` `1f118` `1f52a` `20900` `20a50` `20bd2` `21cae` `21cb6` `21cbe` `21ce0` `21d32` `22248` `22424`.
+  - `21ce0` `22248` `22424`는 `215e6`의 C(목록 Set/Clear)를 읽는다. 나머지는 각 callee의 C이며, 계약에서 생산자를 정한다.
+  - flag를 넘기는 곳: `22188`·`2226c`(다음 block으로 떨어짐), `22284`·`22450`(RTS로 돌려줌, C 생산자 후보).
+
+#### 10.8.3 IO·seed
+
+- [F] 실행 run 8개(X1~X4 × case 68·94). 각 run의 C9 PC 첫 frame(처음 ~ 마지막):
+
+  | run | case 68 | case 94 |
+  | --- | --- | --- |
+  | X1 | 440..515 | 224..309 |
+  | X2 | 438..650 | 216..311 |
+  | X3 | 436..659 | 221..467 |
+  | X4 | 440..1,108 | 280..948 |
+
+  플레이어 node는 `100cb8`이다(관측 field `p1cb`).
+- [F] IO 예측(C9만 연결, 재관측 `obs2/reobs/v2_u1`): 5,095 → **5,839**(+744).
+  - 첫 정지는 D 6 run(`6f1ca` `eaac0` `252b4` `71468`, FR10)과 C 2 run(`223fa`, C10, X4)으로 옮겨 간다.
+- [F] seed state: 새 관측의 state pack `obs2/final/states/X*/0{68,94}.pack.gz`(모든 frame). D1 자연 seed와 원래 IO 관측은 C9 코드를 실행하지 않는다.
+
+#### 10.8.4 영향받는 기존 시험·spec
+
+- [F] C9 시작을 정지 PC로 쓰는 시험·spec(정지 → 실행으로 기대값이 바뀜):
+  - `engine/tests/animation_machine_player_c3_test.cpp`(`21e48` 773행 등, `2210c` `21ca4` `21d0e` `22452` `223a0` `223d6`)
+  - `_c4_test.cpp`(`21e48` `2210c` `223a0` `223d6` `1f070`)
+  - `_c5_test.cpp`(`21e48` `208fa` `2210c`)
+  - `_c8_test.cpp`(`21e48` `1f48a` `2210c` `223d6` `223a0` `21d0e` `1fb28`)
+  - `tools/unit_fixture_specs/pc3.py` `pc4.py` `pc5.py` `pc8.py`, `tools/generate_animation_machine_player_c5_test_table.py`
+  - 앞 단위 계약의 방식대로 이전 기대값을 기록하고 갱신한다.
+- [I] C8 `JMP (A1)` `21d9e`의 허용 대상 `21e48`(routing 밖 → 선언 정지)이 routing된 handler가 된다. C8 시험의 그 행이 바뀐다.
+- [F] IO 기준: 원래 관측은 C9 코드를 실행하지 않는다. 일치 173,966은 그대로여야 한다. 새 관측의 기준은 5,095 → 예측 5,839다.
+
+### 10.9 미확인
+
+- [U] `default-settings`가 실제 기계의 상태와 같은지. 카드·backup 상태와 BIOS가 USER 초기화를 언제 부르는지는 모른다. 선언으로만 둔다.
+- [U] 남은 C11~C14가 어떤 입력·stage 조건에서 실행되는지. `1d388`의 D7 출처, `1aa3a`의 bit, 탈것 여부.
+- [U] 이름(사격·점프·수류탄·웅크림, 마지막 목숨 뒤 화면 `e695a` 계열, D 단위의 적·stage 코드)은 동작에서 붙인 것이다.
+- [U] 주기 입력의 X3/X4가 X1/X2보다 오래 사는 이유(입력 탓인지 우연인지).
+- [U] D 단위 FR10~FR14의 root 분류는 주소 규칙과 호출자 재분류에 따른다. 표 칸처럼 실제 소유가 다른 PC가 더 있는지는 단위 계약에서 확인한다(결정 4).
+- [I] 재관측은 run 12개 전체를 했다. key와 예측은 이 두 seed 묶음, mission 0에만 해당한다.
+
+### 10.x 메인 결정(2026-10-23)
+
+- 확장 관측의 설계와 측정을 받아들인다. 기존 observer 파일은 바뀌지 않았다(SHA256 `facf49fa…`, `main`과 같음). 기존 IO 비교는 그대로 173,966/173,966이다.
+- `default-settings` host 쓰기(버튼 mask `10f01c`/`10f020`, `10f026`, 목숨 `10fd88`, `10fd8b`)는 선언으로 받아들인다. 원래 설정 경로(`8fa → bcb4 → bbfa → bc1e`)를 실행했다는 주장이 아니다.
+- 단위 이름과 순서는 C9, FR10, C10, FR11, FR12, FR13, E2, FR14로 한다(§10 표).
+- C7 표 `25298`의 칸 `252b4 → 252ce`는 C10에 넣는다(주소 규칙으로 D가 된 것). C10은 C3 `2031c`와 C7 `25298`의 허용 칸을 늘린다.
+- 미실행 선언 정지(`1e67a` `1e918` `23c56` `36350` `371f8`)는 그대로 둔다. C11~C14는 다른 mission seed 관측 뒤에 다시 잰다.
+- 검증기의 관측 pin은 "알려진 관측 pin 표"(원래 관측 + 확장 관측)로 바꾼다. 원래 관측의 결과는 바뀌지 않아야 한다. 이 변경은 C9 단위에서 한다.
+- 확장 관측을 `artifacts/`에 둘지는 사용자 결정이다. 그때까지 scratch `ms5-scratch/obs2/final/`을 쓰고, 단위 IO 확인은 scratch 경로로 한다.
