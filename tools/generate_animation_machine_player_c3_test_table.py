@@ -644,7 +644,7 @@ def gen_errors():
     err('slot-odd-node', 0x201a2, odd, 0x201a2, stop=0x201a8, a6=NODE + 1)
     for v in (0x21602, 0x10fe40, 0, 0x21c23, 0x1021c22):
         err('21620-%x' % v, 0x21620, jump, 0x21620, a1=v)
-    for v in (0x21d60, 0x219c8, 0x21720):
+    for v in (0x21e48, 0x219c8, 0x21720):            # player C4 routes 21d60 since (was 0x21d60, 0x219c8, 0x21720)
         err('21620-listed-%x' % v, 0x21620, unrouted, v, a1=v)
     for v in (0x21c22, 0x21603, 0x1021602, 0):
         err('221de-%x' % v, 0x221de, jump, 0x221de, a1=v)
@@ -654,7 +654,8 @@ def gen_errors():
         err('20318-entry-%x' % v, 0x20318, unrouted, 0x20320 + ((4 * v) & 0xffff), d0=v)
     err('2030a-a0-9', 0x2030a, jump, 0x20318, puts=((NODE + 0xa0, 1, 9), (NODE + 0x9f, 1, 0)))
     err('2030a-a0-ff', 0x2030a, jump, 0x20318, puts=((NODE + 0xa0, 1, 0xff), (NODE + 0x9f, 1, 0)))
-    err('21610-key-1', 0x21610, unrouted, 0x21d60, puts=((NODE + 0x9c, 1, 1),))
+    # the synthetic list 21622: key 1 -> 21d60 (player C4 since) -> BYTE 9d = 1: BGT.W 21dd0 (C12, unrouted) (was: unrouted at 21d60, puts 9c only)
+    err('21610-key-1', 0x21610, unrouted, 0x21dd0, puts=((NODE + 0x9c, 1, 1), (NODE + 0x9d, 1, 1)))
     err('21610-key-3', 0x21610, unrouted, 0x21662, puts=((NODE + 0x9c, 1, 3),))    # the key WORD 0103 does not match BYTE 3: C Clear -> 21662 (C6)
     # the Z source of 1ee56 (contract decision 3)
     err('z-word-1b5f2', ZREAD, flag, ZREAD, a0=0x1b5f2, puts=((NODE + 0x9f, 1, 1),))

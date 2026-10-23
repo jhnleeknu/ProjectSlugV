@@ -2538,3 +2538,14 @@
   - IO 166,744(변화 없음), 불일치 0. `48350`이 frontier에서 빠졌다. 수용 키는 `frontiers_confirmed`만 false다(TB 안에 숨은 `4e8e6`, demo `1d398`).
   - 남은 실행 PC: C 659 → 529.
   - 계약: `animation-machine-player-c3-contract.md`.
+
+## 2026-10-23 — 플레이어 C4(232 block)
+
+- [F] C4(232 block): `4e94e` 본체, 숫자 출력(`JSR (A1)` = `3650`, DIVU 6), `21c72` 목록, helper `371e` `3786` `1be3a` `1c052` 등.
+  - 범위 보정(계약 결정 1): TB 안에 숨은 직선 연속 `4e57e` `4e8e6`을 넣었다. `4e8e6`은 C1~C3 뒤 frame 72/288/192의 실제 정지였다.
+  - 정확한 bitmap 재관측을 단위마다 해서 IO를 예측한다. C4 예측 170,691 = 실측 170,691.
+  - DIVU는 68000 그대로(나머지<<16 | 몫, 몫 > ffff면 overflow로 레지스터 유지), 0 나누기는 checked error다.
+  - 실제 ROM 7,500건 불일치 0. 변이 640개 중 624개 검출, 16개 동등. V1 1,873(두 번 같음). 회귀 spec 37개, legacy 검증기 10개 통과. frame 비교 변화 없음.
+  - IO 166,744 → 170,691(+3,947), 불일치 0. 수용 키는 `frontiers_confirmed`만 false다(다음 숨은 정지 C5 `20240`, demo C6 `1d398`).
+  - 남은 실행 PC: C 529 → 361.
+  - 계약: `animation-machine-player-c4-contract.md`.

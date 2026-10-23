@@ -83,7 +83,9 @@ TRAPS = (0x4e69a,)                      # TRAP #15 (WORD 76 >= 2): outside the r
 # PCs of later units that a C1 block reaches by a fall-through or a branch (declared stops of the native runs: a straight-line unrouted PC after a C1
 # block is not the interior of a routed block)
 EXIT_STOPS = (0x1d222, 0x48350, 0x4e4e2, 0x4e538, 0x4e564, 0x4e758, 0x4e962, 0x4e986, 0x4e8e6, 0x4e8f8, 0x4eb58, 0x4e69a)
-ROUTED_LATER = (0x1d222, 0x48350)       # later-unit stops that a later unit has routed since (player C2: 1d222, player C3: 48350): still declared stops of the C1 runs
+# later-unit stops that a later unit has routed since (player C2: 1d222, player C3: 48350, player C4: 4e4e2 4e538 4e564 4e758 4e962 4e986 and the
+# straight-line 4e8e6 of 4e8e0): still declared stops of the C1 runs
+ROUTED_LATER = (0x1d222, 0x48350, 0x4e4e2, 0x4e538, 0x4e564, 0x4e758, 0x4e962, 0x4e986, 0x4e8e6)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1d216, 0x1d21c), (0x4e802, 0x4e808), (0x4e94e, 0x4e958))
 PASS_CHAINS = ()
