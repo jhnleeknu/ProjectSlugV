@@ -208,3 +208,24 @@ FR2..FR9, C1~C9 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 - [F] **IO, 입력 확장 관측**(FR10 연결 뒤, `--workers 3`): run 12, native 비교 frame 14,500 가운데 일치 **6,230**(예측 6,230, 기준선 5,839 → +391), 불일치 0(beyond 0), C++ 오류 0, chain divergence 0, 수용 키 모두 true(`negatives_ok` 포함, `P1` case 94)(`trial_logs/io_ext_fr10.log`; `verification.json` SHA256 `73e27b2773324c6d…`, `frontier.json` `960c218ab8c451d8…`). 첫 정지(확인된 frontier): X1 68 frame 590·X1 94 384·X2 68 608·X2 94 386 `1dccc`, X3 68 591 `252b4`, X3 94 391 `22148`, X4 68 520·X4 94 360 `223fa` — 재관측 예측(`reobs/fr10v1.stops`)과 run·frame·PC가 모두 같다. 모두 C10이다.
 - [F] 원래 IO 관측·frame 비교·legacy 검증기는 작업자가 돌리지 않았다(메인 runner).
 - [F] `CPP_PINS`: 작업 트리와 scratch clone root(`work/mkroot.py`; 확인 뒤 symlink를 먼저 지우고 삭제)에서 파일 SHA와 같다(4 / 9 pin, 불일치 0, `trial_logs/pincheck_tree.log` `pincheck_root.log`).
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j3 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. FR10 시험 `animation machine objects fr10: 1074 fixtures (646 single-block, 306 path, 36 producer chain, 28 declared C, 58 checked error (15 with a later failing PC), 109 kept C), 211 blocks, 4830 calls, 130326 checks`.
+- [F] `ubsan`: 빌드/실행 종료 0, 런타임 오류 0.
+- [F] `mutation`: 변이 686, 제거 675, 등가 11.
+  - 이 실행 전에 메운 시험 빈틈 7개.
+- [F] real-ROM: 배치 `f4`, `f5`, `s1`, `s2`, `s3` 커버 `211`, `211`, `211`, `209`, `211`; 불일치 `0,0,0,0,0`(합집합 211/211).
+  - 오라클: `native_safe` 켬.
+  - 범위: C7 표 항목 `252b4 252ce 252d8 252e2`는 C10에 남기고, `cd804`를 추가했다(`cd7c2`의 `BRA.W`).
+  - 수정된 버그: real-ROM에서 `70f2c` / `70f3e`의 `71c48` 캐리 케이스를 찾아 이 실행 전에 고쳤다.
+- [F] V1: A/B 각각 fixtures 2170, failed 0, identical true(digest `33da4558deac0f5f`); regression specs 43개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 완료 54400/54400, 불일치 0; `controller_game` 완료 54400/54400, 불일치 0; `irq` 완료 54400/54400, 불일치 0; `demo` 완료 45684/45684, 불일치 0.
+- [F] IO(원래 관측): 일치 합계 173966, 기준 173966, 차이 0, 불일치 0, C++ 오류 0, 실행 2, 동일함; 설정별 `P0` 81600, `P1` 81600, `P1b` 8400, `boot-demo-0` 577, `boot-title-idle` 600, `boot-title-start` 906, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 수락 항목은 모두 true이고, native frame 173966 전부 일치한다.
+- [F] IO(확장 입력 관측): 일치 합계 6230, 기준 5839, 차이 391, 불일치 0, C++ 오류 0, 실행 2, 동일함; 설정별 `P0` 1200, `P1` 1200, `X1` 974, `X2` 994, `X3` 982, `X4` 880.
+  - 예측 확인: 정확한 비트맵 재관측은 6230을 예측했고, 실측도 6230이다.
+  - 수락 항목은 모두 true다. native 완료 frame 14500 중 6230이 일치한다(나머지는 다음 단위의 첫 정지 뒤).
+  - 첫 정지: `1dccc 252b4 22148 223fa`(모두 C10).
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
