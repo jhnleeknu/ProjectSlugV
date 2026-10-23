@@ -73,7 +73,7 @@ GUARD_ERRORS = {
     'guard-path-index-0002-mid-instruction': UNSUPPORTED_UPDATE,      # 19e8c: operand word of the 19e8a slot (not a block start)
     'guard-path-index-0001-odd': UNALIGNED_PC,                        # 19e8b
     'guard-path-index-0006-mid-slot': UNSUPPORTED_UPDATE,             # 19e90: displacement word of the 19e8e slot
-    'guard-path-index-7ffe-far': UNSUPPORTED_MACHINE,                 # 21e88: outside every executor range
+    'guard-path-index-7ffe-far': 'unsupported animation player c8 PC',  # 21e88: operand of the player C8 block 21e84 (was UNSUPPORTED_MACHINE before C8)
     'guard-path-index-7fff-odd-far': UNALIGNED_PC,                    # 21e89
     'guard-bad-stop-1a6a2-on-frame-seed': UNSUPPORTED_MACHINE,        # RTS to 1a78c runs the U2 tail to the RTS into ff000 (no executor)
     'guard-bad-stop-1a78c-on-init-entry': UNSUPPORTED_MACHINE}        # RTS to 1a6a2 (no executor)

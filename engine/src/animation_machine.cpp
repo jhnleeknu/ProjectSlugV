@@ -1228,6 +1228,9 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // Unknown.
     case 0x1ca0e:case 0x1f330:case 0x1f5c4:case 0x1f644:case 0x1f752:case 0x1f776:case 0x22674:case 0x22704:case 0x25140:case 0x25454:
     case 0x1ca12:case 0x1ca68:
+    // Player C8 blocks: the 5 consumers 1f47c (BCC, 49fc6), 1fa70 (BCS, 1cb08), 1fd34 4d0e6 (BCC, 484b4), 21e72 (BCC, 215e6).  4d0ea sets Set in its own
+    // block (read by C3 201b8); every other C8 block stays Unknown (no C8 block passes a C through; no Z crosses a C8 block boundary).
+    case 0x1f47c:case 0x1fa70:case 0x1fd34:case 0x21e72:case 0x4d0e6:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1890,6 +1893,12 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x22656 && next.pc<0x22788) || (next.pc>=0x2285c && next.pc<0x2291a) || (next.pc>=0x24fb0 && next.pc<0x25082) ||
                 (next.pc>=0x25102 && next.pc<0x2529c) || (next.pc>=0x252a4 && next.pc<0x252a8) || (next.pc>=0x252c0 && next.pc<0x252ce) ||
                 (next.pc>=0x253c8 && next.pc<0x25488))ok=animation_player_c7_block(c);
+            else if ((next.pc>=0x1ce98 && next.pc<0x1cea8) || (next.pc>=0x1cfde && next.pc<0x1d086) || (next.pc>=0x1eb98 && next.pc<0x1eba0) ||
+                (next.pc>=0x1ef4c && next.pc<0x1ef6c) || (next.pc>=0x1f3d8 && next.pc<0x1f3e0) || (next.pc>=0x1f3ec && next.pc<0x1f48a) ||
+                (next.pc>=0x1f756 && next.pc<0x1f76a) || (next.pc>=0x1fa68 && next.pc<0x1fa90) || (next.pc>=0x1fafc && next.pc<0x1fb28) ||
+                (next.pc>=0x1fb2e && next.pc<0x1fb32) || (next.pc>=0x1fcce && next.pc<0x1fd3c) || (next.pc>=0x201bc && next.pc<0x201d0) ||
+                (next.pc>=0x21d9e && next.pc<0x21da0) || (next.pc>=0x21e3a && next.pc<0x21e48) || (next.pc>=0x21e52 && next.pc<0x21ea0) ||
+                (next.pc>=0x4d0cc && next.pc<0x4d100) || (next.pc>=0x4d1ac && next.pc<0x4d208) || (next.pc>=0xea626 && next.pc<0xea62e))ok=animation_player_c8_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

@@ -653,8 +653,10 @@ def gen_errors():
         err('209ce-d0-%x-entry' % v, 0x209ce, unrouted, 0x209da + 4 * (v & 0xff), d0=v)
     for v in (0x21622, 0x21b26, 0, 0x1021602, 0x21603, 0x21c66):
         err('21f7c-%x' % v, 0x21f7c, jump, 0x21f7c, a1=v)
-    for v in (0x21e48, 0x21e3a):
-        err('21f7c-listed-%x' % v, 0x21f7c, unrouted, v, a1=v)
+    err('21f7c-listed-21e48', 0x21f7c, unrouted, 0x21e48, a1=0x21e48)
+    # 21e3a is a player C8 start since C8 (previous row: 'unsupported animation machine PC' at 21e3a); the MOVE.B #1,aa(A6) of 21e3a with A6 = 0
+    # writes fixed ROM and keeps the failing PC 21e3a
+    err('21f7c-listed-21e3a', 0x21f7c, 'unsupported animation machine write device', 0x21e3a, a1=0x21e3a, a6=0)
     # the Z source of 1c3e2 (contract decision 3)
     for v in (0x200000 - 0x9e, 0x3c0000, 0x2ffff0):
         err('z-a0-%x' % v, ZREAD, flag, ZREAD, a0=v, d7=TABLE_1C52C[0])
