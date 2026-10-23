@@ -83,6 +83,7 @@ TRAPS = (0x4e69a,)                      # TRAP #15 (WORD 76 >= 2): outside the r
 # PCs of later units that a C1 block reaches by a fall-through or a branch (declared stops of the native runs: a straight-line unrouted PC after a C1
 # block is not the interior of a routed block)
 EXIT_STOPS = (0x1d222, 0x48350, 0x4e4e2, 0x4e538, 0x4e564, 0x4e758, 0x4e962, 0x4e986, 0x4e8e6, 0x4e8f8, 0x4eb58, 0x4e69a)
+ROUTED_LATER = (0x1d222,)                # later-unit stops that a later unit has routed since (player C2): still declared stops of the C1 runs
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1d216, 0x1d21c), (0x4e802, 0x4e808), (0x4e94e, 0x4e958))
 PASS_CHAINS = ()
@@ -436,7 +437,9 @@ def build():
     require(len(STARTS) == 139 and len(STARTS_SET) == 139, ('starts', len(STARTS), len(STARTS_SET)))
     require(unit_of(SENTINEL) is None and not mine(SENTINEL), 'sentinel must be unrouted')
     for t in TRAPS + EXIT_STOPS:
-        require(unit_of(t) is None and not mine(t), ('TRAP site / later-unit stop must stay unrouted', hex(t)))
+        # player C2 refresh: 1d222 is a C2 block start now (routed); it stays a declared stop of the C1 runs so that the C1 fixture set is unchanged
+        # (was: every TRAP site / later-unit stop unrouted)
+        require((unit_of(t) is None or t in ROUTED_LATER) and not mine(t), ('TRAP site / later-unit stop must stay unrouted', hex(t)))
     for s in STARTS:
         require(unit_of(s) == 'animation_player_c1_block', ('start is not routed to player c1', hex(s), unit_of(s)))
     rng = random.Random(0xC1A1)

@@ -172,5 +172,6 @@ bool animation_objects_fr8_block(AnimationMachineContext& c);
 bool animation_objects_fr9_block(AnimationMachineContext& c);
 bool animation_player_c1_block(AnimationMachineContext& c);
 bool animation_select_e1_block(AnimationMachineContext& c);
+bool animation_player_c2_block(AnimationMachineContext& c);
 }
 #endif

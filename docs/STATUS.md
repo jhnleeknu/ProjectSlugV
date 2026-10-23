@@ -2518,3 +2518,12 @@
 - [I] 관측 보정의 한계: 보정 관측도 TB의 첫 routing 밖 PC만 기록한다. 그래서 C3·C4는 직선 연속 block을 범위에 더했고(C3 4개, C4 2개), 단위마다 정확한 bitmap으로 다시 관측해 예측한다.
 - 남은 실행 PC: E 218 → 12(C6 helper `b0c` `e6496`), C 757.
 - 계약: `animation-machine-select-e1-contract.md`.
+
+## 2026-10-22 — 플레이어 C2(196 block)
+
+- [F] C2(196 block): 플레이어 객체 `1d1f4` 본체 순환(`1cd98` `1d20c` `1dfe6` `1d582` … `1a9e8`).
+  - live `JMP (A1)` `1aa38`은 routing된 시작 PC만 허용한다. ROM 자료는 0이 아닌 목표를 쓰지 않으므로 다른 목표는 checked error다(계약 결정 2).
+  - 실제 ROM 7,500건 불일치 0. 변이 631개 중 593개 검출, 38개는 동등(메인이 세 분류를 코드로 확인). V1 1,743(두 번 같음). 회귀 spec 35개, legacy 검증기 10개 통과. frame 비교 변화 없음.
+  - IO 166,744(변화 없음), 불일치 0. C2 코드는 `48350`(C3)과 `4e8e6`(C4) 뒤에만 실행되므로 C2만으로는 IO 진척이 없다(계획과 같음). 수용 키는 `frontiers_confirmed`만 false다(`4e8e6`).
+  - 남은 실행 PC: C 757 → 659.
+  - 계약: `animation-machine-player-c2-contract.md`.
