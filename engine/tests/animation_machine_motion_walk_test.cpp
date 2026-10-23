@@ -758,7 +758,9 @@ void errors(){
  // Failures after writes: 196ac stores 53b8/53ba, then the next record type 0001 sends 18c06 to an odd PC.
  {Bytes ram=zero_ram();record(ram,REC,0,0x14,0,0,0);put(ram,REC+10,2,0x10);put(ram,REC+12,2,0x0001);putf(ram,0x53b4,4,REC);
   State s=state(0x19812);s.d[0]=0x00200000;reject(ram,s,STOP,"unaligned animation machine PC");
-  put(ram,REC+12,2,0x7ffe);reject(ram,s,STOP,"unsupported animation machine PC");}
+  // Player C9: the type 7ffe (18c0e + 7ffe = 20c0c) is now a player C9 interior PC (previous expectation 'unsupported animation machine PC'); the type
+  // 7ff0 (18c0e + 7ff0 = 20bfe, the unrouted later-unit start after the C9 range 20a4a..20bfe) keeps the expectation.
+  put(ram,REC+12,2,0x7ff0);reject(ram,s,STOP,"unsupported animation machine PC");}
  // After the 1a73c PVC writes: a first motion record of type fffe sends 18efa into its own JMP.
  {Bytes ram=natural_ram();put(ram,MOT+2,2,0xfffe);reject(ram,state(0x1a73c),0x1a7a8,"unsupported animation motion walk PC");}
  // A stop that is never reached rolls back at the STOP return address.

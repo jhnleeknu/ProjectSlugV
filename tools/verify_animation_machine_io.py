@@ -1,7 +1,12 @@
 """Unit IO (IO-2): C++ frame comparison and frontier report against the native input / stage-progress observation (tools/observe_animation_machine_io.py).
 
 Inputs (read-only, pinned): the observation directory (default artifacts/animation_machine_io_native; observation.json file SHA256 and compared_sha256 are pinned,
-every run record and state pack is checked against the SHA256 in observation.json).  Nothing is executed natively here: the native side is the recorded observation
+every run record and state pack is checked against the SHA256 in observation.json).
+Known observations (player C9, docs/analysis/animation-machine-player-c9-contract.md): the table KNOWN_OBSERVATIONS replaces the former single pin.
+  historic  artifacts/animation_machine_io_native (the default; behaviour and verification.json / frontier.json unchanged, negative checks on P1 case 0).
+  io-ext    artifacts/animation_machine_io_ext (tools/observe_animation_machine_io_ext.py, extended input).  It has no P1 case 0 run: the negative checks
+            run on its P1 case 94 control run (required, like P1 case 0 for historic); verification.json records inputs.observation.pin / .negatives.
+Nothing is executed natively here: the native side is the recorded observation
 (frame-start states of every frame, the native external-read consumption log `q`, the declared host writes, per-segment digests / port digests / IRQ records / waits).
 
 For every run (configuration x seed) and every frame:
@@ -48,8 +53,18 @@ EXE = ROOT / 'build/frame_io_acceptance'
 HARNESS = ROOT / 'engine/tools/frame_io_acceptance.cpp'
 ROM_PATH = ROOT / 'extracted/program/maincpu.decrypted.be.bin'
 ROM_SHA = '29112a94b5c073de95919ab4efbc75427287739eab794ef442d2aa7c886c860f'
-OBS_FILE_SHA_PREFIX = '66d30130d8a11a86'
-OBS_COMPARED_SHA = '4bb6b9336274742a492182b8a745f48a574ba456aa94856c535395f89f969b62'
+# Known-observation pin table (player C9 contract, area-C plan 10.6 / main decision 10.x): --observation must match one entry exactly (observation.json file
+# SHA256 prefix and the stored compared_sha256).  'negatives' names the (config, case) run whose frame 5 carries the negative checks; None skips them and the
+# acceptance key negatives_ok stays None.  The historic entry is the former single pin (OBS_FILE_SHA_PREFIX / OBS_COMPARED_SHA); its behaviour and its
+# verification.json / frontier.json are unchanged apart from the recorded SHA256 of this file.
+KNOWN_OBSERVATIONS = collections.OrderedDict([
+    ('historic', dict(file_sha_prefix='66d30130d8a11a86', compared_sha256='4bb6b9336274742a492182b8a745f48a574ba456aa94856c535395f89f969b62',
+                      negatives=('P1', 0))),
+    ('io-ext', dict(file_sha_prefix='9da40ac6dcbea3eb', compared_sha256='b5d15d4fcd53555bce3f4773c8ee6113c6b79ee5aac113f6c1e59a87ddc57161',
+                    negatives=('P1', 94))),          # no P1 case 0 run; P1 case 94 passes every check (case 68 misses palette-not-attached)
+])
+OBS_FILE_SHA_PREFIX = KNOWN_OBSERVATIONS['historic']['file_sha_prefix']
+OBS_COMPARED_SHA = KNOWN_OBSERVATIONS['historic']['compared_sha256']
 HISTORIC_SEED_SHA = '1f65100f1fedc36b4999543c720814dc6f9eb4bf634f3af3439aa68d70e31207'
 KEYS = O.KEYS
 PVC_LO, PVC_HI = 0x2fe000, 0x300000
@@ -1015,12 +1030,15 @@ def main(argv=None):
     obs_path = Path(args.observation).absolute()
     native = obs_path.parent
     obs_sha = file_sha(obs_path)
-    if not obs_sha.startswith(OBS_FILE_SHA_PREFIX):
-        raise SystemExit('observation.json SHA256 %s is not the pinned %s...' % (obs_sha, OBS_FILE_SHA_PREFIX))
+    pin_name = next((n for n, p in KNOWN_OBSERVATIONS.items() if obs_sha.startswith(p['file_sha_prefix'])), None)
+    if pin_name is None:
+        raise SystemExit('observation.json SHA256 %s is not a pinned observation (%s)' % (
+            obs_sha, ', '.join('%s %s...' % (n, p['file_sha_prefix']) for n, p in KNOWN_OBSERVATIONS.items())))
+    pin = KNOWN_OBSERVATIONS[pin_name]
     obs = json.loads(obs_path.read_text())
     claimed = obs['compared_sha256']
-    if claimed != OBS_COMPARED_SHA:
-        raise SystemExit('observation compared_sha256 is not the pinned %s' % OBS_COMPARED_SHA)
+    if claimed != pin['compared_sha256']:
+        raise SystemExit('observation compared_sha256 is not the pinned %s (%s)' % (pin['compared_sha256'], pin_name))
     if O.recompute_compared_sha(obs) != claimed:
         raise SystemExit('observation compared_sha256 cannot be recomputed from observation.json')
     if file_sha(TOOLS / 'observe_animation_machine_io.py') != obs['pins']['observer']['sha256']:
@@ -1055,7 +1073,11 @@ def main(argv=None):
     for e in entries:
         tasks.append(dict(entry=e, max_frames=args.max_frames, real_chain=not args.reuse_chain))
     tasks.sort(key=lambda t: (-t['entry']['frames'], t['entry']['config'], t['entry']['case']))
-    neg_entry = next((e for e in obs['runs'] if e['config'] == 'P1' and e['case'] == 0), None)
+    neg_entry = None
+    if pin['negatives'] is not None:   # required for this observation: the named run must exist (historic: P1 case 0, the former fixed choice)
+        neg_entry = next((e for e in obs['runs'] if (e['config'], e['case']) == pin['negatives']), None)
+        if neg_entry is None:
+            raise SystemExit('observation %s has no %s case %d run for the negative checks' % (pin_name, pin['negatives'][0], pin['negatives'][1]))
     ctx = multiprocessing.get_context('fork')
     rows, neg = [], None
     with ctx.Pool(args.workers, initializer=worker_init, initargs=(EXE, resources, native, stderr_dir)) as pool:
@@ -1084,8 +1106,9 @@ def main(argv=None):
     summary = summarize(rows)
     inputs = dict(
         rom=dict(path='extracted/program/maincpu.decrypted.be.bin', sha256=ROM_SHA, size=rom_stat.st_size),
-        observation=dict(file_sha256=obs_sha, compared_sha256=OBS_COMPARED_SHA, runs=len(obs['runs']), observer_sha256=obs['pins']['observer']['sha256'],
-                         input_scripts_sha256=obs['pins']['input_scripts']['sha256'], scope_doc_sha256=obs['pins']['scope_doc']['sha256']),
+        observation=dict(file_sha256=obs_sha, compared_sha256=pin['compared_sha256'], runs=len(obs['runs']), observer_sha256=obs['pins']['observer']['sha256'],
+                         input_scripts_sha256=obs['pins']['input_scripts']['sha256'], scope_doc_sha256=obs['pins']['scope_doc']['sha256'],
+                         **({} if pin_name == 'historic' else dict(pin=pin_name, negatives='skipped' if pin['negatives'] is None else '%s/%d' % pin['negatives']))),
         seed=seed, program_rom_resources=resource_refs,
         engine_sources=dict((str(p.relative_to(ROOT)), file_sha(p)) for p in machine_sources()),
         engine_headers=dict((str(p.relative_to(ROOT)), file_sha(p)) for p in sorted(set((ROOT / 'engine/include').rglob('*.h')) | set((ROOT / 'engine/src').rglob('*.h')))),
@@ -1107,8 +1130,9 @@ def main(argv=None):
     (out / 'frontier.json').write_text(json.dumps(fr, indent=1, sort_keys=True, default=str) + '\n')
     import platform as _p
     (out / 'run_info.json').write_text(json.dumps(dict(elapsed_seconds=round(time.time() - t0, 1), python=sys.version.split()[0], os=_p.platform(), workers=args.workers,
+                                                       observation_pin=pin_name,
                                                        harness_calls_note='per-process counters are not kept', argv=sys.argv[1:]), indent=1, sort_keys=True) + '\n')
-    print(json.dumps(dict(summary=summary['totals'], acceptance=accept, report_sha256=file_sha(out / 'verification.json'), frontier_sha256=file_sha(out / 'frontier.json')),
+    print(json.dumps(dict(observation_pin=pin_name, summary=summary['totals'], acceptance=accept, report_sha256=file_sha(out / 'verification.json'), frontier_sha256=file_sha(out / 'frontier.json')),
                      indent=1, sort_keys=True, default=str))
     return 0 if all(v is True for k, v in accept.items() if isinstance(v, bool)) else 1
 

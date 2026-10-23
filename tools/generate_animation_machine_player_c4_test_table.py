@@ -661,7 +661,9 @@ def gen_errors():
         err('37ca-a1-%x' % v, 0x37ca, jump, 0x37ca, a1=v, d2=1)
     for v in (0x21622, 0x21c22, 0x1021602, 0, 0x21d61, 0x21610):
         err('21c72-%x' % v, 0x21c72, jump, 0x21c72, a1=v)
-    err('21c72-listed-21e48', 0x21c72, unrouted, 0x21e48, a1=0x21e48)
+    # 21e48 is a player C9 start since C9 (previous row: 'unsupported animation machine PC' at 21e48): its MOVE.B #1,aa(A6) with A6 = 0 writes fixed ROM
+    # and keeps the failing PC 21e48
+    err('21c72-listed-21e48', 0x21c72, 'unsupported animation machine write device', 0x21e48, a1=0x21e48, a6=0)
     # 21e3a is a player C8 start since C8 (previous row: 'unsupported animation machine PC' at 21e3a); the MOVE.B #1,aa(A6) of 21e3a with A6 = 0
     # writes fixed ROM and keeps the failing PC 21e3a
     err('21c72-listed-21e3a', 0x21c72, 'unsupported animation machine write device', 0x21e3a, a1=0x21e3a, a6=0)

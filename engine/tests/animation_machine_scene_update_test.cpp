@@ -703,10 +703,12 @@ void caf0_tail(){
 // alignment, PCs outside every executor are unsupported; failures after earlier writes roll back. The opcode 7ffc (target 21e86)
 // replaces 1000, whose target 1ae8a is now an F5 frame head H1 interior PC. Player C8: 7ffc / 7ffe (targets 21e86 / 21e88) are now player C8 interior
 // PCs (previous expectation 'unsupported animation machine PC'); 7fbe / 7fc0 (targets 21e48, the unrouted list handler, and 21e4a) replace them.
+// Player C9: 7fbe / 7fc0 (targets 21e48 / 21e4a) are now a player C9 start / interior PC (previous expectation 'unsupported animation machine PC');
+// 7f7a / 7f7c (targets 21e04, an unrouted slot-84 value, and 21e06) replace them.
 void path_policy(){
  struct Op {std::uint32_t op;const char*message;};
  const Op ops[]={{0x2,"unsupported animation scene update PC"},{0x1e,"unsupported animation scene update PC"},{0x22,"unsupported animation scene update PC"},
-  {0x7fff,"unaligned animation machine PC"},{0x1001,"unaligned animation machine PC"},{0x7fbe,"unsupported animation machine PC"},{0x7fc0,"unsupported animation machine PC"}};
+  {0x7fff,"unaligned animation machine PC"},{0x1001,"unaligned animation machine PC"},{0x7f7a,"unsupported animation machine PC"},{0x7f7c,"unsupported animation machine PC"}};
  for(unsigned int i=0;i<sizeof(ops)/sizeof(ops[0]);++i){Bytes ram=zero_ram();put(ram,P0,4,STR);put(ram,STR,2,0x00);put(ram,STR+6,2,ops[i].op);
   reject(ram,state(0x19e64),STOP,ops[i].message);}
  // From the frame entry: the opcode 0002 of node 0 fails after the node/camera writes.

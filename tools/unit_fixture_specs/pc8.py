@@ -85,9 +85,12 @@ TRAPS = ()
 # after a routed block is not the interior of a routed block.
 EXIT_STOPS = (0x1f48a, 0x1fb28, 0x1fd3c, 0x21ea0, 0x21d0e, 0x2210c, 0x223a0, 0x223d6,
               0x1d3e0, 0x4eb6a, 0x1dc8e, 0x1dccc, 0x208fa, 0x1efd6, 0x1f070, 0x21dd0, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21ca4,
-              0x21fa6, 0x4e69a)
+              0x21fa6, 0x4e69a,
+              0x21e48)
 UNIT_EXITS = EXIT_STOPS[:8]             # the C8 later-unit stops (deferred leaders)
-ROUTED_LATER = ()
+# later-unit stops routed since (player C9: 1f48a 1fb28 21d0e 2210c 223a0 223d6 208fa 1f070 21ca4, and the list handler 21e48 of the JMP (A1) 21d9e,
+# appended to EXIT_STOPS so that the C8 runs stop there as before): still declared stops of the C8 runs
+ROUTED_LATER = (0x1f48a, 0x1fb28, 0x21d0e, 0x2210c, 0x223a0, 0x223d6, 0x208fa, 0x1f070, 0x21ca4, 0x21e48)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1f476, 0x1f47c), (0x1fa68, 0x1fa70), (0x1fd2e, 0x1fd34), (0x4d0e0, 0x4d0e6), (0x21e6a, 0x21e72))
 PASS_CHAINS = ()
@@ -530,7 +533,8 @@ def build():
         require(mine(jmp) and jmp in STARTS, ('JMP (A1) block', hex(jmp)))
         for t in handlers:
             require(t == 0x21e48 or unit_of(t) is not None, ('list handler must be routed (21e48: a declared stop)', hex(t)))
-    require(unit_of(0x21e48) is None, 'the list handler 21e48 stays unrouted')
+    # player C9 routes the list handler 21e48 since: it stays a declared stop of the C8 runs (EXIT_STOPS, ROUTED_LATER)
+    require(unit_of(0x21e48) in (None, 'animation_player_c9_block'), 'the list handler 21e48 stays unrouted or a C9 start')
     rng = random.Random(0xC8A8)
     bases = []
     pointers = []
@@ -1051,7 +1055,9 @@ def error_fixtures(bases, add):
         err('21d9e-a1-%x' % v, U.with_host_writes(st, regs=dict(a1=v), pc=0x21d9e), ERROR_JUMP, 0x21d9e)
     for v in (0x21e3a, 0x21e48, 0, 0x21d61, 0x1021602):
         err('21e76-a1-%x' % v, U.with_host_writes(st, regs=dict(a1=v), pc=0x21e76), ERROR_JUMP, 0x21e76)
-    err('21d9e-a1-21e48-entry', U.with_host_writes(st, regs=dict(a1=0x21e48), pc=0x21d9e), unrouted, 0x21e48)
+    # 21e48 is a player C9 start since C9 (previous expectation 'unsupported animation machine PC' at 21e48): its MOVE.B #1,aa(A6) with A6 = 0 writes
+    # fixed ROM and keeps the failing PC 21e48
+    err('21d9e-a1-21e48-entry', U.with_host_writes(st, regs=dict(a1=0x21e48, a6=0), pc=0x21d9e), 'unsupported animation machine write device', 0x21e48)
     # odd node / stack / A0 / A4: the entry block fails (the row's stop is the PC right after the failing block)
     err('1f3f0-odd-node', U.with_host_writes(st, regs=dict(a6=a6 + 1), pc=0x1f3f0), odd_write, 0x1f3f0, stop=0x1f418)
     err('1fcce-odd-node', U.with_host_writes(st, regs=dict(a6=a6 + 1), pc=0x1fcce), odd_write, 0x1fcce, stop=0x1fcd4)
@@ -1067,13 +1073,15 @@ def error_fixtures(bases, add):
     # failures after executed blocks:
     #   1f45c (D0.W & c) -> 1f48a (deferred, unrouted); 1fb1e (BYTE 15 bit 7) -> 1fb28; 21e52 (BYTE 9d 1 / 80) -> 21ea0 / 21d0e; 21e7c .. 21e94
     #   (D0 bits 0 / 1 / 4) -> 223a0 / 223d6 / 2210c
-    err('1f45c-then-1f48a', U.with_host_writes(st, regs=dict(d0=4), pc=0x1f45c), unrouted, 0x1f48a)
-    err('1fb1e-then-1fb28', U.with_host_writes(st, [((a6 + 0x15) & 0xffff, 1, 0x80)], pc=0x1fb1e), unrouted, 0x1fb28)
+    #   (1f48a 1fb28 21d0e 223a0 223d6 2210c are player C9 starts since C9; previous expectation 'unsupported animation machine PC' there: the first BSR.W
+    #   of 1f48a / 21d0e / 223a0 / 223d6 / 2210c at an odd A7 and the MOVE.L #1ec74,(A6) of 1fb28 at an odd A6 keep the failing PCs)
+    err('1f45c-then-1f48a', U.with_host_writes(st, regs=dict(d0=4, a7=a7 + 1), pc=0x1f45c), odd_word, 0x1f48a)
+    err('1fb1e-then-1fb28', U.with_host_writes(st, [((a6 + 1 + 0x15) & 0xffff, 1, 0x80)], regs=dict(a6=a6 + 1), pc=0x1fb1e), odd_write, 0x1fb28)
     err('21e52-then-21ea0', U.with_host_writes(st, [((a6 + 0x9d) & 0xffff, 1, 1)], pc=0x21e52), unrouted, 0x21ea0)
-    err('21e52-then-21d0e', U.with_host_writes(st, [((a6 + 0x9d) & 0xffff, 1, 0x80)], pc=0x21e52), unrouted, 0x21d0e)
-    err('21e7c-then-223a0', U.with_host_writes(st, regs=dict(d0=1), pc=0x21e7c), unrouted, 0x223a0)
-    err('21e84-then-223d6', U.with_host_writes(st, regs=dict(d0=2), pc=0x21e84), unrouted, 0x223d6)
-    err('21e8c-then-2210c', U.with_host_writes(st, regs=dict(d0=0x10), pc=0x21e8c), unrouted, 0x2210c)
+    err('21e52-then-21d0e', U.with_host_writes(st, [((a6 + 0x9d) & 0xffff, 1, 0x80)], regs=dict(a7=a7 + 1), pc=0x21e52), odd_word, 0x21d0e)
+    err('21e7c-then-223a0', U.with_host_writes(st, regs=dict(d0=1, a7=a7 + 1), pc=0x21e7c), odd_word, 0x223a0)
+    err('21e84-then-223d6', U.with_host_writes(st, regs=dict(d0=2, a7=a7 + 1), pc=0x21e84), odd_word, 0x223d6)
+    err('21e8c-then-2210c', U.with_host_writes(st, regs=dict(d0=0x10, a7=a7 + 1), pc=0x21e8c), odd_word, 0x2210c)
     #   RTS at an odd A7 after executed blocks: 1d04e (D0 & 50 = 0) -> 1d064; 1d076 (BYTE 61 bit 1) -> 1d084; 4d1c0 (WORD (A4) = 0) -> 4d206
     err('1d04e-then-1d064', U.with_host_writes(st, regs=dict(a7=a7 + 1, d0=0), pc=0x1d04e), odd_word, 0x1d064)
     err('1d076-then-1d084', U.with_host_writes(st, [((a6 + 0x61) & 0xffff, 1, 2)], regs=dict(a7=a7 + 1), pc=0x1d076), odd_word, 0x1d084)
