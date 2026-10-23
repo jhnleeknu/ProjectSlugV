@@ -504,7 +504,7 @@ def gen_errors():
         err('unknown-c-%x' % cp, cp, 'player c2 caller requires known carry', cp, stop=SUCC[cp][0])
     # the live JMP (A1) 1aa38 (contract decision 2): a RAM target / a C3 start / the interior PC 1ce0e / an odd target
     err('jmp-ram', 0x1aa2c, unrouted, 0x10fe40, a1=0x10fe40)
-    err('jmp-1ee00', 0x1aa2c, unrouted, 0x1ee00, a1=0x1ee00)
+    err('jmp-1ed70', 0x1aa2c, unrouted, 0x1ed70, a1=0x1ed70)          # player C3 refresh: was jmp-1ee00 (1ee00 is a C3 start now); 1ed70 is ROM data
     err('jmp-interior', 0x1aa2c, inside, 0x1ce0e, a1=0x1ce0e)
     err('jmp-odd', 0x1aa2c, 'unaligned animation machine PC', 0x1c1e3, a1=0x1c1e3)
     err('jmp-chain', 0x1a9e8, unrouted, 0x10fe40, puts=((NODE + 0x6e, 1, 6), (A5 + 0x5434, 4, 0x10fe40), (NODE + 0x3e, 4, 0x10d2d6)))

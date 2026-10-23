@@ -945,7 +945,10 @@ def boundary_zero_step(exe, base, resources):
 # API-only control now succeeds. Only the superseding outcome is accepted (never both); the rejection control moved to even work-RAM PCs (below).
 # 49bca: area-C unit C1 (player_c1 block start, contract animation-machine-player-c1-contract.md); former expectation 'unsupported animation machine PC',
 # from the frozen base state it now completes at ff000 (observed with this verifier's harness, scratch c1/work/ip_probe.py)
-SUPERSEDED_OUTSIDE = {0x4d81c: 'F1c2', 0x1bee4: 'F1b', 0x49be0: 'F4 U06', 0xe73f8: 'F4 U06', 0x49c38: 'FR6', 0x49bca: 'area C C1 (player_c1)'}
+# player C3 refresh: 48384 (was rejected with 'unsupported animation machine PC') is a C3 block start; from the base state it returns to ff000
+# (scratch c3/work/ip_probe.py)
+SUPERSEDED_OUTSIDE = {0x4d81c: 'F1c2', 0x1bee4: 'F1b', 0x49be0: 'F4 U06', 0xe73f8: 'F4 U06', 0x49c38: 'FR6', 0x49bca: 'area C C1 (player_c1)',
+                      0x48384: 'area C C3 (player_c3)'}
 WORK_RAM_REJECT_PCS = (0x10fe00, 0x10fe02, 0x10fefe)    # code never executes in work RAM: routing always gives 'unsupported animation machine PC'
 
 

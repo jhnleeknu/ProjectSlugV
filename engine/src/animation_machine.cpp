@@ -1194,6 +1194,16 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // Clear and 1e016 the SUB.W borrow in their own block (no incoming C needed); every other C2 block stays Unknown.
     case 0x1d1d6:case 0x1d58e:case 0x1d59c:case 0x1ed80:case 0x1fa44:case 0x1f296:case 0x1f802:case 0x1fac0:
     case 0x1cb18:case 0x1ed34:case 0x1ed3c:case 0x1ed3e:case 0x1ed48:
+    // Player C3 blocks: the 22 consumers 1ed26 1ee32 1ee86 (BCC / BCS, 1cb08), 1ee04 (BCS, 1ed34 of C2), 1ee16 (BCC, 1dfe6), 1ee26 1eea4 1eec2
+    // (BCS, 1ed22), 1ee3c (BCC, 484e2), 1ee7a (BCS, 4c1de), 1f1ca (BCC, 49fc6), 201b8 (BCC, 4d0a4), 201e4 (BCC, 4de9c), 202da (BCS, 49c38),
+    // 2161c 21c6e 221da (BCC, 215e6), 21c3a (BCS, 21bc6), 21c42 (BCS, 21baa), 21c48 (BCS, 21c1c), 21c9c (BCS, 21be6), 36282 (BCC, 482aa), and the 4
+    // blocks that pass the incoming C: 1ee00 (BSR 1ed34: the C Clear of C2 1edf6 goes to 1ee04 through 1ed34 / its RTS), the RTS 1ed32 (1ed30 CMP.W
+    // borrow / 1ed26 Clear), 215f6 (215ec CMPA Clear) and 21c1a (21c06 CMP.W Clear).  215ec 21bc0 21be0 21bfa 21c1c 48392 4d100 4debc 4ded4 set
+    // Clear, 215fc 21bda 48362 4deca Set, 1ed30 21bb2 21c06 the compare borrow in their own block; every other C3 block stays Unknown (the Z reader
+    // 1ee56 recomputes the Z of 1cb08 from memory).
+    case 0x1ed26:case 0x1ee04:case 0x1ee16:case 0x1ee26:case 0x1ee32:case 0x1ee3c:case 0x1ee7a:case 0x1ee86:case 0x1eea4:case 0x1eec2:case 0x1f1ca:
+    case 0x201b8:case 0x201e4:case 0x202da:case 0x2161c:case 0x21c3a:case 0x21c42:case 0x21c48:case 0x21c6e:case 0x21c9c:case 0x221da:case 0x36282:
+    case 0x1ee00:case 0x1ed32:case 0x215f6:case 0x21c1a:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1812,6 +1822,16 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x1ed34 && next.pc<0x1ed70) || (next.pc>=0x1ed78 && next.pc<0x1ee00) || (next.pc>=0x1eee0 && next.pc<0x1eeea) ||
                 (next.pc>=0x1f1d8 && next.pc<0x1f2a4) || (next.pc>=0x1f7a4 && next.pc<0x1f810) || (next.pc>=0x1fa3c && next.pc<0x1fa68) ||
                 (next.pc>=0x1fa90 && next.pc<0x1fafc))ok=animation_player_c2_block(c);
+            else if ((next.pc>=0x1cb40 && next.pc<0x1cb44) || (next.pc>=0x1cde0 && next.pc<0x1cdea) || (next.pc>=0x1cdf0 && next.pc<0x1cdfe) || (next.pc>=0x1ed22 && next.pc<0x1ed34) || (next.pc>=0x1ee00 && next.pc<0x1eee0) ||
+                (next.pc>=0x1f126 && next.pc<0x1f1d8) || (next.pc>=0x201a2 && next.pc<0x201bc) || (next.pc>=0x201d0 && next.pc<0x20240) ||
+                (next.pc>=0x2024a && next.pc<0x20268) || (next.pc>=0x20290 && next.pc<0x202ac) || (next.pc>=0x202b6 && next.pc<0x20320) ||
+                (next.pc>=0x20516 && next.pc<0x20544) || (next.pc>=0x20626 && next.pc<0x206cc) || (next.pc>=0x206d2 && next.pc<0x206d4) ||
+                (next.pc>=0x2156a && next.pc<0x21622) || (next.pc>=0x21baa && next.pc<0x21c12) || (next.pc>=0x21c1a && next.pc<0x21c72) ||
+                (next.pc>=0x21c74 && next.pc<0x21ca4) || (next.pc>=0x21f30 && next.pc<0x21f4c) || (next.pc>=0x21f58 && next.pc<0x21f78) ||
+                (next.pc>=0x21ffc && next.pc<0x22028) || (next.pc>=0x221ca && next.pc<0x22238) || (next.pc>=0x361e4 && next.pc<0x36292) ||
+                (next.pc>=0x48350 && next.pc<0x48368) || (next.pc>=0x48384 && next.pc<0x4838c) || (next.pc>=0x48392 && next.pc<0x48398) ||
+                (next.pc>=0x484ca && next.pc<0x484d2) || (next.pc>=0x4d0a4 && next.pc<0x4d0cc) || (next.pc>=0x4d100 && next.pc<0x4d106) ||
+                (next.pc>=0x4de9c && next.pc<0x4dee2) || (next.pc>=0xe8b5a && next.pc<0xe8b7e))ok=animation_player_c3_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}

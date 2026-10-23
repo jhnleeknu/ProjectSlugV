@@ -77,8 +77,12 @@ EXTERNAL_QUEUE_EMPTY = 'animation machine external read queue empty'
 # the routed continuation ends with the same external-read queue error as e8a1c / 4b82e (the continuation unit is not traced [U]); 4abc2 is an FR7
 # interior PC ('unsupported animation objects fr7 PC').  Only the superseding outcome is accepted; the unrouted controls are the work-RAM PCs below.
 SUPERSEDED_OUTSIDE = {0x4b830: 'unsupported animation objects n03 PC', 0xe8a1c: EXTERNAL_QUEUE_EMPTY, 0x4b82e: EXTERNAL_QUEUE_EMPTY,
-                      0x4abc0: EXTERNAL_QUEUE_EMPTY, 0x4abc2: 'unsupported animation objects fr7 PC'}
-SUPERSEDED_CLASS = {0x4b830: 'superseded_by_F4_N03', 0x4abc0: 'superseded_by_FR7_start_then_routed_continuation_unit_not_traced', 0x4abc2: 'superseded_by_FR7_interior'}
+                      0x4abc0: EXTERNAL_QUEUE_EMPTY, 0x4abc2: 'unsupported animation objects fr7 PC',
+                      # player C3 refresh (was UNSUPPORTED_MACHINE for both): e8b5a is a C3 block start (it runs into the FR7 tail e8b7e / e8b80 and an
+                      # undeclared input read), e8b5c is the interior of that block (scratch c3/work/bc_probe.py on the verifier's base row)
+                      0xe8b5a: EXTERNAL_QUEUE_EMPTY, 0xe8b5c: 'unsupported animation player c3 PC'}
+SUPERSEDED_CLASS = {0x4b830: 'superseded_by_F4_N03', 0x4abc0: 'superseded_by_FR7_start_then_routed_continuation_unit_not_traced', 0x4abc2: 'superseded_by_FR7_interior',
+                    0xe8b5a: 'superseded_by_player_C3_start_then_routed_continuation_unit_not_traced', 0xe8b5c: 'superseded_by_player_C3_interior'}
 DEBUG_ROWS = int(os.environ.get('BUFCUE_DEBUG_ROWS', '0'))     # development switch only: the reported run is always the full set
 
 

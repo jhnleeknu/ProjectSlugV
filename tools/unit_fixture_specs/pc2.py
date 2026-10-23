@@ -88,6 +88,7 @@ TRAPS = ()
 # a straight-line unrouted PC after a C2 block is not the interior of a routed block)
 EXIT_STOPS = (0x1cb1a, 0x1cb38, 0x1cde0, 0x1cdf0, 0x1ce98, 0x1cfde, 0x1ceb0, 0x1cec2, 0x1d398, 0x1ebbe, 0x1ee00, 0x1eeea, 0x1f2a4, 0x1fa68, 0x1fafc,
               0x201a2, 0x48384, 0xe8b5a, 0x1de3c, 0x1e21c, 0x1e8de)
+ROUTED_LATER = (0x1ee00, 0x201a2, 0x48384, 0xe8b5a, 0x1cde0, 0x1cdf0)   # later-unit stops routed since (player C3): still declared stops of the C2 runs
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1d588, 0x1d58e), (0x1d592, 0x1d59c), (0x1ed78, 0x1ed80), (0x1fa3c, 0x1fa44), (0x1f290, 0x1f296), (0x1f7fc, 0x1f802), (0x1faba, 0x1fac0))
 CHAIN_49FC6 = (0x1f290, 0x1f7fc, 0x1faba)
@@ -448,7 +449,9 @@ def build():
     require(len(STARTS) == 196 and len(STARTS_SET) == 196, ('starts', len(STARTS), len(STARTS_SET)))
     require(unit_of(SENTINEL) is None and not mine(SENTINEL), 'sentinel must be unrouted')
     for t in TRAPS + EXIT_STOPS:
-        require(unit_of(t) is None and not mine(t), ('later-unit stop must stay unrouted', hex(t)))
+        # player C3 refresh: 1ee00 201a2 48384 e8b5a 1cde0 1cdf0 are C3 block starts now (routed); they stay declared stops of the C2 runs so that the C2 fixture set
+        # is unchanged (was: every later-unit stop unrouted)
+        require((unit_of(t) is None or t in ROUTED_LATER) and not mine(t), ('later-unit stop must stay unrouted', hex(t)))
     for s in STARTS:
         require(unit_of(s) == 'animation_player_c2_block', ('start is not routed to player c2', hex(s), unit_of(s)))
     rng = random.Random(0xC2A2)
@@ -1023,11 +1026,13 @@ def error_fixtures(bases, add):
     odd_write = 'invalid animation machine write size/alignment'
     unrouted = 'unsupported animation machine PC'
     # the live JMP (A1) 1aa38 (contract decision 2): a target that is not a routed block start fails at the next dispatch; an odd target is unaligned
-    for a1, text in ((0x201a2, unrouted), (0x1ce0e, ERROR_PC), (0x1c1e3, 'unaligned animation machine PC'), (0x1ee00, unrouted)):
+    # player C3 refresh: the unrouted targets were the C3 starts 201a2 / 1ee00 (rows 1aa2c-jmp-201a2, 1aa2c-jmp-1ee00, 1a9e8-jmp-1ee00); C3 routes them, so
+    # the unrouted targets are now the ROM data LONGs 1ed70 / 1ed74 between the C2 ranges (never code)
+    for a1, text in ((0x1ed70, unrouted), (0x1ce0e, ERROR_PC), (0x1c1e3, 'unaligned animation machine PC'), (0x1ed74, unrouted)):
         err('1aa2c-jmp-%05x' % a1, U.with_host_writes(st, regs=dict(a1=a1), pc=0x1aa2c), text, a1)
-    #   1a9e8 -> 1a9f2 (LONG 5434(A5) = 1ee00) -> 1a9fe (LONG 3e(A6) = 109156) -> 1aa2c -> JMP 1ee00 (unit C3, unrouted)
-    err('1a9e8-jmp-1ee00', U.with_host_writes(st, [((a6 + 0x6e) & 0xffff, 1, 6), ((a5 + 0x5434) & 0xffff, 4, 0x1ee00), ((a6 + 0x3e) & 0xffff, 4, 0x109156)],
-                                               pc=0x1a9e8), unrouted, 0x1ee00)
+    #   1a9e8 -> 1a9f2 (LONG 5434(A5) = 1ed70) -> 1a9fe (LONG 3e(A6) = 109156) -> 1aa2c -> JMP 1ed70 (ROM data, unrouted)
+    err('1a9e8-jmp-1ed70', U.with_host_writes(st, [((a6 + 0x6e) & 0xffff, 1, 6), ((a5 + 0x5434) & 0xffff, 4, 0x1ed70), ((a6 + 0x3e) & 0xffff, 4, 0x109156)],
+                                               pc=0x1a9e8), unrouted, 0x1ed70)
     # odd node / stack / A0 / A4
     err('1aa2c-odd-node', U.with_host_writes(st, regs=dict(a6=a6 + 1), pc=0x1aa2c), odd_word, 0x1aa2c)
     err('1cd98-odd-node', U.with_host_writes(st, regs=dict(a6=a6 + 1), pc=0x1cd98), odd_word, 0x1cd98, stop=0x1cdb0)

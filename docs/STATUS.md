@@ -2527,3 +2527,14 @@
   - IO 166,744(변화 없음), 불일치 0. C2 코드는 `48350`(C3)과 `4e8e6`(C4) 뒤에만 실행되므로 C2만으로는 IO 진척이 없다(계획과 같음). 수용 키는 `frontiers_confirmed`만 false다(`4e8e6`).
   - 남은 실행 PC: C 757 → 659.
   - 계약: `animation-machine-player-c2-contract.md`.
+
+## 2026-10-22 — 플레이어 C3(230 block)
+
+- [F] C3(230 block): `1edb0` `20128` `215e6` 계열과 helper `48350` `48384` `4d0a4` `4de9c` `e8b5a` 등.
+  - 범위 보정(계약 결정 10): 보정 관측은 TB의 첫 routing 밖 PC만 기록하므로 직선 연속 `1cde0` `1cdf0` `1cdfa` `202a0`이 숨어 있었다. native trace로 찾아 C3에 넣었다.
+  - 계산 점프 `201a6 JSR (A4)`, 표 `2031c`, `21620`/`221de JMP (A1)`은 ROM 자료가 쓰는 목표만 허용하고 나머지는 checked error다.
+  - 실제 ROM 7,500건 불일치 0. batch `f4`는 Unicorn 2.1.4 자체 코드 생성기 abort(try 618) 때문에 그 try만 건너뛰고 다시 돌렸다.
+  - 변이 735개 중 715개 검출, 20개 동등. V1 1,831(두 번 같음). 회귀 spec 36개, legacy 검증기 10개 통과. frame 비교 변화 없음.
+  - IO 166,744(변화 없음), 불일치 0. `48350`이 frontier에서 빠졌다. 수용 키는 `frontiers_confirmed`만 false다(TB 안에 숨은 `4e8e6`, demo `1d398`).
+  - 남은 실행 PC: C 659 → 529.
+  - 계약: `animation-machine-player-c3-contract.md`.
