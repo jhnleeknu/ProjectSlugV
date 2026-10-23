@@ -436,8 +436,10 @@ void boundaries(){
  // "e5286" (JSR 48256) left this list: 48256 is a block start of the frontier unit FR2b (contract animation-machine-frontier-fr2b-contract.md),
  // so the run continues past it; its success fixture still stops at 48256 (stop-only check; the former rollback expectation was
  // "unsupported animation machine PC"; F4 unit test boundary convention).
- const char* names[]={"39be-trap","39fc-trap","8ebe-trap","8ebe-trap-ff","39a4-zero","39c8-next-x","3a52",
-  "e5086-p1","e5086-p2"};
+ // "e5086-p1" / "e5086-p2" (JSR e6496) left this list for the same reason: e6496 is a block start of the player unit C6 (contract
+ // animation-machine-player-c6-contract.md), so the run continues past it; both success fixtures still stop at e6496 (stop-only check; the former
+ // rollback expectation was "unsupported animation machine PC").
+ const char* names[]={"39be-trap","39fc-trap","8ebe-trap","8ebe-trap-ff","39a4-zero","39c8-next-x","3a52"};
  for(unsigned int i=0;i<sizeof(names)/sizeof(names[0]);++i){const Fixture&f=fixture_of(names[i]);Bytes ram=base_ram(f.puts);State s=state_of(f.regs,f.entry,f.carry);
   reject(ram,s,STOP,"unsupported animation machine PC");}
  // 8f4e / 8f5a continue at 36ba, now an F5 controller C1 block start (digit renderer): past it the renderer reads the BCD string, which this

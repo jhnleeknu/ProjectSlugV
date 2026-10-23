@@ -96,7 +96,8 @@ EXIT_STOPS = (0x21564, 0x208fa, 0x2210c,
               0x1e21c, 0x1e8de, 0x1ebbe, 0x1fa68, 0x1fafc, 0x1fc96, 0x1fd50, 0x201bc, 0x206cc, 0x21662, 0x21ca4, 0x21d0e, 0x21fa6, 0x4838c, 0x4d0cc,
               0x4e69a, 0x4e8f8, 0x4eb58)
 UNIT_EXITS = EXIT_STOPS[:3]             # the C5 later-unit stops and deferred leaders
-ROUTED_LATER = ()
+# later-unit stops routed since (player C6: 21564 1efa4 4e572 1d398 1ebbe 206cc 21662 4838c 4e8f8 4eb58): still declared stops of the C5 runs
+ROUTED_LATER = (0x21564, 0x1efa4, 0x4e572, 0x1d398, 0x1ebbe, 0x206cc, 0x21662, 0x4838c, 0x4e8f8, 0x4eb58)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the Z chain 1c3dc -> 1c51c -> 1c3e2
 CHAINS = ((0x1c36e, 0x1c374), (0x1c3c0, 0x1c3ca), (0x2027e, 0x20288), (0x20e50, 0x20e56), (0x214ac, 0x214b2), (0x21f70, 0x21f78), (0xcddee, 0xcddfe),
           (0x1c3dc, 0x1c3e2))
@@ -1150,8 +1151,9 @@ def error_fixtures(bases, add):
         odd_word, 0x21540)
     #   4d628 (D0.B = 0, WORD 5cba(A5) = 0) -> 4d62e -> 4d63a -> 4d6a8 RTS at an odd A7
     err('4d628-then-4d6a8', U.with_host_writes(st, [((0x108000 + 0x5cba) & 0xffff, 2, 0)], regs=dict(d0=0, a7=a7 + 1), pc=0x4d628), odd_word, 0x4d6a8)
-    #   214d6 (BYTE 88 = 0) -> SUBQ.B borrow -> 21564 (C6, unrouted)
-    err('214d6-then-21564', U.with_host_writes(st, [((a6 + 0x88) & 0xffff, 1, 0)], pc=0x214d6), unrouted, 0x21564)
+    #   214d6 (BYTE 88 = 0) -> SUBQ.B borrow -> 21564 (player C6 since; was: unrouted at 21564, error-214d6-then-21564) -> JMP 2a00 -> BSR.B 299c at
+    #   an odd A7
+    err('214d6-then-2a00', U.with_host_writes(st, [((a6 + 0x88) & 0xffff, 1, 0)], regs=dict(a7=a7 + 1), pc=0x214d6), odd_word, 0x2a00)
     #   208f2 (BYTE 5e negative) -> 208fa (deferred leader, unrouted)
     err('208f2-then-208fa', U.with_host_writes(st, [((a6 + 0x5e) & 0xffff, 1, 0x80)], pc=0x208f2), unrouted, 0x208fa)
     #   21f8a (D0 bit 4) -> 2210c (deferred leader, unrouted)

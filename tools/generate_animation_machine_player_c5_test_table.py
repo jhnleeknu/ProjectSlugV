@@ -687,7 +687,8 @@ def gen_errors():
     err('20f04-then-20f20', 0x20f04, odd, 0x20f20, a7=SP + 1)
     err('21524-then-21540', 0x21524, odd, 0x21540, a7=SP + 1, puts=((NODE + 0x46, 2, 0x100),))
     err('4d628-then-4d6a8', 0x4d628, odd, 0x4d6a8, a7=SP + 1)
-    err('214d6-then-21564', 0x214d6, unrouted, 0x21564)
+    # 214d6 (BYTE 88 = 0) -> the SUBQ.B borrow -> 21564 (player C6 since; was: unrouted at 21564) -> JMP 2a00 -> BSR.B 299c at an odd A7
+    err('214d6-then-2a00', 0x214d6, odd, 0x2a00, a7=SP + 1)
     err('208f2-then-208fa', 0x208f2, unrouted, 0x208fa, puts=((NODE + 0x5e, 1, 0x80),))
     err('21f8a-then-2210c', 0x21f8a, unrouted, 0x2210c, d0=0x10)
     err('2093a-then-20952', 0x2093a, unrouted, 0x20952)

@@ -870,6 +870,11 @@ def negatives(exe, base, st, resources):
                             observed_pc=hex(actual[0]['pc']), observed_status=actual[0]['status'], API_only_control=True, native_execution_equivalence_claimed=False, superseded_by=SUPERSEDED_OUTSIDE[pc],
                             native_exception_rollback_equivalence_claimed=False))
             continue
+        if pc in SUPERSEDED_OUTSIDE_ERRORS:
+            by, error = SUPERSEDED_OUTSIDE_ERRORS[pc]
+            reject(exe, 'outside_entry_%06x' % pc, base, {'pc': pc}, 0xff000, error, out, resources)
+            out[-1].update(former_expected_API_error=UNSUPPORTED_MACHINE, superseded_by=by)
+            continue
         reject(exe, 'outside_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, out, resources)
     # work-RAM controls (replace the rejection that 49c38 no longer gives): every even PC in 10fe00..10fefe is rejected with the exact string, state preserved
     for pc in WORK_RAM_REJECT_PCS:
@@ -948,7 +953,11 @@ def boundary_zero_step(exe, base, resources):
 # player C3 refresh: 48384 (was rejected with 'unsupported animation machine PC') is a C3 block start; from the base state it returns to ff000
 # (scratch c3/work/ip_probe.py)
 SUPERSEDED_OUTSIDE = {0x4d81c: 'F1c2', 0x1bee4: 'F1b', 0x49be0: 'F4 U06', 0xe73f8: 'F4 U06', 0x49c38: 'FR6', 0x49bca: 'area C C1 (player_c1)',
-                      0x48384: 'area C C3 (player_c3)'}
+                      0x48384: 'area C C3 (player_c3)', 0x1d63a: 'area C C6 (player_c6)', 0x1d698: 'area C C6 (player_c6)'}
+# later-unit starts whose frozen-input run ends in a different checked error (rollback): 1daba (area C C6) on the base row takes WORD 78 = 0 ->
+# 1daee -> 1d63a -> 43e08 -> 1d90a -> 48210 -> 1d914 -> C2 1ddd0, whose continuation reads an unsupported device address (was: the dispatch of 1daba
+# itself, 'unsupported animation machine PC').
+SUPERSEDED_OUTSIDE_ERRORS = {0x1daba: ('area C C6 (player_c6)', 'unsupported program bus device address')}
 WORK_RAM_REJECT_PCS = (0x10fe00, 0x10fe02, 0x10fefe)    # code never executes in work RAM: routing always gives 'unsupported animation machine PC'
 
 

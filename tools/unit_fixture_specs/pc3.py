@@ -101,9 +101,10 @@ EXIT_STOPS = (0x1cb44, 0x1fa68, 0x201bc, 0x20240, 0x20268, 0x202ac, 0x20544, 0x2
               # the later-unit stops of the C2 blocks that the C3 runs pass through (pc2 EXIT_STOPS that are still unrouted; the straight-line ones
               # 1ce98 1ceb0 1d398 are not interiors of a routed block; 1cde0 1cdf0 are C3 starts now, contract decision 10)
               0x1cb1a, 0x1cb38, 0x1ce98, 0x1cfde, 0x1ceb0, 0x1cec2, 0x1d398, 0x1ebbe, 0x1eeea, 0x1f2a4, 0x1fafc, 0x1de3c, 0x1e21c, 0x1e8de)
-# later-unit stops routed since (player C4: 21c72 1ceb0 1cec2 1eeea; player C5: 1cb44 20240 20268 202ac 20544 21c12 21f4c 21f78 1cb1a 1cb38): still
-# declared stops of the C3 runs
-ROUTED_LATER = (0x21c72, 0x1ceb0, 0x1cec2, 0x1eeea, 0x1cb44, 0x20240, 0x20268, 0x202ac, 0x20544, 0x21c12, 0x21f4c, 0x21f78, 0x1cb1a, 0x1cb38)
+# later-unit stops routed since (player C4: 21c72 1ceb0 1cec2 1eeea; player C5: 1cb44 20240 20268 202ac 20544 21c12 21f4c 21f78 1cb1a 1cb38; player
+# C6: 206cc 21662 4838c 1d398 1ebbe): still declared stops of the C3 runs
+ROUTED_LATER = (0x21c72, 0x1ceb0, 0x1cec2, 0x1eeea, 0x1cb44, 0x20240, 0x20268, 0x202ac, 0x20544, 0x21c12, 0x21f4c, 0x21f78, 0x1cb1a, 0x1cb38,
+                0x206cc, 0x21662, 0x4838c, 0x1d398, 0x1ebbe)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1edf6, 0x1ee04), (0x1ed22, 0x1ed26), (0x1ee12, 0x1ee16), (0x1ee1a, 0x1ee26), (0x1ee2a, 0x1ee32), (0x1ee36, 0x1ee3c), (0x1ee74, 0x1ee7a),
           (0x1ee7e, 0x1ee86), (0x1ee98, 0x1eea4), (0x1eeb6, 0x1eec2), (0x1f1c4, 0x1f1ca), (0x201ae, 0x201b8), (0x201da, 0x201e4), (0x202d0, 0x202da),
