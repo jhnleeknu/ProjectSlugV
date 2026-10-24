@@ -653,7 +653,9 @@ def gen_errors():
         err('209ce-d0-%x-entry' % v, 0x209ce, unrouted, 0x209da + 4 * (v & 0xff), d0=v)
     for v in (0x21622, 0x21b26, 0, 0x1021602, 0x21603, 0x21c66):
         err('21f7c-%x' % v, 0x21f7c, jump, 0x21f7c, a1=v)
-    err('21f7c-listed-21e48', 0x21f7c, unrouted, 0x21e48, a1=0x21e48)
+    # 21e48 is a player C9 start since C9 (previous row: 'unsupported animation machine PC' at 21e48): its MOVE.B #1,aa(A6) with A6 = 0 writes fixed ROM
+    # and keeps the failing PC 21e48
+    err('21f7c-listed-21e48', 0x21f7c, 'unsupported animation machine write device', 0x21e48, a1=0x21e48, a6=0)
     # 21e3a is a player C8 start since C8 (previous row: 'unsupported animation machine PC' at 21e3a); the MOVE.B #1,aa(A6) of 21e3a with A6 = 0
     # writes fixed ROM and keeps the failing PC 21e3a
     err('21f7c-listed-21e3a', 0x21f7c, 'unsupported animation machine write device', 0x21e3a, a1=0x21e3a, a6=0)
@@ -691,8 +693,10 @@ def gen_errors():
     err('4d628-then-4d6a8', 0x4d628, odd, 0x4d6a8, a7=SP + 1)
     # 214d6 (BYTE 88 = 0) -> the SUBQ.B borrow -> 21564 (player C6 since; was: unrouted at 21564) -> JMP 2a00 -> BSR.B 299c at an odd A7
     err('214d6-then-2a00', 0x214d6, odd, 0x2a00, a7=SP + 1)
-    err('208f2-then-208fa', 0x208f2, unrouted, 0x208fa, puts=((NODE + 0x5e, 1, 0x80),))
-    err('21f8a-then-2210c', 0x21f8a, unrouted, 0x2210c, d0=0x10)
+    # 208fa / 2210c are player C9 starts since C9 (previous rows: 'unsupported animation machine PC' at 208fa / 2210c): the JSR ea680.l of 208fa and the
+    # BSR.W 1cd98 of 2210c at an odd A7 keep the failing PCs
+    err('208f2-then-208fa', 0x208f2, odd, 0x208fa, puts=((NODE + 0x5e, 1, 0x80),), a7=SP + 1)
+    err('21f8a-then-2210c', 0x21f8a, odd, 0x2210c, d0=0x10, a7=SP + 1)
     err('2093a-then-20952', 0x2093a, unrouted, 0x20952)
     err('1c356-then-1c4aa', 0x1c356, odd, 0x1c4aa, d1=0x13, a7=SP + 1)
 

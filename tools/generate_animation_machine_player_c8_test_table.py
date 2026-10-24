@@ -543,7 +543,9 @@ def gen_errors():
         err('jump-21d9e-%x' % v, 0x21d9e, jump, 0x21d9e, a1=v)
     for v in (0x21e3a, 0x21e48, 0, 0x21d61, 0x1021602, 0x21c24):
         err('jump-21e76-%x' % v, 0x21e76, jump, 0x21e76, a1=v)
-    err('entry-21d9e-21e48', 0x21d9e, unrouted, 0x21e48, a1=0x21e48)
+    # 21e48 is a player C9 start since C9 (previous row: 'unsupported animation machine PC' at 21e48): its MOVE.B #1,aa(A6) with A6 = 0 writes fixed ROM
+    # and keeps the failing PC 21e48
+    err('entry-21d9e-21e48', 0x21d9e, 'unsupported animation machine write device', 0x21e48, a1=0x21e48, a6=0)
     # the motion record A0 in fixed ROM outside the declared synthetic bytes (the ROM records 1cf1e / 1cf3e of the C4 table 1cfce)
     err('rom-1cfee-1cf1e', 0x1cfee, rom, 0x1cfee, a0=0x1cf1e)
     err('rom-1cffa-1cf3e', 0x1cffa, rom, 0x1cffa, a0=0x1cf3e)
@@ -564,13 +566,15 @@ def gen_errors():
     err('odd-stack-ea626', 0xea626, odd, 0xea626, a7=SP + 1)
     err('odd-stack-4d0ea', 0x4d0ea, odd, 0x4d0ea, a7=SP + 1)
     # failures after executed blocks (rollback; the failing PC differs from the entry):
-    err('1f45c-then-1f48a', 0x1f45c, unrouted, 0x1f48a, d0=4)
-    err('1fb1e-then-1fb28', 0x1fb1e, unrouted, 0x1fb28, puts=((NODE + 0x15, 1, 0x80),))
+    # 1f48a 1fb28 21d0e 223a0 223d6 2210c are player C9 starts since C9 (previous rows: 'unsupported animation machine PC' there): the first BSR.W of
+    # 1f48a / 21d0e / 223a0 / 223d6 / 2210c at an odd A7 and the MOVE.L #1ec74,(A6) of 1fb28 at an odd A6 keep the failing PCs
+    err('1f45c-then-1f48a', 0x1f45c, odd, 0x1f48a, d0=4, a7=SP + 1)
+    err('1fb1e-then-1fb28', 0x1fb1e, wodd, 0x1fb28, puts=((NODE + 1 + 0x15, 1, 0x80),), a6=NODE + 1)
     err('21e52-then-21ea0', 0x21e52, unrouted, 0x21ea0, puts=((NODE + 0x9d, 1, 1),))
-    err('21e52-then-21d0e', 0x21e52, unrouted, 0x21d0e, puts=((NODE + 0x9d, 1, 0x80),))
-    err('21e7c-then-223a0', 0x21e7c, unrouted, 0x223a0, d0=1)
-    err('21e84-then-223d6', 0x21e84, unrouted, 0x223d6, d0=2)
-    err('21e8c-then-2210c', 0x21e8c, unrouted, 0x2210c, d0=0x10)
+    err('21e52-then-21d0e', 0x21e52, odd, 0x21d0e, puts=((NODE + 0x9d, 1, 0x80),), a7=SP + 1)
+    err('21e7c-then-223a0', 0x21e7c, odd, 0x223a0, d0=1, a7=SP + 1)
+    err('21e84-then-223d6', 0x21e84, odd, 0x223d6, d0=2, a7=SP + 1)
+    err('21e8c-then-2210c', 0x21e8c, odd, 0x2210c, d0=0x10, a7=SP + 1)
     err('1fd34-then-1fd3c', 0x1fd34, unrouted, 0x1fd3c, carry=1)
     err('1d04e-then-1d064', 0x1d04e, odd, 0x1d064, a7=SP + 1)
     err('1d076-then-1d084', 0x1d076, odd, 0x1d084, a7=SP + 1, puts=((NODE + 0x61, 1, 2),))

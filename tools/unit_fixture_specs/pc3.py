@@ -102,9 +102,11 @@ EXIT_STOPS = (0x1cb44, 0x1fa68, 0x201bc, 0x20240, 0x20268, 0x202ac, 0x20544, 0x2
               # 1ce98 1ceb0 1d398 are not interiors of a routed block; 1cde0 1cdf0 are C3 starts now, contract decision 10)
               0x1cb1a, 0x1cb38, 0x1ce98, 0x1cfde, 0x1ceb0, 0x1cec2, 0x1d398, 0x1ebbe, 0x1eeea, 0x1f2a4, 0x1fafc, 0x1de3c, 0x1e21c, 0x1e8de)
 # later-unit stops routed since (player C4: 21c72 1ceb0 1cec2 1eeea; player C5: 1cb44 20240 20268 202ac 20544 21c12 21f4c 21f78 1cb1a 1cb38; player
-# C6: 206cc 21662 4838c 1d398 1ebbe; player C7: 1f2a4; player C8: 1fa68 201bc 4d0cc 1ce98 1cfde 1fafc): still declared stops of the C3 runs
+# C6: 206cc 21662 4838c 1d398 1ebbe; player C7: 1f2a4; player C8: 1fa68 201bc 4d0cc 1ce98 1cfde 1fafc; player C9: 21ca4 21d0e 2210c 223a0 223d6):
+# still declared stops of the C3 runs
 ROUTED_LATER = (0x21c72, 0x1ceb0, 0x1cec2, 0x1eeea, 0x1cb44, 0x20240, 0x20268, 0x202ac, 0x20544, 0x21c12, 0x21f4c, 0x21f78, 0x1cb1a, 0x1cb38,
-                0x206cc, 0x21662, 0x4838c, 0x1d398, 0x1ebbe, 0x1f2a4, 0x1fa68, 0x201bc, 0x4d0cc, 0x1ce98, 0x1cfde, 0x1fafc)
+                0x206cc, 0x21662, 0x4838c, 0x1d398, 0x1ebbe, 0x1f2a4, 0x1fa68, 0x201bc, 0x4d0cc, 0x1ce98, 0x1cfde, 0x1fafc, 0x21ca4, 0x21d0e, 0x2210c,
+                0x223a0, 0x223d6)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1edf6, 0x1ee04), (0x1ed22, 0x1ed26), (0x1ee12, 0x1ee16), (0x1ee1a, 0x1ee26), (0x1ee2a, 0x1ee32), (0x1ee36, 0x1ee3c), (0x1ee74, 0x1ee7a),
           (0x1ee7e, 0x1ee86), (0x1ee98, 0x1eea4), (0x1eeb6, 0x1eec2), (0x1f1c4, 0x1f1ca), (0x201ae, 0x201b8), (0x201da, 0x201e4), (0x202d0, 0x202da),
@@ -492,9 +494,10 @@ def build():
     for t in TRAPS + EXIT_STOPS:
         require((unit_of(t) is None or t in ROUTED_LATER) and not mine(t), ('later-unit stop must stay unrouted', hex(t)))
     for t in SLOT84 + LIST_21622 + tuple(range(0x20320, 0x20344, 4)):
-        # player C4 routes the listed targets 21d92 (slot 84) and 21d60 (list 21622) since; player C8 routes 21e6a (slot 84) and 21e3a (list 21622) since
-        # (the C3 runs still stop at a listed target that is not a C3 start)
-        require(unit_of(t) in (None, 'animation_player_c3_block', 'animation_player_c4_block', 'animation_player_c8_block'),
+        # player C4 routes the listed targets 21d92 (slot 84) and 21d60 (list 21622) since; player C8 routes 21e6a (slot 84) and 21e3a (list 21622) since;
+        # player C9 routes 21cd8 21d2a 2210c 22128 22240 2241c 22452 (slot 84) and 21e48 (list 21622) since (the C3 runs still stop at a listed target
+        # that is not a C3 start)
+        require(unit_of(t) in (None, 'animation_player_c3_block', 'animation_player_c4_block', 'animation_player_c8_block', 'animation_player_c9_block'),
                 ('computed-jump target routed by another unit', hex(t)))
     for s in STARTS:
         require(unit_of(s) == 'animation_player_c3_block', ('start is not routed to player c3', hex(s), unit_of(s)))
@@ -1119,12 +1122,15 @@ def error_fixtures(bases, add):
     # a listed target that is not routed yet fails at the next dispatch (the paired row stops at that target)
     for v in (0, 0x21603, 0x12345678, 0x1021602, 0x1ee00, 0x21622):
         err('201a2-slot-%x' % v, U.with_host_writes(st, [((a6 + 0x84) & 0xffff, 4, v)], pc=0x201a2), ERROR_JUMP, 0x201a2)
-    for v in (0x2210c, 0x22452, 0x21664):
+    for v in (0x21664, 0x2173c):              # player C9 routes 2210c / 22452 since (was 0x2210c, 0x22452, 0x21664; 2173c is still unrouted)
         err('201a2-slot-listed-%x' % v, U.with_host_writes(st, [((a6 + 0x84) & 0xffff, 4, v)], pc=0x201a2), unrouted, v)
     for v in (0x21602, 0x10fe40, 0, 0x21c23):
         err('21620-a1-%x' % v, U.with_host_writes(st, regs=dict(a1=v), pc=0x21620), ERROR_JUMP, 0x21620)
-    for v in (0x21e48, 0x219c8):              # player C4 routes 21d60 since (was 0x21d60, 0x219c8)
+    for v in (0x219c8,):                      # player C4 routes 21d60 since (was 0x21d60, 0x219c8)
         err('21620-a1-listed-%x' % v, U.with_host_writes(st, regs=dict(a1=v), pc=0x21620), unrouted, v)
+    # 21e48 is a player C9 start since C9 (previous expectation 'unsupported animation machine PC' at 21e48): its MOVE.B #1,aa(A6) with A6 = 0 writes
+    # fixed ROM and keeps the failing PC 21e48
+    err('21620-a1-listed-21e48', U.with_host_writes(st, regs=dict(a1=0x21e48, a6=0), pc=0x21620), 'unsupported animation machine write device', 0x21e48)
     for v in (0x21c22, 0x21603, 0x1021602):
         err('221de-a1-%x' % v, U.with_host_writes(st, regs=dict(a1=v), pc=0x221de), ERROR_JUMP, 0x221de)
     for v in (9, 0x47, 0xffff, 0x12340010):
@@ -1133,9 +1139,10 @@ def error_fixtures(bases, add):
         err('20318-d0-entry-%x' % v, U.with_host_writes(st, regs=dict(d0=v), pc=0x20318), unrouted, 0x20320 + 4 * (v & 0x3fff))
     #   2030a (BYTE a0 = 9 != BYTE 9f) -> 20318: displacement 24 beyond the table
     err('2030a-then-20318', U.with_host_writes(st, [((a6 + 0xa0) & 0xffff, 1, 9), ((a6 + 0x9f) & 0xffff, 1, 0)], pc=0x2030a), ERROR_JUMP, 0x20318)
-    #   21610 (BYTE 9c = 3) -> 215e6 on the ROM list 21622 -> Set, A1 = 21e48 -> 2161c -> JMP (A1): listed, unrouted (player C4 routes 21d60 since:
-    #   was BYTE 9c = 2 -> 21d60, error-21610-then-21d60)
-    err('21610-then-21e48', U.with_host_writes(st, [((a6 + 0x9c) & 0xffff, 1, 3)], pc=0x21610), unrouted, 0x21e48)
+    #   21610 (BYTE 9c = 3) -> 215e6 on the ROM list 21622 -> Set, A1 = 21e48 -> 2161c -> JMP (A1) (player C4 routes 21d60 since: was BYTE 9c = 2 ->
+    #   21d60, error-21610-then-21d60; player C9 routes 21e48 since: was the failing PC 21e48, now BYTE 9d = 1 makes C9 21e48 -> C8 21e52 BGT reach the
+    #   unrouted 21ea0)
+    err('21610-then-21e48', U.with_host_writes(st, [((a6 + 0x9c) & 0xffff, 1, 3), ((a6 + 0x9d) & 0xffff, 1, 1)], pc=0x21610), unrouted, 0x21ea0)
     # the Z source of 1ee56 (contract decision 3, widened by player C5): a source outside fixed ROM and work RAM.  A WORD (A0 + 2 x BYTE 9f) that is not
     # 0 is the C5 path 1cb1a since player C5 (the row '1ee56-word', A0 = 1b5f2 with BYTE 9f = 0, expected the flag-source error before); its first
     # source A0 + sext(W) = 1f9000 + 7000 = 200000 is the error now.

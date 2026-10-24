@@ -97,9 +97,9 @@ EXIT_STOPS = (0x21564, 0x208fa, 0x2210c,
               0x4e69a, 0x4e8f8, 0x4eb58)
 UNIT_EXITS = EXIT_STOPS[:3]             # the C5 later-unit stops and deferred leaders
 # later-unit stops routed since (player C6: 21564 1efa4 4e572 1d398 1ebbe 206cc 21662 4838c 4e8f8 4eb58; player C7: 1f2a4; player C8: 1ef4c 21d9e
-# 1ce98 1cfde 1fa68 1fafc 201bc 4d0cc): still declared stops of the C5 runs
+# 1ce98 1cfde 1fa68 1fafc 201bc 4d0cc; player C9: 208fa 2210c 1f070 223a0 223d6 21ca4 21d0e): still declared stops of the C5 runs
 ROUTED_LATER = (0x21564, 0x1efa4, 0x4e572, 0x1d398, 0x1ebbe, 0x206cc, 0x21662, 0x4838c, 0x4e8f8, 0x4eb58, 0x1f2a4, 0x1ef4c, 0x21d9e, 0x1ce98,
-                0x1cfde, 0x1fa68, 0x1fafc, 0x201bc, 0x4d0cc)
+                0x1cfde, 0x1fa68, 0x1fafc, 0x201bc, 0x4d0cc, 0x208fa, 0x2210c, 0x1f070, 0x223a0, 0x223d6, 0x21ca4, 0x21d0e)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the Z chain 1c3dc -> 1c51c -> 1c3e2
 CHAINS = ((0x1c36e, 0x1c374), (0x1c3c0, 0x1c3ca), (0x2027e, 0x20288), (0x20e50, 0x20e56), (0x214ac, 0x214b2), (0x21f70, 0x21f78), (0xcddee, 0xcddfe),
           (0x1c3dc, 0x1c3e2))
@@ -523,11 +523,13 @@ def build():
     for t in TRAPS + EXIT_STOPS:
         require((unit_of(t) is None or t in ROUTED_LATER) and not mine(t), ('later-unit stop must stay unrouted', hex(t)))
     require(unit_of(0x21602) == 'animation_player_c3_block', 'routed computed-jump target 21602')
-    # player C8 routes the listed target 21e3a since: it stays a declared stop of the C5 runs (not in JUMP_ROUTED, as ROUTED_LATER)
+    # player C8 routes the listed target 21e3a since, player C9 the listed target 21e48: they stay declared stops of the C5 runs (not in JUMP_ROUTED, as
+    # ROUTED_LATER)
     for t in LIST_21B26:
-        require(unit_of(t) in (None, 'animation_player_c3_block', 'animation_player_c8_block'), ('computed-jump target routed by another unit', hex(t)))
-    require(set(t for t in LIST_21B26 if unit_of(t) not in (None, 'animation_player_c8_block')) == set(JUMP_ROUTED),
-            'JUMP_ROUTED = the routed allowed targets (C8 21e3a excluded)')
+        require(unit_of(t) in (None, 'animation_player_c3_block', 'animation_player_c8_block', 'animation_player_c9_block'),
+                ('computed-jump target routed by another unit', hex(t)))
+    require(set(t for t in LIST_21B26 if unit_of(t) not in (None, 'animation_player_c8_block', 'animation_player_c9_block')) == set(JUMP_ROUTED),
+            'JUMP_ROUTED = the routed allowed targets (C8 21e3a, C9 21e48 excluded)')
     for t in TABLE_20796 + TABLE_20952 + TABLE_209DA:
         require(unit_of(t) is None or t in (0x20796, 0x2095a), ('table entry routed by another unit', hex(t)))
     require(set(TABLE_20796 + TABLE_20952 + TABLE_209DA) & set(STARTS) == {0x20796, 0x2095a}, 'only the executed table entries are blocks')
@@ -1127,12 +1129,15 @@ def error_fixtures(bases, add):
         err('209ce-d0-%x-entry' % v, U.with_host_writes(st, regs=dict(d0=v), pc=0x209ce), unrouted, 0x209da + 4 * (v & 0xff))
     for v in (0x21622, 0x21b26, 0, 0x1021602, 0x21603, 0x21c66, 0x21f70):
         err('21f7c-a1-%x' % v, U.with_host_writes(st, regs=dict(a1=v), pc=0x21f7c), ERROR_JUMP, 0x21f7c)
-    err('21f7c-a1-listed-21e48', U.with_host_writes(st, regs=dict(a1=0x21e48), pc=0x21f7c), unrouted, 0x21e48)
+    # 21e48 is a player C9 start since C9 (previous expectation 'unsupported animation machine PC' at 21e48): its MOVE.B #1,aa(A6) with A6 = 0 writes
+    # fixed ROM and keeps the failing PC 21e48
+    err('21f7c-a1-listed-21e48', U.with_host_writes(st, regs=dict(a1=0x21e48, a6=0), pc=0x21f7c), 'unsupported animation machine write device', 0x21e48)
     # 21e3a is a player C8 start since C8 (previous expectation 'unsupported animation machine PC' at 21e3a): its MOVE.B #1,aa(A6) with A6 = 0 writes
     # fixed ROM and keeps the failing PC 21e3a
     err('21f7c-a1-listed-21e3a', U.with_host_writes(st, regs=dict(a1=0x21e3a, a6=0), pc=0x21f7c), 'unsupported animation machine write device', 0x21e3a)
-    #   C3 21f70 (BYTE 9c = 3) -> 215e6 on the ROM list 21b26 -> Set, A1 = 21e48 -> 21f78 -> 21f7c JMP (A1): listed, unrouted
-    err('21f70-then-21e48', U.with_host_writes(st, [((a6 + 0x9c) & 0xffff, 1, 3)], pc=0x21f70), unrouted, 0x21e48)
+    #   C3 21f70 (BYTE 9c = 3) -> 215e6 on the ROM list 21b26 -> Set, A1 = 21e48 -> 21f78 -> 21f7c JMP (A1) (player C9 routes 21e48 since: was the failing
+    #   PC 21e48, now BYTE 9d = 1 makes C9 21e48 -> C8 21e52 BGT reach the unrouted 21ea0)
+    err('21f70-then-21e48', U.with_host_writes(st, [((a6 + 0x9c) & 0xffff, 1, 3), ((a6 + 0x9d) & 0xffff, 1, 1)], pc=0x21f70), unrouted, 0x21ea0)
     # the Z source of 1c3e2 (contract decision 3): BYTE 9e(A0) outside work RAM / fixed ROM, D7 not the LONG of the table 1c52c (ROM 0007ffff)
     for v in (0x200000 - 0x9e, 0x3c0000, 0x2ffff0):
         err('1c3e2-a0-%x' % v, U.with_host_writes(st, regs=dict(a0=v, d7=0x7ffff), pc=0x1c3e2), ERROR_FLAG, 0x1c3e2)
@@ -1160,10 +1165,10 @@ def error_fixtures(bases, add):
     #   214d6 (BYTE 88 = 0) -> SUBQ.B borrow -> 21564 (player C6 since; was: unrouted at 21564, error-214d6-then-21564) -> JMP 2a00 -> BSR.B 299c at
     #   an odd A7
     err('214d6-then-2a00', U.with_host_writes(st, [((a6 + 0x88) & 0xffff, 1, 0)], regs=dict(a7=a7 + 1), pc=0x214d6), odd_word, 0x2a00)
-    #   208f2 (BYTE 5e negative) -> 208fa (deferred leader, unrouted)
-    err('208f2-then-208fa', U.with_host_writes(st, [((a6 + 0x5e) & 0xffff, 1, 0x80)], pc=0x208f2), unrouted, 0x208fa)
-    #   21f8a (D0 bit 4) -> 2210c (deferred leader, unrouted)
-    err('21f8a-then-2210c', U.with_host_writes(st, regs=dict(d0=0x10), pc=0x21f8a), unrouted, 0x2210c)
+    #   208f2 (BYTE 5e negative) -> 208fa; 21f8a (D0 bit 4) -> 2210c: both player C9 starts since C9 (previous expectation 'unsupported animation machine
+    #   PC' there): the JSR ea680.l of 208fa and the BSR.W 1cd98 of 2210c at an odd A7 keep the failing PCs
+    err('208f2-then-208fa', U.with_host_writes(st, [((a6 + 0x5e) & 0xffff, 1, 0x80)], regs=dict(a7=a7 + 1), pc=0x208f2), odd_word, 0x208fa)
+    err('21f8a-then-2210c', U.with_host_writes(st, regs=dict(d0=0x10, a7=a7 + 1), pc=0x21f8a), odd_word, 0x2210c)
     #   2093a (BYTE 5e = 0) -> 20946 -> JMP 20952 (entry 0, unrouted)
     err('2093a-then-20952', U.with_host_writes(st, [((a6 + 0x5e) & 0xffff, 1, 0)], pc=0x2093a), unrouted, 0x20952)
 

@@ -688,13 +688,21 @@ def gen_errors():
     # the computed jumps (contract decision 2)
     for v in (0, 0x21603, 0x12345678, 0x1021602, 0x1ee00, 0x21622):
         err('slot-%x' % v, 0x201a2, jump, 0x201a2, puts=((NODE + 0x84, 4, v),))
-    for v in (0x2210c, 0x22452, 0x21664, 0x2173c):
+    for v in (0x21664, 0x2173c):
         err('slot-listed-%x' % v, 0x201a2, unrouted, v, puts=((NODE + 0x84, 4, v),))
+    # 2210c / 22452 are player C9 starts since C9 (previous rows: 'unsupported animation machine PC' at 2210c / 22452): the node at 1fff70 (the upper RAM
+    # mirror; LONG 84(A6) = 1ffff4 in RAM) makes the first access of the C9 block (BCLR.B #5,a7(A6) / MOVE.B 9c(A6),D0) read the bank window 200017 /
+    # 20000c, which keeps the failing PC 2210c / 22452
+    for v in (0x2210c, 0x22452):
+        err('slot-listed-%x' % v, 0x201a2, 'missing or ambiguous physical program bus ROM byte', v, a6=0x1fff70, puts=((0x1fff70 + 0x84, 4, v),))
     err('slot-odd-node', 0x201a2, odd, 0x201a2, stop=0x201a8, a6=NODE + 1)
     for v in (0x21602, 0x10fe40, 0, 0x21c23, 0x1021c22):
         err('21620-%x' % v, 0x21620, jump, 0x21620, a1=v)
-    for v in (0x21e48, 0x219c8, 0x21720):            # player C4 routes 21d60 since (was 0x21d60, 0x219c8, 0x21720)
+    for v in (0x219c8, 0x21720):                     # player C4 routes 21d60 since (was 0x21d60, 0x219c8, 0x21720)
         err('21620-listed-%x' % v, 0x21620, unrouted, v, a1=v)
+    # 21e48 is a player C9 start since C9 (previous row: 'unsupported animation machine PC' at 21e48): its MOVE.B #1,aa(A6) with A6 = 0 writes fixed ROM
+    # and keeps the failing PC 21e48
+    err('21620-listed-21e48', 0x21620, 'unsupported animation machine write device', 0x21e48, a1=0x21e48, a6=0)
     for v in (0x21c22, 0x21603, 0x1021602, 0):
         err('221de-%x' % v, 0x221de, jump, 0x221de, a1=v)
     for v in (9, 0x47, 0xffff, 0x12340010, 0x3fff):
