@@ -1139,9 +1139,14 @@ SUPERSEDED_NEIGHBOUR_ERRORS = {0x49a84: RNG_ERROR, 0x49a86: 'unsupported animati
                                # b7a48); from the base state D0.B = 0 runs on through b7a2e into the input read without a declared queue entry.
                                # b7a2a / b7a2c are interior PCs of that block.  Each was 'unsupported animation machine PC' before C1.
                                0xb7a28: 'animation machine external read queue empty', 0xb7a2a: 'unsupported animation player c1 PC',
-                               0xb7a2c: 'unsupported animation player c1 PC'}
+                               0xb7a2c: 'unsupported animation player c1 PC',
+                               # area-D unit FR12 (objects_fr12, contract animation-machine-frontier-fr12-contract.md): 4d84e is an FR12 block start (MULU.W
+                               # #10 record 4cf64 -> C; RTS 4d86c); from the base state it returns to the caller and runs on into the input read without a
+                               # declared queue entry.  Was 'unsupported animation machine PC' before FR12.
+                               0x4d84e: 'animation machine external read queue empty'}
 SUPERSEDED_NOTES = {0xb7a28: 'C1 routing: block start executes (b7a2e, then the undeclared input read)',
-                    0xb7a2a: 'C1 routing: interior PC of b7a28 (player c1 executor error)', 0xb7a2c: 'C1 routing: interior PC of b7a28 (player c1 executor error)'}
+                    0xb7a2a: 'C1 routing: interior PC of b7a28 (player c1 executor error)', 0xb7a2c: 'C1 routing: interior PC of b7a28 (player c1 executor error)',
+                    0x4d84e: 'FR12 routing: block start executes (4d868 / 4d86c RTS, then the undeclared input read)'}
 # 4e68e is also a C1 block start since C1; its expectation text is unchanged: from the base state WORD 76(A6) >= 2, so the block runs and the next
 # dispatch fails at the TRAP #15 site 4e69a (outside the routing) with the same 'unsupported animation machine PC' (no longer at 4e68e itself).
 UNROUTED_NEIGHBOURS = (0x47a54, 0x47a56, 0x47a5c, 0x47a62, 0x49a84, 0x49a86, 0x49a8c, 0xb7a28, 0xb7a2a, 0xb7a2c, 0x4d84e, 0x4ddde, 0x4e68e, 0xb481e, 0xb4a2a, 0x46f52, 0x1bdde, 0x2eff4, 0x4aa86)
