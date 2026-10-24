@@ -17,6 +17,29 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'artifacts/animation_machine_carry_execution'
 NATIVE_SHA = '759ea9af0fd9e9fa58ba44b87be2b48a8b7b6b257aba6b164438f7c3df586d70'
 NATIVE_TOOL_SHA = '1f133fb8a6d8645f7cf837c18d78c56e9294550a67722e50bac5eb5d3ce06633'
+UNSUPPORTED_MACHINE = 'unsupported animation machine PC'
+# Late-branch probes whose branch successor a later area-C unit routes. The label is kept; the former error was UNSUPPORTED_MACHINE at
+# the successor. The run now executes the routed successor and ends in a checked error that depends on the probe state: node A6 = 102000
+# of the first fixture, LONG 84(A6) = 81ec885b (C3 201a6 JSR (A4) rejects a target outside the ROM list) and LONG 8(A6) = a3592789
+# (287e CMP.W 10(A0) with an odd A0). The 1dc84 / 210ae stubs themselves are unchanged (C2 decision 7, C10 decision 5).
+# 'successor': with that stop the stub run ends at the selected successor with the input state otherwise unchanged (branch direction).
+# 'reached': block starts reached in order with earlier stops on the same run.
+C3_JUMP_TARGET = 'unsupported animation player c3 jump target'
+ODD_ACCESS = 'program bus requires even WORD/LONG address'
+SUPERSEDED_LATE_BRANCH = {
+    # C10 routes 1dccc (BRA.W 201a2) and 1dc8e (BSR.W 1d1d0 ... falls into 1dccc); contract animation-machine-player-c10-contract.md
+    'late-branch-01dc8a-1': dict(error=C3_JUMP_TARGET, classification='superseded_by_player_C10_routes_1dccc', successor=0x1dccc,
+                                 reached=(0x1dccc, 0x201a2)),
+    'late-branch-01dc8a-2': dict(error=C3_JUMP_TARGET, classification='superseded_by_player_C10_routes_1dc8e', successor=0x1dc8e,
+                                 reached=(0x1dc8e, 0x1d1d0, 0x1dc92, 0x1dccc, 0x201a2)),
+    # C6 routes 21564 (JMP 2a00, object removal); contract animation-machine-player-c6-contract.md
+    'late-branch-0210b4-2': dict(error=ODD_ACCESS, classification='superseded_by_player_C6_routes_21564', successor=0x21564,
+                                 reached=(0x21564, 0x2a00, 0x299c, 0x287e)),
+    'whole-caller-late-branch-01dc84': dict(error=C3_JUMP_TARGET, classification='superseded_by_player_C10_routes_1dc8e', successor=None,
+                                            reached=(0x1dc8a, 0x1dc8e, 0x1dccc, 0x201a2)),
+    'whole-caller-late-branch-0210ae': dict(error=ODD_ACCESS, classification='superseded_by_player_C6_routes_21564', successor=None,
+                                            reached=(0x210b4, 0x21564, 0x2a00, 0x287e)),
+}
 
 
 def digest(path):
@@ -80,6 +103,9 @@ def negatives(exe, folder, records, resources):
     rows = []
     initial = dict(fx['regs'], a7=fx['initial_a7'], pc=fx['entry_pc'], carry=2)
     def reject(label, state, stop, cause):
+        superseded = SUPERSEDED_LATE_BRANCH.get(label)
+        if superseded:
+            cause = superseded['error']
         actual = common.invoke(exe, folder, 'negative_' + label, fx['ram'], state,
                                fx['pvc'], fx['bank_base'], resources, stop=stop, external=fx['external'])
         result, ram, pvc, ports, error = actual
@@ -89,20 +115,38 @@ def negatives(exe, folder, records, resources):
         assert ports == struct.pack('>BII', 1, 0xdeadbeef, 0x87)
         assert result['external_reads'] == 0x12345678 and result['status'] == 1
         rows.append(dict(label=label, error=error, incoming_carry=state['carry'], all_API_outputs_preserved=True))
+        if superseded:
+            rows[-1].update(superseded_controls(label, state, superseded))
+    def superseded_controls(label, state, superseded):
+        def run(stop):
+            result, ram, pvc, ports, error = common.invoke(exe, folder, 'superseded_%s_stop_%06x' % (label, stop), fx['ram'], state,
+                                                           fx['pvc'], fx['bank_base'], resources, stop=stop, external=fx['external'])
+            assert result['ok'] and not error and result['pc'] == stop, (label, hex(stop), result, error)
+            return result, ram, pvc, ports
+        successor = superseded['successor']
+        if successor is not None:
+            result, ram, pvc, ports = run(successor)
+            assert {k: result[k] for k in common.STATE_KEYS} == dict(state, pc=successor), (label, 'branch successor state')
+            assert ram == fx['ram'] and pvc == fx['pvc'] and result['bank_base'] == fx['bank_base'] and not ports and result['external_reads'] == 0
+        for stop in superseded['reached']:
+            run(stop)
+        return dict(former_expected_API_error=UNSUPPORTED_MACHINE, classification=superseded['classification'],
+                    branch_successor=None if successor is None else hex(successor),
+                    reached_block_starts=[hex(stop) for stop in superseded['reached']], API_only_control=True)
     for pc in (0x1dc8a, 0x210b4):
         reject('Unknown-branch-%06x' % pc, dict(initial, pc=pc, carry=0), 0xff000, 'requires known carry')
     for value in (3, 0xffffffff):
         reject('invalid-enum-%x' % value, dict(initial, pc=0xff000, carry=value), 0xff000, 'carry')
     for pc, carry in ((0x1dc8a, 1), (0x1dc8a, 2), (0x210b4, 1), (0x210b4, 2)):
         reject('late-branch-%06x-%d' % (pc, carry), dict(initial, pc=pc, carry=carry), 0xff000,
-               'unsupported animation machine PC')
+               UNSUPPORTED_MACHINE)
     for entry in (0x1dc84, 0x210ae):
         selection, fx, phases = next(record for record in records
                                      if record[1]['entry_pc'] == entry and len(record[2]) == 2)
         state = dict(fx['regs'], a7=fx['initial_a7'], pc=entry, carry=2)
         assert any(e['access'] == 'write' for e in phases[0]['events'])
         reject('whole-caller-late-branch-%06x' % entry, state, 0xff000,
-               'unsupported animation machine PC')
+               UNSUPPORTED_MACHINE)
         rows[-1]['prior_original_prefix_writes'] = sum(e['access'] == 'write' for e in phases[0]['events'])
         rows[-1]['prior_original_prefix_ports'] = sum(e['region'] == 'pvc' for e in phases[0]['events'])
     return rows
