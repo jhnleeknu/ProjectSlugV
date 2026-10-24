@@ -275,3 +275,11 @@ FR12 계약(`animation-machine-frontier-fr12-contract.md`) 결정 6에 따른 �
 - [F] **FR11의 뒤 단위 정지 가운데 FR12 진입**: `b41f2` `b6e5e` `c5612`가 FR12 block이 되었다. 나머지 둘(FR13 `b6d90` `bfcfa`)은 계속 뒤 단위 정지다. 계산 점프의 대상 가운데 `b42a2` `c0924` `b4294`(`JMP (A0)` `b4034`)와 `b42c4`(표 `b42b8` 칸 c)가 FR12 block이 되었다. `b4036` `b42bc`와 표 `c54b2`의 26칸은 그대로 routing 밖이다.
 - [F] 생성기 `generate_animation_machine_objects_fr11_test_table.py`의 오류 행 다섯(이전: 그 FR12 PC에서 `unsupported animation machine PC`): `b41d8-then-b41f2` → `b41d8-then-b4292-odd-stack`, `b6e5a-then-b6e5e`(홀수 node, 실패 PC 그대로), `c560e-then-c5612` → `c560e-then-2a00-odd-stack`, `b4030-then-c0924` → `b4030-then-b412c-odd-stack`, `b42b0-then-b42c4` → `b42b0-then-b42ea-odd-stack`. 생성기를 다시 돌려 그 5행만 바뀜을 확인했다(fixture 958 그대로).
 - [F] V1 spec `fr11.py`: `ROUTED_LATER` `()` → (`b41f2` `b6e5e` `c5612` `70f8e` `b6c58`), 새 `JUMP_LATER`(`b42a2` `c0924` `b4294` `b42c4`)와 `build()`의 계산 점프 대상 확인 `… or t in JUMP_LATER`. 오류 fixture `b41d8-then-b41f2` → `b41d8-then-b4292-odd-stack`, `b42b0-then-b42c4` → `b42b0-then-b42ea-odd-stack`. FR11 run은 그 PC에서 계속 멈춘다.
+
+## 뒤 단위 변경 기록: objects FR13(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR13 계약(`animation-machine-frontier-fr13-contract.md`) 결정 6에 따른 기록이다. FR11 실행부는 바뀌지 않았다(표 `c54b2`의 대상 판정은 routing이 하므로 FR13이 `c54ba` `c54d6`을 routing해도 그대로다).
+
+- [F] **FR11의 뒤 단위 정지 가운데 FR13 진입**: `b6d90` `bfcfa`가 FR13 block이 되었다. FR11의 뒤 단위 정지는 이제 모두 routing되었다. 계산 점프 대상 가운데 표 `c54b2`의 칸 2 `c54ba`·9 `c54d6`이 FR13 block이 되었다. `b4036` `b42bc`와 표 `c54b2`의 나머지 24칸(칸 6 `c54ca`는 FR11)은 그대로 routing 밖이다.
+- [F] 생성기 `generate_animation_machine_objects_fr11_test_table.py`의 오류 행 셋(이전: 그 FR13 PC에서 `unsupported animation machine PC`): `b6d8c-then-b6d90`(홀수 A0: FR13 `b6d90`의 `CMP.W 42(A0),D0`, 실패 PC 그대로), `bfcea-then-bfcfa`(홀수 A7: FR13 `bfcfa JSR 2986`의 push, 실패 PC 그대로), `c5496-then-c54ba` → `c5496-then-c5520`(홀수 node: FR13 `c54ba` → `c5520`의 `MOVE.L #c5432,(A6)`). 생성기를 다시 돌려 그 3행만 바뀜을 확인했다(fixture 958 그대로).
+- [F] V1 spec `fr11.py`: `ROUTED_LATER`에 `b6d90` `bfcfa` `70f60` `70fcc` `70ff8` `71028`, `JUMP_LATER`에 `c54ba` `c54d6`. 오류 fixture `b6d82-then-b6d90`(홀수 node: `49392`가 A0를 플레이어 기록으로 바꾸므로 홀수 A0 대신 홀수 node로 `b6d90`의 `MOVE.W 42(A6)`에서 실패), `bfcea-then-bfcfa`(홀수 A7), `c5496-then-c54ba` → `c5496-then-c5520`(홀수 node). FR11 run은 그 PC에서 계속 멈춘다.

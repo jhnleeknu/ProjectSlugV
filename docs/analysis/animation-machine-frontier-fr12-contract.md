@@ -243,3 +243,11 @@ FR2..FR11, C1~C10 계약의 같은 절을 그대로 따른다. 다른 점만 적
   - 범위: 범위 변경 없음; 실행된 표 항목 `b42c4`를 포함했고(메인 결정), 2바이트로 빠져나가는 블록 `7177a 71786`(FR14)와 `71682 717c2`(FR13)는 계획대로 이후 단위에 남긴다.
   - 산술: `MULS`는 부호 있는 낮은 WORD, `MULU`는 부호 없는, `MOVEM.W`는 부호 확장; 자체 계산 점프 없음.
 - 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
+
+## 뒤 단위 변경 기록: objects FR13(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR13 계약(`animation-machine-frontier-fr13-contract.md`) 결정 6에 따른 기록이다. FR12 실행부는 바뀌지 않았다.
+
+- [F] **FR12의 뒤 단위 정지 가운데 FR13 진입**: `71682` `717c2`가 FR13 block이 되었다(메인 결정: 계획대로 FR13). 나머지 둘(FR14 `7177a` `71786`)은 계속 뒤 단위 정지다.
+- [F] 생성기 `generate_animation_machine_objects_fr12_test_table.py`의 오류 행 둘(이전: 그 FR13 PC에서 `unsupported animation machine PC`): `71532-then-71682`(홀수 node: FR13 `71682`의 `MOVE.W 7a(A6)`, 실패 PC 그대로), `717ae-then-717c2` → `717ae-then-717c8-odd-stack`(홀수 A7: FR13 `717c2` → FR12 `717c8 JSR 4bfa4`의 push). 생성기를 다시 돌려 그 2행만 바뀜을 확인했다(fixture 1,127 그대로).
+- [F] V1 spec `fr12.py`: `ROUTED_LATER` `()` → (`71682` `717c2` `b6d90` `bfcfa` `70f60` `70fcc` `70ff8` `71028`). 오류 fixture `71532-then-71682`(홀수 node), `717ae-then-717c2` → `717ae-then-717c8-odd-stack`. FR12 run은 그 PC에서 계속 멈춘다.

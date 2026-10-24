@@ -267,3 +267,9 @@ FR2 계약 "공통 규칙·native 검증 계획"을 그대로 따른다. 다른 
 - **`b336a..b33d8`(8)**: `b336a b3388 b33b0 b33bc b33c2 b33c8 b33d0 b33d6`
 - **`bc844..bc93c`(19)**: `bc844 bc85c bc884 bc8b6 bc8c0 bc8c6 bc8ca bc8d0 bc8dc bc8e4 bc8ea bc8f0 bc8f2 bc91e bc924 bc92a bc930 bc934 bc93a`
 - **`dd574..dd6b2`(14)**: `dd574 dd5a6 dd5ba dd5c0 dd5c6 dd5f8 dd60c dd612 dd618 dd64a dd65e dd664 dd66a dd69c`
+
+## 뒤 단위 변경 기록: objects FR13(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR13 계약(`animation-machine-frontier-fr13-contract.md`) 결정 6에 따른 기록이다. FR2b 실행부·시험은 바뀌지 않았다.
+
+- [F] FR2b의 정지 설치 값 `71884`(`706f4`가 쓰기만 하는 값)가 FR13 block(`71876`의 곧바로 들어가는 설치 값)이 되었다. V1 spec `fr2b.py`의 `build()`가 routing 밖이어야 한다고 확인하던 목록 (`702fa` `70d72` `76922` `71884`) → (`702fa` `70d72` `76922`). FR2b 실행부는 그 값을 계속 쓰기만 한다.

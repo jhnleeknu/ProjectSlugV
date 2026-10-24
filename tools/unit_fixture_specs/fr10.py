@@ -105,7 +105,9 @@ ROUTED_LATER = (
     # objects FR11 (the FR11 entries kept as declared stops of the FR10 runs, as before FR11)
     0x70e42, 0x70fac, 0xcd7e2, 0xcd92e, 0xcd96c,
     # objects FR12 (the FR12 entries kept as declared stops of the FR10 runs, as before FR12)
-    0x70f8e, 0xb6c58)
+    0x70f8e, 0xb6c58,
+    # objects FR13 (the FR13 entries kept as declared stops of the FR10 runs, as before FR13)
+    0x70f60, 0x70fcc, 0x70ff8, 0x71028)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the flag chains 70ff0 -> 70ff4, cd804 -> cd80a
 CHAINS = ((0x70f84, 0x70f8a), (0x71454, 0x7145a), (0x714e4, 0x714ea), (0xeab30, 0xeab36), (0x70fd2, 0x70fd6), (0x70ffa, 0x70ffe), (0x71012, 0x71016),
           (0xb7a62, 0xb7a68), (0xb7a6e, 0xb7a78), (0xcd93c, 0xcd940), (0xcdd86, 0xcdd9c), (0xeaa26, 0xeaa3a), (0xeaa34, 0xeaa3a), (0xeaac0, 0xeaac6),
@@ -1050,9 +1052,13 @@ def error_fixtures(bases, add):
     err('70e2a-then-70e4a', U.with_host_writes(st, [((a6 + 0x8e) & 0xffff, 2, 0), ((a6 + 0x42) & 0xffff, 2, 1), ((a6 + 0x15) & 0xffff, 1, 1),
                                                     ((a6 + 0x9c) & 0xffff, 2, 0)], regs=dict(a7=a7 + 1), pc=0x70e2a),
         odd_word, 0x70e4a)                                                              # FR11 70e42 -> 70e4a: the JSR 49f8c push on the odd A7
-    err('70f4e-then-70f60', U.with_host_writes(st, regs=dict(d7=0x6000), pc=0x70f4e), unrouted, 0x70f60)
-    err('70fc2-then-70fcc', U.with_host_writes(st, [((a6 + 0x82) & 0xffff, 1, 0x80)], pc=0x70fc2), unrouted, 0x70fcc)
-    err('71020-then-71028', U.with_host_writes(st, [((a6 + 0x7c) & 0xffff, 2, 0)], pc=0x71020), unrouted, 0x71028)
+    # objects FR13 routes 70f60 / 70fcc / 70ff8 / 71028 since FR13 (FR13 contract; was: 70f4e-then-70f60 / 70fc2-then-70fcc / 71020-then-71028 /
+    # 70ff0-then-70ff8 / 70fe4-then-70ff8 / 70f94-then-70fcc with 'unsupported animation machine PC' at the FR13 PC): 70f60 runs on through FR13 70f7e
+    # / 70f74 to the JSR 49fc6 of FR10 70f84 (the push on the odd A7 fails); 70fcc / 70ff8 write LONG (A6) of the odd node; 71028 runs on through 7102e
+    # to the JSR 4b54e of 72dd2; 70f94 runs through FR11 70fac, FR10 70fc2 and FR13 70fcc to the BSR 7028e of FR10 70fd2
+    err('70f4e-then-70f84-odd-stack', U.with_host_writes(st, regs=dict(d7=0x6000, a7=a7 + 1), pc=0x70f4e), odd_word, 0x70f84)
+    err('70fc2-then-70fcc', U.with_host_writes(st, [((a6 + 1 + 0x82) & 0xffff, 1, 0x80)], regs=dict(a6=a6 + 1), pc=0x70fc2), odd_write, 0x70fcc)
+    err('71020-then-72dd2-odd-stack', U.with_host_writes(st, [((a6 + 0x7c) & 0xffff, 2, 0)], regs=dict(a7=a7 + 1), pc=0x71020), odd_word, 0x72dd2)
     # objects FR12 routes b6c58 since FR12 (FR12 contract; was: b6c2c-then-b6c58, 'unsupported animation machine PC' at b6c58): b6c58 runs on through
     # FR10 b6c66 to the BSR b7cfa of b6c72, where the push on the odd A7 fails
     err('b6c2c-then-b6c72', U.with_host_writes(st, [((a6 + 0x42) & 0xffff, 2, 0)], regs=dict(a7=a7 + 1), pc=0xb6c2c), odd_word, 0xb6c72)
@@ -1060,11 +1066,11 @@ def error_fixtures(bases, add):
     err('cd8ee-then-cd92e', U.with_host_writes(st, [((a6 + 1 + 0x15) & 0xffff, 1, 0x80)], regs=dict(a6=a6 + 1), pc=0xcd8ee), odd_write, 0xcd92e)
     err('cd95a-then-cd96c', U.with_host_writes(st, [((a6 + 1 + 0x5f) & 0xffff, 1, 0x80), ((a6 + 1 + 0x15) & 0xffff, 1, 0)], regs=dict(a6=a6 + 1), pc=0xcd95a),
         odd_word, 0xcd96c)
-    err('70ff0-then-70ff8', U.with_host_writes(st, regs=dict(a0=0x71502), pc=0x70ff0), unrouted, 0x70ff8)
-    err('70fe4-then-70ff8', U.with_host_writes(st, regs=dict(d0=1), pc=0x70fe4), unrouted, 0x70ff8)       # the ROM LONG 70d72 + 4 = 71502
-    err('70f94-then-70fcc', U.with_host_writes(st, [((a6 + 0x8e) & 0xffff, 2, 0), ((a6 + 0x42) & 0xffff, 2, 1), ((a6 + 0x15) & 0xffff, 1, 1),
-                                                    ((a6 + 0x82) & 0xffff, 1, 0x80)], pc=0x70f94),
-        unrouted, 0x70fcc)                                                              # FR11 70fac -> FR10 70fc2 -> the FR13 stop 70fcc
+    err('70ff0-then-70ff8', U.with_host_writes(st, regs=dict(a0=0x71502, a6=a6 + 1), pc=0x70ff0), odd_write, 0x70ff8)
+    err('70fe4-then-70ff8', U.with_host_writes(st, regs=dict(d0=1, a6=a6 + 1), pc=0x70fe4), odd_write, 0x70ff8)   # the ROM LONG 70d72 + 4 = 71502
+    err('70f94-then-70fd2-odd-stack', U.with_host_writes(st, [((a6 + 0x8e) & 0xffff, 2, 0), ((a6 + 0x42) & 0xffff, 2, 1), ((a6 + 0x15) & 0xffff, 1, 1),
+                                                              ((a6 + 0x82) & 0xffff, 1, 0x80)], regs=dict(a7=a7 + 1), pc=0x70f94),
+        odd_word, 0x70fd2)                                                              # FR11 70fac -> FR10 70fc2 -> FR13 70fcc -> FR10 70fd2 (BSR 7028e)
     err('eaa52-odd-stack-after-eaa44', U.with_host_writes(st, [((a6 + 0x78) & 0xffff, 1, 0)], regs=dict(a7=a7 + 1), pc=0xeaa44), odd_word, 0xeaa52)
 
 

@@ -99,8 +99,10 @@ UNIT_EXITS = EXIT_STOPS[:5]             # the FR11 later-unit stops (FR12 / FR13
 # objects FR12 routes the FR11 later-unit stops b41f2 b6e5e c5612 and the FR10 ones 70f8e b6c58 since FR12 (declared stops of the FR11 runs, as before
 # FR12); JUMP_LATER: the targets of the FR11 computed jumps that FR12 routes (the handlers b42a2 c0924 b4294 of b4034, the b42b8 entry b42c4); the
 # FR11 runs keep stopping there (JUMP_PCS: a target that is not an FR11 block is a stop)
-ROUTED_LATER = (0xb41f2, 0xb6e5e, 0xc5612, 0x70f8e, 0xb6c58)
-JUMP_LATER = (0xb42a2, 0xc0924, 0xb4294, 0xb42c4)
+# objects FR13 routes the FR11 later-unit stops b6d90 bfcfa, the FR10 ones 70f60 70fcc 70ff8 71028 and the c54b2 entries c54ba c54d6 (JUMP_LATER) since
+# FR13 (declared stops of the FR11 runs, as before FR13)
+ROUTED_LATER = (0xb41f2, 0xb6e5e, 0xc5612, 0x70f8e, 0xb6c58, 0xb6d90, 0xbfcfa, 0x70f60, 0x70fcc, 0x70ff8, 0x71028)
+JUMP_LATER = (0xb42a2, 0xc0924, 0xb4294, 0xb42c4, 0xc54ba, 0xc54d6)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0xb6874, 0xb687a), (0xb6d6e, 0xb6d74), (0xb6e54, 0xb6e5a), (0xb77fa, 0xb7800), (0xc5476, 0xc547c), (0xc5608, 0xc560e), (0xb687e, 0xb688e),
           (0xb6ca2, 0xb6cac), (0xb6d82, 0xb6d8c), (0xc5486, 0xc5492), (0xb7d5a, 0xb7d8c))
@@ -1089,12 +1091,16 @@ def error_fixtures(bases, add):
     # FR12 PC): b41f2 runs on through FR12 b4212 / b4250 .. b427a to FR11 b427e and its RTS b4292 (the odd A7 fails the pop); b42c4 BRA.W b42ea, whose
     # JSR 49a58 push on the odd A7 fails
     err('b41d8-then-b4292-odd-stack', U.with_host_writes(st, [((a6 + 0x8e) & 0xffff, 2, 1)], regs=dict(a7=a7 + 1), pc=0xb41d8), odd_word, 0xb4292)
-    err('b6d82-then-b6d90', U.with_host_writes(st, [((a6 + 0x9d) & 0xffff, 1, 0), ((a5 + 0x568e) & 0xffff, 1, 1)], pc=0xb6d82), unrouted, 0xb6d90)
-    err('bfcea-then-bfcfa', U.with_host_writes(st, regs=dict(d0=4), pc=0xbfcea), unrouted, 0xbfcfa)
+    # objects FR13 routes b6d90 / bfcfa / c54ba since FR13 (FR13 contract; was: b6d82-then-b6d90 / bfcea-then-bfcfa / c5496-then-c54ba with
+    # 'unsupported animation machine PC' at the FR13 PC): b6d90 reads WORD 42 of the odd node, bfcfa pushes the JSR 2986 return on the odd A7, c54ba
+    # runs on to FR13 c5520 that writes LONG (A6) of the odd node
+    err('b6d82-then-b6d90', U.with_host_writes(st, [((a6 + 1 + 0x9d) & 0xffff, 1, 0), ((a5 + 0x568e) & 0xffff, 1, 1)], regs=dict(a6=a6 + 1), pc=0xb6d82),
+        odd_word, 0xb6d90)
+    err('bfcea-then-bfcfa', U.with_host_writes(st, regs=dict(d0=4, a7=a7 + 1), pc=0xbfcea), odd_word, 0xbfcfa)
     err('b4030-then-b4036', U.with_host_writes(st, [((a6 + 0x76) & 0xffff, 4, 0xb4036)], pc=0xb4030), unrouted, 0xb4036)
     err('b42b0-then-b42bc', U.with_host_writes(st, regs=dict(d0=4), pc=0xb42b0), unrouted, 0xb42bc)
     err('c54a6-then-c54b2', U.with_host_writes(st, regs=dict(d0=0), pc=0xc54a6), unrouted, 0xc54b2)
-    err('c5496-then-c54ba', U.with_host_writes(st, [((a6 + 0x5e) & 0xffff, 1, 2)], pc=0xc5496), unrouted, 0xc54ba)
+    err('c5496-then-c5520', U.with_host_writes(st, [((a6 + 1 + 0x5e) & 0xffff, 1, 2)], regs=dict(a6=a6 + 1), pc=0xc5496), odd_write, 0xc5520)
     err('b42b0-then-b42ea-odd-stack', U.with_host_writes(st, regs=dict(d0=0xc, a7=a7 + 1), pc=0xb42b0), odd_word, 0xb42ea)
 
 
