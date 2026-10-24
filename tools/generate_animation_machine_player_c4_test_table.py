@@ -702,7 +702,9 @@ def gen_errors():
     err('1cec2-then-1cef4', 0x1cec2, odd, 0x1cef4, a7=SP + 1)
     err('1c05e-then-1c066', 0x1c05e, odd, 0x1c066, a7=SP + 1, d0=2)
     err('4f22c-then-4f25c', 0x4f22c, odd, 0x4f25c, a7=SP + 1, puts=((0x10dddc, 2, 5), (NODE + 0xa0, 1, 5), (NODE + 0x9a, 1, 1)))
-    err('21d60-then-21dd0', 0x21d60, unrouted, 0x21dd0, puts=((NODE + 0x9d, 1, 1),))
+    # 21dd0 is a player C10 start since C10 (previous row: 'unsupported animation machine PC' at 21dd0 with the node at 10e000): the node at 1fff60 (the
+    # upper RAM mirror; BYTE 9d(A6) = 1ffffd) makes the first C10 access BCLR.B #5,a7(A6) read the bank window 200007 and keeps the failing PC 21dd0
+    err('21d60-then-21dd0', 0x21d60, 'missing or ambiguous physical program bus ROM byte', 0x21dd0, a6=0x1fff60, puts=((0x1fff60 + 0x9d, 1, 1),))
     # 4e564 (WORD 76 = 0) -> 4e572 (player C6 since; was: unrouted at 4e572) -> 4e57e -> JMP 3918 -> its RTS to the RAM return LONG 10fe40 (unrouted)
     err('4e564-then-10fe40', 0x4e564, unrouted, 0x10fe40, puts=((SP, 4, 0x10fe40),))
     err('3774-then-3778', 0x3774, odd, 0x3778, a7=SP + 1, d4=1)

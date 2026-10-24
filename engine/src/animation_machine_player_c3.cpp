@@ -218,8 +218,9 @@ bool animation_player_c3_block(AnimationMachineContext& c) {
     case 0x2030a:
         r.d[0]=0;if(!pc3_get(c,r.a[6],0xa0,1,value))return false;am_byte(r.d[0],value);if(!pc3_get(c,r.a[6],0x9f,1,value))return false;
         r.pc=(r.d[0]&0xffU)==value?0x20516:0x20318;return true;
-    // ADD.W D0,D0 twice; JMP 20320(PC,D0.W) (contract decision 2: the 9 BRA.W entries 20320..20340 only, none transcribed: every listed entry is a
-    // later-unit stop; a displacement beyond the table is the checked error).
+    // ADD.W D0,D0 twice; JMP 20320(PC,D0.W) (contract decision 2: the 9 BRA.W entries 20320..20340 only; a displacement beyond the table is the
+    // checked error).  The entry is decided by the routing: since player C10 the executed entry 20324 (BRA.W 203a0) is a C10 block (C10 contract
+    // decision 2; was: no entry transcribed), the other entries are later-unit stops.
     case 0x20318: {
         am_word(r.d[0],r.d[0]+r.d[0]);am_word(r.d[0],r.d[0]+r.d[0]);
         const std::uint32_t displacement=r.d[0]&0xffffU;

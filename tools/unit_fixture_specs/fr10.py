@@ -95,9 +95,13 @@ TRAPS = ()
 EXIT_STOPS = (0x70e42, 0x70fac, 0xcd7e2, 0xcd92e, 0xcd96c, 0x70f8e, 0xb6c58, 0x70f60, 0x70fcc, 0x70ff8, 0x71028,
               0x1f082, 0x20bfe, 0x22148, 0x22286, 0x223fa,
               0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x1dc8e, 0x1dccc, 0x1efd6, 0x21dd0, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6,
-              0x4e69a)
+              0x4e69a,
+              # player C10 routes the entries below since C10 (declared stops of the FR10 runs, as before C10)
+              0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
 UNIT_EXITS = EXIT_STOPS[:11]            # the FR10 later-unit stops (FR11 / FR12 / FR13)
-ROUTED_LATER = ()
+ROUTED_LATER = (
+    # player C10 (the C10 entries kept as declared stops)
+    0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the flag chains 70ff0 -> 70ff4, cd804 -> cd80a
 CHAINS = ((0x70f84, 0x70f8a), (0x71454, 0x7145a), (0x714e4, 0x714ea), (0xeab30, 0xeab36), (0x70fd2, 0x70fd6), (0x70ffa, 0x70ffe), (0x71012, 0x71016),
           (0xb7a62, 0xb7a68), (0xb7a6e, 0xb7a78), (0xcd93c, 0xcd940), (0xcdd86, 0xcdd9c), (0xeaa26, 0xeaa3a), (0xeaa34, 0xeaa3a), (0xeaac0, 0xeaac6),
@@ -504,9 +508,10 @@ def build():
     for s in STARTS:
         require(unit_of(s) == 'animation_objects_fr10_block', ('start is not routed to objects fr10', hex(s), unit_of(s)))
     for t in EXIT_STOPS:
-        require(unit_of(t) is None, ('later-unit stop must stay unrouted', hex(t)))
+        require(unit_of(t) is None or t in ROUTED_LATER, ('later-unit stop must stay unrouted', hex(t)))
+    # player C10 routes the C7 table entry 252b4 -> 252ce .. 252e2 since C10 (main decision 4; was: the four PCs stay unrouted)
     for t in (0x252b4, 0x252ce, 0x252d8, 0x252e2):
-        require(unit_of(t) is None, ('the C7 table entry 252b4 -> 252ce stays unrouted (C10, main decision 4)', hex(t)))
+        require(unit_of(t) == 'animation_player_c10_block', ('the C7 table entry 252b4 -> 252ce is a C10 start (main decision 4)', hex(t)))
     for t in (0xcc7c4, 0xcc7d0, 0xcc846):
         require(unit_of(t) == 'animation_objects_fr10_block', ('FR4 table entry routed to FR10', hex(t)))
     rng = random.Random(0xF10A)

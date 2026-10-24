@@ -100,13 +100,17 @@ EXIT_STOPS = (0x1cb44, 0x1fa68, 0x201bc, 0x20240, 0x20268, 0x202ac, 0x20544, 0x2
               0x1fc96, 0x1fd50, 0x21ca4, 0x21d0e, 0x21fa6, 0x2210c, 0x223a0, 0x223d6,
               # the later-unit stops of the C2 blocks that the C3 runs pass through (pc2 EXIT_STOPS that are still unrouted; the straight-line ones
               # 1ce98 1ceb0 1d398 are not interiors of a routed block; 1cde0 1cdf0 are C3 starts now, contract decision 10)
-              0x1cb1a, 0x1cb38, 0x1ce98, 0x1cfde, 0x1ceb0, 0x1cec2, 0x1d398, 0x1ebbe, 0x1eeea, 0x1f2a4, 0x1fafc, 0x1de3c, 0x1e21c, 0x1e8de)
+              0x1cb1a, 0x1cb38, 0x1ce98, 0x1cfde, 0x1ceb0, 0x1cec2, 0x1d398, 0x1ebbe, 0x1eeea, 0x1f2a4, 0x1fafc, 0x1de3c, 0x1e21c, 0x1e8de,
+              # player C10 routes the entries below since C10 (declared stops of the C3 runs, as before C10)
+              0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
 # later-unit stops routed since (player C4: 21c72 1ceb0 1cec2 1eeea; player C5: 1cb44 20240 20268 202ac 20544 21c12 21f4c 21f78 1cb1a 1cb38; player
 # C6: 206cc 21662 4838c 1d398 1ebbe; player C7: 1f2a4; player C8: 1fa68 201bc 4d0cc 1ce98 1cfde 1fafc; player C9: 21ca4 21d0e 2210c 223a0 223d6):
 # still declared stops of the C3 runs
 ROUTED_LATER = (0x21c72, 0x1ceb0, 0x1cec2, 0x1eeea, 0x1cb44, 0x20240, 0x20268, 0x202ac, 0x20544, 0x21c12, 0x21f4c, 0x21f78, 0x1cb1a, 0x1cb38,
                 0x206cc, 0x21662, 0x4838c, 0x1d398, 0x1ebbe, 0x1f2a4, 0x1fa68, 0x201bc, 0x4d0cc, 0x1ce98, 0x1cfde, 0x1fafc, 0x21ca4, 0x21d0e, 0x2210c,
-                0x223a0, 0x223d6)
+                0x223a0, 0x223d6,
+                # player C10 (the C10 entries kept as declared stops)
+                0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1edf6, 0x1ee04), (0x1ed22, 0x1ed26), (0x1ee12, 0x1ee16), (0x1ee1a, 0x1ee26), (0x1ee2a, 0x1ee32), (0x1ee36, 0x1ee3c), (0x1ee74, 0x1ee7a),
           (0x1ee7e, 0x1ee86), (0x1ee98, 0x1eea4), (0x1eeb6, 0x1eec2), (0x1f1c4, 0x1f1ca), (0x201ae, 0x201b8), (0x201da, 0x201e4), (0x202d0, 0x202da),
@@ -114,7 +118,8 @@ CHAINS = ((0x1edf6, 0x1ee04), (0x1ed22, 0x1ed26), (0x1ee12, 0x1ee16), (0x1ee1a, 
           (0x36278, 0x36282), (0x1ee4e, 0x1ee56))
 PASS_CHAINS = ()
 TABLE_JUMPS = {}
-# computed jumps (contract decision 2): JSR (A4) 201a6, JMP (PC,D0.W) 2031c, JMP (A1) 21620 / 221de
+# computed jumps (contract decision 2): JSR (A4) 201a6, JMP (PC,D0.W) 2031c, JMP (A1) 21620 / 221de (the executed table entry 20324 and the slot-84 values
+# 21e04 2228e 22360 are player C10 blocks since C10: declared stops of the C3 runs)
 JUMP_PCS = (0x201a6, 0x2031c, 0x21620, 0x221de)
 TABLE_ENTRIES = ()
 SLOT84 = (0x21602, 0x21610, 0x21664, 0x2173c, 0x21770, 0x217b2, 0x217e0, 0x217f6, 0x218b2, 0x2190e, 0x21960, 0x2199a, 0x219d8, 0x21a76, 0x21acc,
@@ -497,7 +502,9 @@ def build():
         # player C4 routes the listed targets 21d92 (slot 84) and 21d60 (list 21622) since; player C8 routes 21e6a (slot 84) and 21e3a (list 21622) since;
         # player C9 routes 21cd8 21d2a 2210c 22128 22240 2241c 22452 (slot 84) and 21e48 (list 21622) since (the C3 runs still stop at a listed target
         # that is not a C3 start)
-        require(unit_of(t) in (None, 'animation_player_c3_block', 'animation_player_c4_block', 'animation_player_c8_block', 'animation_player_c9_block'),
+        # player C10 routes 21e04 2228e 22360 (slot 84) and the table entry 20324 since
+        require(unit_of(t) in (None, 'animation_player_c3_block', 'animation_player_c4_block', 'animation_player_c8_block', 'animation_player_c9_block',
+                               'animation_player_c10_block'),
                 ('computed-jump target routed by another unit', hex(t)))
     for s in STARTS:
         require(unit_of(s) == 'animation_player_c3_block', ('start is not routed to player c3', hex(s), unit_of(s)))

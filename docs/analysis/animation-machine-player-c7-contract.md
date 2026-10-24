@@ -223,3 +223,11 @@ FR2..FR9, C1~C6 계약의 같은 절을 그대로 따른다. 다른 점만 적�
   - 범위: 214블록은 계획 217에서 `1cde0`, `1cdf0`, `1cdfa`(C3이 담당)를 뺀 값이고, 숨은 직선형 블록은 없다.
 - [F] 남은 실행 PC: C 194 → 93, E 0.
 - 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
+
+## 뒤 단위 변경 기록: player C10(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+C10 계약(`animation-machine-player-c10-contract.md`) 결정 2·4와 계획 §10.x 메인 결정 4에 따른 기록이다. C7 실행부의 동작은 바뀌지 않았다(주석만 고침).
+
+- [F] **표 `25298`의 전사 칸**: 이전 = 실행된 칸 `252a4`만 C7 block(위 결정 2). 새 = `252a4`(C7)와 `252b4`(→ `BRA.W 252ce`, C10 block; 이어지는 `252ce` `252d8` `252e2`도 C10)가 routing된 칸이다. 칸 선택 규칙(변위 0..`20`은 칸, 그 밖은 checked jump-target 오류)은 그대로다. [F] 정확 bitmap 재관측에서 실행된 칸은 `252a4`와 `252b4`뿐이다(`252a8` → `252ce`는 실행되지 않음). 나머지 7칸은 계속 뒤 단위 정지다.
+- [F] 실행부 `animation_machine_player_c7.cpp`의 `pc7_table_jump` 주석, 생성기 `JUMP_TARGETS` 주석, V1 spec 주석을 고쳤다. C7 단위 시험은 `252b4`를 정지로만 쓰므로 바뀌지 않는다(정지 검사가 dispatch보다 먼저).
+- [F] V1 spec `pc7.py`: 표 칸 검사 `{252a4}` → `{252a4, 252b4}`(소유자 C7 또는 C10). 오류 fixture `25294-d0-6-entry`(이전: `252b4`에서 `unsupported animation machine PC`) → `25294-d0-6-then-252d8`(`252b4` → `252ce`(BYTE `61(A2)` bit 7 clear) → `252d8 JSR 3af8`가 홀수 A7에서 실패; `25294`와 `252b4`/`252ce`는 스택을 쓰지 않음). `EXIT_STOPS`·`ROUTED_LATER`에 C10 진입 14개를 더했다. V1 pc7 2,077 그대로.

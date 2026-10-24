@@ -427,6 +427,7 @@ ROUTED_EXITS = {0x2986, 0x2a00, 0x3af8, 0x8ebe, 0xce02, 0x16ed2, 0x1cab6, 0x1cb0
                 0x201a2, 0x2291a, 0x43e34, 0x443d2, 0x491b6, 0x49214, 0x49a58, 0x49f8c, 0x49fc6, 0x4ae4a, 0x4bb52, 0x4be34, 0x4bfc0, 0xea69c}
 UNIT_EXITS = set(B.UNIT_EXITS)
 assert UNIT_EXITS == {0x1eb98, 0x1f756, 0x1fa68}
+# the table entries that are not C7 blocks: stop-only (the entry 252b4 is a player C10 block since C10, main decision 4: still a stop of the C7 rows)
 JUMP_TARGETS = set(t for t in TABLE_2529C if t not in STARTS_SET)
 ALLOWED_STOPS = ROUTED_EXITS | {STOP} | UNIT_EXITS | JUMP_TARGETS
 EXITS = sorted(ROUTED_EXITS) + sorted(UNIT_EXITS) + sorted(JUMP_TARGETS)

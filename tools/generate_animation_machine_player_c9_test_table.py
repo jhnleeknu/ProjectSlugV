@@ -614,12 +614,17 @@ def gen_errors():
     err('rom-write-1fb28', 0x1fb28, device, 0x1fb28, stop=0x1fb2e, a6=0x1b000)
     err('rom-write-21e48', 0x21e48, device, 0x21e48, stop=0x21e52, a6=0)
     # failures after executed blocks (rollback; the failing PC differs from the entry):
-    err('1f070-then-1f082', 0x1f070, unrouted, 0x1f082, puts=((NODE + 0x9d, 1, 1),))
-    err('20bee-then-20bfe', 0x20bee, unrouted, 0x20bfe, puts=((NODE + 0x36, 4, 0xffffff00),))   # D2 = 0 - ffffff00 = 100: BPL
-    err('22128-then-22148', 0x22128, unrouted, 0x22148, puts=((NODE + 0xa7, 1, 1),))
-    err('221a2-then-22286', 0x221a2, unrouted, 0x22286, puts=((NODE + 0x8c, 4, REC), (REC + 4, 1, 5)))
-    err('21d3c-then-223fa', 0x21d3c, unrouted, 0x223fa, d0=1)
-    err('20bc4-then-20bfe', 0x20bc4, unrouted, 0x20bfe, d0=0)                     # D0 bit 4 clear -> 20bee; LONG 36 = 0: D2 = 0, BPL
+    # Player C10 routes 1f082 20bfe 22148 22286 223fa (previous rows '1f070-then-1f082' '20bee-then-20bfe' '22128-then-22148' '221a2-then-22286'
+    # '21d3c-then-223fa' '20bc4-then-20bfe': 'unsupported animation machine PC' at those PCs).  The C10 blocks 1f082 (LEA) and 20bfe (ADDQ.L) access no
+    # memory and 22148 only the fields that 22128 accesses first: an odd A7 moves the failing PC to the first stack access after them (C9 1f086 BSR.W
+    # 1cab6, C9 20c16 JSR 43ea4.l, C10 22160 BSR.W 1cb08).  22286 / 223fa keep the failing PC: the node in fixed ROM (A6 = fff78: LONG 8c(A6) = 100004 in
+    # work RAM, the 22286 MOVE.L #2228e,84(A6) writes ffffc; A6 = 0: the 223fa MOVE.B #1,9d(A6) writes 9d).
+    err('1f070-then-1f086', 0x1f070, odd, 0x1f086, a7=SP + 1, puts=((NODE + 0x9d, 1, 1),))
+    err('20bee-then-20c16', 0x20bee, odd, 0x20c16, a7=SP + 1, puts=((NODE + 0x36, 4, 0xffffff00),))   # D2 = 0 - ffffff00 = 100: BPL -> 20bfe
+    err('22128-then-22160', 0x22128, odd, 0x22160, a7=SP + 1, puts=((NODE + 0xa7, 1, 1),))
+    err('221a2-then-22286', 0x221a2, device, 0x22286, a6=0xfff78, puts=((0x100004, 4, REC), (REC + 4, 1, 5)))
+    err('21d3c-then-223fa', 0x21d3c, device, 0x223fa, a6=0, d0=1)
+    err('20bc4-then-20c16', 0x20bc4, odd, 0x20c16, a7=SP + 1, d0=0)              # D0 bit 4 clear -> 20bee; LONG 36 = 0: D2 = 0, BPL -> 20bfe
     err('20a6e-then-20a90', 0x20a6e, odd, 0x20a90, a7=SP + 1)
     err('20b00-then-20b28', 0x20b00, odd, 0x20b28, a7=SP + 1)
     err('22276-then-22284', 0x22276, odd, 0x22284, a7=SP + 1)

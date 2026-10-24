@@ -96,9 +96,13 @@ TRAPS = ()
 # 1dc8e / 1dccc).  Declared stops of the native runs: a straight-line unrouted PC after a routed block is not the interior of a routed block.
 EXIT_STOPS = (0x1f082, 0x20bfe, 0x22148, 0x22286, 0x223fa,
               0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x1dc8e, 0x1dccc, 0x1efd6, 0x21dd0, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6,
-              0x4e69a)
+              0x4e69a,
+              # player C10 routes the entries below since C10 (declared stops of the C9 runs, as before C10)
+              0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
 UNIT_EXITS = EXIT_STOPS[:5]             # the C9 later-unit stops (C10)
-ROUTED_LATER = ()
+ROUTED_LATER = (
+    # player C10 (the C10 entries kept as declared stops)
+    0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the N chain 22174 -> 22180
 CHAINS = ((0x1ec98, 0x1eca0), (0x1ed0e, 0x1ed14), (0x1f112, 0x1f118), (0x1f524, 0x1f52a), (0x208fa, 0x20900), (0x20a4a, 0x20a50), (0x20bcc, 0x20bd2),
           (0x21ca4, 0x21cae), (0x21cb2, 0x21cb6), (0x21cba, 0x21cbe), (0x21cd8, 0x21ce0), (0x21d2a, 0x21d32), (0x22240, 0x22248), (0x2241c, 0x22424),
@@ -542,7 +546,7 @@ def build():
             require(unit_of(t) is not None, ('list handler must be routed', hex(t)))
     require(unit_of(0x21e48) == 'animation_player_c9_block', 'the list handler 21e48 is a C9 start')
     for t in EXIT_STOPS:
-        require(unit_of(t) is None, ('later-unit stop must stay unrouted', hex(t)))
+        require(unit_of(t) is None or t in ROUTED_LATER, ('later-unit stop must stay unrouted', hex(t)))
     rng = random.Random(0xC9A9)
     bases = []
     pointers = []
@@ -1085,11 +1089,16 @@ def error_fixtures(bases, add):
     # failures after executed blocks:
     #   1f070 (BYTE 9d > 0) -> 1f082 (C10); 20bee (0 - LONG 36 not negative) -> 20bfe (C10); 22128 (BYTE a7 bit 0) -> 22148 (C10); 221a2 (BYTE 4 of the record = 5)
     #   -> 22286 (C10); 21d3c (D0 bit 0) -> 223fa (C10); the RTS at an odd A7 after executed blocks
-    err('1f070-then-1f082', U.with_host_writes(st, [((a6 + 0x9d) & 0xffff, 1, 1)], pc=0x1f070), unrouted, 0x1f082)
-    err('20bee-then-20bfe', U.with_host_writes(st, [((a6 + 0x36) & 0xffff, 4, 0xffffff00)], pc=0x20bee), unrouted, 0x20bfe)   # D2 = 100: BPL
-    err('22128-then-22148', U.with_host_writes(st, [((a6 + 0xa7) & 0xffff, 1, 1)], pc=0x22128), unrouted, 0x22148)
-    err('221a2-then-22286', U.with_host_writes(st, [((a6 + 0x8c) & 0xffff, 4, rec + 0x20), ((rec + 0x24) & 0xffff, 1, 5)], pc=0x221a2), unrouted, 0x22286)
-    err('21d3c-then-223fa', U.with_host_writes(st, regs=dict(d0=1), pc=0x21d3c), unrouted, 0x223fa)
+    #   Player C10 routes 1f082 20bfe 22148 22286 223fa (previous rows '1f070-then-1f082' '20bee-then-20bfe' '22128-then-22148' '221a2-then-22286'
+    #   '21d3c-then-223fa': 'unsupported animation machine PC' there): an odd A7 moves the failing PC of the first three to the first stack access
+    #   after them (C9 1f086 BSR.W 1cab6, C9 20c16 JSR 43ea4.l, C10 22160 BSR.W 1cb08); 22286 / 223fa keep it with the node in fixed ROM (A6 = fff78:
+    #   LONG 8c(A6) = 100004 in work RAM, the 22286 MOVE.L writes ffffc; A6 = 0: the 223fa MOVE.B writes 9d).
+    err('1f070-then-1f086', U.with_host_writes(st, [((a6 + 0x9d) & 0xffff, 1, 1)], regs=dict(a7=a7 + 1), pc=0x1f070), odd_word, 0x1f086)
+    err('20bee-then-20c16', U.with_host_writes(st, [((a6 + 0x36) & 0xffff, 4, 0xffffff00)], regs=dict(a7=a7 + 1), pc=0x20bee), odd_word, 0x20c16)   # D2 = 100: BPL
+    err('22128-then-22160', U.with_host_writes(st, [((a6 + 0xa7) & 0xffff, 1, 1)], regs=dict(a7=a7 + 1), pc=0x22128), odd_word, 0x22160)
+    err('221a2-then-22286', U.with_host_writes(st, [(0x0004, 4, rec + 0x20), ((rec + 0x24) & 0xffff, 1, 5)], regs=dict(a6=0xfff78), pc=0x221a2),
+        'unsupported animation machine write device', 0x22286)
+    err('21d3c-then-223fa', U.with_host_writes(st, regs=dict(d0=1, a6=0), pc=0x21d3c), 'unsupported animation machine write device', 0x223fa)
     err('20a6e-then-20a90', U.with_host_writes(st, regs=dict(a7=a7 + 1), pc=0x20a6e), odd_word, 0x20a90)
     err('22276-then-22284', U.with_host_writes(st, regs=dict(a7=a7 + 1, d7=0), pc=0x22276), odd_word, 0x22284)
 

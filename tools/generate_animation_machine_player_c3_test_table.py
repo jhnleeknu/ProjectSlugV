@@ -397,6 +397,7 @@ def world(rng, fl, s, hint=None):
 ROUTED_EXITS = {0x8ebe, 0xce02, 0x1a988, 0x1aa3a, 0x1c1f4, 0x36292, 0x482aa, 0x484e2, 0x49290, 0x49a58, 0x49c38, 0x49f8c, 0x49fc6, 0x49fca, 0x4ae4a,
                 0x4b54e, 0x4bfc0, 0x4c1de, 0xe8b7e, 0xe8b80, 0x1cdfe, 0x1a9e8, 0x1cab6, 0x1cabe, 0x1cb08, 0x1cd98, 0x1cef8, 0x1d0c2, 0x1d15a, 0x1dfe6, 0x1ed34,
                 0x1ed78, 0x1eee0, 0x1f7a4, 0x1fa3c, 0x1fae8, 0x48368, 0x49bca}
+# the computed-jump targets: stop-only (the table entry 20324 and the slot-84 values 21e04 2228e 22360 are player C10 blocks since C10: still stops)
 JUMP_TARGETS = set(B.SLOT84) | set(LIST_21622) | set(range(0x20320, 0x20344, 4))
 UNIT_EXITS = set(B.EXIT_STOPS[:23])                 # the C3 later-unit and deferred stops (the rest of EXIT_STOPS are C2 stops)
 assert 0x223d6 in UNIT_EXITS and 0x202ac in UNIT_EXITS and 0x1cb1a not in UNIT_EXITS and len(UNIT_EXITS) == 23
@@ -711,8 +712,11 @@ def gen_errors():
         err('20318-entry-%x' % v, 0x20318, unrouted, 0x20320 + ((4 * v) & 0xffff), d0=v)
     err('2030a-a0-9', 0x2030a, jump, 0x20318, puts=((NODE + 0xa0, 1, 9), (NODE + 0x9f, 1, 0)))
     err('2030a-a0-ff', 0x2030a, jump, 0x20318, puts=((NODE + 0xa0, 1, 0xff), (NODE + 0x9f, 1, 0)))
-    # the synthetic list 21622: key 1 -> 21d60 (player C4 since) -> BYTE 9d = 1: BGT.W 21dd0 (C12, unrouted) (was: unrouted at 21d60, puts 9c only)
-    err('21610-key-1', 0x21610, unrouted, 0x21dd0, puts=((NODE + 0x9c, 1, 1), (NODE + 0x9d, 1, 1)))
+    # the synthetic list 21622: key 1 -> 21d60 (player C4 since) -> BYTE 9d = 1: BGT.W 21dd0 (C12, unrouted) (was: unrouted at 21d60, puts 9c only).
+    # Player C10 routes 21dd0 (previous row '21610-key-1': 'unsupported animation machine PC' at 21dd0): the C10 path 21dd0 .. 21dee runs (21bc6 /
+    # 21baa / 21c1c Clear) and C2 1cac2 reads the undeclared fixed-ROM record 1b8a2 (BYTE aa(A6) is written by 21610 first, so the 21dd0 BCLR cannot be
+    # made to fail alone)
+    err('21610-key-1-then-1cac2', 0x21610, 'missing or ambiguous physical program bus ROM byte', 0x1cac2, puts=((NODE + 0x9c, 1, 1), (NODE + 0x9d, 1, 1)))
     # the key WORD 0103 does not match BYTE 3: C Clear -> 21662 (the RTS of player C6 since; was: unrouted at 21662, puts 9c only) -> the RAM return
     # LONG 10fe40 (unrouted)
     err('21610-key-3-then-10fe40', 0x21610, unrouted, 0x10fe40, puts=((NODE + 0x9c, 1, 3), (SP, 4, 0x10fe40)))

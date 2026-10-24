@@ -181,5 +181,6 @@ bool animation_player_c7_block(AnimationMachineContext& c);
 bool animation_player_c8_block(AnimationMachineContext& c);
 bool animation_player_c9_block(AnimationMachineContext& c);
 bool animation_objects_fr10_block(AnimationMachineContext& c);
+bool animation_player_c10_block(AnimationMachineContext& c);
 }
 #endif

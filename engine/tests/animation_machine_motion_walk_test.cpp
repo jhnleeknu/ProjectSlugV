@@ -759,8 +759,10 @@ void errors(){
  {Bytes ram=zero_ram();record(ram,REC,0,0x14,0,0,0);put(ram,REC+10,2,0x10);put(ram,REC+12,2,0x0001);putf(ram,0x53b4,4,REC);
   State s=state(0x19812);s.d[0]=0x00200000;reject(ram,s,STOP,"unaligned animation machine PC");
   // Player C9: the type 7ffe (18c0e + 7ffe = 20c0c) is now a player C9 interior PC (previous expectation 'unsupported animation machine PC'); the type
-  // 7ff0 (18c0e + 7ff0 = 20bfe, the unrouted later-unit start after the C9 range 20a4a..20bfe) keeps the expectation.
-  put(ram,REC+12,2,0x7ff0);reject(ram,s,STOP,"unsupported animation machine PC");}
+  // 7ff0 (18c0e + 7ff0 = 20bfe, the unrouted later-unit start after the C9 range 20a4a..20bfe) kept the expectation until player C10.
+  // Player C10: 20bfe is a player C10 start (previous expectation with 7ff0: 'unsupported animation machine PC'); the type 2562 (18c0e + 2562 = 1b170,
+  // the ROM WORD table 1b170 of C9 20aa4 / 21376: data, never an executor PC) keeps the expectation.
+  put(ram,REC+12,2,0x2562);reject(ram,s,STOP,"unsupported animation machine PC");}
  // After the 1a73c PVC writes: a first motion record of type fffe sends 18efa into its own JMP.
  {Bytes ram=natural_ram();put(ram,MOT+2,2,0xfffe);reject(ram,state(0x1a73c),0x1a7a8,"unsupported animation motion walk PC");}
  // A stop that is never reached rolls back at the STOP return address.

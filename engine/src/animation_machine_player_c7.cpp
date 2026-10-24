@@ -122,8 +122,9 @@ std::uint32_t pc7_ext(std::uint32_t byte) {
     return (byte&0x80U)!=0U?(byte|0xff00U):(byte&0xffU);
 }
 // JMP 2529c(PC,D0.W) (contract decision 2): the BRA.W table 2529c..252c0 of 9 entries (D0.W 0..8 after CMPI.W #9; BCC.W at 2528c), only the executed
-// entry 252a4 is a block; a displacement 0 .. 20 moves the PC to the table entry (an unrouted entry is the next dispatch's 'unsupported animation
-// machine PC', a declared stop), any other D0.W (a direct 25294 entry) is the checked jump-target error.
+// entries are blocks: 252a4 (C7) and, since player C10, 252b4 (BRA.W 252ce, a C10 block: main decision 4, C10 contract decision 2; was: 252a4 only);
+// a displacement 0 .. 20 moves the PC to the table entry (an unrouted entry is the next dispatch's 'unsupported animation machine PC', a declared
+// stop), any other D0.W (a direct 25294 entry) is the checked jump-target error.
 bool pc7_table_jump(AnimationMachineContext& c) {
     const std::uint32_t displacement=c.s.d[0]&0xffffU;
     if(displacement>0x20U)return am_error(c,"unsupported animation player c7 jump target");
