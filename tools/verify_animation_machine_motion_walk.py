@@ -65,6 +65,7 @@ UNSUPPORTED_MACHINE = 'unsupported animation machine PC'
 UNSUPPORTED_WALK = 'unsupported animation motion walk PC'
 UNSUPPORTED_F6C = 'unsupported animation irq f6c PC'
 UNSUPPORTED_C5 = 'unsupported animation player c5 PC'
+UNSUPPORTED_C9 = 'unsupported animation player c9 PC'
 UNKNOWN_CARRY = 'motion walk caller requires known carry'
 WRITE_DEVICE = 'unsupported animation machine write device'
 EVEN = 'program bus requires even WORD/LONG address'
@@ -98,7 +99,7 @@ GUARD_OOR_PCS = {'guard-oor-18c06-type0001': 0x18c0f, 'guard-oor-18caa-type0002'
 # is now the player C5 interior error (scratch probe in a clone root: a run that reaches 20f00 fails with 'unsupported animation player c5 PC').
 SUPERSEDED_GUARD_ERRORS = {'guard-oor-18fd2-type8000': UNSUPPORTED_F6C, 'guard-oor-18efa-type7ffe': UNSUPPORTED_C5}
 SUPERSEDED_BY = {'guard-oor-18fd2-type8000': 'F6c family A', 'guard-oor-18efa-type7ffe': 'player C5 interior 20f00',
-                 'oor-18efa-type7ffe': 'player C5 interior 20f00'}
+                 'oor-18efa-type7ffe': 'player C5 interior 20f00', 'oor-18c06-type7ffe': 'player C9 interior 20c0c'}
 VERIFIED_ARTIFACTS = set()
 RUN_DIR = None
 WORKERS = 8
@@ -932,7 +933,11 @@ SUPERSEDED_RECORDS = []
 SUPERSEDED_COMPUTED = {'oor-18c06-type8000': 'unsupported animation machine write device', 'oor-18caa-type8000': UNSUPPORTED_F6C,
                        'oor-18efa-type8000': 'unsupported animation machine write device', 'oor-18fd2-type8000': UNSUPPORTED_F6C,
                        'oor-192c4-type8000': UNSUPPORTED_F6C,
-                       'oor-18efa-type7ffe': UNSUPPORTED_C5}     # player C5: the computed PC 20f00 is a C5 interior PC (former: UNSUPPORTED_MACHINE)
+                       'oor-18efa-type7ffe': UNSUPPORTED_C5,     # player C5: the computed PC 20f00 is a C5 interior PC (former: UNSUPPORTED_MACHINE)
+                       # player C9 (20c00..20c30 routed; block starts 20c00 / 20c0e / 20c10 / ...): the computed PC 18c0e + 7ffe = 20c0c is the displacement
+                       # word of 20c0a BMI.W 20c10 inside the C9 block 20c00 (former: UNSUPPORTED_MACHINE). The C++ test changed its own type 7ffe for the
+                       # same reason (C9 contract); this native row's type is recorded data and stays.
+                       'oor-18c06-type7ffe': UNSUPPORTED_C9}
 SUPERSEDED_ERROR_RECORDS = []      # guards that still fail, with a new exact error (counted in rows, unlike SUPERSEDED_RECORDS)
 SUPERSEDED_NEGATIVES = []
 
