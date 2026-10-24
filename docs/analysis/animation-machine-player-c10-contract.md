@@ -237,3 +237,9 @@ FR2..FR10, C1~C9 계약의 같은 절을 그대로 따른다. 다른 점만 적�
   - 범위: 계획 127 + C7 표 항목 `252b4 252ce 252d8 252e2` + `2041a`(실행되지 않은 표 항목의 분기 대상); `203c4 203cc 20340`는 어떤 관측에서도 실행되지 않아 추가하지 않았다.
   - 스텁: 라우팅된 스텁 `1dc84`의 인계 대상 `1dccc/1dc8e`는 이제 멈추는 대신 C10 코드를 실행한다.
 - 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
+
+## 뒤 단위 변경 기록: objects FR11(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR11 계약(`animation-machine-frontier-fr11-contract.md`) 결정 7에 따른 기록이다. C10 실행부·시험은 바뀌지 않았다.
+
+- [F] V1 spec `pc10.py`: `EXIT_STOPS` 가운데 FR10의 뒤 단위 정지 `70e42` `70fac` `cd7e2` `cd92e` `cd96c`가 FR11 block이 되었다. `ROUTED_LATER` `()` → 그 다섯(C10 run은 그 PC에서 계속 멈춘다), 두 번째 확인 `for t in EXIT_STOPS: require(unit_of(t) is None)` → `is None or t in ROUTED_LATER`.

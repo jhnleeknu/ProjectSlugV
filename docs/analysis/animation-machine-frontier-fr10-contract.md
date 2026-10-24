@@ -229,3 +229,11 @@ FR2..FR9, C1~C9 계약의 같은 절을 그대로 따른다. 다른 점만 적�
   - 수락 항목은 모두 true다. native 완료 frame 14500 중 6230이 일치한다(나머지는 다음 단위의 첫 정지 뒤).
   - 첫 정지: `1dccc 252b4 22148 223fa`(모두 C10).
 - 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
+
+## 뒤 단위 변경 기록: objects FR11(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR11 계약(`animation-machine-frontier-fr11-contract.md`) 결정 1·7에 따른 기록이다. FR10 실행부는 바뀌지 않았다.
+
+- [F] **FR10의 뒤 단위 정지 가운데 FR11 진입**: `70e42` `70fac` `cd7e2` `cd92e` `cd96c`(위 "출구와 경계"의 FR11 다섯)가 FR11 block이 되었다. 나머지 여섯(FR12 `70f8e` `b6c58`, FR13 `70f60` `70fcc` `70ff8` `71028`)은 계속 뒤 단위 정지다.
+- [F] 생성기 `generate_animation_machine_objects_fr10_test_table.py`의 오류 행 다섯(이전: 그 FR11 PC에서 `unsupported animation machine PC`)을 실패 PC를 지키거나 경로를 따라 옮겼다: `70e2a-then-70e42` → `70e2a-then-70e4a`(FR11 `70e4a`가 선언하지 않은 bank LONG `2a1110`을 읽음), `cd7cc-then-cd7e2` → `cd7cc-then-cd7e4`(홀수 node, FR10 `cd7e4`의 LONG 쓰기), `cd8ee-then-cd92e`(홀수 node, FR11 `cd92e`의 LONG 쓰기), `cd95a-then-cd96c`(홀수 node, FR11 `cd96c`의 WORD 읽기), `70f94-then-70fac` → `70f94-then-70fcc`(BYTE 82 bit 7: FR11 `70fac` → FR10 `70fc2` → FR13 `70fcc`). 다시 생성한 시험은 그 다섯 행만 바뀌었다(fixture 1,074 그대로).
+- [F] V1 spec `fr10.py`: `ROUTED_LATER`에 FR11 진입 다섯을 더했다(FR10 run은 그 PC에서 계속 멈춘다). 오류 fixture 다섯을 같은 뜻으로 바꿨다(`70e2a-then-70e4a`는 원본 ROM에서 bank 읽기가 성공하므로 홀수 A7의 `JSR 49f8c` push로 실패시킴).
