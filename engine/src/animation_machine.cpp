@@ -1261,6 +1261,9 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // the RTS b450c that passes the C of 1c356 back to the FR2 item-handler consumer b46ac.  Every other FR13 block stays Unknown; the Z reader 71fe4
     // (BEQ) recomputes the Z of the TST.B D0 of 71fe2 from D0.B (no other Z / N crosses an FR13 block boundary).
     case 0x716bc:case 0x71a6e:case 0x72102:case 0x722cc:case 0xbfd94:case 0xc5586:case 0xd172a:case 0xd177a:case 0x71f30:case 0xd16a2:case 0xb450c:
+    // Select E2 blocks: the 3 consumers e69c6 (BCC, 4836e), e69e8 (BCS, e6c26: e6c44 / e6c68 Set, e6c90 Clear) and e6b64 (BCC, e63fa: e640a Set,
+    // e6410 Clear).  The producers set their own C; every other E2 block stays Unknown (no Z / N crosses an E2 block boundary).
+    case 0xe69c6:case 0xe69e8:case 0xe6b64:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1982,6 +1985,8 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0xcc8f6 && next.pc<0xcc8fa) || (next.pc>=0xcc94a && next.pc<0xcc94c) || (next.pc>=0xcca5a && next.pc<0xcca76) ||
                 (next.pc>=0xccbc0 && next.pc<0xccc88) || (next.pc>=0xd159e && next.pc<0xd1632) ||
                 (next.pc>=0xd1636 && next.pc<0xd177e))ok=animation_objects_fr13_block(c);
+            else if ((next.pc>=0x3144 && next.pc<0x314c) || (next.pc>=0xe63fa && next.pc<0xe6448) || (next.pc>=0xe695a && next.pc<0xe6d92) ||
+                (next.pc>=0xe6db6 && next.pc<0xe6dd0) || (next.pc>=0xe6df4 && next.pc<0xe6e06))ok=animation_select_e2_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
