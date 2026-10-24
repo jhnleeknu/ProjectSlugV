@@ -246,3 +246,24 @@ FR2..FR10, C1~C10 계약의 같은 절을 그대로 따른다. 다른 점만 적
 ## 메인 결정(2026-10-24)
 
 - 실행되는 표 칸 `b42c4`(표 `b42b8`)는 FR12, `c54ba` `c54d6`(표 `c54b2`)는 FR13에 둔다(계획 배정 유지). 그때까지 FR11에서는 뒤 단위 정지다.
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j3 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. FR11 시험 `animation machine objects fr11: 958 fixtures (578 single-block, 272 path, 18 producer chain, 22 declared C, 68 checked error (15 with a later failing PC), 42 kept C), 192 blocks, 4586 calls, 110157 checks`.
+- [F] `ubsan`: 빌드/실행 종료 0, 런타임 오류 0.
+- [F] `mutation`: 변이 809, 제거 783, 등가 26.
+  - 이 실행 전에 메운 시험 빈틈 7개.
+- [F] real-ROM: 배치 `f4`, `f5`, `s1`, `s2`, `s3` 커버 `192`, `192`, `192`, `192`, `192`; mismatches `0,0,0,0,0`(합집합 192/192).
+  - 오라클: `native_safe` 켬.
+- [F] V1: A/B 각각 fixtures 2170, failed 0, identical true(digest `fe9cc45c918274e6`); regression specs 45개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 완료 54400/54400, mismatches 0; `controller_game` 완료 54400/54400, mismatches 0; `irq` 완료 54400/54400, mismatches 0; `demo` 완료 45684/45684, mismatches 0.
+- [F] IO(원래 관측): 일치 합계 173966, 기준 173966, 차이 0, mismatches 0, C++ 오류 0, 실행 2, identical true; 설정별 `P0` 81600, `P1` 81600, `P1b` 8400, `boot-demo-0` 577, `boot-title-idle` 600, `boot-title-start` 906, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 수락 항목은 모두 true이고, native frame 173,966 전부 일치한다.
+- [F] IO(확장 입력 관측): 일치 합계 7383, 기준 6751, 차이 632, mismatches 0, C++ 오류 0, 실행 2, identical true; 설정별 `P0` 1200, `P1` 1200, `X1` 1233, `X2` 1206, `X3` 1232, `X4` 1312.
+  - 예측 확인: 정확한 비트맵 재관측은 7383을 예측했고, 실측도 7383이다.
+  - 수락 항목은 모두 true다. native 완료 frame 14500 중 7383이 일치한다(나머지는 FR12의 첫 정지 뒤).
+  - 첫 정지: `b6e5e c1036 cc7c0 70f8e`(모두 FR12).
+  - 범위: 범위 변경 없음; 실행된 표 항목 `b42c4`(FR12로)와 `c54ba c54d6`(FR13로)는 이후 단위에서 유지한다(메인 결정).
+  - 분기: `JMP (A0) b4034`는 ROM에 기록된 6개 핸들러로 제한; 표 `b42b4`(0/4/c)와 `c54ae`(0..1a)는 범위 검사; `TRAP b3e58`는 단위 밖(FR5 관례).
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
