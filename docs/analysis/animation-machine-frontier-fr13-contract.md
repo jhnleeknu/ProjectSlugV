@@ -253,3 +253,11 @@ FR2..FR12, C1~C10 계약의 같은 절을 그대로 따른다. 다른 점만 적
   - 첫 정지: `e695a`(E2, 6회 실행), `3643e 7177a`(FR14).
   - 범위: 범위 변경 없음; 계산된 점프 `cc8da`는 가드 `cc8c0`가 범위 검사한다; 실행된 표 항목 `c54ba c54d6 cc8f6`.
 - 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
+
+## 뒤 단위 변경 기록: objects FR14(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR14 계약(`animation-machine-frontier-fr14-contract.md`) 결정 5에 따른 기록이다. FR13 실행부는 바뀌지 않았다.
+
+- [F] **FR13의 뒤 단위 정지 `71874` `d1632` `d177e`가 FR14 block이 되었다**(FR13 결정 1의 계획 배정대로). FR13의 뒤 단위 정지는 이제 없다. 표 `cc8de`의 routing 밖 칸 26개(칸 3 `cc8ea`(→ `cd0fe`, FR14 block) 포함)는 그대로 정지다.
+- [F] 생성기 `generate_animation_machine_objects_fr13_test_table.py`의 오류 행 셋(이전: 그 FR14 PC에서 `unsupported animation machine PC`): `71860-then-71874` → `71860-then-71876-odd-node`(FR13 `71876`의 `MOVE.L D0,64(A6)`), `d161a-then-d1632` → `d161a-then-d1654-odd-stack`(`d1654`의 `JSR 4be34` push), `d177a-then-d177e` → `d177a-then-d178a-odd-stack`(FR14 `d178a JSR 4ae4a` push). 생성기를 다시 돌려 그 3행만 바뀜을 확인했다(fixture 909 그대로).
+- [F] V1 spec `fr13.py`: `ROUTED_LATER` `()` → (`71874` `d1632` `d177e` `7177a` `71786`). 오류 fixture `71860-then-71874` → `71860-then-71876-odd-node`, `d161a-then-d1632` → `d161a-then-d1654-odd-stack`. FR13 run은 그 PC에서 계속 멈춘다.

@@ -186,5 +186,6 @@ bool animation_objects_fr11_block(AnimationMachineContext& c);
 bool animation_objects_fr12_block(AnimationMachineContext& c);
 bool animation_objects_fr13_block(AnimationMachineContext& c);
 bool animation_select_e2_block(AnimationMachineContext& c);
+bool animation_objects_fr14_block(AnimationMachineContext& c);
 }
 #endif

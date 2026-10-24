@@ -90,7 +90,8 @@ TRAPS = (0xe6d92, 0xe6dd0)
 EXIT_STOPS = (0x71874, 0xd1632, 0xd177e, 0x7177a, 0x71786,
               0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a)
 UNIT_EXITS = ()
-ROUTED_LATER = ()
+# objects FR14 routes the FR13 / FR12 later-unit stops 71874 d1632 d177e 7177a 71786 since FR14 (declared stops of the E2 runs, as before FR14)
+ROUTED_LATER = (0x71874, 0xd1632, 0xd177e, 0x7177a, 0x71786)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0xe69c0, 0xe69c6), (0xe69e0, 0xe69e8), (0xe6b5a, 0xe6b64))
 PASS_CHAINS = ()

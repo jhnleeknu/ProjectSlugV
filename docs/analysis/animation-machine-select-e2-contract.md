@@ -221,3 +221,9 @@ select E1, FR2..FR13, C1~C10 계약의 같은 절을 그대로 따른다. 다른
   - 첫 정지: `d177e 3643e 7177a`(모두 FR14).
   - 범위: 계획 128개에 `e695e`(`28ae`의 라우팅되지 않은 자식 `e6952`에서 오는 `BRA.W`)를 추가했다. `TRAP` `e6d92`와 `e6dd0`은 단위 밖에 있다(FR5 관례). E에서 실행된 라우팅되지 않은 PC는 0에 도달한다.
 - 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
+
+## 뒤 단위 변경 기록: objects FR14(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+FR14 계약(`animation-machine-frontier-fr14-contract.md`) 결정 5에 따른 기록이다. E2 실행부와 E2 시험은 바뀌지 않았다.
+
+- [F] V1 spec `se2.py`의 `EXIT_STOPS` 앞 5개(`71874` `d1632` `d177e` `7177a` `71786`)가 FR14 block이 되어 `ROUTED_LATER` `()` → (`71874` `d1632` `d177e` `7177a` `71786`)로 두었다(E2 run의 선언 정지는 그대로).

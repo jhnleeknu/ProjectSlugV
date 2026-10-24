@@ -587,9 +587,12 @@ def gen_errors():
     err('rom-write-c553a', 0xc553a, device, 0xc553a, a6=0x1000)
     # failures after executed blocks (rollback; the failing PC differs from the entry): the later-unit stops of FR14, the unrouted entries of the table
     # cc8de, the item handler path into the declared stop after a consumer
-    err('71860-then-71874', 0x71860, unrouted, 0x71874)
-    err('d161a-then-d1632', 0xd161a, unrouted, 0xd1632)
-    err('d177a-then-d177e', 0xd177a, unrouted, 0xd177e, carry=2)
+    # objects FR14 routes 71874 / d1632 / d177e since FR14 (FR14 contract; was: 71860-then-71874 / d161a-then-d1632 / d177a-then-d177e with
+    # 'unsupported animation machine PC' at the FR14 PC): 71874 (NEG.L D0) runs on to FR13 71876 (MOVE.L D0,64 on the odd node); d1632 runs on through
+    # d1636 / d1644 to the JSR 4be34 push of d1654 on the odd A7; d177e runs on to the JSR 4ae4a push of d178a on the odd A7
+    err('71860-then-71876-odd-node', 0x71860, wodd, 0x71876, a6=NODE + 1)
+    err('d161a-then-d1654-odd-stack', 0xd161a, odd, 0xd1654, stop=0x4be34, a7=SP + 1)
+    err('d177a-then-d178a-odd-stack', 0xd177a, odd, 0xd178a, carry=2, stop=0x4ae4a, a7=SP + 1)
     err('cc8d2-then-cc8de', 0xcc8d2, unrouted, 0xcc8de, d0=0x12345600)
     err('cc8c0-then-cc8e2', 0xcc8c0, unrouted, 0xcc8e2, puts=((NODE + 0x5e, 1, 1),))
     err('cc8c0-then-cc946', 0xcc8c0, unrouted, 0xcc946, puts=((NODE + 0x5e, 1, 0x1a),))
