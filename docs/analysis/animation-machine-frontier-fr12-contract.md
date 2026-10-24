@@ -223,6 +223,27 @@ FR2..FR11, C1~C10 계약의 같은 절을 그대로 따른다. 다른 점만 적
 - [F] 원래 IO 관측·frame 비교·legacy 검증기는 작업자가 돌리지 않았다(메인 runner). stage area 검증기는 이웃 `4d84e`만 scratch clone root에서 탐침했다(위 "영향받는").
 - [F] `CPP_PINS`: 작업 트리와 scratch clone root(`work/mkroot.py`; 확인 뒤 symlink를 먼저 지우고 삭제)에서 파일 SHA와 같다(4 / 9 pin, 불일치 0, `trial_logs/pincheck_tree.log` `pincheck_root.log`).
 
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j4 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. FR12 시험 `animation machine objects fr12: 1127 fixtures (724 single-block, 323 path, 24 producer chain, 16 declared C, 40 checked error (6 with a later failing PC), 72 kept C), 212 blocks, 5269 calls, 122166 checks`.
+- [F] `ubsan`: 빌드/실행 종료 0, 런타임 오류 0.
+- [F] `mutation`: 변이 749, 제거 724, 등가 25.
+  - 이 실행 전에 메운 시험 빈틈 2개.
+- [F] real-ROM: 배치 `f4`, `f5`, `s1`, `s2`, `s3` 커버 `212`, `212`, `211`, `212`, `211`; mismatches `0,0,0,0,0`.
+  - 오라클: `native_safe` 켬.
+- [F] V1: A/B 각각 fixtures 2302, failed 0, identical true(digest `87f7a8535f611d48`); regression specs 46개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 완료 54400/54400, mismatches 0; `controller_game` 완료 54400/54400, mismatches 0; `irq` 완료 54400/54400, mismatches 0; `demo` 완료 45684/45684, mismatches 0.
+- [F] IO(원래 관측): 일치 합계 173966, 기준 173966, 차이 0, mismatches 0, C++ 오류 0, 실행 2, identical true; 설정별 `P0` 81600, `P1` 81600, `P1b` 8400, `boot-demo-0` 577, `boot-title-idle` 600, `boot-title-start` 906, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 수락 실패 항목은 없고, native frame 173966 전부 일치한다.
+- [F] IO(확장 입력 관측, 14500 native frames): 일치 합계 7977, 기준 7383, 차이 594, mismatches 0, C++ 오류 0, 실행 2, identical true; 설정별 `P0` 1200, `P1` 1200, `X1` 1477, `X2` 1386, `X3` 1348, `X4` 1366.
+  - 예측 확인: 정확한 비트맵 재관측은 7977을 예측했고, 실측도 7977이다.
+  - 수락 실패 항목은 없고, native 완료 frame 14500 중 7977이 일치한다.
+  - 첫 정지: `70fcc c54ba 71028 70f60 b44ac c54d6 c554c 71f2c`(모두 FR13).
+  - 범위: 범위 변경 없음; 실행된 표 항목 `b42c4`를 포함했고(메인 결정), 2바이트로 빠져나가는 블록 `7177a 71786`(FR14)와 `71682 717c2`(FR13)는 계획대로 이후 단위에 남긴다.
+  - 산술: `MULS`는 부호 있는 낮은 WORD, `MULU`는 부호 없는, `MOVEM.W`는 부호 확장; 자체 계산 점프 없음.
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
+
 ## 뒤 단위 변경 기록: objects FR13(2026-10-24, 작업자 Claude Opus 5.5 / high)
 
 FR13 계약(`animation-machine-frontier-fr13-contract.md`) 결정 6에 따른 기록이다. FR12 실행부는 바뀌지 않았다.
