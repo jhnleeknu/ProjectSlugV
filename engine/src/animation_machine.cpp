@@ -1236,6 +1236,14 @@ bool carry_preserving_pc(std::uint32_t pc) {
     // 22180 recomputes the N of 22174 from the BYTE 9d(A6)).
     case 0x1eca0:case 0x1ed14:case 0x1f118:case 0x1f52a:case 0x20900:case 0x20a50:case 0x20bd2:case 0x21cae:case 0x21cb6:case 0x21cbe:case 0x21ce0:
     case 0x21d32:case 0x22248:case 0x22424:
+    // Objects FR10 blocks: the 13 consumers 70f8a 7145a 714ea eab36 (BCC, 49fc6), 70fd6 (BCC, 7028e), 70ffe (BCC, 705ca), 71016 (BCC, 70594), b7a68
+    // (BCC, 484e2), b7a78 (MOVEM.W (A7)+,D0-D1; BCC, 49392), cd940 (BCC, ccade), cdd9c (BCC, 28ae), eaa3a (BCC, eaa26 ANDI Clear / 49fc6), eaac6 (BCS,
+    // 1abda); b7b40 (EORI.B #1,CCR; RTS: the C of 4941e inverted for U19 b7b6a / b7b7e); ccae6 (BTST+BNE) and the RTS ccaf6 pass the C of ccade (TST.B
+    // Clear) / 4b54e to cd940.  705be (ORI Set) / 705c4 (ANDI Clear) / b7b46 (ANDI Clear) set their C before their RTS (N15 711c0, 71016, U19), eaa26
+    // and ccade set Clear in their own block; 70f2c (MOVE.L last) sets Clear and 70f3e (BTST+BEQ) passes the C to the N15 consumer 71c48; cddae (ORI)
+    // sets Set without a reader.  The Z reader 70ff4 and the N reader cd80a recompute their flag.
+    case 0x70f8a:case 0x7145a:case 0x714ea:case 0xeab36:case 0x70fd6:case 0x70ffe:case 0x71016:case 0xb7a68:case 0xb7a78:case 0xcd940:case 0xcdd9c:
+    case 0xeaa3a:case 0xeaac6:case 0xb7b40:case 0xccae6:case 0xccaf6:case 0x70f3e:
     // BTST/BEQ changes only Z; its known memory test is already modeled.
     // F6b palette transfer FLOW blocks outside the cell range: 7302 BCLR+BEQ, 8738 RTS, 8b60 BRA (contract carry section).
     case 0x7302:case 0x8738:case 0x8b60:
@@ -1911,6 +1919,16 @@ bool run_machine(std::vector<std::uint8_t>& ram,
                 (next.pc>=0x21370 && next.pc<0x213da) || (next.pc>=0x21ca4 && next.pc<0x21d60) || (next.pc>=0x21e48 && next.pc<0x21e52) ||
                 (next.pc>=0x2210c && next.pc<0x22148) || (next.pc>=0x22174 && next.pc<0x221ca) || (next.pc>=0x22238 && next.pc<0x22286) ||
                 (next.pc>=0x223a0 && next.pc<0x223fa) || (next.pc>=0x22408 && next.pc<0x22472))ok=animation_player_c9_block(c);
+            else if ((next.pc>=0x4e122 && next.pc<0x4e132) || (next.pc>=0x6f1ca && next.pc<0x6f1d4) || (next.pc>=0x70594 && next.pc<0x705ca) ||
+                (next.pc>=0x70e2a && next.pc<0x70e42) || (next.pc>=0x70ea2 && next.pc<0x70f60) || (next.pc>=0x70f84 && next.pc<0x70f8e) ||
+                (next.pc>=0x70f94 && next.pc<0x70fac) || (next.pc>=0x70fc2 && next.pc<0x70fcc) || (next.pc>=0x70fd2 && next.pc<0x70ff8) ||
+                (next.pc>=0x70ffa && next.pc<0x71028) || (next.pc>=0x7102e && next.pc<0x71032) || (next.pc>=0x713d8 && next.pc<0x71502) ||
+                (next.pc>=0xb6ba0 && next.pc<0xb6c58) || (next.pc>=0xb6c66 && next.pc<0xb6ca2) || (next.pc>=0xb7a62 && next.pc<0xb7acc) ||
+                (next.pc>=0xb7b30 && next.pc<0xb7b4c) || (next.pc>=0xcc7c4 && next.pc<0xcc7c8) || (next.pc>=0xcc7d0 && next.pc<0xcc7d4) ||
+                (next.pc>=0xcc846 && next.pc<0xcc84a) || (next.pc>=0xcca44 && next.pc<0xcca5a) || (next.pc>=0xccade && next.pc<0xccbc0) ||
+                (next.pc>=0xcd7c6 && next.pc<0xcd7e2) || (next.pc>=0xcd7e4 && next.pc<0xcd92e) || (next.pc>=0xcd93c && next.pc<0xcd96c) ||
+                (next.pc>=0xcda34 && next.pc<0xcdb08) || (next.pc>=0xcdd86 && next.pc<0xcddba) || (next.pc>=0xcde6e && next.pc<0xcde96) ||
+                (next.pc>=0xeaa00 && next.pc<0xeaa54) || (next.pc>=0xeaac0 && next.pc<0xeab42))ok=animation_objects_fr10_block(c);
             else return am_error(c,"unsupported animation machine PC");
             if (!ok)return false;
             if (c.waiting) {result=AnimationMachineWaiting;stopped=true;break;}
