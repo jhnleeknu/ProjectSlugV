@@ -233,6 +233,27 @@ FR2..FR12, C1~C10 계약의 같은 절을 그대로 따른다. 다른 점만 적
 - [F] 원래 IO 관측·frame 비교·legacy 검증기는 작업자가 돌리지 않았다(메인 runner).
 - [F] `CPP_PINS`: 작업 트리와 scratch clone root(`work/mkroot.py`; 확인 뒤 symlink를 먼저 지우고 삭제)에서 파일 SHA와 같다(4 / 9 pin, 불일치 0, `trial_logs/pincheck_tree.log` `pincheck_root.log`).
 
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. FR13 시험 `animation machine objects fr13: 909 fixtures (536 single-block, 292 path, 18 producer chain, 20 declared C, 43 checked error (6 with a later failing PC), 33 kept C), 207 blocks, 4326 calls, 96027 checks`.
+- [F] `ubsan`: 빌드/실행 종료 0, 런타임 오류 0.
+- [F] `mutation`: 변이 780, 제거 770, 등가 10.
+  - 이 실행 전에 메운 시험 빈틈 5개.
+- [F] real-ROM: 배치 `f4`, `f5`, `s1`, `s2`, `s3` 커버 `207`, `207`, `207`, `207`, `207`; mismatches `0,0,0,0,0`.
+  - 오라클: `native_safe` 켬.
+  - 두 무작위 월드(`s1 b44ac`, `f4 b4506`)가 `C5 1c46a`를 통해 `300000..3fffff` 장치 창에 1바이트를 쓴다. C++는 자체 검사된 장치 쓰기 오류로 거부하고, 하네스는 이를 문서화된 분류로 처리한 뒤 배치를 다시 실행했다.
+- [F] V1: A/B 각각 fixtures 2126, failed 0, identical true(digest `8e08cd3c3bc1edb8`); regression specs 47개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 완료 54400, mismatches 0; `controller_game` 완료 54400, mismatches 0; `irq` 완료 54400, mismatches 0; `demo` 완료 45684, mismatches 0.
+- [F] IO(원래 관측): 일치 합계 173966, 기준 173966, 차이 0, mismatches 0, C++ 오류 0, 실행 2, identical true; 설정별 `P0` 81600, `P1` 81600, `P1b` 8400, `boot-demo-0` 577, `boot-title-idle` 600, `boot-title-start` 906, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 수락 실패 항목은 없고, native frame 173966 전부 일치한다.
+- [F] IO(확장 입력 관측, 14500 native frames): 일치 합계 10374, 기준 7977, 차이 2397, mismatches 0, C++ 오류 0, 실행 2, identical true; 설정별 `P0` 1200, `P1` 1200, `X1` 1728, `X2` 1792, `X3` 2078, `X4` 2376.
+  - 예측 확인: 정확한 비트맵 재관측은 10374를 예측했고, 실측도 10374이다.
+  - 수락 실패 항목은 없고, native 완료 frame 14500 중 10374가 일치한다.
+  - 첫 정지: `e695a`(E2, 6회 실행), `3643e 7177a`(FR14).
+  - 범위: 범위 변경 없음; 계산된 점프 `cc8da`는 가드 `cc8c0`가 범위 검사한다; 실행된 표 항목 `c54ba c54d6 cc8f6`.
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
+
 ## 뒤 단위 변경 기록: objects FR14(2026-10-24, 작업자 Claude Opus 5.5 / high)
 
 FR14 계약(`animation-machine-frontier-fr14-contract.md`) 결정 5에 따른 기록이다. FR13 실행부는 바뀌지 않았다.

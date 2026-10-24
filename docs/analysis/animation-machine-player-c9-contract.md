@@ -220,3 +220,23 @@ FR2..FR9, C1~C8 계약의 같은 절을 그대로 따른다. 다른 점만 적�
 - [F] **IO, 원래 관측**(C9 연결 뒤, `--workers 5`): run 296, 일치 **173,966** / 173,966, 불일치 0, C++ 오류 0, chain divergence 0, 수용 키 모두 true(`negatives_ok` 포함)(`trial_logs/io_hist_c9.log`; `verification.json` SHA256 `d4ae0ecf8bf5666d…`, `frontier.json` `c4cf020fb54375e5…`). C9를 넣기 전(`main` engine, pin 표 검증기)과 비교하면 `verification.json`은 `inputs`의 engine source·header SHA(`animation_machine.cpp` `animation_machine_internal.h`, 새 `animation_machine_player_c9.cpp`), harness binary SHA, routing SHA·atom 수(1,253 → 1,273), `tools/verify_animation_machine.py` SHA만 다르고, `frontier.json`은 `routing_file_sha256`만 다르다(`tools/jdiff.py`). 결과 필드는 모두 같다.
 - [F] **IO, 입력 확장 관측**(C9 연결 뒤): run 12, native 비교 frame 14,500 가운데 일치 **5,839**(예측 5,839, 기준선 5,095 → +744), 불일치 0(beyond 0), C++ 오류 0, chain divergence 0, 수용 키 모두 true(`negatives_ok` 포함, `P1` case 94)(`trial_logs/io_ext_c9.log`; `verification.json` `3d2d0c36f097d933…`, `frontier.json` `3c50a45d5274d963…`). 구성별 일치 P0 1,200 / P1 1,200 / X1 796 / X2 795 / X3 968 / X4 880. 첫 정지(확인된 frontier): X1 68 frame 501·X1 94 295 `6f1ca`(D), X2 68 504·X2 94 291 `eaac0`(D), X3 68 591 `252b4`(D), X3 94 377 `71468`(D), X4 68 520·X4 94 360 `223fa`(C10) — 재관측 예측(`reobs/c9r.stops`)과 run·frame·PC가 모두 같다.
 - [F] `CPP_PINS`: 작업 트리와 scratch clone root(`work/mkroot.py`: 작업 트리 clone + 변경 파일 복사 + 공유 자료 symlink; 확인 뒤 symlink를 먼저 지우고 삭제)에서 파일 SHA와 같다(4 / 9 pin, 불일치 0, `trial_logs/pincheck_tree.log` `pincheck_root.log`).
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j6 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. C9 시험 `animation machine player pc9: 1678 fixtures (1210 single-block, 313 path, 48 producer chain, 28 declared C, 79 checked error (11 with a later failing PC), 70 kept C), 220 blocks, 7089 calls, 307318 checks`.
+- [F] `ubsan`: 빌드/실행 종료 0, 런타임 오류 0.
+- [F] `mutation`: 변이 674, 제거 661, 등가 13.
+  - 이 실행 전에 메운 시험 빈틈 10개.
+- [F] real-ROM: 배치 `f4`, `f5`, `s1`, `s2`, `s3` 커버 `220`, `220`, `220`, `219`, `219`; 불일치 `0,0,0,0,0`(합집합 220/220).
+  - 오라클: `native_safe` 켬.
+- [F] V1: A/B 각각 fixtures 2347, failed 0, identical true(digest `da3660d2b456fa56`); regression specs 42개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 완료 54400/54400, 불일치 0; `controller_game` 완료 54400/54400, 불일치 0; `irq` 완료 54400/54400, 불일치 0; `demo` 완료 45684/45684, 불일치 0.
+- [F] IO(원래 관측): 일치 합계 173966, 기준 173966, 차이 0, 불일치 0, C++ 오류 0, 실행 2, 동일함; 설정별 `P0` 81600, `P1` 81600, `P1b` 8400, `boot-demo-0` 577, `boot-title-idle` 600, `boot-title-start` 906, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 수락 항목은 모두 true이고, native frame 173,966 전부 일치한다.
+- [F] IO(확장 입력 관측): 일치 합계 5839, 기준 5095, 차이 744, 불일치 0, C++ 오류 0, 실행 2, 동일함; 설정별 `P0` 1200, `P1` 1200, `X1` 796, `X2` 795, `X3` 968, `X4` 880.
+  - 예측 확인: 정확한 비트맵 재관측은 5839를 예측했고, 실측도 5839이다.
+  - 수락 항목은 모두 true다. native 완료 frame 14,500 중 5,839가 일치한다(나머지는 다음 단위의 첫 정지 뒤).
+  - 첫 정지: `D 6f1ca eaac0 252b4 71468`, `C 223fa`(모두 이후 단위).
+- [F] 검증기 변경: IO 검증 고정값을 알려진 관측 pin 표(historic, io-ext)로 변경했다. historic 관측의 출력은 변하지 않았고, io-ext의 `P1` case 94의 negative checks가 필수다.
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
