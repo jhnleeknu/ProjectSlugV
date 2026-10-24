@@ -256,3 +256,24 @@ FR2..FR13, C1~C10, E1, E2 계약의 같은 절을 그대로 따른다. 다른 �
 - [F] **IO, 입력 확장 관측**(FR14 연결 뒤, `--workers 3`, `MS5_SEED_DIR=artifacts/stage_entry_body`): run 12, native 비교 frame 14,500 가운데 일치 **14,500**(예측 14,500, 기준선 12,586 → +1,914), 불일치 0(beyond 0), C++ 오류 0, chain divergence 0, unrouted 0, 수용 키 모두 true(`negatives_ok` `frontiers_confirmed` 포함), 관측 pin `io-ext`(`trial_logs/io_ext_fr14.log`; `verification.json` SHA256 `0a13b61ce93e6a66…`, `frontier.json` `61caf880a4a0cdea…`, scratch `io_ext_fr14/`). run별 일치: P0 1,200, P1 1,200, X1 2,552, X2 2,612, X3 3,656, X4 3,280. 12 run 모두 끝(P0 / P1 frame-limit, X run system-return guard)까지 일치하고 첫 정지 run은 0이다 — 재관측 예측(`reobs/fr14v1.stops`, `fr14final.stops`)과 같다.
 - [F] 원래 IO 관측·frame 비교·legacy 검증기는 작업자가 돌리지 않았다(메인 runner).
 - [F] `CPP_PINS`: 작업 트리와 scratch clone root(`work/mkroot.py`; 확인 뒤 symlink를 먼저 지우고 삭제)에서 파일 SHA와 같다(4 / 9 pin, 불일치 0, `trial_logs/pincheck_tree.log` `pincheck_root.log`).
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j4 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. `animation machine objects fr14` 시험 997 fixtures, 200 block, 호출 4426, 검사 109529.
+- [F] `ubsan`: 빌드/실행 종료 0, 런타임 오류 0.
+- [F] `mutation`: 변이 597, 제거 587, 등가 10.
+  - 이 실행 전에 메운 시험 빈틈 4개.
+- [F] real-ROM: 배치 `f4`, `f5`, `s1`, `s2`, `s3` 커버 `200`, `200`, `199`, `199`, `199`; mismatches `0,0,0,0,0`.
+  - 오라클: `native_safe` 켬.
+- [F] V1: A/B 각각 fixtures 1783, failed 0, identical true(digest `90a4a9300cfa6a00`); regression specs 49개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 완료 54400, mismatches 0; `controller_game` 완료 54400, mismatches 0; `irq` 완료 54400, mismatches 0; `demo` 완료 45684, mismatches 0.
+- [F] IO(원래 관측): 일치 합계 173966, 기준 173966, 차이 0, mismatches 0, C++ 오류 0, 실행 2, identical true; 설정별 `P0` 81600, `P1` 81600, `P1b` 8400, `boot-demo-0` 577, `boot-title-idle` 600, `boot-title-start` 906, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 수락 키 실패 항목은 없고, native frame 173966 전부 일치한다.
+- [F] IO(확장 입력 관측, 14500 native frames): 일치 합계 14500, 기준 12586, 차이 1914, mismatches 0, C++ 오류 0, 실행 2, identical true; 설정별 `P0` 1200, `P1` 1200, `X1` 2552, `X2` 2612, `X3` 3656, `X4` 3280.
+  - 예측 확인: 정확한 비트맵 재관측은 14500을 예측했고, 실측도 14500이다.
+  - 수락 키 실패 항목은 없고, native frame 14500 전부 일치한다(일치 합계 14500 = 전체 14500).
+  - 첫 정지: 없음(모든 실행이 끝 또는 가드에 도달).
+  - 범위: 계획 199개에 `3657c`(`2986`의 라우팅되지 않은 자식 `365fc`에서 오는 `BRA.W`)를 추가했다. 계산 점프, `TRAP`, `MUL`/`DIV`, `28ae` 자식은 없다.
+  - 완료: 확장 관측에서 실행된 라우팅되지 않은 PC는 C 0 / D 0 / E 0이고, native frame 14500 전부 일치한다.
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
