@@ -2672,3 +2672,16 @@
   - 실제 ROM 7,500건 불일치 0. 변이 597개 중 587개 검출(10개 동등). V1 1,783(두 번 같음). 회귀 spec 49개, legacy 검증기 10개 통과. frame 비교 변화 없음.
 - [F] **확장 관측 IO: native frame 14,500 전부 일치**(12,586 → 14,500). 불일치 0, 수용 키 모두 true, 첫 정지 없음. 실행된 routing 밖 PC는 C 0 / D 0 / E 0이다. 원래 관측도 173,966/173,966 그대로다.
 - 계획 문서 §10.y에 단위별 수치와 남은 일을 적었다. 다음 관측(다른 mission seed, P2 입력, game over 뒤)은 사용자 결정이 필요하다.
+
+## 2026-10-25 — 세 번째 IO 관측(다른 stage·P2·continue) 설계와 남은 단위 계획
+
+- [F] 새 도구 `tools/observe_animation_machine_io_ext2.py`는 pin된 observer와 확장 관측 도구를 고치지 않고 import한다. 입력은 `docs/analysis/data/io-input-scripts-ext2.json`이다.
+  - 다른 stage: game start 뒤 frame 3에 BYTE `10d680`/`10d681`(group/area)을 선언 쓰기로 준다. 근거는 `477ee`가 이 값으로 stage 색인 `474f4`를 찾는다는 것이다. 다른 mission으로 가는 게임 안 경로는 mission을 깨는 것뿐이라 선언을 썼다.
+  - P2: 기존 `player-start-p2`와 P2 입력 script를 쓴다.
+  - continue: soft-DIP `10fd8a`=1과 credit `100004`/`100003`을 선언하고, PLAYER_START 효과를 두 번 선언한다. 원래 USER 초기화 경로를 실행했다는 주장이 아니다.
+- 관측은 scratch에만 있다(`ms5-scratch/obs3/final/`, run 11개, 18,722 frame, 23 MB). 두 번 실행 결과가 같다. 대조군 P0·P1·X1은 확장 관측의 frame 기록과 같다. `artifacts/`에 둘지는 사용자 결정이다.
+- 측정(현재 routing): 실행된 routing 밖 PC는 C 502 / D 1,954 / E 2다. C11~C14 시작 683개 중 345개가 실행된다. 선언 정지 `1e67a` `1e918`, 자식 `365fc`도 실행된다.
+- IO 검증기의 알려진 관측 pin 표에 `io-ext2`를 더했다. historic·io-ext 결과는 그대로다.
+  - 기준선: 18,718 중 5,681 일치, 예측은 6,638이다. 불일치 2(P2 run D1·D2의 frame 끝 carry, P2 자식 `ea908`)가 957 frame 차이의 원인이다. 기존 routing 결함이다.
+- 남은 단위 계획(§11): 17개 IO 단위, 3,055 block(C 4, D 12, E 1). 재관측 예측이 수렴했다. 첫 단위는 C11(209 block)이다.
+- 다음(사용자 결정): 관측을 `artifacts/`에 둘지, 선언 세 가지를 받아들일지, P2 carry 결함을 먼저 고칠지 정한다. 그 뒤 단위 구현을 시작한다.
