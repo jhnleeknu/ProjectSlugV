@@ -311,3 +311,10 @@ FR1 계약 "공통 규칙·native 검증 계획"과 FR1c 계약의 같은 절을
 - **`e693a..e6952`(2)**: `e693a e694c`
 - **`e991c..e995c`(7)**: `e991c e9922 e9930 e993c e9942 e9952 e9956`
 - **`e9b5a..e9b8a`(2)**: `e9b5a e9b72`
+
+## 뒤 단위 변경 기록: select E2(2026-10-24, 작업자 Claude Opus 5.5 / high)
+
+select E2 계약(`animation-machine-select-e2-contract.md`) 결정 1에 따른 기록이다. FR2 실행부·시험은 바뀌지 않았다.
+
+- [F] `e693a`가 `28ae`에 넘기는 자식 callback `e6952`(`ST.B 8c(A6); BRA.W e695e`)는 여전히 routing 밖이다(확장 관측에서도 실행되지 않음; 결정 10의 "따라가지 않는다" 그대로). 그 분기 대상 `e695e`는 E2 block 시작이 되었다(E2가 `e695a` block을 `e695a` / `e695e`로 나눔). 뒤 단위가 `e6952`를 routing하면 그 `BRA.W`는 E2 시작에 닿는다.
+- [F] FR2 시험·spec의 RANGES `e63ec..e63fa` `e693a..e6952`는 E2 범위 `e63fa..` 와 맞닿을 뿐 겹치지 않는다. `e693a` 행의 stop은 `28ae`이고 자식 값 `e6952`는 A0 값일 뿐이라 그대로다.

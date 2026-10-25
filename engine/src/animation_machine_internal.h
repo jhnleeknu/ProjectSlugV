@@ -182,5 +182,10 @@ bool animation_player_c8_block(AnimationMachineContext& c);
 bool animation_player_c9_block(AnimationMachineContext& c);
 bool animation_objects_fr10_block(AnimationMachineContext& c);
 bool animation_player_c10_block(AnimationMachineContext& c);
+bool animation_objects_fr11_block(AnimationMachineContext& c);
+bool animation_objects_fr12_block(AnimationMachineContext& c);
+bool animation_objects_fr13_block(AnimationMachineContext& c);
+bool animation_select_e2_block(AnimationMachineContext& c);
+bool animation_objects_fr14_block(AnimationMachineContext& c);
 }
 #endif

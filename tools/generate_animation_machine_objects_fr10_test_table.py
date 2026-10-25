@@ -633,18 +633,27 @@ def gen_errors():
     err('rom-write-cca52', 0xcca52, device, 0xcca52, a6=0x70d72 - 0x15)        # BYTE 15(A6) = the synthetic 70d72: BSET writes fixed ROM
     err('rom-write-70fda', 0x70fda, device, 0x70fda, stop=0x70fe0, a6=0x1000)
     # failures after executed blocks (rollback; the failing PC differs from the entry): the later-unit stops of FR11 / FR12 / FR13
-    err('70e2a-then-70e42', 0x70e2a, unrouted, 0x70e42, puts=((NODE + 0x8e, 2, 0), (NODE + 0x42, 2, 1), (NODE + 0x15, 1, 1)))
-    err('70f4e-then-70f60', 0x70f4e, unrouted, 0x70f60, d7=0x6000)
-    err('70fc2-then-70fcc', 0x70fc2, unrouted, 0x70fcc, puts=((NODE + 0x82, 1, 0x80),))
-    err('71020-then-71028', 0x71020, unrouted, 0x71028)
-    err('b6c2c-then-b6c58', 0xb6c2c, unrouted, 0xb6c58)
-    err('cd7cc-then-cd7e2', 0xcd7cc, unrouted, 0xcd7e2, puts=((NODE + 0x5f, 1, 0x80),))
-    err('cd8ee-then-cd92e', 0xcd8ee, unrouted, 0xcd92e, puts=((NODE + 0x15, 1, 0x80),))
-    err('cd95a-then-cd96c', 0xcd95a, unrouted, 0xcd96c, puts=((NODE + 0x5f, 1, 0x80),))
-    err('70ff0-then-70ff8', 0x70ff0, unrouted, 0x70ff8, a0=0x71502)
-    err('70fe4-then-70ff8', 0x70fe4, unrouted, 0x70ff8, d0=0)                       # the synthetic LONG 70d72 + 0 = 10e800 (not 0)
-    err('70f94-then-70fac', 0x70f94, unrouted, 0x70fac, puts=((NODE + 0x8e, 2, 0), (NODE + 0x42, 2, 1), (NODE + 0x15, 1, 1)))
-    err('70f8a-then-70f8e', 0x70f8a, unrouted, 0x70f8e, carry=2)
+    # objects FR11 routes 70e42 / 70fac / cd7e2 / cd92e / cd96c since FR11: the rows that failed there (unrouted) now fail on the FR11 path (FR11 contract,
+    # was: 70e2a-then-70e42 / cd7cc-then-cd7e2 / cd8ee-then-cd92e / cd95a-then-cd96c / 70f94-then-70fac with 'unsupported animation machine PC')
+    err('70e2a-then-70e4a', 0x70e2a, rom, 0x70e4a, puts=((NODE + 0x8e, 2, 0), (NODE + 0x42, 2, 1), (NODE + 0x15, 1, 1)))   # FR11 70e4a reads the undeclared 2a1110
+    # objects FR13 routes 70f60 / 70fcc / 70ff8 / 71028 since FR13 (FR13 contract; was: 70f4e-then-70f60 / 70fc2-then-70fcc / 71020-then-71028 /
+    # 70ff0-then-70ff8 / 70fe4-then-70ff8 / 70f94-then-70fcc with 'unsupported animation machine PC' at the FR13 PC): 70f60 runs on through FR13 70f7e
+    # to the FR10 JSR 49fc6 of 70f84 (the odd A7 fails there); 70fcc / 70ff8 write LONG (A6) of the odd node; 71028 runs on through 7102e to the JSR
+    # 4b54e of 72dd2 (the odd A7 fails there); 70f94 runs through FR11 70fac / FR10 70fc2 / FR13 70fcc to the BSR 7028e of FR10 70fd2
+    err('70f4e-then-70f84-odd-stack', 0x70f4e, odd, 0x70f84, stop=0x49fc6, d7=0x6000, a7=SP + 1)
+    err('70fc2-then-70fcc', 0x70fc2, wodd, 0x70fcc, a6=NODE + 1, puts=((NODE + 1 + 0x82, 1, 0x80),))
+    err('71020-then-72dd2-odd-stack', 0x71020, odd, 0x72dd2, stop=0x4b54e, a7=SP + 1)
+    # objects FR12 routes b6c58 / 70f8e since FR12 (FR12 contract; was: b6c2c-then-b6c58 / 70f8a-then-70f8e with 'unsupported animation machine PC' at
+    # the FR12 PC): b6c58 runs on through FR10 b6c66 to the BSR b7cfa of b6c72 (the odd A7 fails there); 70f8e writes LONG (A6) of the odd node
+    err('b6c2c-then-b6c72', 0xb6c2c, odd, 0xb6c72, stop=0xb7cfa, a7=SP + 1)
+    err('cd7cc-then-cd7e4', 0xcd7cc, wodd, 0xcd7e4, a6=NODE + 1, puts=((NODE + 1 + 0x5f, 1, 0x80),))   # FR11 cd7e2 NEG.L -> FR10 cd7e4 writes LONG 7e(A6)
+    err('cd8ee-then-cd92e', 0xcd8ee, wodd, 0xcd92e, a6=NODE + 1, puts=((NODE + 1 + 0x15, 1, 0x80),))   # FR11 cd92e writes LONG 7e(A6) of the odd node
+    err('cd95a-then-cd96c', 0xcd95a, odd, 0xcd96c, a6=NODE + 1, puts=((NODE + 1 + 0x5f, 1, 0x80),))   # FR11 cd96c reads WORD 8c(A6) of the odd node
+    err('70ff0-then-70ff8', 0x70ff0, wodd, 0x70ff8, a0=0x71502, a6=NODE + 1)
+    err('70fe4-then-70ff8', 0x70fe4, wodd, 0x70ff8, d0=0, a6=NODE + 1)             # the synthetic LONG 70d72 + 0 = 10e800 (not 0)
+    err('70f94-then-70fd2-odd-stack', 0x70f94, odd, 0x70fd2, stop=0x7028e, a7=SP + 1,
+        puts=((NODE + 0x8e, 2, 0), (NODE + 0x42, 2, 1), (NODE + 0x15, 1, 1), (NODE + 0x82, 1, 0x80)))   # FR11 70fac -> FR10 70fc2 -> FR13 70fcc -> 70fd2
+    err('70f8a-then-70f8e', 0x70f8a, wodd, 0x70f8e, carry=2, a6=NODE + 1)       # FR12 70f8e MOVE.L #70c0c,(A6) of the odd node
     err('eaa44-then-eaa52-odd-stack', 0xeaa44, odd, 0xeaa52, a7=SP + 1)
     err('ccade-then-ccaf6-odd-stack', 0xccade, odd, 0xccaf6, a7=SP + 1)
     err('b7a86-then-b7aca-odd-stack', 0xb7a86, odd, 0xb7aca, a7=SP + 1, a5=A5, puts=((A5 + 0x5ddc, 2, 0x10),))
