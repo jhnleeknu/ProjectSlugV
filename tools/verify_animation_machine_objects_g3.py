@@ -39,6 +39,7 @@ ORIGINAL_SEGMENT = V.cpp_segment
 ORIGINAL_GROUPS = V.phase_groups
 ORIGINAL_BLOCK = V.native_block
 EXTERNAL_PROOFS = [None]
+REPEATED_TARGET_PROOFS = [None]
 LOADED_FILES = set()
 
 
@@ -211,17 +212,79 @@ def run_cpp_flow(srv, nat, st, carry0, tag, declared_carry=True, with_whole=Fals
         boundary.update(ok=proof['ok'], ev=proof['ev'])
         if not proof['ok']:
             res['errors'].append(('unmasked-guard-evidence', proof))
+    # Fixture stage only (the proofs are recorded per row); the natural stage is unchanged.
+    for error in [e for e in res['errors'] if e[0] == 'cont-run' and e[3] == 'ok'] if REPEATED_TARGET_PROOFS[0] is not None else []:
+        proof = repeated_target_cont_run(srv, nat, st, carry0, declared_carry, error[1], error[2])
+        REPEATED_TARGET_PROOFS[0].append(dict(tag=tag, phases=[error[1], error[2]], **proof))
+        if proof['ok']:
+            # the G2 request itself is now explained (a); the new run (b) is counted as one more continuous run
+            res['errors'].remove(error)
+            res['cont_runs'] += 1
+            res['cont_match'] += 2
+            res['cont_vs_chain'] += 1
     return result
+
+
+def repeated_target_cont_run(srv, nat, st, carry0, declared_carry, i, j):
+    # G2 continuous check (3) runs C++ once over the successful phases i..j and
+    # stops at the end PC of phase j. The C++ API stops at the first arrival at
+    # that PC. FR7 routes the external callee 4ad6c, so the N08 "through" chains
+    # have no blocked phase any more, and every second phase ends at 4ad6c again.
+    # The G2 stop then lands at the first 4ad6c (end of phase i), not at phase j.
+    # Only this repeated-target case is replaced, by two well-posed native checks:
+    # (a) the same request equals the native state at the first arrival;
+    # (b) a run to the latest phase end of i..j not executed earlier (at least two
+    # phases) equals the native end state, ports, external reads and known C.
+    groups = V.phase_groups(nat)
+    first = groups[i][0]
+    def end_index(k):
+        return nat.pieces[groups[k][1]]['end']
+    def end_pc(k):
+        return nat.states[end_index(k)]['pc']
+    def executed(k):
+        return V.reached_pcs(nat, first, groups[k][1])
+    target = end_pc(j)
+    if target not in executed(j):
+        return dict(ok=False, reason='target not repeated: G2 check is well-posed', target=hex(target))
+    if i:
+        ns = nat.states[nat.pieces[first]['start']]
+        begin = V.start_state(ns, V.carry_of(ns['ccr']) if (declared_carry and ns['ccr'] is not None) else 0)
+    else:
+        begin = V.start_state(st, carry0)
+    def compare(k, seg):
+        if seg['kind'] != 'ok':
+            return ['kind:%s' % seg['kind'], seg.get('error')]
+        ports, ext = V.native_phase_expect(nat, first, groups[k][1])
+        nstate = nat.states[end_index(k)]
+        diffs = V.compare_ok_segment(seg, begin, nstate, ports, ext)
+        if seg['cur']['carry'] and nstate['ccr'] is not None and seg['cur']['carry'] != V.carry_of(nstate['ccr']):
+            diffs.append('carry')
+        return diffs
+    arrival = next((k for k in range(i, j + 1) if end_pc(k) == target), None)
+    if arrival is None or (arrival > i and target in executed(arrival - 1)):
+        return dict(ok=False, reason='first arrival is not a phase end', target=hex(target))
+    first_diffs = compare(arrival, V.cpp_segment(srv, begin, target))
+    longest = next((k for k in range(j, i, -1) if end_pc(k) not in executed(k)), None)
+    if longest is None:
+        return dict(ok=False, reason='no well-posed run of two or more phases', target=hex(target),
+                    first_arrival_phase=arrival, first_arrival_diffs=first_diffs)
+    longest_diffs = compare(longest, V.cpp_segment(srv, begin, end_pc(longest)))
+    return dict(ok=not first_diffs and not longest_diffs, target=hex(target),
+                first_arrival_phase=arrival, first_arrival_diffs=first_diffs,
+                continuous_phases=[i, longest], continuous_stop=hex(end_pc(longest)), continuous_diffs=longest_diffs)
 
 
 def fixture_task(arg):
     index, fixture = arg
     EXTERNAL_PROOFS[0] = []
+    REPEATED_TARGET_PROOFS[0] = []
     try:
         row = ORIGINAL_FIXTURE(arg)
         row['external_carry_boundaries'] = EXTERNAL_PROOFS[0]
+        row['repeated_target_cont_runs'] = REPEATED_TARGET_PROOFS[0]
     finally:
         EXTERNAL_PROOFS[0] = None
+        REPEATED_TARGET_PROOFS[0] = None
     if index in (1278, 1281):
         state = V.O.load_state(fixture['start'])
         pc = state['pc']
@@ -401,7 +464,8 @@ def summarize_natural(rows):
 
 def summarize_fixtures(rows):
     return dict(count=len(rows), classes=dict(collections.Counter(row['cls'] for row in rows)), rows=rows,
-                declared_entries=sum(row['kind'] in ('entry-self', 'entry-declared') for row in rows))
+                declared_entries=sum(row['kind'] in ('entry-self', 'entry-declared') for row in rows),
+                repeated_target_cont_runs=sum(len(row.get('repeated_target_cont_runs', [])) for row in rows))
 
 
 def probe_checks(rows, env):
@@ -510,6 +574,7 @@ def main(argv=None):
                       fixtures_no_diff=all(not row['cls'].startswith('DIFF') and not row['errors'] for row in rows),
                       fixtures_carry=all(row['carry_bad']==0 for row in rows),
                       fixtures_through=all(not row.get('through') or (row['through']['regen_ok'] and not row['through']['cls'].startswith('DIFF') and not row['through']['errors']) for row in rows),
+                      fixtures_repeated_target_runs=all(proof['ok'] for row in rows for proof in row.get('repeated_target_cont_runs', [])),
                       fixture_consumers_exact=all(row.get('consumer_passthrough') is True if row.get('consumer_semantics') else row.get('consumer_unknown') is True for row in rows if row['kind']=='carry-consumer'),
                       valid_N_counterparts=all(row['cls']=='match' and not row['errors'] for row in rows if row['index'] in (1279,1280)),
                       fixtures_unknown=all(not str(row['unknown_carry']).startswith('DIFF') for row in rows))

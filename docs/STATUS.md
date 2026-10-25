@@ -2626,6 +2626,16 @@
   - 원래 관측 IO 173,966/173,966 그대로. 확장 관측 IO 6,230 → 6,751(+521, 예측과 같음), 불일치 0, 수용 키 모두 true.
   - 계약: `animation-machine-player-c10-contract.md`.
 
+## 2026-10-24 — 단위 runner가 돌리지 않던 검증기 4개의 낡은 기대값 수정
+
+- [F] 모든 검증기를 scratch clone root에서 돌리는 통합 sweep으로 찾았다. `carry`, `stage_catalog`, `motion_walk`, `objects_g3` 네 개가 실패했다. 모두 실행부 회귀가 아니라 이후 단위가 routing한 코드를 아직 unrouted로 기대한 낡은 기대값이다.
+  - `carry`: C6(`21564`)와 C10(`1dccc`/`1dc8e`) 때문이다. 오류가 바뀐 행을 `SUPERSEDED_LATE_BRANCH`에 기록하고 분기 방향과 경로 검사를 더했다.
+  - `stage_catalog`: C3(`48350`) 때문이다. `boundary_entry_0479b0`은 이제 `ea4`의 장치 읽기에서 queue empty로 끝난다. 경로 검사를 더했다.
+  - `motion_walk`: C9 때문이다. 계산 PC `20c0c`가 C9 block 안이다. C5의 `20f00` 선례를 따랐다.
+  - `objects_g3`: FR7부터 실패했다. G2 연속 검사가 반복되는 목표 PC(`4ad6c`)의 첫 도착에서 멈추는 문제다. 그 경우만 native 비교 두 개(첫 도착 상태, 반복되지 않는 phase 끝까지의 연속 실행)로 바꿨다.
+- 네 검증기는 `main`과 FR14 끝 양쪽에서 rc 0이다. 기록: `docs/reviews/0268-stale-verifier-expectations.md`.
+- 앞으로 PR 묶음마다 통합 sweep을 돌린다.
+
 ## 2026-10-24 — 객체 FR11(192 block, 확장 관측의 영역 D)
 
 - [F] FR11(192 block): 범위는 계획과 같다. 실행되는 표 칸 `b42c4`는 FR12, `c54ba` `c54d6`은 FR13에 둔다(메인 결정).

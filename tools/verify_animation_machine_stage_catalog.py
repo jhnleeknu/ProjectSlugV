@@ -648,6 +648,14 @@ def initial_from_fixture(cond, ctx):
 
 # ----------------------------------------------------------------------------------------------------------------- condition replay
 SUPERSEDED_GUARDS = ('guard-undeclared-cut-479b0',)
+# API-only boundary probes whose run reaches code a later unit routes (label -> observed error, classification, block starts reached in order).
+# boundary_entry_0479b0: since F1c2 the run from 479b0 executes and failed at the first unrouted block 48350 (the Set side of the C1 block 48346).
+# Player C3 routes 48350 (contract animation-machine-player-c3-contract.md): the run continues 48362 -> C1 1d21c -> ... and ends at ea4, whose
+# MOVE.W 3c0006.l (LSPC VCOUNT, a queue device) has no queued value in this API call: checked error with full rollback (unchanged since C3).
+SUPERSEDED_BOUNDARY_ENTRIES = {
+    'boundary_entry_0479b0': dict(error='animation machine external read queue empty', classification='superseded_by_player_C3_routes_48350',
+                                  reached=(0x48350, 0x1d21c, 0xea4)),
+}
 
 
 class Acc(object):
@@ -1088,9 +1096,12 @@ def negatives(ctx, base, st, resources):
     jobs = []
     for pc in st['interior']:
         jobs.append((exe, 'interior_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_CATALOG, resources, {}))
-    # TRAP 478a6 (stop-only boundary) and the F1c2 entry 479b0 (stop-only cut): no executor
+    # TRAP 478a6 (stop-only boundary): no executor. The F1c2 entry 479b0 is an executable block start (see SUPERSEDED_GUARDS); its probe is kept with
+    # the observed later error and reached-block controls (SUPERSEDED_BOUNDARY_ENTRIES).
     for pc in (TRAP_STOP, CUT_STOP):
-        jobs.append((exe, 'boundary_entry_%06x' % pc, base, {'pc': pc}, 0xff000, UNSUPPORTED_MACHINE, resources, {}))
+        label = 'boundary_entry_%06x' % pc
+        expected = SUPERSEDED_BOUNDARY_ENTRIES[label]['error'] if label in SUPERSEDED_BOUNDARY_ENTRIES else UNSUPPORTED_MACHINE
+        jobs.append((exe, label, base, {'pc': pc}, 0xff000, expected, resources, {}))
     # neighbours of the routed ranges that no executor owns at this commit (data table, gaps, dead code)
     # Former probes 0x4755e and 0x48156 (expected UNSUPPORTED_MACHINE) are now inside routed ranges: 4755e..47594 (controller C2) and 48156..48180 (F6a
     # IRQ shell). They would run that code and pass only because a later PC ends in the same message (independent review 0264 M-1), so they are no
@@ -1110,6 +1121,18 @@ def negatives(ctx, base, st, resources):
     jobs.append((exe, 'short_pvc', base, {'pc': 0x477e4}, 0xff000, None, resources, {'pvc': pvc[:-1]}))
     jobs.append((exe, 'missing_physical', base, {'pc': 0x477e4}, 0xff000, None, resources, {'resources': []}))
     out = run_parallel(reject_one, jobs)
+    for row in out:
+        superseded = SUPERSEDED_BOUNDARY_ENTRIES.get(row['label'])
+        if not superseded:
+            continue
+        # The same run with an earlier stop must end there: the former failing block and the block of the new error are reached in order.
+        s = dict(state, carry=2, pc=int(row['label'][-6:], 16))
+        reached = []
+        for stop in superseded['reached']:
+            res, out_ram, out_pvc, ports, error = inv('n_%s_stop_%06x' % (row['label'], stop), exe, ram, s, pvc, bank, resources, stop=stop, external=255)
+            assert res['ok'] and not error.strip() and res['pc'] == stop, (row['label'], hex(stop), res, error)
+            reached.append(hex(stop))
+        row.update(former_expected_API_error=UNSUPPORTED_MACHINE, classification=superseded['classification'], reached_block_starts=reached, API_only_control=True)
     # the four carry consumers need a known incoming C (Unknown -> checked error, full rollback)
     for pc in CONSUMERS:
         s0 = dict(state, pc=pc, carry=0)
