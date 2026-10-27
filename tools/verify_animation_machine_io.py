@@ -6,6 +6,7 @@ Known observations (player C9, docs/analysis/animation-machine-player-c9-contrac
   historic  artifacts/animation_machine_io_native (the default; behaviour and verification.json / frontier.json unchanged, negative checks on P1 case 0).
   io-ext    artifacts/animation_machine_io_ext (tools/observe_animation_machine_io_ext.py, extended input).  It has no P1 case 0 run: the negative checks
             run on its P1 case 94 control run (required, like P1 case 0 for historic); verification.json records inputs.observation.pin / .negatives.
+  io-ext2   the third observation (tools/observe_animation_machine_io_ext2.py: other stage groups, two players, continue); negatives on P1 case 94 as io-ext.
 Nothing is executed natively here: the native side is the recorded observation
 (frame-start states of every frame, the native external-read consumption log `q`, the declared host writes, per-segment digests / port digests / IRQ records / waits).
 
@@ -62,6 +63,8 @@ KNOWN_OBSERVATIONS = collections.OrderedDict([
                       negatives=('P1', 0))),
     ('io-ext', dict(file_sha_prefix='9da40ac6dcbea3eb', compared_sha256='b5d15d4fcd53555bce3f4773c8ee6113c6b79ee5aac113f6c1e59a87ddc57161',
                     negatives=('P1', 94))),          # no P1 case 0 run; P1 case 94 passes every check (case 68 misses palette-not-attached)
+    ('io-ext2', dict(file_sha_prefix='bac35488287f2a5a', compared_sha256='d30e68d6b8c7f69181be12b00f017c4eafccb705416af7e8beea02b6d9595673',
+                     negatives=('P1', 94))),         # third observation (tools/observe_animation_machine_io_ext2.py, area-C plan section 11)
 ])
 OBS_FILE_SHA_PREFIX = KNOWN_OBSERVATIONS['historic']['file_sha_prefix']
 OBS_COMPARED_SHA = KNOWN_OBSERVATIONS['historic']['compared_sha256']

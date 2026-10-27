@@ -1,0 +1,1267 @@
+{
+  "format": "ms5-io-input-script",
+  "version": 1,
+  "description": "Third IO observation (tools/observe_animation_machine_io_ext2.py, same format). Entries with the same name as in docs/analysis/data/io-input-scripts.json or io-input-scripts-ext.json are verbatim copies (checked by the tool). New: declared stage-group / area selections (mission-*), the declared continue settings, declared continue PLAYER_START effects, two-player input scripts, and per-configuration seed cases (configs.*.cases). Every value is a declaration, not a BIOS, IRQ-timing or device claim. Design and results: docs/analysis/area-c-completion-plan.md section 11.",
+  "ports": {
+    "380000": "BYTE system port (active low): bit0 P1 start, bit1 P1 select, bit2 P2 start, bit3 P2 select [I: input-sampler.md]",
+    "300000": "BYTE P1 port (active low): bit0 up, bit1 down, bit2 left, bit3 right, bit4 A, bit5 B, bit6 C, bit7 D",
+    "340000": "BYTE P2 port (active low), same bit layout as 300000",
+    "3c0006": "WORD raster / video status read by the frame head (eaa, efc); declared 0"
+  },
+  "semantics": {
+    "frame": "Frame number k of the D1 frame protocol. Frame 0 is the N0 pass (no head, no external read); the values of frame k >= 1 are served to the H of that frame.",
+    "repeat": "A value applies to every read of that port inside the frame (pause loops that read again see the same value).",
+    "defaults": "Port values of every frame before any segment applies (all released: BYTE ff, raster 0000).",
+    "segment": "{from, to (inclusive, null = open), port, optional every + phase [a, b] (absolute frame number modulo every inside [a, b], inclusive), and one or more of value (replace), clear (bits cleared, active low press), set (bits set)}. Segments apply in file order.",
+    "queue_limit": "Optional per-port number of values the frame queue holds (default 32 = FH.QLEN). A read beyond it is the checked stop external-read-queue-empty.",
+    "consumption": "What the C++ harness receives is the native consumption log (address, size, value in consumption order), not this table."
+  },
+  "scripts": {
+    "none": {
+      "description": "Nothing pressed: all ports released, raster 0.",
+      "defaults": {
+        "380000": "ff",
+        "300000": "ff",
+        "340000": "ff",
+        "3c0006": "0000"
+      },
+      "segments": []
+    },
+    "walkfire": {
+      "description": "IO-1 probe walkfire: from frame 20 P1 right held, A toggling every 4 frames, B pulsed 6 frames out of 64. No start, select or coin bit (scope decision 3).",
+      "defaults": {
+        "380000": "ff",
+        "300000": "ff",
+        "340000": "ff",
+        "3c0006": "0000"
+      },
+      "segments": [
+        {
+          "from": 20,
+          "to": null,
+          "port": "300000",
+          "clear": "08"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 8,
+          "phase": [
+            0,
+            3
+          ],
+          "port": "300000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 64,
+          "phase": [
+            0,
+            5
+          ],
+          "port": "300000",
+          "clear": "20"
+        }
+      ]
+    },
+    "jumpshoot": {
+      "description": "From frame 20, period 48: P1 right held; A pressed 2 of every 6 frames; B pressed phase 0..3 (jump); down held phase 14..29 (aim down in the air, then crouch); up held phase 34..43 (aim up). No start, select or coin bit.",
+      "defaults": {
+        "380000": "ff",
+        "300000": "ff",
+        "340000": "ff",
+        "3c0006": "0000"
+      },
+      "segments": [
+        {
+          "from": 20,
+          "to": null,
+          "port": "300000",
+          "clear": "08"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 6,
+          "phase": [
+            0,
+            1
+          ],
+          "port": "300000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 48,
+          "phase": [
+            0,
+            3
+          ],
+          "port": "300000",
+          "clear": "20"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 48,
+          "phase": [
+            14,
+            29
+          ],
+          "port": "300000",
+          "clear": "02"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 48,
+          "phase": [
+            34,
+            43
+          ],
+          "port": "300000",
+          "clear": "01"
+        }
+      ]
+    },
+    "grenadeturn": {
+      "description": "From frame 20, period 96: P1 right held phase 0..47, left held phase 48..95 (turn); C pressed 2 of every 24 frames (grenade); A pressed 2 of every 10 frames; down held phase 60..83 (crouch, crouch shot and grenade); B pressed phase 30..33 (jump while turning). No start, select or coin bit.",
+      "defaults": {
+        "380000": "ff",
+        "300000": "ff",
+        "340000": "ff",
+        "3c0006": "0000"
+      },
+      "segments": [
+        {
+          "from": 20,
+          "to": null,
+          "every": 96,
+          "phase": [
+            0,
+            47
+          ],
+          "port": "300000",
+          "clear": "08"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 96,
+          "phase": [
+            48,
+            95
+          ],
+          "port": "300000",
+          "clear": "04"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 24,
+          "phase": [
+            0,
+            1
+          ],
+          "port": "300000",
+          "clear": "40"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 10,
+          "phase": [
+            0,
+            1
+          ],
+          "port": "300000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 96,
+          "phase": [
+            60,
+            83
+          ],
+          "port": "300000",
+          "clear": "02"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 96,
+          "phase": [
+            30,
+            33
+          ],
+          "port": "300000",
+          "clear": "20"
+        }
+      ]
+    },
+    "mixed": {
+      "description": "From frame 20, period 160 in eight 20-frame windows: (0) right + A held (no repeat), (1) right + B held 8 frames then down + A, (2) left + up + A pulses, (3) nothing, (4) down + C pulses, (5) right + D pulses + B, (6) up + B then A + C together, (7) left + down (crouch walk) with A pulses. No start, select or coin bit.",
+      "defaults": {
+        "380000": "ff",
+        "300000": "ff",
+        "340000": "ff",
+        "3c0006": "0000"
+      },
+      "segments": [
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            0,
+            19
+          ],
+          "port": "300000",
+          "clear": "18"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            20,
+            27
+          ],
+          "port": "300000",
+          "clear": "28"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            28,
+            39
+          ],
+          "port": "300000",
+          "clear": "12"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            40,
+            59
+          ],
+          "port": "300000",
+          "clear": "05"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            40,
+            41
+          ],
+          "port": "300000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            46,
+            47
+          ],
+          "port": "300000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            52,
+            53
+          ],
+          "port": "300000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            80,
+            99
+          ],
+          "port": "300000",
+          "clear": "02"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            82,
+            83
+          ],
+          "port": "300000",
+          "clear": "40"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            92,
+            93
+          ],
+          "port": "300000",
+          "clear": "40"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            100,
+            119
+          ],
+          "port": "300000",
+          "clear": "08"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            102,
+            103
+          ],
+          "port": "300000",
+          "clear": "80"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            110,
+            111
+          ],
+          "port": "300000",
+          "clear": "80"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            106,
+            109
+          ],
+          "port": "300000",
+          "clear": "20"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            120,
+            125
+          ],
+          "port": "300000",
+          "clear": "21"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            130,
+            131
+          ],
+          "port": "300000",
+          "clear": "50"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            140,
+            159
+          ],
+          "port": "300000",
+          "clear": "06"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            142,
+            143
+          ],
+          "port": "300000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            150,
+            151
+          ],
+          "port": "300000",
+          "clear": "10"
+        }
+      ]
+    },
+    "duo-walk-jump": {
+      "description": "Two players: P1 port 300000 = walkfire (from frame 20 right held, A every 8 frames, B 6 of 64), P2 port 340000 = jumpshoot (from frame 20, period 48: right, A 2 of 6, B jump, down aim / crouch, up aim). Segments copied from the walkfire / jumpshoot scripts, P2 copies on port 340000. No start, select or coin bit.",
+      "defaults": {
+        "380000": "ff",
+        "300000": "ff",
+        "340000": "ff",
+        "3c0006": "0000"
+      },
+      "segments": [
+        {
+          "from": 20,
+          "to": null,
+          "port": "300000",
+          "clear": "08"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 8,
+          "phase": [
+            0,
+            3
+          ],
+          "port": "300000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 64,
+          "phase": [
+            0,
+            5
+          ],
+          "port": "300000",
+          "clear": "20"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "port": "340000",
+          "clear": "08"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 6,
+          "phase": [
+            0,
+            1
+          ],
+          "port": "340000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 48,
+          "phase": [
+            0,
+            3
+          ],
+          "port": "340000",
+          "clear": "20"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 48,
+          "phase": [
+            14,
+            29
+          ],
+          "port": "340000",
+          "clear": "02"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 48,
+          "phase": [
+            34,
+            43
+          ],
+          "port": "340000",
+          "clear": "01"
+        }
+      ]
+    },
+    "duo-turn-mixed": {
+      "description": "Two players: P1 port 300000 = grenadeturn (period 96: right / left turn, C grenade, A, down, B), P2 port 340000 = mixed (period 160, eight 20-frame windows). Segments copied from the grenadeturn / mixed scripts, P2 copies on port 340000. No start, select or coin bit.",
+      "defaults": {
+        "380000": "ff",
+        "300000": "ff",
+        "340000": "ff",
+        "3c0006": "0000"
+      },
+      "segments": [
+        {
+          "from": 20,
+          "to": null,
+          "every": 96,
+          "phase": [
+            0,
+            47
+          ],
+          "port": "300000",
+          "clear": "08"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 96,
+          "phase": [
+            48,
+            95
+          ],
+          "port": "300000",
+          "clear": "04"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 24,
+          "phase": [
+            0,
+            1
+          ],
+          "port": "300000",
+          "clear": "40"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 10,
+          "phase": [
+            0,
+            1
+          ],
+          "port": "300000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 96,
+          "phase": [
+            60,
+            83
+          ],
+          "port": "300000",
+          "clear": "02"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 96,
+          "phase": [
+            30,
+            33
+          ],
+          "port": "300000",
+          "clear": "20"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            0,
+            19
+          ],
+          "port": "340000",
+          "clear": "18"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            20,
+            27
+          ],
+          "port": "340000",
+          "clear": "28"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            28,
+            39
+          ],
+          "port": "340000",
+          "clear": "12"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            40,
+            59
+          ],
+          "port": "340000",
+          "clear": "05"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            40,
+            41
+          ],
+          "port": "340000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            46,
+            47
+          ],
+          "port": "340000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            52,
+            53
+          ],
+          "port": "340000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            80,
+            99
+          ],
+          "port": "340000",
+          "clear": "02"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            82,
+            83
+          ],
+          "port": "340000",
+          "clear": "40"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            92,
+            93
+          ],
+          "port": "340000",
+          "clear": "40"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            100,
+            119
+          ],
+          "port": "340000",
+          "clear": "08"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            102,
+            103
+          ],
+          "port": "340000",
+          "clear": "80"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            110,
+            111
+          ],
+          "port": "340000",
+          "clear": "80"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            106,
+            109
+          ],
+          "port": "340000",
+          "clear": "20"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            120,
+            125
+          ],
+          "port": "340000",
+          "clear": "21"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            130,
+            131
+          ],
+          "port": "340000",
+          "clear": "50"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            140,
+            159
+          ],
+          "port": "340000",
+          "clear": "06"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            142,
+            143
+          ],
+          "port": "340000",
+          "clear": "10"
+        },
+        {
+          "from": 20,
+          "to": null,
+          "every": 160,
+          "phase": [
+            150,
+            151
+          ],
+          "port": "340000",
+          "clear": "10"
+        }
+      ]
+    }
+  },
+  "host_write_sets": {
+    "game-mode": [
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "1008e4",
+        "size": 4,
+        "value": "c7fc",
+        "mode": "set",
+        "why": "D9 configuration (ii): the stage controller LONG 1008e4 := c7fc (game-mode controller)",
+        "evidence": "docs/analysis/animation-machine-frame-head-f5-scope.md D9 (ii); VC.DECLARE_PRESETS['game']"
+      },
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "10fdaf",
+        "size": 1,
+        "value": "02",
+        "mode": "set",
+        "why": "D9 configuration (ii): BYTE 10fdaf := 2 (BIOS game mode); b68 copies it to 100012 in the H of frame 1",
+        "evidence": "docs/analysis/animation-machine-frame-head-f5-scope.md D9 (ii); VC.DECLARE_PRESETS['game']"
+      }
+    ],
+    "player-start-p1": [
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "10f006",
+        "size": 1,
+        "value": "01",
+        "mode": "or",
+        "why": "declared effect of the BIOS PLAYER_START call for P1: BYTE 10f006 |= 1 (OR.B D0,10f006 at ae4); b68 turns the bit into BYTE 10fdb6 := 1 in the H of frame 1",
+        "evidence": "a74 -> abc -> OR.B D0,10f006 (ae4); b68 BCLR/MOVE.B #1,(A0,D0.W); scope decision 2",
+        "crosscheck": "a74"
+      }
+    ],
+    "player-start-p2": [
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "10f006",
+        "size": 1,
+        "value": "02",
+        "mode": "or",
+        "why": "declared effect of the BIOS PLAYER_START call for P2: BYTE 10f006 |= 2",
+        "evidence": "a74 -> abc -> OR.B D0,10f006 (ae4); b68; scope section 3.1 configuration P1b"
+      }
+    ],
+    "default-settings": [
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "10f01c",
+        "size": 4,
+        "value": "10204080",
+        "mode": "set",
+        "why": "declared effect of the game default-settings path bbfa -> bc1e for P1: the four BYTEs of ROM 49ab0 (10 20 40 80) copied to 10f01c..10f01f. In game mode (BYTE 100012 = 2) the input helper 49b3a uses 10f01c as the A / B / C / D button masks; with the zero seed RAM every button reads as held and never as newly pressed",
+        "evidence": "bc1e LEA 49ab0,A0; LEA 10f01c,A1; LEA 10f020,A2; 4 x MOVE.B (A0)+,(A1)+ / (A2)+; 49b42 LEA 10f01c,A4 (100012 = 2) / 49b52 LEA 49ab0(PC),A4; 49ab4..49ad4 mask test; reached from 8fa JSR bcb4 (USER init path, 10fd82 = 0) -> bd16 / bd20 BSR bbfa -> bc0a JSR bc1e"
+      },
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "10f020",
+        "size": 4,
+        "value": "10204080",
+        "mode": "set",
+        "why": "the same declared default for P2 (10f020..10f023, used by 49b98 for the second player)",
+        "evidence": "bc1e (A2 = 10f020); 49b98 LEA 10f020,A4"
+      },
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "10f026",
+        "size": 2,
+        "value": "0302",
+        "mode": "set",
+        "why": "declared default settings bc0e / bc14: BYTE 10f026 := 3, BYTE 10f027 := 2 (written by bbfa after bc1e)",
+        "evidence": "bc0e MOVE.B #2,7027(A5); bc14 MOVE.B #3,7026(A5)"
+      },
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "10fd88",
+        "size": 1,
+        "value": "03",
+        "mode": "set",
+        "why": "declared effect of be3a (end of bbfa, 10fd82 = 0): BYTE 10fd88 := BYTE 10f026 = 3. 4e8d6 copies it to the player record BYTE 99 (0 becomes 1)",
+        "evidence": "be3a TST.B 10fd82; be44 MOVE.B 7026(A5),7d88(A5); 4e8d6 MOVE.B 7d88(A5),99(A6); 4e8e0 MOVE.B #1,99(A6)"
+      },
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "10fd8b",
+        "size": 1,
+        "value": "02",
+        "mode": "set",
+        "why": "declared effect of be3a: BYTE 10fd8b := BYTE 10f027 = 2 (490cc reads it in game mode, otherwise 3)",
+        "evidence": "be4a MOVE.B 7027(A5),7d8b(A5); 490cc MOVE.B 7d8b(A5),D1; 490d0 CMPI.B #2,-7fee(A5)"
+      }
+    ],
+    "continue-settings": [
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "10fd8a",
+        "size": 1,
+        "value": "01",
+        "mode": "set",
+        "why": "declared soft-DIP value CONTINUE = ON (choice 1). The cartridge soft-DIP tables 2ac8 / 2cbc / 2ec8 give option 1 the byte 12 (2 choices, default 1; names CONTINUE, OFF, ON); the BIOS keeps the chosen values in 10fd8a.. (not executed: BIOS RAM value). 4eb60 TST.B 10fd8a; BEQ 4ed3c: with 0 the last life goes straight to the game over",
+        "evidence": "header 11a LONG 2ac8; ROM 2ac8 + 16 = 12; 4eb58 .. 4eb66; 4eb6a continue path"
+      },
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "100004",
+        "size": 2,
+        "value": "0505",
+        "mode": "set",
+        "why": "declared effect of 848 (USER initialisation 9ce BSR 848, not executed by the BIOS-less seed): WORD 100004 := 0505, the home-mode credits of P1 / P2 (BCD). 4a974 (10fd82 = 0) tests BYTE 100004 (+ player when BYTE 100003 is non-zero); 0 credits end the last life in the game over (4eb7e BNE 4eba8)",
+        "evidence": "9ce BSR 848; 848 MOVE.W #505,100004; 4a9b4 LEA 100004,A0; 4a9ba TST.B 100003; 4a9c6 TST.B (A0); a2c / a4e (PLAYER_START credit test and SBCD)"
+      },
+      {
+        "frames": [
+          1,
+          1
+        ],
+        "address": "100003",
+        "size": 1,
+        "value": "ff",
+        "mode": "set",
+        "why": "declared effect of 798 (USER initialisation 9d6 BSR 798; 10fd82 = 0): BYTE 100003 := ff (separate credits per player)",
+        "evidence": "9d6 BSR 798; 798 TST.B 10fd82; 7a2 MOVE.B #ff,100003"
+      }
+    ],
+    "mission-g3-a1": [
+      {
+        "frames": [
+          3,
+          3
+        ],
+        "address": "10d680",
+        "size": 1,
+        "value": "03",
+        "mode": "set",
+        "why": "declared stage-group selection: BYTE 10d680 := 3 (group 3 of the stage index 474f4, record 1 at payload db6f8, name '2_2'). The seed runs the game start c882 -> 47570 (prefix 4823a with D0 = 0: 10d680 := 0, 10d681 := 0) in the C of frame 2; c8fa installs 477e4 on the stage node 100b30 when the character select ends (frame 166 in case 94) and 477ee copies 10d680 / 10d681 to 7c / 7d(A6) and looks the record up (474e2 / 47540). This is the value the original writes itself through 4823a (stage group menu event 3, demo c610 with 6 + (702a & 1)) or through the area clear 47e9a (ADDQ.B #1,7c(A6); MOVE.B 7c(A6),10d680); neither path is executed here",
+        "evidence": "4823a (D0 < 19: MOVE.B D0,10d680; CLR.B 10d681); c88a JSR 47570; c8fa LEA 477e4,A1; JSR 2a28; 477ee MOVE.B 10d680,7c(A6) / 10d681,7d(A6); 474e2; 47540; 47e9a ADDQ.B #1,7c(A6); docs/analysis/stage-catalog.md; animation-machine-stage-catalog-f1c-contract.md"
+      },
+      {
+        "frames": [
+          3,
+          3
+        ],
+        "address": "10d681",
+        "size": 1,
+        "value": "01",
+        "mode": "set",
+        "why": "declared area index of the same selection: BYTE 10d681 := 1 (record 1 of group 3: entry record db9e8, entry style BYTE 7 = f read by e8bde into D7 and dispatched at 1d388)",
+        "evidence": "48250 MOVE.B D0,10d681 (area value); 477ee; 47aaa MOVEA.L 6(A4),A0; JSR e8a1c (10de26 := entry record); e8bde MOVE.B 7(A4),D7; 1d388 CMPI.W #1,D7 ..."
+      }
+    ],
+    "mission-g1-a5": [
+      {
+        "frames": [
+          3,
+          3
+        ],
+        "address": "10d680",
+        "size": 1,
+        "value": "01",
+        "mode": "set",
+        "why": "declared stage-group selection: BYTE 10d680 := 1 (group 1 of the stage index 474f4, record 5 at payload dcdd6, name '4_5'). The seed runs the game start c882 -> 47570 (prefix 4823a with D0 = 0: 10d680 := 0, 10d681 := 0) in the C of frame 2; c8fa installs 477e4 on the stage node 100b30 when the character select ends (frame 166 in case 94) and 477ee copies 10d680 / 10d681 to 7c / 7d(A6) and looks the record up (474e2 / 47540). This is the value the original writes itself through 4823a (stage group menu event 3, demo c610 with 6 + (702a & 1)) or through the area clear 47e9a (ADDQ.B #1,7c(A6); MOVE.B 7c(A6),10d680); neither path is executed here",
+        "evidence": "4823a (D0 < 19: MOVE.B D0,10d680; CLR.B 10d681); c88a JSR 47570; c8fa LEA 477e4,A1; JSR 2a28; 477ee MOVE.B 10d680,7c(A6) / 10d681,7d(A6); 474e2; 47540; 47e9a ADDQ.B #1,7c(A6); docs/analysis/stage-catalog.md; animation-machine-stage-catalog-f1c-contract.md"
+      },
+      {
+        "frames": [
+          3,
+          3
+        ],
+        "address": "10d681",
+        "size": 1,
+        "value": "05",
+        "mode": "set",
+        "why": "declared area index of the same selection: BYTE 10d681 := 5 (record 5 of group 1: entry record dd286, entry style BYTE 7 = e read by e8bde into D7 and dispatched at 1d388)",
+        "evidence": "48250 MOVE.B D0,10d681 (area value); 477ee; 47aaa MOVEA.L 6(A4),A0; JSR e8a1c (10de26 := entry record); e8bde MOVE.B 7(A4),D7; 1d388 CMPI.W #1,D7 ..."
+      }
+    ],
+    "mission-g4-a0": [
+      {
+        "frames": [
+          3,
+          3
+        ],
+        "address": "10d680",
+        "size": 1,
+        "value": "04",
+        "mode": "set",
+        "why": "declared stage-group selection: BYTE 10d680 := 4 (group 4 of the stage index 474f4, record 0 at payload dd386, name '5_1'). The seed runs the game start c882 -> 47570 (prefix 4823a with D0 = 0: 10d680 := 0, 10d681 := 0) in the C of frame 2; c8fa installs 477e4 on the stage node 100b30 when the character select ends (frame 166 in case 94) and 477ee copies 10d680 / 10d681 to 7c / 7d(A6) and looks the record up (474e2 / 47540). This is the value the original writes itself through 4823a (stage group menu event 3, demo c610 with 6 + (702a & 1)) or through the area clear 47e9a (ADDQ.B #1,7c(A6); MOVE.B 7c(A6),10d680); neither path is executed here",
+        "evidence": "4823a (D0 < 19: MOVE.B D0,10d680; CLR.B 10d681); c88a JSR 47570; c8fa LEA 477e4,A1; JSR 2a28; 477ee MOVE.B 10d680,7c(A6) / 10d681,7d(A6); 474e2; 47540; 47e9a ADDQ.B #1,7c(A6); docs/analysis/stage-catalog.md; animation-machine-stage-catalog-f1c-contract.md"
+      },
+      {
+        "frames": [
+          3,
+          3
+        ],
+        "address": "10d681",
+        "size": 1,
+        "value": "00",
+        "mode": "set",
+        "why": "declared area index of the same selection: BYTE 10d681 := 0 (record 0 of group 4: entry record ddcb0, entry style BYTE 7 = 19 read by e8bde into D7 and dispatched at 1d388)",
+        "evidence": "48250 MOVE.B D0,10d681 (area value); 477ee; 47aaa MOVEA.L 6(A4),A0; JSR e8a1c (10de26 := entry record); e8bde MOVE.B 7(A4),D7; 1d388 CMPI.W #1,D7 ..."
+      }
+    ],
+    "mission-g2-a0": [
+      {
+        "frames": [
+          3,
+          3
+        ],
+        "address": "10d680",
+        "size": 1,
+        "value": "02",
+        "mode": "set",
+        "why": "declared stage-group selection: BYTE 10d680 := 2 (group 2 of the stage index 474f4, record 0 at payload d99e6, name '1_0'). The seed runs the game start c882 -> 47570 (prefix 4823a with D0 = 0: 10d680 := 0, 10d681 := 0) in the C of frame 2; c8fa installs 477e4 on the stage node 100b30 when the character select ends (frame 166 in case 94) and 477ee copies 10d680 / 10d681 to 7c / 7d(A6) and looks the record up (474e2 / 47540). This is the value the original writes itself through 4823a (stage group menu event 3, demo c610 with 6 + (702a & 1)) or through the area clear 47e9a (ADDQ.B #1,7c(A6); MOVE.B 7c(A6),10d680); neither path is executed here",
+        "evidence": "4823a (D0 < 19: MOVE.B D0,10d680; CLR.B 10d681); c88a JSR 47570; c8fa LEA 477e4,A1; JSR 2a28; 477ee MOVE.B 10d680,7c(A6) / 10d681,7d(A6); 474e2; 47540; 47e9a ADDQ.B #1,7c(A6); docs/analysis/stage-catalog.md; animation-machine-stage-catalog-f1c-contract.md"
+      },
+      {
+        "frames": [
+          3,
+          3
+        ],
+        "address": "10d681",
+        "size": 1,
+        "value": "00",
+        "mode": "set",
+        "why": "declared area index of the same selection: BYTE 10d681 := 0 (record 0 of group 2: entry record da40e, entry style BYTE 7 = 16 read by e8bde into D7 and dispatched at 1d388)",
+        "evidence": "48250 MOVE.B D0,10d681 (area value); 477ee; 47aaa MOVEA.L 6(A4),A0; JSR e8a1c (10de26 := entry record); e8bde MOVE.B 7(A4),D7; 1d388 CMPI.W #1,D7 ..."
+      }
+    ],
+    "continue-start-94": [
+      {
+        "frames": [
+          828,
+          828
+        ],
+        "address": "10f006",
+        "size": 1,
+        "value": "01",
+        "mode": "or",
+        "why": "declared effect of the BIOS PLAYER_START call for P1 during the continue count-down (BYTE 10fdb6 = 2 since the last life, measured in the probe run of this seed case 94): BYTE 10f006 |= 1 (OR.B D0,10f006 at ae4); b68 turns the bit into BYTE 10fdb6 := 1 in the H of the frame and 4ebe2 takes the continue (4ebf4 .. 4ec2e). The home-mode credit SBCD of a4e is not declared (as player-start-p1)",
+        "evidence": "a74 -> abc -> OR.B D0,10f006 (ae4); b68; 4ebe2 MOVE.B 7db6(A5)+player; 4ebf4 CMPI.B #1,D0; b58 status table (status 2 may start)",
+        "crosscheck": "a74"
+      },
+      {
+        "frames": [
+          1468,
+          1468
+        ],
+        "address": "10f006",
+        "size": 1,
+        "value": "01",
+        "mode": "or",
+        "why": "declared effect of the BIOS PLAYER_START call for P1 during the continue count-down (BYTE 10fdb6 = 2 since the last life, measured in the probe run of this seed case 94): BYTE 10f006 |= 1 (OR.B D0,10f006 at ae4); b68 turns the bit into BYTE 10fdb6 := 1 in the H of the frame and 4ebe2 takes the continue (4ebf4 .. 4ec2e). The home-mode credit SBCD of a4e is not declared (as player-start-p1)",
+        "evidence": "a74 -> abc -> OR.B D0,10f006 (ae4); b68; 4ebe2 MOVE.B 7db6(A5)+player; 4ebf4 CMPI.B #1,D0; b58 status table (status 2 may start)",
+        "crosscheck": "a74"
+      }
+    ],
+    "continue-start-68": [
+      {
+        "frames": [
+          1020,
+          1020
+        ],
+        "address": "10f006",
+        "size": 1,
+        "value": "01",
+        "mode": "or",
+        "why": "declared effect of the BIOS PLAYER_START call for P1 during the continue count-down (BYTE 10fdb6 = 2 since the last life, measured in the probe run of this seed case 68): BYTE 10f006 |= 1 (OR.B D0,10f006 at ae4); b68 turns the bit into BYTE 10fdb6 := 1 in the H of the frame and 4ebe2 takes the continue (4ebf4 .. 4ec2e). The home-mode credit SBCD of a4e is not declared (as player-start-p1)",
+        "evidence": "a74 -> abc -> OR.B D0,10f006 (ae4); b68; 4ebe2 MOVE.B 7db6(A5)+player; 4ebf4 CMPI.B #1,D0; b58 status table (status 2 may start)",
+        "crosscheck": "a74"
+      },
+      {
+        "frames": [
+          1660,
+          1660
+        ],
+        "address": "10f006",
+        "size": 1,
+        "value": "01",
+        "mode": "or",
+        "why": "declared effect of the BIOS PLAYER_START call for P1 during the continue count-down (BYTE 10fdb6 = 2 since the last life, measured in the probe run of this seed case 68): BYTE 10f006 |= 1 (OR.B D0,10f006 at ae4); b68 turns the bit into BYTE 10fdb6 := 1 in the H of the frame and 4ebe2 takes the continue (4ebf4 .. 4ec2e). The home-mode credit SBCD of a4e is not declared (as player-start-p1)",
+        "evidence": "a74 -> abc -> OR.B D0,10f006 (ae4); b68; 4ebe2 MOVE.B 7db6(A5)+player; 4ebf4 CMPI.B #1,D0; b58 status table (status 2 may start)",
+        "crosscheck": "a74"
+      }
+    ]
+  },
+  "configs": {
+    "P0": {
+      "family": "stage",
+      "description": "control: game-mode declaration (ii), nothing pressed, IRQ execution",
+      "input": "none",
+      "host_write_sets": [
+        "game-mode"
+      ],
+      "seed_prep": "p1",
+      "frames": 600
+    },
+    "P1": {
+      "family": "stage",
+      "description": "main configuration: game mode + declared P1 player start at frame 1 + walkfire input",
+      "input": "walkfire",
+      "host_write_sets": [
+        "game-mode",
+        "player-start-p1"
+      ],
+      "seed_prep": "p1",
+      "frames": 600
+    },
+    "X1": {
+      "family": "stage",
+      "description": "P1 input (walkfire) + the declared default settings (default-settings): A and B are now read as presses, 3 lives, difficulty 2",
+      "input": "walkfire",
+      "host_write_sets": [
+        "game-mode",
+        "player-start-p1",
+        "default-settings"
+      ],
+      "seed_prep": "p1",
+      "frames": 2000
+    },
+    "M3.1": {
+      "family": "stage",
+      "description": "P1 start + default settings + mixed input + declared stage selection stage group 3 area 1 (record db6f8, entry style f, mode word bits from its stage script)",
+      "input": "mixed",
+      "host_write_sets": [
+        "game-mode",
+        "player-start-p1",
+        "default-settings",
+        "mission-g3-a1"
+      ],
+      "seed_prep": "p1",
+      "frames": 2000
+    },
+    "M1.5": {
+      "family": "stage",
+      "description": "P1 start + default settings + grenadeturn input + declared stage selection stage group 1 area 5 (record dcdd6)",
+      "input": "grenadeturn",
+      "host_write_sets": [
+        "game-mode",
+        "player-start-p1",
+        "default-settings",
+        "mission-g1-a5"
+      ],
+      "seed_prep": "p1",
+      "frames": 2000
+    },
+    "M4.0": {
+      "family": "stage",
+      "description": "P1 start + default settings + walkfire input + declared stage selection stage group 4 area 0 (record dd386, entry style 19)",
+      "input": "walkfire",
+      "host_write_sets": [
+        "game-mode",
+        "player-start-p1",
+        "default-settings",
+        "mission-g4-a0"
+      ],
+      "seed_prep": "p1",
+      "frames": 2000
+    },
+    "M2.0": {
+      "family": "stage",
+      "description": "P1 start + default settings + grenadeturn input + declared stage selection stage group 2 area 0 (record d99e6, entry style 16)",
+      "input": "grenadeturn",
+      "host_write_sets": [
+        "game-mode",
+        "player-start-p1",
+        "default-settings",
+        "mission-g2-a0"
+      ],
+      "seed_prep": "p1",
+      "frames": 2000
+    },
+    "D1": {
+      "family": "stage",
+      "description": "P1 and P2 start + default settings + duo-walk-jump (P1 walkfire, P2 jumpshoot)",
+      "input": "duo-walk-jump",
+      "host_write_sets": [
+        "game-mode",
+        "player-start-p1",
+        "player-start-p2",
+        "default-settings"
+      ],
+      "seed_prep": "p1",
+      "frames": 2000
+    },
+    "D2": {
+      "family": "stage",
+      "description": "P1 and P2 start + default settings + duo-turn-mixed (P1 grenadeturn, P2 mixed)",
+      "input": "duo-turn-mixed",
+      "host_write_sets": [
+        "game-mode",
+        "player-start-p1",
+        "player-start-p2",
+        "default-settings"
+      ],
+      "seed_prep": "p1",
+      "frames": 2000
+    },
+    "G1.94": {
+      "family": "stage",
+      "description": "P1 start + default settings + walkfire + declared continue settings + declared continue PLAYER_START at frames 828 and 1468 (60 frames after BYTE 10fdb6 becomes 2 in the probe runs of seed case 94)",
+      "input": "walkfire",
+      "host_write_sets": [
+        "game-mode",
+        "player-start-p1",
+        "default-settings",
+        "continue-settings",
+        "continue-start-94"
+      ],
+      "seed_prep": "p1",
+      "frames": 3000,
+      "cases": [
+        94
+      ]
+    },
+    "G1.68": {
+      "family": "stage",
+      "description": "P1 start + default settings + walkfire + declared continue settings + declared continue PLAYER_START at frames 1020 and 1660 (60 frames after BYTE 10fdb6 becomes 2 in the probe runs of seed case 68)",
+      "input": "walkfire",
+      "host_write_sets": [
+        "game-mode",
+        "player-start-p1",
+        "default-settings",
+        "continue-settings",
+        "continue-start-68"
+      ],
+      "seed_prep": "p1",
+      "frames": 3000,
+      "cases": [
+        68
+      ]
+    }
+  }
+}
