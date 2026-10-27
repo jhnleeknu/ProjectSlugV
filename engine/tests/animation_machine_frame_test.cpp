@@ -130,7 +130,8 @@ void manual_segment(Bytes& ram,State& s,Device& d,std::uint32_t stop,Ports& port
  assert(false);}
 void manual_pass(Bytes& ram,State& s,Device& d,Manual& m){
  const std::uint32_t stop=get(ram,HEAD,4);
- manual_segment(ram,s,d,stop,m.node_ports,m.node_reads,m.waits);}
+ manual_segment(ram,s,d,stop,m.node_ports,m.node_reads,m.waits);
+ s.carry=ms5::AnimationCarryUnknown;}  // declared frame boundary (D1 amendment): the pass end reports C Unknown
 void manual_frame(Bytes& ram,State& s,Device& d,Manual& m){
  const std::uint32_t controller=get(ram,CONTROLLER,4);
  manual_segment(ram,s,d,controller,m.head_ports,m.head_reads,m.waits);
@@ -229,6 +230,17 @@ void pass_and_frames(){
  {const Bytes ram=bc_ram();const State s=pass_state();const Device d=device_with(frame_reads());const Run x=drive(false,ram,s,d);
   same_as_manual(false,x,ram,s,d);assert(x.r.waits.size()==1);check_wait(x.r.waits[0],ms5::AnimationFrameNodes,0xcda4,0x108d34,2,2,4);
   assert(get(x.ram,0x108d34,2)==4);}
+ // Declared frame boundary (D1 amendment, P2 carry): the last node (node 7 = 100d7c) returns a known C through the C-preserving
+ // dispatcher (2908 ORI #1,CCR; 290c RTS = Set, 290e ANDI #fe,CCR; 2916 RTS = Clear). The raw run reaches the head e74 with that C;
+ // the pass and the frame report C Unknown (old behaviour: the known C, as in io-ext2 D1 frame 295 / D2 frame 481 via ea9f8 / ea9fe).
+ {const char* puts[2]={"100d7c:00002908","100d7c:0000290e"};
+  const ms5::AnimationCarryState raw[2]={ms5::AnimationCarrySet,ms5::AnimationCarryClear};
+  for(unsigned int i=0;i<2;++i){
+   const Bytes ram=frame_ram(0xe74,puts[i]);const State s=pass_state();const Device d=device_with(frame_reads());
+   {Bytes mram(ram);State ms(s);Device md(d);Ports p;std::uint32_t n=0;unsigned int w=0;manual_segment(mram,ms,md,0xe74,p,n,w);
+    assert(ms.pc==0xe74&&ms.a[6]==HEAD&&ms.carry==raw[i]);++checks;}
+   const Run x=drive(false,ram,s,d);same_as_manual(false,x,ram,s,d);assert(x.s.carry==ms5::AnimationCarryUnknown);
+   const Run y=frame_row(puts[i]);assert(y.s.carry==ms5::AnimationCarryUnknown);}}
 }
 // Declared BIOS card request: node 3 runs the fade card block c364 (pushes A6, JSR c00468 at c376).
 void card(){

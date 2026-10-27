@@ -13,6 +13,7 @@ namespace ms5 {
 //      A5 = 108000 and LONG (100820) unchanged from the C start and e4a / e74, else "animation frame controller boundary mismatch".
 //   N: the existing F2 node pass from 2ac2 until the dispatcher enters LONG (100820).
 // BIOS, IRQ and (in Skip mode) the controller are not executed. Each segment starts with C Unknown. Only the head callbacks e4a / e74 are supported.
+// A completed pass / frame reports C Unknown (declared frame boundary: the next H never reads the C left by the last node callback).
 // External-read queue (device.reads): only H reads it. C and N have no declared external reads (IO scope 5.6, E1 contract decision 2): the
 //   entries left after H are held back during C / N and put back unchanged, so a queue-device read there fails with "animation machine
 //   external read queue empty" (the native undeclared-device-read guard). A delivered IRQ reads only the two entries it adds (below).

@@ -13,7 +13,7 @@
   1. H: frame head를 PC=LONG `(100820)`부터 controller 진입 PC=LONG `(1008e4)`까지 실행한다. 종료 시 A6 `1008e4`, A5 `108000`, A0=controller, A7 `1feffc`, 복귀 LONG `2ac2`를 확인하고, controller LONG이 바뀌지 않았는지도 확인한다.
   2. 선언 controller 생략: PC:=`2ac2`, A7+=4, C Unknown.
   3. N: `run_animation_machine_pass`와 같은 pass를 실행한다.
-- 모든 구간은 C Unknown으로 시작한다. 실패하면 RAM·상태·device(PVC, bank, 외부 읽기 queue)·result를 전혀 바꾸지 않는다.
+- 모든 구간은 C Unknown으로 시작하고, 완료된 pass·frame은 C Unknown을 보고한다(아래 "개정: frame 끝 carry"). 실패하면 RAM·상태·device(PVC, bank, 외부 읽기 queue)·result를 전혀 바꾸지 않는다.
 - 선언 해제(`AnimationFrameWait`로 순서대로 기록하고, 구간마다 최대 16회, 원본 `S.WAIT_LIMIT`와 같음):
 
   | PC | 해제 동작 | 의미 |
@@ -59,6 +59,17 @@
 - **비교 어댑터:** C++ `MOVE.L` `3c0000` 1건을 원본의 WORD 2건으로 나누는 변환을 썼다. 원본 node `4fcce`/`4fcda`의 port 구간 안에서만 적용한다(F4 검증기와 같은 규약).
 - **외부 읽기 queue:** 원본 H가 실제 소비한 값과 순서를 그대로 C++에 공급했고, C++가 queue를 남김없이 소비했는지 확인했다.
 - 재현 명령: `.venv/bin/python tools/verify_animation_machine_frame_driver.py --workers 4`. 4코어에서 약 4분 16초 걸렸고, 보고서는 `artifacts/animation_machine_frame_driver/verification.json`(로컬, SHA256 `76873c60…`, 최종 코드 기준)이다.
+
+## 개정: frame 끝 carry (P2 carry, 2026-10-27)
+
+- **옛 동작(`eeae7b0`).** pass는 마지막 node callback이 남긴 C를 그대로 보고했다. dispatcher block `2ac2`(`MOVEA.L 8(A6),A6`), `2ac6`(`BRA`), `2ab8`(`LEA`), `2abe`(`MOVEA.L (A6),A0`), `2ac0`(`JSR (A0)`)는 68000에서 CCR을 바꾸지 않으므로 C 보존이고, pass는 dispatcher가 head callback에 들어가는 `e4a`/`e74`에서 멈추기 때문이다.
+- **원인 [F].** 셋째 IO 관측(io-ext2)의 D1 frame 295와 D2 frame 481에서 pass의 마지막 node는 P2 플레이어의 자식(A6 `101640` / `1010e4`)이고, 그 callback은 U18 `ea908` → `ea940` 상태다. segment 탐침(scratch `p2c/probe/carryprobe.py`, N 시작에서 block마다 stop PC 하나)의 C: `ea9ea` Unknown(U18 계약: 소비자 없는 `ANDI.B #fe,CCR`), `ea9f8` Unknown, `ea9fe` Clear(`ea9f8 JSR 49fc6`이 interpreter의 known C를 돌려줌), pass 끝 `e74` Clear. IO 검증기는 frame 끝 carry Unknown을 요구하므로(`animation-machine-io-execution.md` 3.1) D1 295~297, D2 481~483이 carry 불일치였고 연쇄는 첫 불일치에서 멈췄다.
+- **실행부 분류는 맞다 [F].** `49fc6`의 known C는 실제 소비자가 쓴다(예: FR3 `ea8f6 JSR 49fc6` 뒤 `ea8fc`). `ea9f8`(JSR)·`ea9fe`(RTS)는 U18 계약에서 FLOW_ONLY이고 68000에서도 CCR을 보존한다. 다른 callback도 `49fc6`의 C를 dispatcher로 돌려준다(예: N28의 `PC := 49fc6` 꼬리). 따라서 결함은 특정 실행부가 아니라 frame 경계의 carry 규약에 있다.
+- **새 동작.** `animation_machine_frame.cpp`의 `run_nodes`(`run_animation_machine_pass`·`step_animation_machine_frame` 공용)가 pass 경계 검사 뒤 C를 Unknown으로 둔다. 공개 header에 주석 한 줄을 더했다. `animation_machine.cpp`·`animation_machine_internal.h`는 바뀌지 않아 `CPP_PINS` 갱신은 없다. segment API(`run_animation_frame_segment`)의 stop 결과 carry는 그대로다.
+- **native 의미와의 대응.** D1은 이미 모든 구간이 C Unknown으로 시작한다고 선언하므로 C++는 frame 끝 C를 소비하지 않는다. [F] native에서도 `e74`의 첫 명령은 `MOVE.W #0,3c0004`(MOVE는 C를 지운다)이고 H1 계약에 carry 소비자가 없으므로 frame 끝 C는 죽은 값이다. 소비자 없는 C를 Unknown으로 두는 것은 U18 `ea9ea`와 같은 규칙이다. [I] native `e74`의 실제 C는 검증된 interpreter 모델로 보아 Clear이다(관측은 SR을 기록하지 않는다).
+- **선택하지 않은 안 [I].** (a) U18의 `ea9fe`나 `ea9f8`을 Unknown 생산으로 바꾸는 안: 68000 의미와 어긋나고, `49fc6`의 C를 돌려주는 다른 callback이 마지막 node가 되면 같은 불일치가 다시 난다. (b) IO 검증기의 carry 검사를 바꾸는 안: 금지 범위다. 검증기는 바꾸지 않았고 부정 검사 `result-carry`(위조 carry 1)는 그대로 검출된다.
+- **시험(옛 → 새).** `engine/tests/animation_machine_frame_test.cpp`: `manual_pass`(harness식 수동 연쇄)가 N 구간 뒤 같은 선언 경계(C Unknown)를 적용한다(옛: 마지막 block의 C 그대로). 새 row는 node 7(`100d7c`) callback `2908`(`ORI #1,CCR`; `290c RTS` = Set)과 `290e`(`ANDI #fe,CCR`; `2916 RTS` = Clear)이다. 수동 `run_animation_machine`은 `e74`에 Set/Clear로 닿고, pass와 frame은 Unknown을 보고한다(옛 동작이면 Set/Clear). 새 줄을 지운 돌연변이는 새 row의 `same_as_manual`에서 실패한다. 시험 97 checks.
+- **검증 [F].** `make -j6 all test` 종료 0, 경고 0. IO 전체 실행: historic 173,966 / 173,966 일치(변화 없음, acceptance 모두 true), io-ext 14,500 / 14,500(변화 없음), io-ext2 6,664 / 18,718 일치(옛 5,707, +957), 불일치 0(옛 2), C++ 오류 11(M1.5 `cue wrapper failure requires known caller X`, 별개의 알려진 한계), acceptance는 `no_unexpected_cpp_errors`만 false. io-ext2 첫 정지: D1 1,180(guard, `animation frame controller system return`), D2 553(routing 밖 `c13c0`), 나머지 run은 옛 값과 같다. V1 regression specs 20개(fr3, pc1~pc11, se1, se2, fr9~fr14; `MS5_SEED_DIR=artifacts/stage_entry_body`)는 frame 구동기를 거치지 않으며 fixtures 35,952개 모두 ok, failed 0이다.
 
 ## 남은 것
 - controller D9/C1~C3를 실행해 선언 생략을 없애야 한다.

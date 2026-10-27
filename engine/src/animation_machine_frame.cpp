@@ -238,6 +238,11 @@ bool run_nodes(std::vector<std::uint8_t>& ram, const std::vector<FixedDataResour
         state.a[5]!=0x108000||state.a[0]!=stop||ram_get(ram,HEAD_LONG,4)!=stop) {
         error="animation frame pass boundary mismatch"; return false;
     }
+    // Declared frame boundary (D1 amendment, P2 carry): the pass ends where the dispatcher enters the head callback e4a / e74. The next H
+    // segment starts with C Unknown and never reads the incoming C (e74 begins with MOVE.W, H1 contract: no carry consumer), so the pass
+    // reports C Unknown. The last node callback may return a known C through the C-preserving dispatcher 2ac2..2ac6 / 2ab8..2ac0
+    // (e.g. U18 ea9f8 JSR 49fc6; ea9fe RTS).
+    state.carry=AnimationCarryUnknown;
     r.pass_stop_pc=stop;
     return true;
 }
