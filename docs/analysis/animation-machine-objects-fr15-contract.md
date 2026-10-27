@@ -208,3 +208,26 @@ FR2..FR14, C1~C11 계약의 같은 절을 그대로 따른다. 다른 점만 적
 - [F] 작업자가 돌리지 않은 검사: 원래 / 확장 IO 관측, frame, legacy 검증기는 결정적 runner가 돌린다.
 - [F] `CPP_PINS`: stage_event / stage_event_ops의 두 pin이 최종 `animation_machine.cpp` / `animation_machine_internal.h` SHA와 같다.
 - [F] 검증 방법: 이 절은 local Qwen이 JSON(`qwen/record_in.json`)에서 초안을 썼고 작업자가 확인했다.
+
+## 검증 기록(검증 실행: 결정적 runner + 메인 검토)
+
+- [F] `make -j4 all test`: 종료 0, 경고 0, Assert 0, Python 310 OK. `animation machine objects fr15` 시험 1182 fixtures(단일 블록 743, 경로 327, 생산자 체인 48, 선언된 C 16, 검사된 오류 48(나중에 실패하는 PC가 있는 것 7), 유지된 C 87, 포트 행 33 / 포트 673), 192 block, 호출 5018, 검사 327768.
+- [F] `ubsan`: 빌드/실행 종료 0, 런타임 오류 0.
+- [F] `mutation`: 변이 898, 제거 876, 등가 22.
+  - 이 실행 전에 메운 시험 빈틈 15개.
+- [F] real-ROM: 배치 `f4`, `f5`, `s1`, `s2`, `s3` 커버 `192`, `192`, `192`, `192`, `192`; mismatches `0,0,0,0,0`.
+  - 오라클: `native_safe` 켬.
+- [F] V1: A/B 각각 fixtures 1793, failed 0, identical true(digest `4f62395b42c1e793`); regression specs 51개 모두 failed 0.
+- [F] legacy verifiers: `stage_entry`, `area_clear`, `stage_event`, `stage_event_ops`, `frame_helpers`, `card_menu_close`, `input`, `scene_core`, `scheduler`, `objects_g1` 모두 종료 0. `objects_g1` 판정은 C1과 같다.
+- [F] frames: `d1` 완료 54400, mismatches 0; `controller_game` 완료 54400, mismatches 0; `irq` 완료 54400, mismatches 0; `demo` 완료 45684, mismatches 0.
+- [F] IO(원래 관측): 일치 합계 173966, 기준 173966, 차이 0, mismatches 0, C++ 오류 0, 실행 2, identical true; 설정별 `P0` 81600, `P1` 81600, `P1b` 8400, `boot-demo-0` 577, `boot-title-idle` 600, `boot-title-start` 906, `fx-bios-call` 3, `fx-c-input-read` 3, `fx-n-input-read` 3, `fx-queue-short` 1, `fx-start-c79a` 273.
+  - 수락 키 실패 항목은 없고, native frame 173966 전부 일치한다.
+- [F] IO(확장 입력 관측, 14500 native frames): 일치 합계 14500, 기준 14500, 차이 0, mismatches 0, C++ 오류 0, 실행 2, identical true; 설정별 `P0` 1200, `P1` 1200, `X1` 2552, `X2` 2612, `X3` 3656, `X4` 3280.
+  - 수락 키 실패 항목은 없고, native frame 14500 전부 일치한다(일치 합계 14500 = 전체 14500).
+  - 첫 정지: 없음(확장 관측은 이미 전부 일치).
+- [F] IO(세 번째 관측: 다른 스테이지, `P2`, 계속, 18718 native frames): 일치 합계 6824, 기준 6664, 차이 160, mismatches 0, C++ 오류 11, 실행 2, identical true.
+  - 예측 확인: 정확한 비트맵 재관측은 6824를 예측했고, 실측도 6824이다.
+  - 수락 키 실패 항목: `no_unexpected_cpp_errors`. C++ 오류 11건이 발생해 false다(알려진 M1.5 caller-X 한계, 변화 없음).
+  - 첫 정지: `ca5c` (E-1), `1d776` `1db0a` `21a90` (C-2), `4ef08` (연기된 C1 진입), `ea1ca` (D-2).
+  - 범위: 변경 없음; `c3ce`와 `ca5c`는 E-1에 남음(FR15 종결 범위 밖); 계산 점프 `e9c6e`는 실행된 진입점 `e9c7e`로 제한.
+- 검증 방법: 결정적 runner(LLM 없음). 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
