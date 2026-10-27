@@ -88,13 +88,19 @@ EXIT_STOPS = (0x1f48a, 0x1fb28, 0x1fd3c, 0x21ea0, 0x21d0e, 0x2210c, 0x223a0, 0x2
               0x21fa6, 0x4e69a,
               0x21e48,
               # player C10 routes the entries below since C10 (declared stops of the C8 runs, as before C10)
-              0x1f082, 0x20bfe, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
+              0x1f082, 0x20bfe, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4,
+              # player C11 routes the C3 list handler 21950 and the slot-84 values 21960 21a76 since C11 (declared stops, as before C11)
+              0x21950, 0x21960, 0x21a76)
 UNIT_EXITS = EXIT_STOPS[:8]             # the C8 later-unit stops (deferred leaders)
 # later-unit stops routed since (player C9: 1f48a 1fb28 21d0e 2210c 223a0 223d6 208fa 1f070 21ca4, and the list handler 21e48 of the JMP (A1) 21d9e,
 # appended to EXIT_STOPS so that the C8 runs stop there as before): still declared stops of the C8 runs
 ROUTED_LATER = (0x1f48a, 0x1fb28, 0x21d0e, 0x2210c, 0x223a0, 0x223d6, 0x208fa, 0x1f070, 0x21ca4, 0x21e48,
                 # player C10 (the C10 entries kept as declared stops)
-                0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
+                0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4,
+                # player C11 (the C11 entries kept as declared stops)
+                0x1d3e0, 0x4eb6a, 0x1e8de,
+                # player C11 (the C3 list handler / slot-84 values kept as declared stops)
+                0x21950, 0x21960, 0x21a76)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1f476, 0x1f47c), (0x1fa68, 0x1fa70), (0x1fd2e, 0x1fd34), (0x4d0e0, 0x4d0e6), (0x21e6a, 0x21e72))
 PASS_CHAINS = ()

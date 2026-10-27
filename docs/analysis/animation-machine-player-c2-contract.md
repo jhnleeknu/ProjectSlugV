@@ -227,3 +227,9 @@ FR2..FR9, C1 계약의 같은 절을 그대로 따른다. 다른 점만 적는�
   - 첫 전체 실행은 frame driver 수정 전 E1 base에서 했고, 두 입력 fixture에서 guard-bad였다. E1 수정을 병합한 뒤 IO를 재실행했다.
 - [F] 남은 실행 PC: C 757 → 659, E 12, 예상 frame 변화 없음. 일치 frame 166,744.
 - 검증 방법: deterministic runner(LLM 없음). IO는 E1 frame driver 수정 병합 후 재실행 값이다. 이 기록 초안은 local Qwen이 썼고 메인이 검토·수정했다.
+
+## 뒤 단위 변경 기록: player C11(2026-10-27, 작업자 Claude Opus 5.5 / high)
+
+C11 계약(`animation-machine-player-c11-contract.md`) 결정 5에 따른 기록이다. C2 실행부·시험은 바뀌지 않았다.
+
+- [F] `1de34 BNE`의 대상 `1e8de`(이전 routing 밖, 뒤 단위 정지)는 C11 block 시작이다. C2 시험은 `1e8de`를 정지 PC로만 쓰므로 그대로 통과한다(정지 검사가 dispatch보다 먼저). V1 spec `pc2.py`의 `ROUTED_LATER`에 `1e8de`를 더했다(C2 run은 그 PC에서 계속 멈춘다). V1 pc2 1,743 그대로.

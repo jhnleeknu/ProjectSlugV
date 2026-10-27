@@ -93,9 +93,14 @@ GATED_CONSUMERS = ()
 TRAPS = (0xb3e58, 0xb3eac)
 # no later-unit stop of FR14 (the last IO unit); the still unrouted later-unit stops of the C1..C9 blocks (pc10 EXIT_STOPS[:12]).  Declared stops of the
 # native runs: a straight-line unrouted PC after a routed block is not the interior of a routed block.
-EXIT_STOPS = (0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a)
+EXIT_STOPS = (0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a,
+              # player C11 routes the C3 list handler 21950 and the slot-84 values 21960 21a76 since C11 (declared stops, as before C11)
+              0x21950, 0x21960, 0x21a76)
 UNIT_EXITS = ()                         # no FR14 later-unit stop
-ROUTED_LATER = ()
+# player C11 routes 1d3e0 4eb6a 1e8de since C11 (declared stops of the FR14 runs, as before C11)
+ROUTED_LATER = (0x1d3e0, 0x4eb6a, 0x1e8de,
+                # player C11 (the C3 list handler / slot-84 values kept as declared stops)
+                0x21950, 0x21960, 0x21a76)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x3650c, 0x36516), (0x365e6, 0x365f0), (0xb5d2a, 0xb5d30), (0xb5d3a, 0xb5d3e), (0xb6038, 0xb6042), (0xb60e4, 0xb60ec), (0xb60f0, 0xb60fa),
           (0xb6104, 0xb610e), (0xb6112, 0xb611c), (0xb7af8, 0xb7b02), (0xc0df6, 0xc0dfc), (0xd17e6, 0xd17ec))

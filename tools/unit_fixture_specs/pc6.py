@@ -98,14 +98,20 @@ EXIT_STOPS = (0x1d3e0, 0x4eb6a, 0x1f2a4, 0x1fa68, 0xea626,
               0x208fa, 0x2210c, 0x1ef4c, 0x21d9e, 0x1efd6, 0x1f070, 0x21dd0, 0x223a0, 0x223d6, 0x4ef08, 0x1ce98, 0x1cfde, 0x1de3c, 0x1e21c, 0x1e8de,
               0x1fafc, 0x1fc96, 0x1fd50, 0x201bc, 0x21ca4, 0x21d0e, 0x21fa6, 0x4d0cc, 0x4e69a,
               # player C10 routes the entries below since C10 (declared stops of the C6 runs, as before C10)
-              0x1f082, 0x20bfe, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
+              0x1f082, 0x20bfe, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4,
+              # player C11 routes the C3 list handler 21950 and the slot-84 values 21960 21a76 since C11 (declared stops, as before C11)
+              0x21950, 0x21960, 0x21a76)
 UNIT_EXITS = EXIT_STOPS[:5]             # the C6 later-unit stops and deferred leaders (1dc8e / 1dccc: through the stub 1dc84 only)
 # later-unit stops routed since (player C7: 1f2a4; player C8: 1fa68 ea626 1ef4c 21d9e 1ce98 1cfde 1fafc 201bc 4d0cc; player C9: 208fa 2210c 1f070
 # 223a0 223d6 21ca4 21d0e): still declared stops of the C6 runs
 ROUTED_LATER = (0x1f2a4, 0x1fa68, 0xea626, 0x1ef4c, 0x21d9e, 0x1ce98, 0x1cfde, 0x1fafc, 0x201bc, 0x4d0cc, 0x208fa, 0x2210c, 0x1f070, 0x223a0, 0x223d6,
                 0x21ca4, 0x21d0e,
                 # player C10 (the C10 entries kept as declared stops)
-                0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
+                0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4,
+                # player C11 (the C11 entries kept as declared stops)
+                0x1d3e0, 0x4eb6a, 0x1e8de,
+                # player C11 (the C3 list handler / slot-84 values kept as declared stops)
+                0x21950, 0x21960, 0x21a76)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the Z chain 4ee26 -> 4a974 -> 4ee30
 CHAINS = ((0x1d63a, 0x1d644), (0x1d698, 0x1d6a2), (0x1d92e, 0x1d934), (0x1dc30, 0x1dc36), (0x1dc42, 0x1dc62), (0x1ebb2, 0x1ebba), (0x1ec60, 0x1ec66),
           (0x4ed70, 0x4ed8c), (0x4ee26, 0x4ee30))
@@ -1122,10 +1128,13 @@ def error_fixtures(bases, add):
     err('4ed90-odd-a0', U.with_host_writes(st, regs=dict(a0=a6 + 1), pc=0x4ed90), odd_write, 0x4ed90, stop=0x4ed9a)
     err('481c2-odd-a0', U.with_host_writes(st, regs=dict(a0=a6 + 1), pc=0x481c2), odd_word, 0x481c2, stop=0x4d50e)
     # failures after executed blocks:
-    #   1d398 (D7.W = 0) -> the type chain -> 1d3e0 (deferred leader, unrouted)
-    err('1d398-then-1d3e0', U.with_host_writes(st, regs=dict(d7=0), pc=0x1d398), unrouted, 0x1d3e0)
-    #   4eb58 (BYTE 10fd8a = 1) -> 4e5b0 -> 4eb60 -> 4eb6a (deferred leader, unrouted)
-    err('4eb58-then-4eb6a', U.with_host_writes(st, [(0xfd8a, 1, 1)], regs=dict(d0=0), pc=0x4eb58), unrouted, 0x4eb6a)
+    #   1d398 (D7.W = 14) -> the type chain -> 1d3e0 .. 1d428 (player C11 since C11) -> C11 1d722: MOVE.W 547a(A5),D0 at an odd A5 (previous row
+    #   '1d398-then-1d3e0', D7.W = 0: 'unsupported animation machine PC' at 1d3e0, the deferred leader; the C6 / C11 compares touch no memory)
+    err('1d398-then-1d722', U.with_host_writes(st, regs=dict(d7=0x14, a5=st['regs']['a5'] + 1), pc=0x1d398), odd_word, 0x1d722)
+    #   4eb58 (BYTE 10fd8a = 1) -> 4e5b0 -> 4eb60 -> 4eb6a (player C11 since C11; BYTEs 5d21 / 7d82(A5) = 0) -> 4eb72 -> 4eb7a: MOVE.W 76(A6),D0 at an
+    #   odd A6 (4eb58 / 4e5b0 / 4eb6a / 4eb72 read only BYTEs) (previous row '4eb58-then-4eb6a': 'unsupported animation machine PC' at 4eb6a)
+    err('4eb58-then-4eb7a', U.with_host_writes(st, [(0xfd8a, 1, 1), (0xdd21, 1, 0), (0xfd82, 1, 0)], regs=dict(d0=0, a6=a6 + 1), pc=0x4eb58), odd_word,
+        0x4eb7a)
     #   1ec2c (D0 bit 1) -> 1f2a4 (C7, unrouted); 1ec3c path: 1ec1e (D0 & c) -> 1fa68 (C8, unrouted)
     #   (1f2a4 is a player C7 start since C7; previous expectation 'unsupported animation machine PC' at 1f2a4: the BSR.W 1cab6 at an odd A7 fails there)
     err('1ec2c-then-1f2a4', U.with_host_writes(st, regs=dict(d0=2, a7=a7 + 1), pc=0x1ec2c), odd_word, 0x1f2a4)

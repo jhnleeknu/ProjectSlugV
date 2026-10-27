@@ -643,8 +643,12 @@ def gen_errors():
     err('odd-a0-4edaa', 0x4edaa, wodd, 0x4edaa, stop=0x4edc0, a0=NODE + 1)
     err('odd-a0-1d574', 0x1d574, wodd, 0x1d574, a0=NODE + 1)
     # failures after executed blocks (rollback; the failing PC differs from the entry):
-    err('1d398-then-1d3e0', 0x1d398, unrouted, 0x1d3e0, d7=0)
-    err('4eb58-then-4eb6a', 0x4eb58, unrouted, 0x4eb6a, puts=((0x10fd8a, 1, 1),))
+    # 1d3e0 / 4eb6a are player C11 starts since C11 (previous rows '1d398-then-1d3e0' (D7 = 0) / '4eb58-then-4eb6a': 'unsupported animation machine PC'
+    # at 1d3e0 / 4eb6a).  1d398 with D7.W = 14 runs through the C11 chain 1d3e0 .. 1d428 to C11 1d722, whose MOVE.W 547a(A5),D0 at an odd A5 fails
+    # (the C6 / C11 compares touch no memory); 4eb58 with an odd A6 (BYTE 10fd8a = 1, BYTEs 5d21 / 7d82(A5) = 0) runs through C11 4eb6a / 4eb72 to C11
+    # 4eb7a, whose MOVE.W 76(A6),D0 fails (4eb58 / 4e5b0 / 4eb6a / 4eb72 read only BYTEs)
+    err('1d398-then-1d722', 0x1d398, odd, 0x1d722, d7=0x14, a5=A5 + 1)
+    err('4eb58-then-4eb7a', 0x4eb58, odd, 0x4eb7a, puts=((0x10fd8a, 1, 1),), a6=NODE + 1)
     # 1f2a4 is a player C7 start since C7 (previous row: 'unsupported animation machine PC' at 1f2a4); the BSR.W 1cab6 of 1f2a4 at an odd A7 keeps
     # the failing PC 1f2a4
     err('1ec2c-then-1f2a4', 0x1ec2c, odd, 0x1f2a4, d0=2, a7=SP + 1)

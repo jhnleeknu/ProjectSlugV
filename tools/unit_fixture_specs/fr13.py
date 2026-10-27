@@ -94,11 +94,17 @@ TRAPS = (0xb3e58, 0xb3eac)
 # FR12 blocks (fr12 UNIT_EXITS that FR13 does not route: FR14 7177a 71786; FR11 and FR10 have none left) and of the C1..C9 blocks (pc10
 # EXIT_STOPS[:12]).  Declared stops of the native runs: a straight-line unrouted PC after a routed block is not the interior of a routed block.
 EXIT_STOPS = (0x71874, 0xd1632, 0xd177e, 0x7177a, 0x71786,
-              0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a)
+              0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a,
+              # player C11 routes the C3 list handler 21950 and the slot-84 values 21960 21a76 since C11 (declared stops, as before C11)
+              0x21950, 0x21960, 0x21a76)
 UNIT_EXITS = EXIT_STOPS[:3]             # the FR13 later-unit stops (FR14)
 # objects FR14 routes the FR13 later-unit stops 71874 d1632 d177e and the FR12 ones 7177a 71786 since FR14 (declared stops of the FR13 runs, as before
 # FR14)
-ROUTED_LATER = (0x71874, 0xd1632, 0xd177e, 0x7177a, 0x71786)
+ROUTED_LATER = (0x71874, 0xd1632, 0xd177e, 0x7177a, 0x71786,
+                # player C11 (the C11 entries kept as declared stops)
+                0x1d3e0, 0x4eb6a, 0x1e8de,
+                # player C11 (the C3 list handler / slot-84 values kept as declared stops)
+                0x21950, 0x21960, 0x21a76)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the flag chain 71fe2 -> 71fe4 (Z of TST.B D0)
 # and 71fde -> 71fe4 (D0 of 70302)
 CHAINS = ((0x716b6, 0x716bc), (0x71a68, 0x71a6e), (0x71f2c, 0x71f30), (0x720fc, 0x72102), (0x722c6, 0x722cc), (0xbfd8e, 0xbfd94), (0xc5580, 0xc5586),

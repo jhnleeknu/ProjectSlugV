@@ -91,7 +91,9 @@ EXIT_STOPS = (0x1cb1a, 0x1cb38, 0x1cde0, 0x1cdf0, 0x1ce98, 0x1cfde, 0x1ceb0, 0x1
 # later-unit stops routed since (player C3: 1ee00 201a2 48384 e8b5a 1cde0 1cdf0; player C4: 1ceb0 1cec2 1eeea; player C5: 1cb1a 1cb38; player C6: 1d398
 # 1ebbe; player C7: 1f2a4; player C8: 1ce98 1cfde 1fa68 1fafc): still declared stops of the C2 runs
 ROUTED_LATER = (0x1ee00, 0x201a2, 0x48384, 0xe8b5a, 0x1cde0, 0x1cdf0, 0x1ceb0, 0x1cec2, 0x1eeea, 0x1cb1a, 0x1cb38, 0x1d398, 0x1ebbe, 0x1f2a4,
-                0x1ce98, 0x1cfde, 0x1fa68, 0x1fafc)
+                0x1ce98, 0x1cfde, 0x1fa68, 0x1fafc,
+                # player C11 (the C11 entries kept as declared stops)
+                0x1e8de)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1d588, 0x1d58e), (0x1d592, 0x1d59c), (0x1ed78, 0x1ed80), (0x1fa3c, 0x1fa44), (0x1f290, 0x1f296), (0x1f7fc, 0x1f802), (0x1faba, 0x1fac0))
 CHAIN_49FC6 = (0x1f290, 0x1f7fc, 0x1faba)
