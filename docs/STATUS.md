@@ -2704,3 +2704,11 @@
   - 원래 관측 IO 173,966, 확장 관측 IO 14,500 그대로.
   - 회귀 spec 50개, legacy 검증기 10개 통과. frame 비교 변화 없음.
 - 기록: `animation-machine-frame-driver-d1.md` "개정: frame 끝 carry".
+
+## 2026-10-27 — 객체 FR15(192 block, 세 번째 관측의 D-1)
+
+- [F] FR15(192 block): 범위는 계획과 같다. 계산 점프 `e9c6e`는 실행되는 칸 `e9c7e`만 허용한다. `c3ce`와 `ca5c`는 FR15 closure 밖이라 E-1에 남겼다.
+  - 실제 ROM 7,500건 불일치 0. 변이 898개 중 876개 검출(22개 동등). V1 1,793(두 번 같음). 회귀 spec 51개, legacy 검증기 10개 통과. frame 비교 변화 없음.
+  - 원래 관측 IO 173,966, 확장 관측 IO 14,500 그대로. 세 번째 관측 IO 6,664 → 6,824(+160, 예측과 같음), 불일치 0. 남은 C++ 오류 11은 이미 알려진 M1.5 caller-X 한계다.
+  - 계약: `animation-machine-objects-fr15-contract.md`.
+- 다음: E-1(`ca5c` `c3ce`)을 접어 넣은 C12. 부분 작업이 `metalslug-c12`에 커밋되지 않은 채로 있다.

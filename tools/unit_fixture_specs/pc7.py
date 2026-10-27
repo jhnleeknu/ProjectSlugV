@@ -92,7 +92,9 @@ EXIT_STOPS = (0x1eb98, 0x1f756, 0x1fa68,
               # player C10 routes the entries below since C10 (declared stops of the C7 runs, as before C10)
               0x1f082, 0x20bfe, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4,
               # player C11 routes the C3 list handler 21950 and the slot-84 values 21960 21a76 since C11 (declared stops, as before C11)
-              0x21950, 0x21960, 0x21a76)
+              0x21950, 0x21960, 0x21a76,
+              # objects FR15 routes the script callback 6f352 since FR15 (a declared stop of the C7 runs, as before FR15)
+              0x6f352)
 UNIT_EXITS = EXIT_STOPS[:3]             # the C7 later-unit stops
 # later-unit stops routed since (player C8: 1eb98 1f756 1fa68 ea626 1ef4c 21d9e 1ce98 1cfde 1fafc 201bc 4d0cc; player C9: 208fa 2210c 1f070 223a0
 # 223d6 21ca4 21d0e): still declared stops of the C7 runs
@@ -103,7 +105,9 @@ ROUTED_LATER = (0x1eb98, 0x1f756, 0x1fa68, 0xea626, 0x1ef4c, 0x21d9e, 0x1ce98, 0
                 # player C11 (the C11 entries kept as declared stops)
                 0x1d3e0, 0x4eb6a, 0x1e8de,
                 # player C11 (the C3 list handler / slot-84 values kept as declared stops)
-                0x21950, 0x21960, 0x21a76)
+                0x21950, 0x21960, 0x21a76,
+                # objects FR15 (the script callback 6f352 kept as a declared stop)
+                0x6f352)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1ca0a, 0x1ca0e), (0x1f32a, 0x1f330), (0x1f5be, 0x1f5c4), (0x1f74c, 0x1f752), (0x1f640, 0x1f644), (0x1f76e, 0x1f776), (0x22670, 0x22674),
           (0x226f0, 0x22704), (0x2513a, 0x25140), (0x2544e, 0x25454))
