@@ -88,10 +88,16 @@ TRAPS = (0xe6d92, 0xe6dd0)
 # E2 has no later-unit stop of its own; the still unrouted later-unit stops of earlier units (FR13 / FR12: FR14 71874 d1632 d177e 7177a 71786;
 # C1..C9: pc10 EXIT_STOPS[:12]) stay declared stops of the native runs (none is reached from E2 code).
 EXIT_STOPS = (0x71874, 0xd1632, 0xd177e, 0x7177a, 0x71786,
-              0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a)
+              0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a,
+              # player C11 routes the C3 list handler 21950 and the slot-84 values 21960 21a76 since C11 (declared stops, as before C11)
+              0x21950, 0x21960, 0x21a76)
 UNIT_EXITS = ()
 # objects FR14 routes the FR13 / FR12 later-unit stops 71874 d1632 d177e 7177a 71786 since FR14 (declared stops of the E2 runs, as before FR14)
-ROUTED_LATER = (0x71874, 0xd1632, 0xd177e, 0x7177a, 0x71786)
+ROUTED_LATER = (0x71874, 0xd1632, 0xd177e, 0x7177a, 0x71786,
+                # player C11 (the C11 entries kept as declared stops)
+                0x1d3e0, 0x4eb6a, 0x1e8de,
+                # player C11 (the C3 list handler / slot-84 values kept as declared stops)
+                0x21950, 0x21960, 0x21a76)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0xe69c0, 0xe69c6), (0xe69e0, 0xe69e8), (0xe6b5a, 0xe6b64))
 PASS_CHAINS = ()

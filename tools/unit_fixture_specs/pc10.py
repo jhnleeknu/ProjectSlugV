@@ -97,11 +97,17 @@ TRAPS = ()
 # of 1dcb8 / 1dcc6, ...) and the later-unit stops of the FR10 blocks (fr10 EXIT_STOPS[:11]).  Declared stops of the native runs: a straight-line
 # unrouted PC after a routed block is not the interior of a routed block.
 EXIT_STOPS = (0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a,
-              0x70e42, 0x70fac, 0xcd7e2, 0xcd92e, 0xcd96c, 0x70f8e, 0xb6c58, 0x70f60, 0x70fcc, 0x70ff8, 0x71028)
+              0x70e42, 0x70fac, 0xcd7e2, 0xcd92e, 0xcd96c, 0x70f8e, 0xb6c58, 0x70f60, 0x70fcc, 0x70ff8, 0x71028,
+              # player C11 routes the C3 list handler 21950 and the slot-84 values 21960 21a76 since C11 (declared stops, as before C11)
+              0x21950, 0x21960, 0x21a76)
 UNIT_EXITS = ()                         # no C10 later-unit stop
 # objects FR11 routes the FR10 later-unit stops 70e42 70fac cd7e2 cd92e cd96c since FR11, objects FR12 routes 70f8e b6c58 since FR12, objects FR13
 # routes 70f60 70fcc 70ff8 71028 since FR13 (declared stops of the C10 runs, as before FR11 / FR12 / FR13)
-ROUTED_LATER = (0x70e42, 0x70fac, 0xcd7e2, 0xcd92e, 0xcd96c, 0x70f8e, 0xb6c58, 0x70f60, 0x70fcc, 0x70ff8, 0x71028)
+ROUTED_LATER = (0x70e42, 0x70fac, 0xcd7e2, 0xcd92e, 0xcd96c, 0x70f8e, 0xb6c58, 0x70f60, 0x70fcc, 0x70ff8, 0x71028,
+                # player C11 (the C11 entries kept as declared stops)
+                0x1d3e0, 0x4eb6a, 0x1e8de,
+                # player C11 (the C3 list handler / slot-84 values kept as declared stops)
+                0x21950, 0x21960, 0x21a76)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the Z chains 1efe8 -> 1efee, 1eff2 -> 1eff6,
 # 204fa -> 20508 (C5 1c51c)
 CHAINS = ((0x21dd0, 0x21dda), (0x21dde, 0x21de2), (0x21de6, 0x21dea), (0x21e04, 0x21e0c), (0x22148, 0x22164), (0x2228e, 0x22296), (0x2236c, 0x22374),

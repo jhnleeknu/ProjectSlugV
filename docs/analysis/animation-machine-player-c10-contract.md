@@ -255,3 +255,9 @@ FR12 계약(`animation-machine-frontier-fr12-contract.md`) 결정 6에 따른 �
 FR13 계약(`animation-machine-frontier-fr13-contract.md`) 결정 6에 따른 기록이다. C10 실행부·시험은 바뀌지 않았다.
 
 - [F] V1 spec `pc10.py`: `EXIT_STOPS` 가운데 FR10의 뒤 단위 정지 `70f60` `70fcc` `70ff8` `71028`가 FR13 block이 되었다. `ROUTED_LATER`에 그 넷을 더했다(C10 run은 그 PC에서 계속 멈춘다).
+
+## 뒤 단위 변경 기록: player C11(2026-10-27, 작업자 Claude Opus 5.5 / high)
+
+C11 계약(`animation-machine-player-c11-contract.md`) 결정 5에 따른 기록이다. C10 실행부·시험은 바뀌지 않았다.
+
+- [F] `1dcc6 MOVE.L #1e8de,(A6)`(쓰기만)의 값 `1e8de`와 `EXIT_STOPS`의 `1d3e0` `4eb6a`는 C11 block 시작이다. V1 spec `pc10.py`의 `ROUTED_LATER`에 그 셋을, `EXIT_STOPS`·`ROUTED_LATER`에 C3 계산 점프의 C11 착지 `21950` `21960` `21a76`을 더했다(C10 run은 그 PC에서 계속 멈춘다). V1 pc10 1,334 그대로.

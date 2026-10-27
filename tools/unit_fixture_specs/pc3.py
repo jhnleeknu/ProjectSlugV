@@ -110,7 +110,9 @@ ROUTED_LATER = (0x21c72, 0x1ceb0, 0x1cec2, 0x1eeea, 0x1cb44, 0x20240, 0x20268, 0
                 0x206cc, 0x21662, 0x4838c, 0x1d398, 0x1ebbe, 0x1f2a4, 0x1fa68, 0x201bc, 0x4d0cc, 0x1ce98, 0x1cfde, 0x1fafc, 0x21ca4, 0x21d0e, 0x2210c,
                 0x223a0, 0x223d6,
                 # player C10 (the C10 entries kept as declared stops)
-                0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4)
+                0x1dc8e, 0x1dccc, 0x1efd6, 0x1f082, 0x20bfe, 0x21dd0, 0x22148, 0x22286, 0x223fa, 0x20324, 0x21e04, 0x2228e, 0x22360, 0x252b4,
+                # player C11 (the C11 entries kept as declared stops)
+                0x1e8de)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x1edf6, 0x1ee04), (0x1ed22, 0x1ed26), (0x1ee12, 0x1ee16), (0x1ee1a, 0x1ee26), (0x1ee2a, 0x1ee32), (0x1ee36, 0x1ee3c), (0x1ee74, 0x1ee7a),
           (0x1ee7e, 0x1ee86), (0x1ee98, 0x1eea4), (0x1eeb6, 0x1eec2), (0x1f1c4, 0x1f1ca), (0x201ae, 0x201b8), (0x201da, 0x201e4), (0x202d0, 0x202da),
@@ -502,9 +504,10 @@ def build():
         # player C4 routes the listed targets 21d92 (slot 84) and 21d60 (list 21622) since; player C8 routes 21e6a (slot 84) and 21e3a (list 21622) since;
         # player C9 routes 21cd8 21d2a 2210c 22128 22240 2241c 22452 (slot 84) and 21e48 (list 21622) since (the C3 runs still stop at a listed target
         # that is not a C3 start)
-        # player C10 routes 21e04 2228e 22360 (slot 84) and the table entry 20324 since
+        # player C10 routes 21e04 2228e 22360 (slot 84) and the table entry 20324 since; player C11 routes 21960 21a76 (slot 84) and 21950 (list 21622)
+        # since
         require(unit_of(t) in (None, 'animation_player_c3_block', 'animation_player_c4_block', 'animation_player_c8_block', 'animation_player_c9_block',
-                               'animation_player_c10_block'),
+                               'animation_player_c10_block', 'animation_player_c11_block'),
                 ('computed-jump target routed by another unit', hex(t)))
     for s in STARTS:
         require(unit_of(s) == 'animation_player_c3_block', ('start is not routed to player c3', hex(s), unit_of(s)))

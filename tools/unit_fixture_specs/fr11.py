@@ -94,14 +94,20 @@ TRAPS = (0xb3e58, 0xb3eac)
 # EXIT_STOPS[:12]).  Declared stops of the native runs: a straight-line unrouted PC after a routed block is not the interior of a routed block.
 EXIT_STOPS = (0xb41f2, 0xb6e5e, 0xc5612, 0xb6d90, 0xbfcfa,
               0x70f8e, 0xb6c58, 0x70f60, 0x70fcc, 0x70ff8, 0x71028,
-              0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a)
+              0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a,
+              # player C11 routes the C3 list handler 21950 and the slot-84 values 21960 21a76 since C11 (declared stops, as before C11)
+              0x21950, 0x21960, 0x21a76)
 UNIT_EXITS = EXIT_STOPS[:5]             # the FR11 later-unit stops (FR12 / FR13)
 # objects FR12 routes the FR11 later-unit stops b41f2 b6e5e c5612 and the FR10 ones 70f8e b6c58 since FR12 (declared stops of the FR11 runs, as before
 # FR12); JUMP_LATER: the targets of the FR11 computed jumps that FR12 routes (the handlers b42a2 c0924 b4294 of b4034, the b42b8 entry b42c4); the
 # FR11 runs keep stopping there (JUMP_PCS: a target that is not an FR11 block is a stop)
 # objects FR13 routes the FR11 later-unit stops b6d90 bfcfa, the FR10 ones 70f60 70fcc 70ff8 71028 and the c54b2 entries c54ba c54d6 (JUMP_LATER) since
 # FR13 (declared stops of the FR11 runs, as before FR13)
-ROUTED_LATER = (0xb41f2, 0xb6e5e, 0xc5612, 0x70f8e, 0xb6c58, 0xb6d90, 0xbfcfa, 0x70f60, 0x70fcc, 0x70ff8, 0x71028)
+ROUTED_LATER = (0xb41f2, 0xb6e5e, 0xc5612, 0x70f8e, 0xb6c58, 0xb6d90, 0xbfcfa, 0x70f60, 0x70fcc, 0x70ff8, 0x71028,
+                # player C11 (the C11 entries kept as declared stops)
+                0x1d3e0, 0x4eb6a, 0x1e8de,
+                # player C11 (the C3 list handler / slot-84 values kept as declared stops)
+                0x21950, 0x21960, 0x21a76)
 JUMP_LATER = (0xb42a2, 0xc0924, 0xb4294, 0xb42c4, 0xc54ba, 0xc54d6)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0xb6874, 0xb687a), (0xb6d6e, 0xb6d74), (0xb6e54, 0xb6e5a), (0xb77fa, 0xb7800), (0xc5476, 0xc547c), (0xc5608, 0xc560e), (0xb687e, 0xb688e),

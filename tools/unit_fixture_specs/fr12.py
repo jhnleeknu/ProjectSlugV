@@ -96,11 +96,17 @@ TRAPS = (0xb3e58, 0xb3eac)
 # routed block.
 EXIT_STOPS = (0x71682, 0x717c2, 0x7177a, 0x71786,
               0xb6d90, 0xbfcfa, 0x70f60, 0x70fcc, 0x70ff8, 0x71028,
-              0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a)
+              0x1fd3c, 0x21ea0, 0x1d3e0, 0x4eb6a, 0x4ef08, 0x1de3c, 0x1e21c, 0x1e8de, 0x1fc96, 0x1fd50, 0x21fa6, 0x4e69a,
+              # player C11 routes the C3 list handler 21950 and the slot-84 values 21960 21a76 since C11 (declared stops, as before C11)
+              0x21950, 0x21960, 0x21a76)
 UNIT_EXITS = EXIT_STOPS[:4]             # the FR12 later-unit stops (FR13 / FR14)
 # objects FR13 routes the FR12 later-unit stops 71682 717c2, the FR11 ones b6d90 bfcfa and the FR10 ones 70f60 70fcc 70ff8 71028 since FR13, objects
 # FR14 routes the FR12 later-unit stops 7177a 71786 since FR14 (declared stops of the FR12 runs, as before FR13 / FR14)
-ROUTED_LATER = (0x71682, 0x717c2, 0xb6d90, 0xbfcfa, 0x70f60, 0x70fcc, 0x70ff8, 0x71028, 0x7177a, 0x71786)
+ROUTED_LATER = (0x71682, 0x717c2, 0xb6d90, 0xbfcfa, 0x70f60, 0x70fcc, 0x70ff8, 0x71028, 0x7177a, 0x71786,
+                # player C11 (the C11 entries kept as declared stops)
+                0x1d3e0, 0x4eb6a, 0x1e8de,
+                # player C11 (the C3 list handler / slot-84 values kept as declared stops)
+                0x21950, 0x21960, 0x21a76)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to
 CHAINS = ((0x716f4, 0x716fa), (0x716ea, 0x716fa), (0x717a4, 0x717aa), (0x71f18, 0x71f1e), (0xb6e6e, 0xb6e7c), (0xc105e, 0xc1064), (0xc120c, 0xc123e),
           (0xc128a, 0xc12cc), (0xc131a, 0xc135c))

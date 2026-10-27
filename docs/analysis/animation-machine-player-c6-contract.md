@@ -246,3 +246,11 @@ select E2 계약(`animation-machine-select-e2-contract.md`) 결정 1에 따른 �
 - [F] **선언 정지 `e695a`**(`4ed70`의 `28ae` 자식, 메인 결정으로 C9~C13 재측정 때까지 둔 것): 입력 확장 관측에서 실행되어(마지막 목숨 뒤 화면 [I]) E2 block이 되었다. C6 실행부는 `4ed70`에서 A0 := `e695a`를 `28ae`에 넘기기만 하므로 바뀌지 않는다.
 - [F] 시험 `animation_machine_player_c6_test.cpp`의 `neighbours[]`(`e695a` 포함)는 C6 범위 밖인지만 확인하므로 그대로 참이다. `4ed70` 행들의 stop은 `28ae`라 그대로다. V1 spec `pc6.py`에는 `e695a`를 정지로 쓰는 곳이 없다(문서 주석뿐). V1 pc6 회귀는 fixture 1,856으로 같다.
 - [F] 남은 선언 정지 `1e67a` `1e918` `23c56` `36350` `371f8`은 그대로다(확장 관측에서도 실행되지 않음).
+
+## 뒤 단위 변경 기록: player C11(2026-10-27, 작업자 Claude Opus 5.5 / high)
+
+C11 계약(`animation-machine-player-c11-contract.md`) 결정 1·5에 따른 기록이다. C6 실행부의 동작은 바뀌지 않았다.
+
+- [F] **미룬 입구·자식·쓰기만 하는 callback**: 이전 = `1d3e0`(`1d3d8`의 fall-through) `4eb6a`(`4eb60`의 fall-through), 28ae 자식 `1e67a`(`1e828`), callback `1e918`(`1e8d4`, 쓰기만)은 routing 밖(선언 정지, 위 결정 6·9). 새 = 넷 모두 C11 block 시작이다. C6 block이 그 PC로 넘기는 방식(fall-through, 28ae 자식 LONG, 쓰기)은 그대로다. `e695a`는 계속 routing 밖이다.
+- [F] 생성기 `generate_animation_machine_player_c6_test_table.py`: 오류 행 `1d398-then-1d3e0`(이전: `1d3e0`에서 `unsupported animation machine PC`) → `1d398-then-1d722`(D7.W = `14`, A5 홀수: C11 `1d722 MOVE.W 547a(A5),D0`이 `program bus requires even WORD/LONG address`), `4eb58-then-4eb6a`(이전: `4eb6a`에서 `unsupported animation machine PC`) → `4eb58-then-4eb7a`(A6 홀수: C11 `4eb7a MOVE.W 76(A6),D0`이 실패). 다시 생성한 시험은 그 두 행만 바뀌었다(fixture 1,248 그대로).
+- [F] V1 spec `pc6.py`: 같은 두 오류 fixture를 같은 방식으로 옮겼고(`4eb58-then-4eb7a`는 BYTE `5d21(A5)` / `7d82(A5)`를 0으로 선언), `ROUTED_LATER`에 `1d3e0` `4eb6a` `1e8de`를, `EXIT_STOPS`·`ROUTED_LATER`에 C3 계산 점프의 C11 착지 `21950` `21960` `21a76`을 더했다(C6 run은 그 PC에서 계속 멈춘다; 더하지 않으면 reinstall world `P1` 94 frame 458 `1e89e`가 C11 `21950`을 지나 고정 ROM에 쓰다 멈춘다). V1 pc6 1,856 그대로.

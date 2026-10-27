@@ -234,3 +234,10 @@ C10 계약(`animation-machine-player-c10-contract.md`) 결정 2·4에 따른 기
 - [F] 실행부 `animation_machine_player_c3.cpp`의 `20318` 주석만 고쳤다(이전 "none transcribed" → 새 "20324는 C10 block").
 - [F] 생성기 `generate_animation_machine_player_c3_test_table.py`: 오류 행 `21610-key-1`(이전: `21dd0`에서 `unsupported animation machine PC`) → `21610-key-1-then-1cac2`(C10 `21dd0` .. `21dee`가 실행된 뒤 C2 `1cac2`가 선언하지 않은 고정 ROM 기록 `1b8a2`를 읽어 `missing or ambiguous physical program bus ROM byte`). `21610`이 BYTE `aa(A6)`를 먼저 쓰므로 `21dd0`의 `BCLR`만 따로 실패시킬 수 없어서다. 표 칸·slot-84 값의 stop-only 목록 `JUMP_TARGETS`에 주석을 더했다. 다시 생성한 시험은 그 한 행만 바뀌었다(fixture 1,293 그대로).
 - [F] V1 spec `pc3.py`: `EXIT_STOPS`·`ROUTED_LATER`에 C10 진입 14개를 더했다(C3 run은 그 PC에서 계속 멈춘다). 계산 점프 대상 검사에 `animation_player_c10_block`을 허용했다(`21e04` `2228e` `22360` slot-84 값과 칸 `20324`). V1 pc3 1,829 그대로.
+
+## 뒤 단위 변경 기록: player C11(2026-10-27, 작업자 Claude Opus 5.5 / high)
+
+C11 계약(`animation-machine-player-c11-contract.md`) 결정 5에 따른 기록이다. C3 실행부·시험은 바뀌지 않았다.
+
+- [F] **목록·칸 값**: `21620 JMP (A1)` 목록 `21622`의 handler `21950`(칸 8)과 `201a6 JSR (A4)`의 칸 `84` 값 `21960` `21a76`(허용 목록 `PC3_SLOT84`)은 이전에 routing 밖(다음 dispatch의 `unsupported animation machine PC` = 선언 정지)이었고, 이제 C11 block 시작이다. 허용 규칙은 그대로이고 대상이 routing되었는지만 달라졌다. C3 시험은 이 값들을 목록·칸 값과 정지로만 쓴다(그대로 통과).
+- [F] V1 spec `pc3.py`: `ROUTED_LATER`에 `1e8de`를 더했고, 계산 점프 대상 검사에 `animation_player_c11_block`을 허용했다. V1 pc3 1,829 그대로.
