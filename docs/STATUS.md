@@ -2694,3 +2694,13 @@
   - 원래 관측 IO 173,966/173,966, 확장 관측 IO 14,500/14,500 그대로. 세 번째 관측(scratch) IO 5,681 → 5,707(+26, 예측과 같음). 불일치 2(P2 carry)와 C++ 오류 11은 기준선과 같다.
   - 열린 결정: 세 번째 관측을 `artifacts/`에 둘지, 선언 세 가지, P2 carry 결함(계획 §11). `ca5c`(E-1)는 계획대로 뒤 단위에 둔다.
   - 계약: `animation-machine-player-c11-contract.md`.
+
+## 2026-10-27 — frame 끝 carry: P2 run의 불일치 수정
+
+- [F] 세 번째 관측의 P2 run D1(frame 295)·D2(frame 481)에서 frame 끝 carry만 달랐다(C++ 1, native Unknown). 마지막 node인 P2 자식 `ea908`이 interpreter `49fc6`가 돌려준 C를 남겼고, frame driver가 그 값을 frame 끝 carry로 보고했다.
+- [F] node pass는 head callback `e74`에서 끝나고, 그 첫 `MOVE`가 C를 지운다. 그래서 frame 끝 carry를 읽는 곳이 없다. frame driver `run_nodes`가 pass 끝에서 carry를 Unknown으로 보고하도록 고쳤다. 실행부와 IO 검증기는 바꾸지 않았다.
+- [F] 검증:
+  - 세 번째 관측 IO 5,707 → 6,664(+957), 불일치 0, 두 번 실행 결과 같음. 남은 C++ 오류 11은 이미 알려진 M1.5 caller-X 한계다.
+  - 원래 관측 IO 173,966, 확장 관측 IO 14,500 그대로.
+  - 회귀 spec 50개, legacy 검증기 10개 통과. frame 비교 변화 없음.
+- 기록: `animation-machine-frame-driver-d1.md` "개정: frame 끝 carry".
