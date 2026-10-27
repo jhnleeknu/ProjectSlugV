@@ -76,3 +76,6 @@
 - IRQ `c8c`(F6)·BIOS·실제 입력·raster 값은 아직 선언 값이다.
 - 화면·사운드 출력 동등성은 비교하지 않았다. 이번 비교는 port 순서까지만이다.
 - b-unit·고아 사슬은 남아 있다.
+
+- U18 쪽 기록(이 문서로 옮김): U18 계약 문서는 G2 observer가 SHA로 고정하므로 고치지 않는다.
+  - [F] **callback 복귀 C(2026-10-27 기록, U18 변경 없음).** `ea940` 상태의 `ea9ea` → `ea9f8 JSR 49fc6` → `ea9fe RTS` 경로는 interpreter의 known C를 dispatcher `2ac2`로 돌려준다(`ea9f8` `ea9fe`는 FLOW_ONLY 그대로). 이 node가 pass의 마지막 node이면(io-ext2 P2 자식, D1 frame 295 / D2 frame 481) 그 C가 frame 끝까지 남아 IO 검증기의 carry Unknown 조건과 어긋났다. 처리는 frame 구동기 쪽이다: `animation-machine-frame-driver-d1.md` "개정: frame 끝 carry"에 따라 pass 끝은 C Unknown을 보고한다. U18 실행부·시험·block 분류는 바꾸지 않았다.
