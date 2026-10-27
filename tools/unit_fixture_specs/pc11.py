@@ -112,7 +112,8 @@ TRAPS = ()
 # (UNIT_EXITS) and the still unrouted declared stops of the earlier specs that the C11 runs pass through (C1..C10, FR10..FR14; scratch union).
 UNIT_EXITS = (0xca5c, 0x1d438, 0x1d776, 0x1d940, 0x1db0a, 0x1dbf0, 0x1e648, 0x1e71e, 0x1e96c, 0x2196c, 0x21a90, 0x21aa2, 0x40a5a, 0x4c2c4, 0x4ebfc)
 EXIT_STOPS = UNIT_EXITS + (0x1de3c, 0x1e21c, 0x1fc96, 0x1fd3c, 0x1fd50, 0x21ea0, 0x21fa6, 0x4e69a, 0x4ef08)
-ROUTED_LATER = ()
+# objects FR15 routes the C11 later-unit stops 40a5a 4c2c4 (D-1) since FR15: still declared stops of the C11 runs
+ROUTED_LATER = (0x40a5a, 0x4c2c4)
 # producer -> consumer chains: entry block (the call of the producer) and the consumer it returns to; the Z chain 4eb7a -> 4eb84 (4a974)
 CHAINS = ((0x1d5c4, 0x1d5ce), (0x1d5fc, 0x1d606), (0x1d76a, 0x1d770), (0x1d8f6, 0x1d8fa), (0x1db98, 0x1db9c), (0x21960, 0x21968), (0x21a76, 0x21a7e),
           (0xe8c40, 0xe8c7c), (0x4eb7a, 0x4eb84))
